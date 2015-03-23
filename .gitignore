@@ -6,6 +6,12 @@
 *.user
 *.log
 *.csv
+<<<<<<< HEAD
 JLinkLog.txt
 Project/KEIL5/Listings
 Project/KEIL5/Output
+=======
+*.schdocpreview
+*.pcbdocpreview
+JLinkLog.txt
+>>>>>>> 3618b7f772737ec53cfceae4284fb9715eec7314
