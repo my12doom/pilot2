@@ -1,0 +1,11 @@
+*.bak
+*.old
+*.mo
+*.suo
+*.ncb
+*.user
+*.log
+*.csv
+JLinkLog.txt
+Project/KEIL5/Listings
+Project/KEIL5/Output
