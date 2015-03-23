@@ -14,9 +14,9 @@ namespace HAL
 	class GPIO
 	{
 	public:
-		virtual void set_mode(GPIO_MODE mode) = 0;			
-		virtual bool read() = 0;
-		virtual void write(bool new value) = 0;
+		virtual void set_mode(GPIO_MODE mode) = 0;
+		virtual bool read() = 0;					// high = true, low = false
+		virtual void write(bool new value) = 0;		// high = true, low = false
 		virtual void toggle() = 0;
 	};
 }
