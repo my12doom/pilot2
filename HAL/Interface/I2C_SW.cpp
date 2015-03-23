@@ -1,8 +1,7 @@
 #include "I2C.h"
 
 namespace HAL
-{
-	
+{	
 I2C_SW::I2C_SW(GPIO *SCL, GPIO *SDA)
 :m_speed_tick(5)
 ,m_SDA(SDA)
