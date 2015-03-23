@@ -12,3 +12,4 @@ namespace HAL
 		virtual void delayus(int us) = 0;
 	};
 }
+extern HAL::SysTimer *systimer;
