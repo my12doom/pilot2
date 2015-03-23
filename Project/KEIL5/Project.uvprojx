@@ -362,7 +362,7 @@
             <uC99>0</uC99>
             <useXO>0</useXO>
             <VariousControls>
-              <MiscControls></MiscControls>
+              <MiscControls>--diag_suppress 177,550,1,1295 --gnu</MiscControls>
               <Define>STM32F40_41xxx,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
               <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface;..\..\HAL\STM32F4</IncludePath>
@@ -672,6 +672,11 @@
               <FileName>STM32F4GPIO.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\STM32F4GPIO.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>I2C_SW.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\Interface\I2C_SW.cpp</FilePath>
             </File>
           </Files>
         </Group>

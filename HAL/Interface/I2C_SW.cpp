@@ -7,6 +7,8 @@ I2C_SW::I2C_SW(GPIO *SCL, GPIO *SDA)
 ,m_SDA(SDA)
 ,m_SCL(SCL)
 {
+	m_SDA->set_mode(MODE_OUT_OpenDrain);
+	m_SCL->set_mode(MODE_OUT_OpenDrain);
 }
 
 int I2C_SW::set_speed(int speed)		// speed in hz
@@ -19,7 +21,7 @@ int I2C_SW::set_speed(int speed)		// speed in hz
 
 int I2C_SW::read_regs(uint8_t SlaveAddress, uint8_t startRegister, uint8_t*out, int count)
 {
-		int i;
+	int i;
 
 	if (!I2C_Start()) {
 			return -1;
@@ -55,7 +57,7 @@ int I2C_SW::read_regs(uint8_t SlaveAddress, uint8_t startRegister, uint8_t*out, 
 
 int I2C_SW::write_regs(uint8_t SlaveAddress, uint8_t startRegister, const uint8_t*data, int count)
 {
-int i;
+	int i;
     if (!I2C_Start()) {
         return -1;
     }
