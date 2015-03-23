@@ -1,0 +1,11 @@
+*.bak
+*.old
+*.mo
+*.suo
+*.ncb
+*.user
+*.log
+*.csv
+*.schdocpreview
+*.pcbdocpreview
+JLinkLog.txt
