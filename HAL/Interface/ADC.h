@@ -1,10 +1,9 @@
 #pragma once
-
 #include <stdint.h>
 
 namespace HAL 
 {
-	class ADC
+	class AnologInput
 	{
 	public:
 		virtual int read() = 0;
