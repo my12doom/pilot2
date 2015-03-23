@@ -3,7 +3,7 @@
 #include <stdint.h>
 namespace STM32F4
 {
-	F4GPIO::F4GPIO(GPIO_TypeDef* GPIOx,uint32_t GPIO_Pin,GPIOMode_TypeDef GPIO_Mode)
+	F4GPIO::F4GPIO(GPIO_TypeDef* GPIOx,uint32_t GPIO_Pin)
 	{
 		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA|RCC_AHB1Periph_GPIOB|RCC_AHB1Periph_GPIOC|RCC_AHB1Periph_GPIOD,ENABLE);
 		this->GPIOx = GPIOx;
@@ -48,14 +48,7 @@ namespace STM32F4
 		else
 		{
 			GPIO_ResetBits(this->GPIOx,this->GPIO_Pin);
-		}
-		GPIO_InitTypeDef GPIO_InitStructure;
-		GPIO_InitStructure.GPIO_Pin  = GPIO_Pin;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-		GPIO_Init(GPIOx, &GPIO_InitStructure);		
+		}	
 	}
 	void F4GPIO::toggle()
 	{
@@ -67,12 +60,5 @@ namespace STM32F4
 		{
 			GPIO_SetBits(this->GPIOx,this->GPIO_Pin);
 		}
-		GPIO_InitTypeDef GPIO_InitStructure;
-		GPIO_InitStructure.GPIO_Pin  = GPIO_Pin;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-		GPIO_Init(GPIOx, &GPIO_InitStructure);	
 	}
 }
