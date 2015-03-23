@@ -147,7 +147,7 @@
             <RestoreSysVw>1</RestoreSysVw>
           </Target>
           <RunDebugAfterBuild>0</RunDebugAfterBuild>
-          <TargetSelection>1</TargetSelection>
+          <TargetSelection>6</TargetSelection>
           <SimDlls>
             <CpuDll></CpuDll>
             <CpuDllArguments></CpuDllArguments>
@@ -161,7 +161,7 @@
             <PeripheralDll></PeripheralDll>
             <PeripheralDllArguments></PeripheralDllArguments>
             <InitializationFile></InitializationFile>
-            <Driver>BIN\UL2CM3.DLL</Driver>
+            <Driver>Segger\JL2CM3.dll</Driver>
           </TargetDlls>
         </DebugOption>
         <Utilities>
@@ -170,12 +170,12 @@
             <UseExternalTool>0</UseExternalTool>
             <RunIndependent>0</RunIndependent>
             <UpdateFlashBeforeDebugging>1</UpdateFlashBeforeDebugging>
-            <Capability>0</Capability>
-            <DriverSelection>-1</DriverSelection>
+            <Capability>1</Capability>
+            <DriverSelection>4096</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
-          <Flash3></Flash3>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -365,7 +365,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F40_41xxx,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface</IncludePath>
+              <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface;..\..\HAL\STM32F4</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -469,9 +469,9 @@
           </GroupOption>
           <Files>
             <File>
-              <FileName>main.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\main.c</FilePath>
+              <FileName>main.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\main.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -669,9 +669,9 @@
           <GroupName>HAL</GroupName>
           <Files>
             <File>
-              <FileName>GPIO.cpp</FileName>
+              <FileName>STM32F4GPIO.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\HAL\STM32F4\GPIO.cpp</FilePath>
+              <FilePath>..\..\HAL\STM32F4\STM32F4GPIO.cpp</FilePath>
             </File>
           </Files>
         </Group>
