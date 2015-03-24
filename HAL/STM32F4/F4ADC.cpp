@@ -1,5 +1,6 @@
 #include "F4ADC.h"
 #include <stdint.h>
+#include "stm32f4xx_rcc.h"
 namespace STM32F4
 {
 	F4ADC::F4ADC(ADC_TypeDef* ADCx,uint8_t ADC_Channel)

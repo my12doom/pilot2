@@ -52,7 +52,7 @@
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
           <DebugInformation>1</DebugInformation>
-          <BrowseInformation>0</BrowseInformation>
+          <BrowseInformation>1</BrowseInformation>
           <ListingPath>.\Listings\</ListingPath>
           <HexFormatSelection>1</HexFormatSelection>
           <Merge32K>0</Merge32K>
@@ -669,14 +669,24 @@
           <GroupName>HAL</GroupName>
           <Files>
             <File>
-              <FileName>STM32F4GPIO.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\STM32F4\STM32F4GPIO.cpp</FilePath>
-            </File>
-            <File>
               <FileName>I2C_SW.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\Interface\I2C_SW.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>F4GPIO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4GPIO.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>F4ADC.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4ADC.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>F4UART.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4UART.cpp</FilePath>
             </File>
           </Files>
         </Group>

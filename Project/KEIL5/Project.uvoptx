@@ -207,7 +207,7 @@
 
   <Group>
     <GroupName>Main</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -725,12 +725,12 @@
       <GroupNumber>3</GroupNumber>
       <FileNumber>39</FileNumber>
       <FileType>8</FileType>
-      <tvExp>1</tvExp>
+      <tvExp>0</tvExp>
       <Focus>0</Focus>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\HAL\STM32F4\STM32F4GPIO.cpp</PathWithFileName>
-      <FilenameWithoutPath>STM32F4GPIO.cpp</FilenameWithoutPath>
+      <PathWithFileName>..\..\HAL\Interface\I2C_SW.cpp</PathWithFileName>
+      <FilenameWithoutPath>I2C_SW.cpp</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -738,12 +738,38 @@
       <GroupNumber>3</GroupNumber>
       <FileNumber>40</FileNumber>
       <FileType>8</FileType>
-      <tvExp>1</tvExp>
+      <tvExp>0</tvExp>
       <Focus>0</Focus>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\HAL\Interface\I2C_SW.cpp</PathWithFileName>
-      <FilenameWithoutPath>I2C_SW.cpp</FilenameWithoutPath>
+      <PathWithFileName>..\..\HAL\STM32F4\F4GPIO.cpp</PathWithFileName>
+      <FilenameWithoutPath>F4GPIO.cpp</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>3</GroupNumber>
+      <FileNumber>41</FileNumber>
+      <FileType>8</FileType>
+      <tvExp>0</tvExp>
+      <Focus>0</Focus>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\HAL\STM32F4\F4ADC.cpp</PathWithFileName>
+      <FilenameWithoutPath>F4ADC.cpp</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>3</GroupNumber>
+      <FileNumber>42</FileNumber>
+      <FileType>8</FileType>
+      <tvExp>0</tvExp>
+      <Focus>0</Focus>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\HAL\STM32F4\F4UART.cpp</PathWithFileName>
+      <FilenameWithoutPath>F4UART.cpp</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
