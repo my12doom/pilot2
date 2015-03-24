@@ -688,6 +688,16 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4UART.cpp</FilePath>
             </File>
+            <File>
+              <FileName>uart4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\uart4.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart4.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\HAL\STM32F4\uart4.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

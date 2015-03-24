@@ -10,6 +10,7 @@ namespace STM32F4
 		
 		GPIO_InitTypeDef GPIO_InitStructure;
 		NVIC_InitTypeDef NVIC_InitStructure;
+		USART_InitTypeDef USART_InitStructure;
 		//choose which uart will be inital:
 		if(USART1 == USARTx)
 		{
@@ -32,26 +33,36 @@ namespace STM32F4
 		else if(UART4 == USARTx )	
 		{
 			RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4, ENABLE);
-			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 			//Set Uart4 bind to GPIOC pin0|pin1
 			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
 			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 			GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-			GPIO_Init(GPIOC, &GPIO_InitStructure);
+			GPIO_Init(GPIOA, &GPIO_InitStructure);
 			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
 			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-			GPIO_Init(GPIOC, &GPIO_InitStructure);
-			GPIO_PinAFConfig(GPIOC, GPIO_PinSource0, GPIO_AF_UART4);
-			GPIO_PinAFConfig(GPIOC, GPIO_PinSource1, GPIO_AF_UART4);
+			GPIO_Init(GPIOA, &GPIO_InitStructure);
+			GPIO_PinAFConfig(GPIOA, GPIO_PinSource0, GPIO_AF_UART4);
+			GPIO_PinAFConfig(GPIOA, GPIO_PinSource1, GPIO_AF_UART4);
 			// NVIC config
 			NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);		
+			
+			USART_InitStructure.USART_BaudRate = 115200;
+			USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+			USART_InitStructure.USART_StopBits = USART_StopBits_1;
+			USART_InitStructure.USART_Parity = USART_Parity_No ;
+			USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+			USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+			USART_Init(UART4, &USART_InitStructure); 
+			USART_Cmd(UART4, ENABLE);
+			USART_ITConfig(UART4, USART_IT_RXNE, ENABLE);
 		}
 		else if(UART5 == USARTx )
 		{
@@ -124,17 +135,18 @@ namespace STM32F4
 		else if(UART8 == USARTx )
 		{
 		}
-		
 		DMA_InitTypeDef DMA_InitStructure = {0};
 		NVIC_InitTypeDef NVIC_InitStructure;
 		
-		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph, ENABLE);
+		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+		
 		NVIC_InitStructure.NVIC_IRQChannel = DMA_Stream_IRQ;  
 		//ToDO: change the Priority by using multi-usart:
 		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;  
 		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 		NVIC_Init(&NVIC_InitStructure);
+		
 
 		DMA_DeInit(DMAy_Streamx);  
 		DMA_InitStructure.DMA_Channel = DMA_Channel; 
@@ -165,8 +177,7 @@ namespace STM32F4
 		return 1;
 	}
 	void F4UART::DMA1_Steam4_IRQHandler()
-	{
-			
+	{	
 		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
 		DMA_ClearFlag(DMA1_Stream4, DMA_FLAG_TCIF4);
 		dma_running = 0;
@@ -175,8 +186,8 @@ namespace STM32F4
 	int F4UART::dma_handle_queue()
 	{
 		
-	if (dma_running)
-		return 0;
+		if (dma_running)
+			return 0;
 
 		DMA_Cmd(DMAy_Streamx, DISABLE);
 
