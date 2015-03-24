@@ -170,11 +170,42 @@ namespace STM32F4
 	}
 	int F4UART::write(const void *data, int count)
 	{
-		return 1;
+		return UART4_SendPacket(data, count);
 	}
 	int F4UART::read(void *data, int max_count)
 	{
-		return 1;
+		char *p = (char*)data;
+		int _end_sentence = end_sentence;
+		int j=0;
+		int i;
+		int size;
+		int lastR = 0;
+		if (_end_sentence == start)
+			return -1;
+		size = _end_sentence - start;
+		if (size<0)
+			size += sizeof(buffer);
+		if (size >= max_count)
+			return -2;
+		for(i=start; i!= _end_sentence; i=(i+1)%sizeof(buffer))
+		{
+			if (buffer[i] == '\r')
+			{
+				if (lastR)
+					p[j++] = buffer[i];
+				lastR = !lastR;
+			}
+
+			p[j++] = buffer[i];
+			if (buffer[i] == '\n')
+			{
+				i=(i+1)%sizeof(buffer);
+				break;
+			}
+		}
+		p[j] = 0;
+		start = i;
+		return j;
 	}
 	void F4UART::DMA1_Steam4_IRQHandler()
 	{	

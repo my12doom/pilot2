@@ -8,6 +8,7 @@
 *.csv
 *.schdocpreview
 *.pcbdocpreview
+*.uvoptx
 JLinkLog.txt
 Project/KEIL5/Listings
 Project/KEIL5/Output
