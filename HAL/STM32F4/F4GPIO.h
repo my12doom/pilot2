@@ -3,7 +3,7 @@
 using namespace HAL;
 namespace STM32F4
 {
-	class F4GPIO:GPIO
+	class F4GPIO: public GPIO
 	{
 	public:
 		F4GPIO(GPIO_TypeDef* GPIOx,uint32_t GPIO_Pin);
