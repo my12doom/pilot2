@@ -1,6 +1,8 @@
 #include "stm32F4xx.h"
 #include "F4GPIO.h"
 #include "F4UART.h"
+#include "F4SysTimer.h"
+
 //#include "F4UART.h"
 #include "stm32F4xx_gpio.h"
 using namespace STM32F4;
@@ -9,36 +11,28 @@ using namespace STM32F4;
 
 F4UART * pUart4=new F4UART(UART4);
 uint8_t recv_buffer[5];
+
+void delay()
+{
+	int64_t t = systimer->gettime();
+	while(systimer->gettime() - t < 20)
+		;
+}
+
 int main(void)
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	
-	uint8_t message[10];
-	for(int k=0;k<9;k++)
-		message[k]='K';
-	F4GPIO P(GPIOC,GPIO_Pin_4);
+	F4GPIO P(GPIOA,GPIO_Pin_7);
 	P.set_mode(MODE_OUT_PushPull);
 	
-	pUart4->set_baudrate(115200);
-	pUart4->UART4_SendPacket("12345\n", 6);
 	while(1)
 	{
-		pUart4->UART4_SendPacket("12345\n", 6);
-		
-		P.write(0);
-		for(int j=0;j<20;j++)
-			for(int i=0;i<65535;i++);
-		P.write(1);
-		pUart4->UART4_ReadPacket(recv_buffer,5);
-		if(recv_buffer[0]==1)
-		{
-			int a=1;
-		}
-		for(int j=0;j<20;j++)
-			for(int i=0;i<65535;i++);
-		
+		P.write(true);
+		delay();
+		P.write(false);
+		delay();
 	}
-	
 }
 
 extern "C" void UART4_IRQHandler(void)
