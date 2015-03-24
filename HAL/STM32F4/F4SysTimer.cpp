@@ -15,7 +15,7 @@ namespace STM32F4
 	
 	F4SysTimer::F4SysTimer()
 	{
-		reload = SystemCoreClock / 100;
+		reload = SystemCoreClock / 100;		// ~ 10ms reload period
 		SysTick_Config(reload);
 	}
 	
@@ -41,10 +41,33 @@ namespace STM32F4
 	
 	void F4SysTimer::delayms(int ms)
 	{
+		delayus(ms*1000);
 	}
 	
 	void F4SysTimer::delayus(int us)
 	{
+		if (us < 9000)	// ~ 9ms
+		{
+			volatile int start = reload - SysTick->VAL;
+			volatile int target = (start + us * (SystemCoreClock / 1000000)) % reload;
+
+			if (start <= target)
+			{
+				while((reload - SysTick->VAL) < target && (reload - SysTick->VAL) >= start)
+					;
+			}
+			else
+			{
+				while((reload - SysTick->VAL) >= start || (reload - SysTick->VAL) < target)
+					;
+			}
+		}
+		else
+		{
+			volatile int64_t t = gettime();
+			while(gettime() - t < us)
+				;
+		}
 	}
 	
 	static F4SysTimer timer;
