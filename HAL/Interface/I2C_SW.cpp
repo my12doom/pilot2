@@ -1,20 +1,41 @@
+#include <stdlib.h>
 #include "I2C.h"
 
 namespace HAL
 {	
+I2C_SW::I2C_SW()
+:m_speed_tick(5)
+,m_SDA(NULL)
+,m_SCL(NULL)
+{
+}
+
 I2C_SW::I2C_SW(GPIO *SCL, GPIO *SDA)
 :m_speed_tick(5)
-,m_SDA(SDA)
-,m_SCL(SCL)
 {
+	init(SCL, SDA);
+}
+
+I2C_SW::~I2C_SW()
+{
+}
+
+int I2C_SW::init(GPIO *SCL, GPIO *SDA)
+{
+	m_SDA = SDA;
+	m_SCL = SCL;
 	m_SDA->set_mode(MODE_OUT_OpenDrain);
 	m_SCL->set_mode(MODE_OUT_OpenDrain);
+	
+	I2C_Stop();
+	
+	return 0;
 }
 
 int I2C_SW::set_speed(int speed)		// speed in hz
 {
 	// TODO: calculate speed tick
-	m_speed_tick = 5;
+	m_speed_tick = 999;
 	
 	return 0;
 }
@@ -89,26 +110,26 @@ int I2C_SW::write_regs(uint8_t SlaveAddress, uint8_t startRegister, const uint8_
 }
 
 
-#define SCL_HI     m_SCL->write(1)
-#define SCL_LO     m_SCL->write(0)
-#define SDA_HI     m_SDA->write(1)
-#define SDA_LO     m_SDA->write(0)
+#define SCL_HI     m_SCL->write(true)
+#define SCL_LO     m_SCL->write(false)
+#define SDA_HI     m_SDA->write(true)
+#define SDA_LO     m_SDA->write(false)
 
 bool I2C_SW::SDA_STATE()
 {
 	bool v;
-	m_SDA->set_mode(MODE_IN);
+	//m_SDA->set_mode(MODE_IN);
 	v = m_SDA->read();
-	m_SDA->set_mode(MODE_OUT_OpenDrain);
+	//m_SDA->set_mode(MODE_OUT_OpenDrain);
 	
 	return v;
 }
 bool I2C_SW::SCL_STATE()
 {
 	bool v;
-	m_SDA->set_mode(MODE_IN);
-	v = m_SDA->read();
-	m_SDA->set_mode(MODE_OUT_OpenDrain);
+	//m_SDA->set_mode(MODE_IN);
+	v = m_SCL->read();
+	//m_SDA->set_mode(MODE_OUT_OpenDrain);
 
 	return v;
 }

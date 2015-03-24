@@ -19,8 +19,10 @@ namespace HAL
 	class I2C_SW : public I2C
 	{
 	public:
+		I2C_SW();
 		I2C_SW(GPIO *SCL, GPIO *SDA);
 		~I2C_SW();
+		int init(GPIO *SCL, GPIO *SDA);
 		virtual int set_speed(int speed);		// speed in hz
 		virtual int read_regs(uint8_t SlaveAddress, uint8_t startRegister, uint8_t*out, int count);
 		virtual int write_regs(uint8_t SlaveAddress, uint8_t startRegister, const uint8_t*data, int count);
