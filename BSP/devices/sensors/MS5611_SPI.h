@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <HAL/Interface/Interfaces.h>
+#include <Interfaces.h>
 
 using namespace HAL;
 namespace sensors

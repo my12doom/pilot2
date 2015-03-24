@@ -43,7 +43,7 @@ namespace STM32F4
 
 	}
 	void F4GPIO::write(bool newvalue){
-		if(newvalue == true)
+		if(newvalue)
 		{
 			GPIO_SetBits(this->GPIOx,this->GPIO_Pin);
 		}
