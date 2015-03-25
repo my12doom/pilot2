@@ -703,6 +703,16 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4SPI.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F4Timer.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4Timer.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>F4Timer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4Timer.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
