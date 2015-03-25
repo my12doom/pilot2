@@ -2,7 +2,7 @@
 #include "F4GPIO.h"
 #include "F4UART.h"
 #include "F4SysTimer.h"
-
+#include "F4Storage.h"
 //#include "F4UART.h"
 #include "stm32F4xx_gpio.h"
 using namespace STM32F4;
@@ -11,12 +11,10 @@ using namespace STM32F4;
 
 F4UART * pUart4=new F4UART(UART4);
 uint8_t recv_buffer[5];
-
 void delay()
 {
 	int64_t t = systimer->gettime();
-	while(systimer->gettime() - t < 20)
-		;
+	while(systimer->gettime() - t < 20);
 }
 
 int main(void)
@@ -25,9 +23,13 @@ int main(void)
 	
 	F4GPIO P(GPIOA,GPIO_Pin_7);
 	P.set_mode(MODE_OUT_PushPull);
-	
+	//Test Storage:
+	//F4Storage Storage;
+	//Storage->write(int address, const void *data, int size)
+	//Storage.read(int address, void *data, int maxsize)
 	while(1)
 	{
+		
 		P.write(true);
 		delay();
 		P.write(false);
