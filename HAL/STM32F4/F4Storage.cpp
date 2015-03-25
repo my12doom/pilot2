@@ -5,7 +5,7 @@
 using namespace HAL;
 namespace STM32F4
 {
-	F4Storage::F4Storage(uint32_t page__size,uint32_t buffer_size,uint32_t start_address):page__size(0x20000),buffer_size(0x40000),start_address(0x080C0000)
+	F4Storage::F4Storage(uint32_t page__size,uint32_t buffer_size,uint32_t start_address)
 	{
 		this->page__size=page__size;
 		this->buffer_size=buffer_size;
@@ -45,9 +45,9 @@ namespace STM32F4
 
 		if (count %4)
 		{
-		uint32_t pending = 0xffffffff;
-		memcpy(&pending, p+count/4*4, count%4);
-		FLASH_ProgramWord(start_address+address+count/4*4, pending);
+			uint32_t pending = 0xffffffff;
+			memcpy(&pending, p+count/4*4, count%4);
+			FLASH_ProgramWord(start_address+address+count/4*4, pending);
 		}
 
 		FLASH_WaitForLastOperation();
