@@ -40,8 +40,6 @@ MS5611_SPI::MS5611_SPI(SPI *spi, GPIO *CS)
 	rawTemperature = 0;
 	rawPressure = 0;
 	DeltaTemp = 0;
-	//off  = (((int64_t)_C[1]) << 16) + ((_C[3] * dT) >> 7);
-	//sens = (((int64_t)_C[0]) << 15) + ((_C[2] * dT) >> 8);
 }
 
 MS5611_SPI::~MS5611_SPI()
@@ -60,7 +58,7 @@ int MS5611_SPI::read_regs(uint8_t start_reg, void *out, int count)
 
 	CS->write(true);
 
-	return 0;	
+	return 0;
 }
 
 int MS5611_SPI::write_reg(uint8_t reg)
@@ -71,8 +69,7 @@ int MS5611_SPI::write_reg(uint8_t reg)
 
 	CS->write(true);
 
-	return 0;
-	
+	return 0;	
 }
 
 int MS5611_SPI::init(void)

@@ -4,6 +4,8 @@
 #include "F4SPI.h"
 #include "F4SysTimer.h"
 #include "BSP/devices/sensors/MS5611_SPI.h"
+#include <BSP/boards/dev_v1/RCIN.h>
+#include <BSP/boards/dev_v1/RCOUT.h>
 #include <stdio.h>
 
 //#include "F4UART.h"
@@ -15,6 +17,8 @@ using namespace sensors;
 
 F4UART * pUart4=new F4UART(UART4);
 uint8_t recv_buffer[5];
+dev_v1::RCIN rc;
+dev_v1::RCOUT rcout;
 
 void delay()
 {
@@ -38,14 +42,25 @@ int main(void)
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);
 
-	F4GPIO P(GPIOA,GPIO_Pin_7);
-	P.set_mode(MODE_OUT_PushPull);
+	//F4GPIO P(GPIOA,GPIO_Pin_7);
+	//P.set_mode(MODE_OUT_PushPull);
 	
 	F4GPIO cs(GPIOE,GPIO_Pin_7);
 	cs.set_mode(MODE_OUT_PushPull);
 	F4SPI spi2(SPI2);
 	MS5611_SPI baro(&spi2, &cs);
 	baro.init();
+	
+	while(1)
+	{		
+		int16_t rcs[8];
+		rc.get_channel_data(rcs, 0, 8);
+
+		rcout.write(rcs, 0, 6);
+		systimer->delayms(10);
+		
+		//printf("\r%d,%d,%d,%d,%d,%d", rcs[0], rcs[1], rcs[2], rcs[3], rcs[4], rcs[5]);
+	}
 	
 	while(1)
 	{
@@ -55,14 +70,6 @@ int main(void)
 		printf("\r%d, %d, %d", res, data[0], data[1]);
 		
  		res = res;
-	}
-
-	while(1)
-	{
-		P.write(true);
-		systimer->delayms(10);
-		P.write(false);
-		systimer->delayms(10);
 	}
 }
 
