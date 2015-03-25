@@ -14,7 +14,7 @@
         <TargetCommonOption>
           <Device>STM32F405RG</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32F4xx_DFP.2.3.0</PackID>
+          <PackID>Keil.STM32F4xx_DFP.1.0.8</PackID>
           <PackURL>http://www.keil.com/pack</PackURL>
           <Cpu>IROM(0x08000000,0x100000) IRAM(0x20000000,0x20000) IRAM2(0x10000000,0x10000) CPUTYPE("Cortex-M4") FPU2 CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -224,7 +224,7 @@
             <hadIRAM2>1</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
-            <useUlib>0</useUlib>
+            <useUlib>1</useUlib>
             <EndSel>0</EndSel>
             <uLtcg>0</uLtcg>
             <RoSelD>3</RoSelD>
@@ -365,7 +365,7 @@
               <MiscControls>--diag_suppress 177,550,1,1295 --gnu</MiscControls>
               <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=8000000</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface;..\..\HAL\STM32F4</IncludePath>
+              <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface;..\..\HAL\STM32F4;..\..\</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -472,6 +472,11 @@
               <FileName>main.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\main.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>MS5611_SPI.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\devices\sensors\MS5611_SPI.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -694,9 +699,9 @@
               <FilePath>..\..\HAL\STM32F4\F4SysTimer.cpp</FilePath>
             </File>
             <File>
-              <FileName>F4Storage.cpp</FileName>
+              <FileName>F4SPI.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\HAL\STM32F4\F4Storage.cpp</FilePath>
+              <FilePath>..\..\HAL\STM32F4\F4SPI.cpp</FilePath>
             </File>
             <File>
               <FileName>F4Timer.cpp</FileName>
