@@ -29,6 +29,19 @@ MS5611_SPI::MS5611_SPI(SPI *spi, GPIO *CS)
 {
 	this->spi = spi;
 	this->CS = CS;
+	CS->set_mode(MODE_OUT_PushPull);
+	
+	OSR = MS561101BA_OSR_4096;
+	temperature = 0;
+	pressure = 0;
+	new_temperature = 0;
+	last_temperature_time = 0;
+	last_pressure_time = 0;
+	rawTemperature = 0;
+	rawPressure = 0;
+	DeltaTemp = 0;
+	//off  = (((int64_t)_C[1]) << 16) + ((_C[3] * dT) >> 7);
+	//sens = (((int64_t)_C[0]) << 15) + ((_C[2] * dT) >> 8);
 }
 
 MS5611_SPI::~MS5611_SPI()
@@ -50,11 +63,11 @@ int MS5611_SPI::read_regs(uint8_t start_reg, void *out, int count)
 	return 0;	
 }
 
-int MS5611_SPI::write_reg(uint8_t reg, uint8_t data)
+int MS5611_SPI::write_reg(uint8_t reg)
 {
 	CS->write(false);
 
-	spi->txrx(data);
+	spi->txrx(reg);
 
 	CS->write(true);
 
@@ -67,7 +80,8 @@ int MS5611_SPI::init(void)
 	uint8_t tmp[3];
 	int i;
 	
-	write_reg(MS561101BA_RESET, 0x00);	
+	spi->set_mode(0, 0);
+	write_reg(MS561101BA_RESET);	
 	systimer->delayms(10);
 	for(i=0; i<6; i++)
 	{
@@ -80,7 +94,7 @@ int MS5611_SPI::init(void)
 	crc = (tmp[0] << 8) + tmp[1];
 	
 	// Temperature
-	write_reg(MS561101BA_D2 + OSR, 0x00);
+	write_reg(MS561101BA_D2 + OSR);
 	systimer->delayms(10);
 	read_regs(0x00, tmp, 3);
 	
@@ -89,7 +103,7 @@ int MS5611_SPI::init(void)
 	temperature = ((1<<EXTRA_PRECISION)*2000l + ((DeltaTemp * refdata[5]) >> (23-EXTRA_PRECISION))) / ((1<<EXTRA_PRECISION));
 		
 	// Pressure
-	write_reg(MS561101BA_D1 + OSR, 0x00);
+	write_reg(MS561101BA_D1 + OSR);
 	systimer->delayms(10);
 	read_regs(0x00, tmp, 3);
 	
@@ -110,7 +124,7 @@ int MS5611_SPI::read(int *data)
 	{
 		if (new_temperature == 0 && last_temperature_time == 0 && last_pressure_time == 0)
 		{
-			if (write_reg(MS561101BA_D2 + OSR, 0x00) < 0)
+			if (write_reg(MS561101BA_D2 + OSR) < 0)
 			{
 				rtn = -1;
 				break;
@@ -130,7 +144,7 @@ int MS5611_SPI::read(int *data)
 			DeltaTemp = rawTemperature - (((int32_t)refdata[4]) << 8);
 			new_temperature = ((1<<EXTRA_PRECISION)*2000l + ((DeltaTemp * refdata[5]) >> (23-EXTRA_PRECISION))) / ((1<<EXTRA_PRECISION));
 			
-			if (write_reg(MS561101BA_D1 + OSR, 0x00) < 0)
+			if (write_reg(MS561101BA_D1 + OSR) < 0)
 			{
 				rtn = -1;
 				break;

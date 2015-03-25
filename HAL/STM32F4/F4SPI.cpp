@@ -1,6 +1,7 @@
 #include "F4SPI.h"
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 #include <stm32f4xx_rcc.h>
 
 #include "stm32F4xx_gpio.h"
@@ -93,23 +94,10 @@ namespace STM32F4
 		return 0;
 	}
 	
-	int F4SPI::set_mode(int mode)		// see http://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus for mode definition
+	int F4SPI::set_mode(int CPOL, int CPHA)// CPOL: 0 = Idle Low, 1 = Idle High; CPHA: 0 = capture at first edge, 1 = capture at second edge
 	{
-		// TODO
-		switch(mode)
-		{
-			case 0:
-				break;
-			case 1:
-				break;
-			case 2:
-				break;
-			case 3:
-				break;
-			default:
-				// reset mcu?
-				break;
-		}
+		SPI_InitStructure.SPI_CPOL = CPOL ? SPI_CPOL_High : SPI_CPOL_Low;
+		SPI_InitStructure.SPI_CPHA = CPHA ? SPI_CPHA_2Edge : SPI_CPHA_1Edge;
 		SPI_Cmd(SPIx, DISABLE);
 		SPI_Init(SPIx, &SPI_InitStructure);
 		SPI_Cmd(SPIx, ENABLE);

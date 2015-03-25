@@ -20,7 +20,7 @@ namespace sensors
 		GPIO *CS;
 
 		int read_regs(uint8_t start_reg, void *out, int count);
-		int write_reg(uint8_t reg, uint8_t data);
+		int write_reg(uint8_t reg);
 
 		uint8_t OSR;// = MS561101BA_OSR_4096;
 		int temperature;// = 0;
