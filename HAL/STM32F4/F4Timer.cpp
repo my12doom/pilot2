@@ -43,25 +43,19 @@ namespace STM32F4
 	}
 	void F4Timer::set_callback(timer_callback cb)
 	{		
-		if(TIM1==TIMx)
-		{
-			TIM_ClearITPendingBit(TIM1, TIM_FLAG_Update);
-			cb();
-		}
-		if(TIM2==TIMx)
-		{
-			TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);
-			cb();
-		}
-		if(TIM3==TIMx)
-		{
-			TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
-			cb();
-		}
-		if(TIM4==TIMx)
-		{
-			TIM_ClearITPendingBit(TIM4 , TIM_FLAG_Update);
-			cb();
-		}
+		this->cb=cb;
 	}
+	void F4Timer::call_callback()
+	{
+		if(TIM1==TIMx)
+			TIM_ClearITPendingBit(TIM1 , TIM_FLAG_Update);
+		else if(TIM2==TIMx)
+			TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);
+		else if(TIM3==TIMx)
+			TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
+		else if(TIM4==TIMx)
+			TIM_ClearITPendingBit(TIM4 , TIM_FLAG_Update);
+		cb();
+	}
+	
 }
