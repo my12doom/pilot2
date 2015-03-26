@@ -14,7 +14,7 @@
         <TargetCommonOption>
           <Device>STM32F405RG</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32F4xx_DFP.2.3.0</PackID>
+          <PackID>Keil.STM32F4xx_DFP.1.0.8</PackID>
           <PackURL>http://www.keil.com/pack</PackURL>
           <Cpu>IROM(0x08000000,0x100000) IRAM(0x20000000,0x20000) IRAM2(0x10000000,0x10000) CPUTYPE("Cortex-M4") FPU2 CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -175,7 +175,7 @@
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
-          <Flash3></Flash3>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -473,6 +473,21 @@
               <FileType>8</FileType>
               <FilePath>..\main.cpp</FilePath>
             </File>
+            <File>
+              <FileName>MPU6000.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\devices\sensors\MPU6000.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>MPU6000.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\BSP\devices\sensors\MPU6000.h</FilePath>
+            </File>
+            <File>
+              <FileName>MPU9250SPI2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\MPU9250SPI2.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -708,11 +723,6 @@
         <Group>
           <GroupName>BSP</GroupName>
           <Files>
-            <File>
-              <FileName>BSP_Init.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\BSP_Init.cpp</FilePath>
-            </File>
             <File>
               <FileName>MS5611_SPI.cpp</FileName>
               <FileType>8</FileType>

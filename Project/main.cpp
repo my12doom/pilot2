@@ -7,7 +7,10 @@
 #include "BSP/devices/sensors/MS5611_SPI.h"
 #include <BSP/boards/dev_v1/RCIN.h>
 #include <BSP/boards/dev_v1/RCOUT.h>
+#include <BSP/devices/sensors/MPU6000.h>
+#include <BSP/devices/sensors/HMC5983SPI.h>
 #include <stdio.h>
+#include "MPU9250SPI.h"
 
 //#include "F4UART.h"
 #include "stm32F4xx_gpio.h"
@@ -45,16 +48,39 @@ int main(void)
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);
 
 	F4GPIO cs(GPIOE,GPIO_Pin_7);
+	F4GPIO cs_mpu6000(GPIOE,GPIO_Pin_8);
+	F4GPIO cs_5983(GPIOE,GPIO_Pin_10);
 	cs.set_mode(MODE_OUT_PushPull);
+	cs_mpu6000.set_mode(MODE_OUT_PushPull);
+	cs_5983.set_mode(MODE_OUT_PushPull);
+	cs.write(true);
+	cs_mpu6000.write(true);
+	cs_5983.write(true);
+	
 	F4SPI spi2(SPI2);
-	MS5611_SPI baro(&spi2, &cs);
-	baro.init();
+	//MS5611_SPI baro(&spi2, &cs);
+	//baro.init();
+	
+	//MPU6000 mpu6000;
+	//mpu6000.init(&spi2, &cs_mpu6000);
+	
+	HMC5983 hmc5983;
+	hmc5983.init(&spi2, &cs_5983);
+	
 	//Test Timer:
+	//init_MPU9250spi();
 	while(1)
 	{
+		short data[7] = {0};
 		
+		int res = hmc5983.read(data);
+		
+		printf("\r%d, %d,%d,%d,%d,%d,%d,%d", res, data[0], data[1], data[2], data[3], data[4], data[5], data[6]);
+		
+		systimer->delayms(10);
 	}
-	while(1)
+	
+	while(0)
 	{		
 		int16_t rcs[8];
 		rc.get_channel_data(rcs, 0, 8);
@@ -65,6 +91,7 @@ int main(void)
 		//printf("\r%d,%d,%d,%d,%d,%d", rcs[0], rcs[1], rcs[2], rcs[3], rcs[4], rcs[5]);
 	}
 	
+	/*
 	while(1)
 	{
 		int data[2];
@@ -74,6 +101,7 @@ int main(void)
 		
  		res = res;
 	}
+	*/
 }
 extern "C" void UART4_IRQHandler(void)
 {

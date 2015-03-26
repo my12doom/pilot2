@@ -69,7 +69,7 @@ namespace STM32F4
 			SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
 			SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 			SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_16;
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
 			SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 			SPI_InitStructure.SPI_CRCPolynomial = 7;
 			SPI_Init(SPIx, &SPI_InitStructure);
@@ -111,6 +111,8 @@ namespace STM32F4
 		SPI_I2S_SendData(SPIx, data);
 		while (SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_RXNE) == RESET);
 
-		return SPI_I2S_ReceiveData(SPIx);
+		uint8_t o = SPI_I2S_ReceiveData(SPIx);
+		//printf("spi:%02x - %02x\n", data, o);
+		return o;
 	}
 }
