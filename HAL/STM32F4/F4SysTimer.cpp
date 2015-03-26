@@ -73,4 +73,4 @@ namespace STM32F4
 	static F4SysTimer timer;
 }
 
-HAL::SysTimer *systimer = &STM32F4::timer;
+HAL::ISysTimer *systimer = &STM32F4::timer;

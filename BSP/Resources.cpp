@@ -1,4 +1,7 @@
-#include "Resources.h"
+#include <BSP\Resources.h>
+using namespace HAL;
+using namespace STM32F4;
+/*
 extern "C" void TIM1_UP_TIM10_IRQHandler(void)
 {
 }
@@ -25,3 +28,4 @@ extern "C" void TIM7_IRQHandler(void)
 extern "C" void TIM8_IRQHandler(void)
 {
 }
+*/

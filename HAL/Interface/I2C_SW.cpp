@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "I2C.h"
+#include "II2C.h"
 
 namespace HAL
 {	
@@ -10,7 +10,7 @@ I2C_SW::I2C_SW()
 {
 }
 
-I2C_SW::I2C_SW(GPIO *SCL, GPIO *SDA)
+I2C_SW::I2C_SW(IGPIO *SCL, IGPIO *SDA)
 :m_speed_tick(5)
 {
 	init(SCL, SDA);
@@ -20,7 +20,7 @@ I2C_SW::~I2C_SW()
 {
 }
 
-int I2C_SW::init(GPIO *SCL, GPIO *SDA)
+int I2C_SW::init(IGPIO *SCL, IGPIO *SDA)
 {
 	m_SDA = SDA;
 	m_SCL = SCL;

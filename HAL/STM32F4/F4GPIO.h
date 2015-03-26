@@ -1,9 +1,10 @@
-#include "GPIO.h"
+#pragma once
+#include "IGPIO.h"
 #include "stm32F4xx_gpio.h"
 using namespace HAL;
 namespace STM32F4
 {
-	class F4GPIO: public GPIO
+	class F4GPIO: public IGPIO
 	{
 	public:
 		F4GPIO(GPIO_TypeDef* GPIOx,uint32_t GPIO_Pin);

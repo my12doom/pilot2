@@ -488,6 +488,11 @@
               <FileType>1</FileType>
               <FilePath>..\MPU9250SPI2.c</FilePath>
             </File>
+            <File>
+              <FileName>HMC5983SPI.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\devices\sensors\HMC5983SPI.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

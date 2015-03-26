@@ -6,7 +6,7 @@
 namespace dev_v1
 {
 	// channel index starts from 0
-	class RCIN : public HAL::RCIN
+	class RCIN : public HAL::IRCIN
 	{
 	public:
 		RCIN();
