@@ -1,0 +1,527 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- saved from url=(0052)https://pixhawk.org/dev/know-how/frames_of_reference -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Frames of Reference - PX4 Autopilot Project</title>
+<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><![endif]-->
+<meta name="generator" content="DokuWiki">
+<meta name="robots" content="index,follow">
+<meta name="keywords" content="dev,know-how,frames_of_reference">
+<link rel="search" type="application/opensearchdescription+xml" href="https://pixhawk.org/lib/exe/opensearch.php" title="PX4 Autopilot Project">
+<link rel="start" href="https://pixhawk.org/">
+<link rel="contents" href="https://pixhawk.org/dev/know-how/frames_of_reference?do=index" title="Sitemap">
+<link rel="alternate" type="application/rss+xml" title="Recent changes" href="https://pixhawk.org/feed.php">
+<link rel="alternate" type="application/rss+xml" title="Current namespace" href="https://pixhawk.org/feed.php?mode=list&ns=dev:know-how">
+<link rel="alternate" type="text/html" title="Plain HTML" href="https://pixhawk.org/_export/xhtml/dev/know-how/frames_of_reference">
+<link rel="alternate" type="text/plain" title="Wiki Markup" href="https://pixhawk.org/_export/raw/dev/know-how/frames_of_reference">
+<link rel="canonical" href="./Frames of Reference - PX4 Autopilot Project_files/Frames of Reference - PX4 Autopilot Project.html">
+<link rel="stylesheet" type="text/css" href="./Frames of Reference - PX4 Autopilot Project_files/css.php">
+<script async="" src="./Frames of Reference - PX4 Autopilot Project_files/analytics.js"></script><script type="text/javascript">/*<![CDATA[*/var NS='dev:know-how';var JSINFO = {"id":"dev:know-how:frames_of_reference","namespace":"dev:know-how","toc":{"initial_state":1}};
+/*!]]>*/</script>
+<script type="text/javascript" charset="utf-8" src="./Frames of Reference - PX4 Autopilot Project_files/js.php"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="shortcut icon" href="https://pixhawk.org/lib/tpl/mnml-blog/user/favicon.ico">
+<link rel="apple-touch-icon" href="https://pixhawk.org/lib/tpl/mnml-blog/images/apple-touch-icon.png">
+<script type="text/javascript" charset="utf-8" src="./Frames of Reference - PX4 Autopilot Project_files/user.js"></script>
+<!--[if lte IE 8]><link rel="stylesheet" media="all" type="text/css" href="/lib/tpl/mnml-blog/css/mnml-blog_screen_iehacks.css" /><![endif]-->
+<!--[if lt IE 7]><style type="text/css">img { behavior: url(/lib/tpl/mnml-blog/js/iepngfix/iepngfix.htc); }</style><![endif]-->
+<link href="./Frames of Reference - PX4 Autopilot Project_files/css" rel="stylesheet" type="text/css">
+<!-- GA script -->
+</head>
+
+<body>
+<div id="pagewrap">
+
+    <!-- start header -->
+    <div id="tmpl_header">
+        <a href="https://pixhawk.org/" name="dokuwiki__top" id="dokuwiki__top" accesskey="h"><img src="./Frames of Reference - PX4 Autopilot Project_files/rotate.php" id="tmpl_header_logo_img" alt=""></a>
+
+       <div id="tmpl_header_nav"><nav>
+<ul>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/start" class="wikilink1" title="start">Overview</a></div>
+<ul>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/videos" class="wikilink1" title="videos">Videos</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/pageindex" class="wikilink1" title="pageindex">Index</a></div>
+</li>
+</ul>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/modules/start" class="wikilink1" title="modules:start">Hardware</a></div>
+<ul>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/modules/pixhawk" class="wikilink1" title="modules:pixhawk">PIXHAWK Autopilot</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/modules/px4fmu" class="wikilink1" title="modules:px4fmu">PX4FMU Autopilot</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/modules/px4ioar" class="wikilink1" title="modules:px4ioar">AR.Drone Shield</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/modules/px4io" class="wikilink1" title="modules:px4io">PX4IO module</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/modules/px4flow" class="wikilink1" title="modules:px4flow">Opt.Flow Sensor</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/peripherals/onboard_computers/start" class="wikilink1" title="peripherals:onboard_computers:start">On-board Computers</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/modules/can_nodes/start" class="wikilink1" title="modules:can_nodes:start">UAVCAN Modules</a></div>
+<ul>
+<li class="level3"><div class="li"> <a href="https://pixhawk.org/modules/pixhawk_esc" class="wikilink1" title="modules:pixhawk_esc">Pixhawk ESC</a></div>
+</li>
+<li class="level3"><div class="li"> <a href="https://pixhawk.org/modules/can_nodes/lpc11c24_xpresso" class="wikilink1" title="modules:can_nodes:lpc11c24_xpresso">LPC11C24 Dev Board</a></div>
+</li>
+</ul>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/peripherals/start" class="wikilink1" title="peripherals:start">Peripherals</a></div>
+<ul>
+<li class="level3"><div class="li"> <a href="https://pixhawk.org/peripherals/radio-control/start" class="wikilink1" title="peripherals:radio-control:start">Radio Control</a></div>
+</li>
+<li class="level3"><div class="li"> <a href="https://pixhawk.org/peripherals/sensors/gps" class="wikilink1" title="peripherals:sensors:gps">GPS Modules</a></div>
+</li>
+<li class="level3"><div class="li"> <a href="https://pixhawk.org/peripherals/telemetry/start" class="wikilink1" title="peripherals:telemetry:start">Telemetry</a></div>
+</li>
+<li class="level3"><div class="li"> <a href="https://pixhawk.org/peripherals/video" class="wikilink1" title="peripherals:video">On-board Video</a></div>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/firmware/start" class="wikilink1" title="firmware:start">Firmware</a></div>
+<ul>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/firmware/downloads" class="wikilink1" title="firmware:downloads">Downloads</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/firmware/source_code" class="wikilink1" title="firmware:source_code">Source Code</a></div>
+</li>
+</ul>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/users/start" class="wikilink1" title="users:start">Setup</a></div>
+<ul>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/users/first_steps" class="wikilink1" title="users:first_steps">Quickstart Guide</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/users/tutorials" class="wikilink1" title="users:tutorials">User Tutorials</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/platforms/multicopters/start" class="wikilink1" title="platforms:multicopters:start">Multicopters</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/platforms/planes/start" class="wikilink1" title="platforms:planes:start">Planes</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/platforms/vtol/start" class="wikilink1" title="platforms:vtol:start">VTOL</a></div>
+</li>
+</ul>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/platforms/start" class="wikilink1" title="platforms:start">Flying</a></div>
+<ul>
+<li class="level2"><div class="li"> <a href="https://groups.google.com/group/px4users" class="urlextern" target="_blank" title="https://groups.google.com/group/px4users" rel="nofollow">Forums</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/flying/flight_phases" class="wikilink1" title="flying:flight_phases">Flight Phases</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/users/system_modes" class="wikilink1" title="users:system_modes">Flight Modes</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/flying/flight_reports" class="wikilink1" title="flying:flight_reports">Flight Reports</a></div>
+</li>
+</ul>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/community/start" class="wikilink1" title="community:start">Dev Community</a></div>
+<ul>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/dev/start" class="wikilink1" title="dev:start">Developer Documentation</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/dev/quickstart" class="wikilink1" title="dev:quickstart">Developer Quickstart</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/dev/tutorials/start" class="wikilink1" title="dev:tutorials:start">Developer Tutorials</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.org/roadmap" class="wikilink1" title="roadmap">PX4 Ecosystem Roadmap</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://groups.google.com/group/px4users" class="urlextern" target="_blank" title="https://groups.google.com/group/px4users" rel="nofollow">Forums</a></div>
+</li>
+<li class="level2"><div class="li"> <a href="https://pixhawk.ethz.ch/docs/" class="urlextern" target="_blank" title="https://pixhawk.ethz.ch/docs/" rel="nofollow">Doxygen API Docs</a></div>
+</li>
+</ul>
+</li>
+</ul>
+
+            <div id="tmpl_header_nav_search" class="dokuwiki">
+<form action="https://pixhawk.org/start" accept-charset="utf-8" class="search" id="dw__search" method="get" role="search"><div class="no"><input type="hidden" name="do" value="search"><input type="text" id="qsearch__in" accesskey="f" name="id" class="edit" title="[F]"><input type="submit" value="Search" class="button" title="Search"><div id="qsearch__out" class="ajax_qsearch JSpopup" style="display: none;"></div></div></form>
+            </div>
+            <div class="clearer"></div>
+        </nav></div>
+        <div class="clearer"></div>
+    </div>
+    <!-- end header -->
+
+
+    <!-- start main content area -->
+    <div class="dokuwiki">
+        
+        <!-- start left col -->
+        <div id="content">
+            <div class="page">
+                <!-- TOC START -->
+<div id="dw__toc">
+<h3 class="toggle open" style="cursor: pointer;"><strong><span>−</span></strong>Table of Contents</h3>
+<div>
+
+<ul class="toc" aria-expanded="true" style="">
+<li class="level1"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#frames_of_reference">Frames of Reference</a></div>
+<ul class="toc">
+<li class="level2"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#coordinate_systems">Coordinate Systems</a></div>
+<ul class="toc">
+<li class="level3"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#geographic_coordinate_system">Geographic Coordinate System</a></div></li>
+<li class="level3"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#ned_coordinate_system">NED Coordinate System</a></div></li>
+</ul>
+</li>
+<li class="level2"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#frames">Frames</a></div>
+<ul class="toc">
+<li class="level3"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#inertial_frame">Inertial frame</a></div></li>
+<li class="level3"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#ecef_-_earth-centered_earth-fixed_frame">ECEF - Earth-Centered, Earth-Fixed frame</a></div></li>
+<li class="level3"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#body_fixed_frame">Body Fixed Frame</a></div></li>
+<li class="level3"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#body_ned_frame">Body NED Frame</a></div></li>
+</ul>
+</li>
+<li class="level2"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#transformation_between_frames">Transformation between frames</a></div>
+<ul class="toc">
+<li class="level3"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#euler_angles">Euler Angles</a></div></li>
+</ul>
+</li>
+<li class="level2"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference#quaternion_representation">Quaternion Representation</a></div></li>
+</ul></li>
+</ul>
+</div>
+</div>
+<!-- TOC END -->
+<div class="clearer"></div>
+
+<!-- start rendered page content -->
+
+<h1 class="sectionedit1" id="frames_of_reference">Frames <span class="search_hit">of</span> Reference</h1>
+<div class="level1">
+
+<p>
+This page gives an overview <span class="search_hit">of</span> the different frames used in the <span class="search_hit">PX4</span> firmware.
+</p>
+
+</div>
+
+<h2 class="sectionedit2" id="coordinate_systems">Coordinate Systems</h2>
+<div class="level2">
+
+</div>
+
+<h3 class="sectionedit3" id="geographic_coordinate_system">Geographic Coordinate System</h3>
+<div class="level3">
+
+<p>
+Represents position on earth with a longitude and latitude value (<a href="http://en.wikipedia.org/wiki/Geographic_coordinate_system" class="interwiki iw_wp" target="_blank" title="http://en.wikipedia.org/wiki/Geographic_coordinate_system">Geographic_coordinate_system</a>). Additionally the altitude may may be included. The altitude can be expressed as distance from the earth center or as altitude above the mean sea level. All in all, this gives a spherical coordinate system.
+</p>
+
+<p>
+<a href="https://pixhawk.org/lib/exe/fetch.php?tok=0b3ee3&media=http%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2Fthumb%2F6%2F62%2FLatitude_and_Longitude_of_the_Earth.svg%2F652px-Latitude_and_Longitude_of_the_Earth.svg.png" class="media" target="_blank" title="http://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Latitude_and_Longitude_of_the_Earth.svg/652px-Latitude_and_Longitude_of_the_Earth.svg.png"><img src="./Frames of Reference - PX4 Autopilot Project_files/fetch.php" class="media" alt="" width="400"></a>
+</p>
+
+</div>
+
+<h3 class="sectionedit4" id="ned_coordinate_system">NED Coordinate System</h3>
+<div class="level3">
+<ul>
+<li class="level1"><div class="li"> The x <span class="search_hit">axis</span> is aligned with the vector to the north pole (tangent to meridians).</div>
+</li>
+<li class="level1"><div class="li"> The y <span class="search_hit">axis</span> points to the east side (tangent to parallels)</div>
+</li>
+<li class="level1"><div class="li"> The z <span class="search_hit">axis</span> points to the center <span class="search_hit">of</span> the earth</div>
+</li>
+</ul>
+
+<p>
+This is a classical cartesian coordinate system where the 3 axes are orthogonal to each other.
+</p>
+
+<p>
+See <a href="http://en.wikipedia.org/wiki/North%20east%20down" class="interwiki iw_wp" target="_blank" title="http://en.wikipedia.org/wiki/North east down">North east down</a> for details.
+</p>
+
+</div>
+
+<h2 class="sectionedit5" id="frames">Frames</h2>
+<div class="level2">
+
+</div>
+
+<h3 class="sectionedit6" id="inertial_frame">Inertial <span class="search_hit">frame</span></h3>
+<div class="level3">
+
+<p>
+A fixed <span class="search_hit">frame</span>. For most low range MAV applications an earth-fixed NED <span class="search_hit">frame</span> at the starting point or aligned with the room.
+</p>
+
+</div>
+
+<h3 class="sectionedit7" id="ecef_-_earth-centered_earth-fixed_frame">ECEF - Earth-Centered, Earth-Fixed <span class="search_hit">frame</span></h3>
+<div class="level3">
+
+<p>
+Cartesian coordinate system at the center <span class="search_hit">of</span> the earth. The positive z <span class="search_hit">axis</span> goes through the north pole. The x and y axes are on the equatorial plane.
+</p>
+
+</div>
+
+<h3 class="sectionedit8" id="body_fixed_frame">Body Fixed <span class="search_hit">Frame</span></h3>
+<div class="level3">
+
+<p>
+Attached to the aircraft.
+</p>
+<ul>
+<li class="level1"><div class="li"> The x <span class="search_hit">axis</span> points in forward (defined by geometry and not by movement) direction. (= roll <span class="search_hit">axis</span>)</div>
+</li>
+<li class="level1"><div class="li"> The y <span class="search_hit">axis</span> points to the right (geometrically) (= pitch <span class="search_hit">axis</span>)</div>
+</li>
+<li class="level1"><div class="li"> The z <span class="search_hit">axis</span> points downwards (geometrically) (= yaw <span class="search_hit">axis</span>)</div>
+</li>
+</ul>
+
+</div>
+
+<h3 class="sectionedit9" id="body_ned_frame">Body NED <span class="search_hit">Frame</span></h3>
+<div class="level3">
+
+<p>
+Attached to the aircraft.
+</p>
+<ul>
+<li class="level1"><div class="li"> The x <span class="search_hit">axis</span> points towards the north pole. </div>
+</li>
+<li class="level1"><div class="li"> Th y <span class="search_hit">axis</span> points to the east</div>
+</li>
+<li class="level1"><div class="li"> The z <span class="search_hit">axis</span> points downwards to the center <span class="search_hit">of</span> the earth</div>
+</li>
+</ul>
+
+</div>
+
+<h2 class="sectionedit10" id="transformation_between_frames">Transformation between frames</h2>
+<div class="level2">
+
+<p>
+</p><p></p><div class="notetip">Read this <a href="https://pixhawk.org/_media/dev/know-how/jlblanco2010geometry3d_techrep.pdf" class="media mediafile mf_pdf" target="_blank" title="dev:know-how:jlblanco2010geometry3d_techrep.pdf (623 KB)">excellent tech report on transformations</a> to become familiar with quaternion and matrix based representations.
+</div><p></p>
+<p></p>
+
+</div>
+
+<h3 class="sectionedit11" id="euler_angles">Euler Angles</h3>
+<div class="level3">
+
+<p>
+Usually a conversion between a earth fixed “ground” <span class="search_hit">frame</span> and the body fixed “in-air” <span class="search_hit">frame</span> is described via Euler-Angles. There are multiple conventions <span class="search_hit">of</span> the Euler angles. In aerospace engineering the standard are the <a href="http://en.wikipedia.org/wiki/Tait%E2%80%93Bryan%20angles" class="interwiki iw_wp" target="_blank" title="http://en.wikipedia.org/wiki/Tait–Bryan angles">Tait–Bryan angles</a>. The rotation order for the Tait-Bryan angles is <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(1).php" class="latex_inline" alt="$ZY&#39;X&#39;&#39;$" title="Math"> (see the figure):
+</p>
+<ol>
+<li class="level1"><div class="li"> rotation <span class="search_hit">of</span> <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(2).php" class="latex_inline" alt="$\Psi$" title="Math"> around <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(3).php" class="latex_inline" alt="$Z$" title="Math"> (yaw)</div>
+</li>
+<li class="level1"><div class="li"> rotation <span class="search_hit">of</span> <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(4).php" class="latex_inline" alt="$\Theta$" title="Math"> around Y' (pitch)</div>
+</li>
+<li class="level1"><div class="li"> rotation <span class="search_hit">of</span> <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(5).php" class="latex_inline" alt="$\Phi$" title="Math"> around <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(6).php" class="latex_inline" alt="$X&#39;&#39;$" title="Math"> (roll)</div>
+</li>
+</ol>
+
+<p>
+<a href="./Frames of Reference - PX4 Autopilot Project_files/fetch(7).php" class="media" target="_blank" title="http://mrechte.free.fr/px4/Lagewinkel-Drehung2.png"><img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(7).php" class="media" alt=""></a>
+</p>
+
+<p>
+This gives the following transformation matrix:
+</p>
+
+<p>
+<img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(8).php" class="latex_inline" alt="
+M_{bi} =
+ \begin{pmatrix}
+    1 &amp; 0          &amp; 0          \\
+    0 &amp; \cos \Phi   &amp; \sin \Phi \\
+    0 &amp; - \sin \Phi &amp; \cos \Phi
+  \end{pmatrix}
+  \begin{pmatrix}
+    \cos \Theta &amp; 0 &amp; - \sin \Theta \\
+    0           &amp; 1 &amp; 0             \\
+    \sin \Theta &amp; 0 &amp; \cos \Theta
+  \end{pmatrix}
+   \begin{pmatrix}
+    \cos \Psi   &amp; \sin \Psi &amp; 0 \\
+    - \sin \Psi &amp; \cos \Psi &amp; 0 \\
+    0           &amp; 0         &amp; 1
+  \end{pmatrix}  \\
+  =
+  \begin{pmatrix}
+    \cos \Theta \cos \Psi &amp;
+    \cos \Theta \sin \Psi &amp;
+    - \sin \Theta \\
+    \sin \Phi \sin \Theta \cos \Psi - \cos \Phi \sin \Psi &amp;
+    \sin \Phi \sin \Theta \sin \Psi + \cos \Phi \cos \Psi &amp;
+    \sin \Phi \cos \Theta \\
+    \cos \Phi \sin \Theta \cos \Psi + \sin \Phi \sin \Psi &amp;
+    \cos \Phi \sin \Theta \sin \Psi - \sin \Phi \cos \Psi &amp;
+    \cos \Phi \cos \Theta
+  \end{pmatrix}
+" title="LaTeX">
+</p>
+
+<p>
+<img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(9).php" class="latex_inline" alt="$M_{bi}$" title="Math"> transforms a vector from the inertial <span class="search_hit">frame</span> to the body fixed <span class="search_hit">frame</span>: <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(10).php" class="latex_inline" alt="$_{b}v = M_{bi} \cdot _{i}v$" title="Math">. Or in other words <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(10).php" class="latex_inline" alt="$_{b}v = M_{bi} \cdot _{i}v$" title="Math"> describes <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(11).php" class="latex_inline" alt="$_{i}v$" title="Math"> in the body <span class="search_hit">frame</span> <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(12).php" class="latex_inline" alt="$b$" title="Math">.
+</p>
+
+<p>
+See the German Wikipedia article for details: <a href="http://de.wikipedia.org/wiki/Eulersche_Winkel#Luftfahrtnorm_.28DIN_9300.29_.28Yaw-Pitch-Roll.2C_Z.2C_Y.E2.80.99.2C_X.E2.80.99.E2.80.99.29" class="urlextern" target="_blank" title="http://de.wikipedia.org/wiki/Eulersche_Winkel#Luftfahrtnorm_.28DIN_9300.29_.28Yaw-Pitch-Roll.2C_Z.2C_Y.E2.80.99.2C_X.E2.80.99.E2.80.99.29" rel="nofollow">http://de.wikipedia.org/wiki/Eulersche_Winkel#Luftfahrtnorm_.28DIN_9300.29_.28Yaw-Pitch-Roll.2C_Z.2C_Y.E2.80.99.2C_X.E2.80.99.E2.80.99.29</a>
+</p>
+
+</div>
+
+<h4 id="boundaries">Boundaries</h4>
+<div class="level4">
+
+<p>
+In order to avoid ambiguities the following limits are used:
+</p>
+<ul>
+<li class="level1"><div class="li"> <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(13).php" class="latex_inline" alt="$-\pi &lt; \Phi &lt; \pi$" title="Math"></div>
+</li>
+<li class="level1"><div class="li"> <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(14).php" class="latex_inline" alt="$-\frac{\pi}{2} &lt; \Theta &lt; \frac{\pi}{2}$" title="Math"></div>
+</li>
+<li class="level1"><div class="li"> <img src="./Frames of Reference - PX4 Autopilot Project_files/fetch(15).php" class="latex_inline" alt="$-\pi &lt; \Psi &lt; \pi$" title="Math"></div>
+</li>
+</ul>
+
+</div>
+
+<h2 class="sectionedit12" id="quaternion_representation">Quaternion Representation</h2>
+<div class="level2">
+<ul>
+<li class="level1"><div class="li"> <a href="http://www.soest.hawaii.edu/wessel/courses/gg711/pdf/Gramkow_2001_JMIV.pdf" class="urlextern" target="_blank" title="http://www.soest.hawaii.edu/wessel/courses/gg711/pdf/Gramkow_2001_JMIV.pdf" rel="nofollow">Rotation Averages</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="http://www.mathworks.com/matlabcentral/fileexchange/40098-tolgabirdal-averaging-quaternions" class="urlextern" target="_blank" title="http://www.mathworks.com/matlabcentral/fileexchange/40098-tolgabirdal-averaging-quaternions" rel="nofollow">Matlab Code</a></div>
+</li>
+</ul>
+
+</div>
+
+<!-- end rendered page content -->
+<div class="clearer"></div>
+
+
+            </div>
+        </div>
+        <!-- end left col -->
+        
+        <!-- start right col -->
+
+<div class="plugin_translation"><span>Translations of this page:</span> <form action="https://pixhawk.org/start" id="translation__dropdown"><select name="id" class="wikilink1"><option class="wikilink1 cur" title="English" value="dev/know-how/frames_of_reference" selected="selected">en</option><option class="wikilink2" title="中文" value="zh/dev/know-how/frames_of_reference">zh</option></select><input name="go" type="submit" value="→" style="display: none;"></form></div>        <div id="tmpl_sidebar">
+            
+            <div class="sidebarnav">
+
+<p>
+<br>
+
+</p><div id="_username"></div>
+<ul><li class="level1"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference?do=register">Register</a></div></li><li class="level1"><div class="li"><a href="https://pixhawk.org/dev/know-how/frames_of_reference?do=login">Login to Edit</a></div></li></ul>
+
+<p></p>
+
+<h1 class="sectionedit1" id="quick_links">Quick Links</h1>
+<div class="level1">
+<ul>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/pageindex" class="wikilink1" title="pageindex">Documentation Overview</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/users/first_steps" class="wikilink1" title="users:first_steps">User Manual</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/dev/start" class="wikilink1" title="dev:start">Developer Manual</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://groups.google.com/forum/#!forum/px4users" class="urlextern" target="_blank" title="https://groups.google.com/forum/#!forum/px4users" rel="nofollow">Forum</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/videos" class="wikilink1" title="videos">Videos</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/faq" class="wikilink1" title="faq">FAQs</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/firmware/downloads" class="wikilink1" title="firmware:downloads">Downloads</a></div>
+</li>
+</ul>
+
+</div>
+<!-- EDIT1 SECTION "Quick Links" [93-378] -->
+<h1 class="sectionedit2" id="platforms">Platforms</h1>
+<div class="level1">
+<ul>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/platforms/multicopters/start" class="wikilink1" title="platforms:multicopters:start">Multicopters</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/platforms/planes/start" class="wikilink1" title="platforms:planes:start">Planes</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/platforms/vtol/start" class="wikilink1" title="platforms:vtol:start">VTOL</a></div>
+</li>
+</ul>
+
+</div>
+<!-- EDIT2 SECTION "Platforms" [379-513] -->
+<h1 class="sectionedit3" id="about">About</h1>
+<div class="level1">
+<ul>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/credits" class="wikilink1" title="credits">Contact and Credits</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/partners" class="wikilink1" title="partners">Partners</a></div>
+</li>
+<li class="level1"><div class="li"> <a href="https://pixhawk.org/projects" class="wikilink1" title="projects">Users and Projects</a></div>
+</li>
+</ul>
+
+</div>
+<!-- EDIT3 SECTION "About" [514-] --><script>
+var username = document.getElementById('_username').innerHTML;
+document.getElementById('_username').innerHTML = "";
+var loc = location.href;
+var url = loc.substr(0, loc.indexOf('?'));
+var anchor = document.getElementById("_login_links");
+var newul = document.createElement("ul");
+
+
+if (username == "") {
+var regHTML = "<li class='level1'><div class='li'><a href='"+url+"?do=register'>Register</a></div></li>"
+var loginHTML = "<li class='level1'><div class='li'><a href='"+url+"?do=login'>Login to Edit</a></div></li>"
+newul.innerHTML = regHTML + loginHTML;
+} else {
+newul.innerHTML = "<li class='level1'><div class='li'><a href='"+url+"?do=edit'>Edit this Page</a></div></li><li class='level1'><div class='li'><a href='"+url+"?do=media'>Media Manager</a></div></li>"
+}
+anchor.parentNode.replaceChild(newul, anchor);
+
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-33658859-2', 'pixhawk.org');
+  ga('send', 'pageview');
+
+</script>            </div>
+
+
+            
+            
+            <div class="sidebarbox" id="qrcode">
+                <h5 class="hspec">QR Code: URL of current page</h5>
+                <div class="level1"><span class="qrcode"><a href="http://goqr.me/" target="_blank"><img src="./Frames of Reference - PX4 Autopilot Project_files/saved_resource" alt="QR Code: URL of current page Frames of Reference (generated for current page)" title="Current page as QR Code (scan for easy mobile access)"></a></span><p class="qrsrc"><a href="http://goqr.me/" target="_blank">QR Code</a> by <a href="http://qrserver.com/" target="_blank">QR-Server</a></p></div>
+            </div>
+
+
+            <div class="clearer"></div>
+        </div>
+        <!-- end right col -->
+        <div class="clearer"></div>
+
+        <div id="tmpl_footer">
+            <div id="tmpl_footer_actlinksleft">
+                [&nbsp;<a href="https://pixhawk.org/dev/know-how/frames_of_reference#dokuwiki__top" class="action top" accesskey="t" rel="nofollow" title="Back to top [T]">Back to top</a>&nbsp;|&nbsp;<a href="https://pixhawk.org/dev/know-how/frames_of_reference?do=index" class="action index" accesskey="x" rel="nofollow" title="Sitemap [X]">Sitemap</a>&nbsp;|&nbsp;<a href="https://pixhawk.org/dev/know-how/frames_of_reference?do=backlink" class="action backlink" rel="nofollow" title="Backlinks">Backlinks</a>&nbsp;|&nbsp;<a href="https://pixhawk.org/dev/know-how/frames_of_reference?do=recent" class="action recent" accesskey="r" rel="nofollow" title="Recent changes [R]">Recent changes</a>&nbsp;]            </div>
+            <div id="tmpl_footer_actlinksright">
+                &nbsp;            </div>
+            <div class="clearer"></div>
+            <div id="tmpl_footer_metainfo">
+                (<a href="http://andreas-haerter.com/" target="_blank">mnml</a><a href="http://www.dokuwiki.org/" target="_blank">DW</a>)
+            </div>
+        </div>
+
+    </div>
+    <!-- end main content area -->
+    <div class="clearer"></div>
+    <img src="./Frames of Reference - PX4 Autopilot Project_files/indexer.php" width="2" height="1" alt="">
+</div>
+
+
+</body></html>
