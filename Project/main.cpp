@@ -37,26 +37,21 @@ extern "C" void delayms(int ms)
 {
 	systimer->delayms(ms);
 }
-
+Timer * pTIM1=new F4Timer(TIM1);
 int main(void)
 {
+
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);
 
-	//F4GPIO P(GPIOA,GPIO_Pin_7);
-	//P.set_mode(MODE_OUT_PushPull);
-	
 	F4GPIO cs(GPIOE,GPIO_Pin_7);
 	cs.set_mode(MODE_OUT_PushPull);
 	F4SPI spi2(SPI2);
 	MS5611_SPI baro(&spi2, &cs);
 	baro.init();
 	//Test Timer:
-	Timer * pTIM1=new F4Timer(TIM1);
-	//pTIM1->set_period()
 	while(1)
 	{
-	
 		
 	}
 	while(1)
