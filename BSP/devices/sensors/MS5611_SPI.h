@@ -9,15 +9,15 @@ namespace sensors
 	class MS5611_SPI
 	{
 	public:
-		MS5611_SPI(SPI *SPI, GPIO *CS);
+		MS5611_SPI(ISPI *SPI, IGPIO *CS);
 		~MS5611_SPI();
 		
 		int init(void);
 		int read(int *data);
 
 	protected:
-		SPI *spi;
-		GPIO *CS;
+		ISPI *spi;
+		IGPIO *CS;
 
 		int read_regs(uint8_t start_reg, void *out, int count);
 		int write_reg(uint8_t reg);

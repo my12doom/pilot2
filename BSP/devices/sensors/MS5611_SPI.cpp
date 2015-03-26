@@ -25,7 +25,7 @@
 namespace sensors
 {
 
-MS5611_SPI::MS5611_SPI(SPI *spi, GPIO *CS)
+MS5611_SPI::MS5611_SPI(ISPI *spi, IGPIO *CS)
 {
 	this->spi = spi;
 	this->CS = CS;

@@ -706,12 +706,12 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>BSP</GroupName>
+          <GroupName>Device</GroupName>
           <Files>
             <File>
-              <FileName>BSP_Init.cpp</FileName>
+              <FileName>init.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\BSP_Init.cpp</FilePath>
+              <FilePath>..\..\BSP\boards\dev_v1\init.cpp</FilePath>
             </File>
             <File>
               <FileName>MS5611_SPI.cpp</FileName>
@@ -728,6 +728,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\dev_v1\RCOUT.cpp</FilePath>
             </File>
+            <File>
+              <FileName>BatteryVoltage.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v1\BatteryVoltage.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -737,6 +742,11 @@
               <FileName>Resources.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\Resources.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>Resources.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\BSP\Resources.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -11,7 +11,7 @@ namespace HAL
 		MODE_OUT_OpenDrain = 2,
 	};
 
-	class GPIO
+	class IGPIO
 	{
 	public:
 		virtual void set_mode(GPIO_MODE mode) = 0;

@@ -4,7 +4,7 @@
 
 namespace HAL 
 {
-	class SysTimer
+	class ISysTimer
 	{
 	public:
 		virtual int64_t gettime() = 0;		// micro-second
@@ -12,4 +12,4 @@ namespace HAL
 		virtual void delayus(int us) = 0;
 	};
 }
-extern HAL::SysTimer *systimer;
+extern HAL::ISysTimer *systimer;

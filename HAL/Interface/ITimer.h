@@ -6,7 +6,7 @@ namespace HAL
 {
 	typedef void (*timer_callback)();
 
-	class Timer
+	class ITimer
 	{
 	public:
 		virtual void set_period(uint32_t period) = 0;				// micro-second

@@ -4,7 +4,7 @@
 
 namespace HAL
 {
-	class Storage
+	class IStorage
 	{
 	public:
 		virtual int init() = 0;

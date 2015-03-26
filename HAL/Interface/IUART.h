@@ -4,7 +4,7 @@
 
 namespace HAL
 {
-	class UART
+	class IUART
 	{
 		public:
 		virtual int set_baudrate(int baudrate) = 0;

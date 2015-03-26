@@ -5,7 +5,7 @@
 namespace HAL
 {
 	// channel index starts from 0
-	class RCOUT
+	class IRCOUT
 	{
 	public:
 		// total channel count

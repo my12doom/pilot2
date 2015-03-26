@@ -1,12 +1,12 @@
 #pragma once
 
 #include <stdint.h>
-#include "Timer.h"
+#include "ITimer.h"
 #include "stm32f4xx.h"
 using namespace HAL;
 namespace STM32F4
 {
-	class F4Timer:public Timer
+	class F4Timer:public ITimer
 	{
 	private:
 		timer_callback cb;

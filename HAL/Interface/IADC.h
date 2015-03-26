@@ -3,7 +3,7 @@
 
 namespace HAL 
 {
-	class AnologInput
+	class IADC
 	{
 	public:
 		virtual int read() = 0;

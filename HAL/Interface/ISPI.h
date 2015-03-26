@@ -4,7 +4,7 @@
 
 namespace HAL 
 {
-	class SPI
+	class ISPI
 	{
 	public:
 		virtual int init() = 0;

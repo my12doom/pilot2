@@ -5,7 +5,7 @@
 namespace HAL
 {
 	// channel index starts from 0
-	class RCIN
+	class IRCIN
 	{
 	public:
 		// total channel count

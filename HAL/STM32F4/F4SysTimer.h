@@ -1,11 +1,11 @@
 #pragma once
-#include "SysTimer.h"
+#include "ISysTimer.h"
 
 #include <stdint.h>
 
 namespace STM32F4 
 {
-	class F4SysTimer : public HAL::SysTimer
+	class F4SysTimer : public HAL::ISysTimer
 	{
 	public:
 		F4SysTimer();

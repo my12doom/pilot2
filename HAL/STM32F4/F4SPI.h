@@ -1,10 +1,10 @@
-#include "SPI.h"
+#include "ISPI.h"
 #include <stm32f4xx_spi.h>
 
 using namespace HAL;
 namespace STM32F4
 {
-	class F4SPI: public SPI
+	class F4SPI: public ISPI
 	{
 	public:
 		F4SPI();

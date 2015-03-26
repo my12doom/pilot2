@@ -1,14 +1,14 @@
 #pragma once
 
 #include <stdint.h>
-#include <HAL/Interface/RCOUT.h>
+#include <HAL/Interface/IRCOUT.h>
 
 #define MAX_CHANNEL 6
 
 namespace dev_v1
 {
 	// channel index starts from 0
-	class RCOUT : public HAL::RCOUT
+	class RCOUT : public HAL::IRCOUT
 	{
 	public:
 		RCOUT();

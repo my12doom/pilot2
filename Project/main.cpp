@@ -4,7 +4,7 @@
 #include "F4SPI.h"
 #include "F4Timer.h"
 #include "F4SysTimer.h"
-#include "BSP/devices/sensors/MS5611_SPI.h"
+#include <BSP/devices/sensors/MS5611_SPI.h>
 #include <BSP/boards/dev_v1/RCIN.h>
 #include <BSP/boards/dev_v1/RCOUT.h>
 #include <stdio.h>
@@ -37,7 +37,7 @@ extern "C" void delayms(int ms)
 {
 	systimer->delayms(ms);
 }
-Timer * pTIM1=new F4Timer(TIM1);
+ITimer * pTIM1=new F4Timer(TIM1);
 int main(void)
 {
 

@@ -1,12 +1,12 @@
 #pragma once
 
 #include <stdint.h>
-#include "GPIO.h"
-#include "SysTimer.h"
+#include "IGPIO.h"
+#include "ISysTimer.h"
 
 namespace HAL
 {
-	class I2C
+	class II2C
 	{
 	public:
 		virtual int set_speed(int speed) = 0;		// speed in hz
@@ -16,21 +16,21 @@ namespace HAL
 		virtual int write_regs(uint8_t SlaveAddress, uint8_t startRegister, const uint8_t*data, int count) = 0;
 	};
 
-	class I2C_SW : public I2C
+	class I2C_SW : public II2C
 	{
 	public:
 		I2C_SW();
-		I2C_SW(GPIO *SCL, GPIO *SDA);
+		I2C_SW(IGPIO *SCL, IGPIO *SDA);
 		~I2C_SW();
-		int init(GPIO *SCL, GPIO *SDA);
+		int init(IGPIO *SCL, IGPIO *SDA);
 		virtual int set_speed(int speed);		// speed in hz
 		virtual int read_regs(uint8_t SlaveAddress, uint8_t startRegister, uint8_t*out, int count);
 		virtual int write_regs(uint8_t SlaveAddress, uint8_t startRegister, const uint8_t*data, int count);
 	
 	protected:
 		int m_speed_tick;
-		GPIO *m_SDA;
-		GPIO *m_SCL;
+		IGPIO *m_SDA;
+		IGPIO *m_SCL;
 	
 		bool SDA_STATE();
 		bool SCL_STATE();
