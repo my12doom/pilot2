@@ -9,6 +9,7 @@ namespace STM32F4
 	class F4Timer:public Timer
 	{
 	private:
+		timer_callback cb;
 		TIM_TypeDef* TIMx;
 		void TimerInit(TIM_TypeDef* TIMx);
 		void TIM1_UP_TIM10_IRQHandler(void);
@@ -19,7 +20,8 @@ namespace STM32F4
 		F4Timer(TIM_TypeDef* TIMx);
 		~F4Timer(){};
 		virtual void set_period(uint32_t period);				// micro-second
-		virtual void set_callback(int ms);		
+		virtual void set_callback(timer_callback cb);	
+		void call_callback();
 			
 	};
 }

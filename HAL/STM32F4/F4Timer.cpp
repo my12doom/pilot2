@@ -41,31 +41,21 @@ namespace STM32F4
 		TIM_ITConfig(TIMx,TIM_IT_Update,ENABLE);
 		TIM_Cmd(TIMx,ENABLE);
 	}
-	void F4Timer::set_callback(int ms)
+	void F4Timer::set_callback(timer_callback cb)
 	{		
+		this->cb=cb;
+	}
+	void F4Timer::call_callback()
+	{
 		if(TIM1==TIMx)
-			TIM1_UP_TIM10_IRQHandler();
-		if(TIM2==TIMx)
-			TIM2_IRQHandler();
-		if(TIM3==TIMx)
-			TIM3_IRQHandler();
-		if(TIM3==TIMx)
-			TIM4_IRQHandler(); 
+			TIM_ClearITPendingBit(TIM1 , TIM_FLAG_Update);
+		else if(TIM2==TIMx)
+			TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);
+		else if(TIM3==TIMx)
+			TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
+		else if(TIM4==TIMx)
+			TIM_ClearITPendingBit(TIM4 , TIM_FLAG_Update);
+		cb();
 	}
-	void F4Timer::TIM1_UP_TIM10_IRQHandler(void)
-	{
-		TIM_ClearITPendingBit(TIM1, TIM_FLAG_Update);
-	}
-	void F4Timer::TIM2_IRQHandler(void)
-	{
-		TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);
-	}
-	void F4Timer::TIM3_IRQHandler(void) 
-	{
-		TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
-	}
-	void F4Timer::TIM4_IRQHandler(void) 
-	{
-		TIM_ClearITPendingBit(TIM4 , TIM_FLAG_Update);
-	}
+	
 }

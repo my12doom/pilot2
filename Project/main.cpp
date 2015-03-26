@@ -72,7 +72,6 @@ int main(void)
  		res = res;
 	}
 }
-
 extern "C" void UART4_IRQHandler(void)
 {
 	pUart4->UART4_IRQHandler();
