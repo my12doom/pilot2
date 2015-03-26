@@ -2,6 +2,7 @@
 #include "F4GPIO.h"
 #include "F4UART.h"
 #include "F4SPI.h"
+#include "F4Timer.h"
 #include "F4SysTimer.h"
 #include "BSP/devices/sensors/MS5611_SPI.h"
 #include <BSP/boards/dev_v1/RCIN.h>
@@ -50,7 +51,14 @@ int main(void)
 	F4SPI spi2(SPI2);
 	MS5611_SPI baro(&spi2, &cs);
 	baro.init();
+	//Test Timer:
+	Timer * pTIM1=new F4Timer(TIM1);
+	//pTIM1->set_period()
+	while(1)
+	{
 	
+		
+	}
 	while(1)
 	{		
 		int16_t rcs[8];
