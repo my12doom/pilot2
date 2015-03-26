@@ -55,7 +55,15 @@ namespace STM32F4
 			TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
 		else if(TIM4==TIMx)
 			TIM_ClearITPendingBit(TIM4 , TIM_FLAG_Update);
+		else if(TIM5==TIMx)
+			TIM_ClearITPendingBit(TIM5 , TIM_FLAG_Update);
+		else if(TIM6==TIMx)
+			TIM_ClearITPendingBit(TIM6 , TIM_FLAG_Update);
+		else if(TIM7==TIMx)
+			TIM_ClearITPendingBit(TIM7 , TIM_FLAG_Update);
+		else if(TIM8==TIMx)
+			TIM_ClearITPendingBit(TIM8 , TIM_FLAG_Update);
 		cb();
 	}
-	
+
 }

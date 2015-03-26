@@ -473,21 +473,6 @@
               <FileType>8</FileType>
               <FilePath>..\main.cpp</FilePath>
             </File>
-            <File>
-              <FileName>MS5611_SPI.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\devices\sensors\MS5611_SPI.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>RCIN.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\RCIN.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>RCOUT.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\RCOUT.cpp</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -717,6 +702,41 @@
               <FileName>F4Timer.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4Timer.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>BSP</GroupName>
+          <Files>
+            <File>
+              <FileName>BSP_Init.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v1\BSP_Init.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>MS5611_SPI.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\devices\sensors\MS5611_SPI.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RCIN.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v1\RCIN.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RCOUT.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v1\RCOUT.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Resources</GroupName>
+          <Files>
+            <File>
+              <FileName>Resources.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\Resources.cpp</FilePath>
             </File>
           </Files>
         </Group>
