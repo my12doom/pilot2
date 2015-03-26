@@ -9,7 +9,7 @@ namespace HAL
 	class Timer
 	{
 	public:
-		virtual void set_period() = 0;				// micro-second
+		virtual void set_period(uint32_t period) = 0;				// micro-second
 		virtual void set_callback(timer_callback cb) = 0;		
 	};
 }
