@@ -3,7 +3,6 @@
 #include <string.h>
 using namespace HAL;
 using namespace STM32F4;
-
 //Manager::LED part
 int  Manager::Register_LED(const char *name,LED *pLED)
 {
@@ -11,7 +10,7 @@ int  Manager::Register_LED(const char *name,LED *pLED)
 	led_table[led_num].num=led_num;
 	led_table[led_num].pLED=pLED;
 	led_num++;
-	return 1;
+	return 0;
 }
 int  Manager::get_LED_Num()
 {
@@ -32,6 +31,40 @@ LED* Manager::getLED(const char *name)
 			if(0==strcmp(name,led_table[i].name))
 			{
 				return led_table[i].pLED;
+			}
+	}
+	//check if not valid,return null pointer:
+	return NULL;
+}
+
+
+//Manager::UART part
+int Manager::Register_UART(const char *name,IUART *pUart)
+{
+	strcpy(uart_table[uart_num].name,name);
+	uart_table[uart_num].num=uart_num;
+	uart_table[uart_num].pUart=pUart;
+	uart_num++;
+	return 0;
+}
+int Manager::get_UART_Num()
+{
+	return uart_num;
+}
+IUART *Manager::getUART(const int num)
+{
+	if(num>uart_num)
+		return NULL;
+	return uart_table[num].pUart;
+}
+IUART *Manager::getUART(const char *name)
+{
+	for(int i=0;i<UART_NUM;i++)
+	{
+			//check if valid,return pointer:
+			if(0==strcmp(name,uart_table[i].name))
+			{
+				return uart_table[i].pUart;
 			}
 	}
 	//check if not valid,return null pointer:

@@ -10,15 +10,15 @@ class Manager
 {
 	//Manager construct:
 	public :
-	Manager(){};
-	~Manager(){};
+		Manager(){};
+		~Manager(){};
 	
 	//LED Manager:
 	#define LED_NUM 5
-	typedef struct a{
-		char name[6];
-		uint8_t num;
-		LED *pLED; 
+	typedef struct{
+		char name[8];//name 
+		uint8_t num; //num
+		LED *pLED;   //pointer
 	}LED_table;
 	private:
 		LED_table led_table[LED_NUM];
@@ -29,20 +29,22 @@ class Manager
 		virtual LED* getLED(const int num);
 		virtual LED* getLED(const char *name);
 	
-	//Baro Manager:
+	//Uart Manager:
+	#define UART_NUM 4
+	typedef struct{
+		char name[8];
+		uint8_t num;
+		IUART *pUart; 
+	}UART_table;
 	private:
+		UART_table uart_table[UART_NUM];
+		int uart_num;
 	public :
+		virtual int  Register_UART(const char *name,IUART *pUart);
+		virtual int  get_UART_Num();
+		virtual IUART *getUART(const int num);
+		virtual IUART *getUART(const char *name);
+	
 		
 };
-Manager manager();
-/*
-
-class manager
-{
-	register_adc(IADC *adc);
-	int get_adc_count();
-	IADC *adc get_adc(int index);
-};
-
-manager mananer;
-*/
+//Manager manager;

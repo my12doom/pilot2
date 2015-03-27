@@ -10,15 +10,16 @@ using namespace STM32F4;
 F4ADC f4adc(ADC1,ADC_Channel_4);
 BatteryVoltage battery_voltage(&f4adc,1.0);
 IBatteryVoltage * pBattery_Voltage= &battery_voltage;
-
-
 //Define LED Function Pin:
 #include <BSP\devices\ILED.h>
 #include <BSP\boards\dev_v1\LED.h>
 F4GPIO f4gpioC1(GPIOC,GPIO_Pin_1);
-LED led(&f4gpioC1);
-LED * pLED= &led;
-
+LED led_red(&f4gpioC1);
+LED * pLED_RED= &led_red;
+void init_led()
+{
+	//manager.Register_LED("LED_RED",pLED_RED);
+}
 
 //Define TIMER Function:
 #include <HAL\STM32F4\F4Timer.h>
@@ -26,9 +27,10 @@ LED * pLED= &led;
 //Timer1
 F4Timer f4TIM1(TIM1);
 ITimer * pTIM1 = &f4TIM1;
+
 void TIM1_Callback()
 {
-	pLED->toggle();
+	pLED_RED->toggle();
 }
 void init_timer1()
 {

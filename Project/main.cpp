@@ -43,6 +43,7 @@ extern "C" void delayms(int ms)
 }
 int main(void)
 {
+	//manager
 	/*
 
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
