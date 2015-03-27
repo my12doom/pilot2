@@ -1,3 +1,4 @@
+#pragma once
 #include "ISPI.h"
 #include <stm32f4xx_spi.h>
 

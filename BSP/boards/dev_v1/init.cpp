@@ -21,17 +21,18 @@ LED * pLED= &led;
 
 
 //Define TIMER Function:
-//Timer1
 #include <HAL\STM32F4\F4Timer.h>
 #include <HAL\Interface\ITimer.h>
+//Timer1
 F4Timer f4TIM1(TIM1);
 ITimer * pTIM1 = &f4TIM1;
 void TIM1_Callback()
 {
+	pLED->toggle();
 }
 void init_timer1()
 {
-	pTIM1->set_period(50000);//50ms
+	pTIM1->set_period(65000);//50ms
 	pTIM1->set_callback(TIM1_Callback);
 }
 extern "C" void TIM1_UP_TIM10_IRQHandler(void)
@@ -39,3 +40,26 @@ extern "C" void TIM1_UP_TIM10_IRQHandler(void)
 	pTIM1->call_callback();
 }
 //Timer2
+
+
+//Define UART Funtion:
+#include <HAL\STM32F4\F4UART.h>
+#include <HAL\Interface\IUART.h>
+F4UART f4uart(UART4);
+IUART * pUART4 = &f4uart;
+void init_uart4()
+{
+	pUART4->set_baudrate(115200);
+	pUART4->write("12345\n", 6);
+}
+
+extern "C" void UART4_IRQHandler(void)
+{
+	f4uart.UART4_IRQHandler();
+}
+extern "C" void DMA1_Stream4_IRQHandler()
+{
+	f4uart.DMA1_Steam4_IRQHandler();
+}
+
+
