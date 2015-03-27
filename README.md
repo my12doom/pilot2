@@ -46,7 +46,8 @@ Read this excellent tech report on transformations to become familiar with quate
 
 Usually a conversion between a earth fixed “ground” frame and the body fixed “in-air” frame is described via Euler-Angles.  
 There are multiple conventions of the Euler angles. In aerospace engineering the standard are the Tait–Bryan angles.   
-The rotation order for the Tait-Bryan angles is   ![zyx](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imge68c69ae0c88ba06ed9c94b02dde7a15.png)  (see the figure):
+The rotation order for the Tait-Bryan angles is   ![zyx](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imge68c69ae0c88ba06ed9c94b02dde7a15.png)  (see the figure):  
+
 rotation of ![x](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img535b15667b86f1b118010d4c218fecb9.png)around  X (yaw)  
 
 rotation of ![y](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgb35e24d8a08c0ab01195f2ad2a78fab7.png) around Y (pitch)  
