@@ -1,10 +1,11 @@
 Frames of Reference
-
+==============
 This page gives an overview of the different frames used in the PX4 firmware.
 Coordinate Systems
+==============
 
 Geographic Coordinate System
-
+---------------------------
 Represents position on earth with a longitude and latitude value (Geographic_coordinate_system). Additionally the altitude may may be included. The altitude can be expressed as distance from the earth center or as altitude above the mean sea level. All in all, this gives a spherical coordinate system.
 ![coordinate](https://pixhawk.org/lib/exe/fetch.php?tok=0b3ee3&media=http%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2Fthumb%2F6%2F62%2FLatitude_and_Longitude_of_the_Earth.svg%2F652px-Latitude_and_Longitude_of_the_Earth.svg.png)
 NED Coordinate System
@@ -17,19 +18,21 @@ See North east down for details.
 Frames
 
 Inertial frame
-
+---------------------------
 A fixed frame. For most low range MAV applications an earth-fixed NED frame at the starting point or aligned with the room.
 ECEF - Earth-Centered, Earth-Fixed frame
 
 Cartesian coordinate system at the center of the earth. The positive z axis goes through the north pole. The x and y axes are on the equatorial plane.
-Body Fixed Frame
 
+Body Fixed Frame
+---------------------------
 Attached to the aircraft.
 The x axis points in forward (defined by geometry and not by movement) direction. (= roll axis)
 The y axis points to the right (geometrically) (= pitch axis)
 The z axis points downwards (geometrically) (= yaw axis)
-Body NED Frame
 
+Body NED Frame
+---------------------------
 Attached to the aircraft.
 The x axis points towards the north pole.
 Th y axis points to the east
@@ -52,13 +55,13 @@ See the German Wikipedia article for details:http://de.wikipedia.org/wiki/Eulers
 Boundaries
 
 In order to avoid ambiguities the following limits are used:
-[pre]
+
 <p>![theta](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgca216094d11d752ea37d852fd0bd3bb5.png)</p>
 <p>![fin](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img8788e69d4828770129160ebf916c32c8.png)</p>
 <p>![fine](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img1ec8194a0a6f561e9c3ff500cc37596d.png)</p>
 
 
 Quaternion Representation
-
+---------------------------
 Rotation Averages
 Matlab Code
