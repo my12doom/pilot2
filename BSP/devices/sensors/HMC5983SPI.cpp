@@ -83,7 +83,7 @@ HMC5983::HMC5983()
 {
 }
 
-int HMC5983::init(HAL::SPI *SPI, HAL::GPIO *CS)
+int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 {
 	int i;
 	int j;

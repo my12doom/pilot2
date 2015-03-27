@@ -92,7 +92,7 @@ int MPU6000::write_reg(uint8_t reg, uint8_t data)
 	}
 }
 
-int MPU6000::init(HAL::SPI *SPI, HAL::GPIO *CS)
+int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 {
 	uint8_t who_am_i = 0;
 	int i;
