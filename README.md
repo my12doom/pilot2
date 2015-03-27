@@ -43,9 +43,12 @@ Read this excellent tech report on transformations to become familiar with quate
 Euler Angles
 
 Usually a conversion between a earth fixed “ground” frame and the body fixed “in-air” frame is described via Euler-Angles. There are multiple conventions of the Euler angles. In aerospace engineering the standard are the Tait–Bryan angles. The rotation order for the Tait-Bryan angles is   ![zyx](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imge68c69ae0c88ba06ed9c94b02dde7a15.png)  (see the figure):
-*rotation of ![x](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img535b15667b86f1b118010d4c218fecb9.png)around  X (yaw)
-*rotation of ![y](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgb35e24d8a08c0ab01195f2ad2a78fab7.png) around Y (pitch)
-*rotation of ![z](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img5e16cba094787c1a10e568c61c63a5fe.png) around Z (roll)
+rotation of ![x](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img535b15667b86f1b118010d4c218fecb9.png)around  X (yaw)  
+
+rotation of ![y](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgb35e24d8a08c0ab01195f2ad2a78fab7.png) around Y (pitch)  
+
+rotation of ![z](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img5e16cba094787c1a10e568c61c63a5fe.png) around Z (roll)  
+
 ![rotation](https://pixhawk.org/lib/exe/fetch.php?tok=de1983&media=http%3A%2F%2Fmrechte.free.fr%2Fpx4%2FLagewinkel-Drehung2.png)
 This gives the following transformation matrix:
 
@@ -57,9 +60,12 @@ Boundaries
 
 In order to avoid ambiguities the following limits are used:<
 
-*![theta](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgca216094d11d752ea37d852fd0bd3bb5.png)
-*![fin](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img8788e69d4828770129160ebf916c32c8.png)
-*![fine](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img1ec8194a0a6f561e9c3ff500cc37596d.png)
+![theta](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgca216094d11d752ea37d852fd0bd3bb5.png)  
+
+![fin](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img8788e69d4828770129160ebf916c32c8.png)  
+
+![fine](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img1ec8194a0a6f561e9c3ff500cc37596d.png)  
+
 
 
 Quaternion Representation
