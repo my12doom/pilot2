@@ -6,7 +6,7 @@ Coordinate Systems
 Geographic Coordinate System
 
 Represents position on earth with a longitude and latitude value (Geographic_coordinate_system). Additionally the altitude may may be included. The altitude can be expressed as distance from the earth center or as altitude above the mean sea level. All in all, this gives a spherical coordinate system.
-
+![coordinate](https://pixhawk.org/lib/exe/fetch.php?tok=0b3ee3&media=http%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2Fthumb%2F6%2F62%2FLatitude_and_Longitude_of_the_Earth.svg%2F652px-Latitude_and_Longitude_of_the_Earth.svg.png)
 NED Coordinate System
 
 The x axis is aligned with the vector to the north pole (tangent to meridians).
