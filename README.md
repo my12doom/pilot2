@@ -51,17 +51,18 @@ rotation of  around  (roll)
 
 >![rotation matrix](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img370b7b538e045463b478370f80ec238e.png)
  transforms a vector from the inertial frame to the body fixed frame: . Or in other words  describes  in the body frame .
-See the German Wikipedia article for details:http://de.wikipedia.org/wiki/Eulersche_Winkel#Luftfahrtnorm_.28DIN_9300.29_.28Yaw-Pitch-Roll.2C_Z.2C_Y.E2.80.99.2C_X.E2.80.99.E2.80.99.29
+>See the German Wikipedia article for details:[WIKI URL][1]
 Boundaries
 
 >In order to avoid ambiguities the following limits are used:
 
->![theta](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgca216094d11d752ea37d852fd0bd3bb5.png)</p>
->![fin](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img8788e69d4828770129160ebf916c32c8.png)</p>
->![fine](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img1ec8194a0a6f561e9c3ff500cc37596d.png)</p>
+>![theta](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgca216094d11d752ea37d852fd0bd3bb5.png)
+>![fin](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img8788e69d4828770129160ebf916c32c8.png)
+>![fine](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img1ec8194a0a6f561e9c3ff500cc37596d.png)
 
 
 Quaternion Representation
 ---------------------------
 Rotation Averages
 Matlab Code
+[1]:http://de.wikipedia.org/wiki/Eulersche_Winkel#Luftfahrtnorm_.28DIN_9300.29_.28Yaw-Pitch-Roll.2C_Z.2C_Y.E2.80.99.2C_X.E2.80.99.E2.80.99.29 "Google"
