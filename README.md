@@ -47,18 +47,18 @@ rotation of  around  (yaw)
 rotation of  around Y' (pitch)
 rotation of  around  (roll)
 ![rotation](https://pixhawk.org/lib/exe/fetch.php?tok=de1983&media=http%3A%2F%2Fmrechte.free.fr%2Fpx4%2FLagewinkel-Drehung2.png)
-This gives the following transformation matrix:
+>This gives the following transformation matrix:
 
-![rotation matrix](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img370b7b538e045463b478370f80ec238e.png)
+>![rotation matrix](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img370b7b538e045463b478370f80ec238e.png)
  transforms a vector from the inertial frame to the body fixed frame: . Or in other words  describes  in the body frame .
 See the German Wikipedia article for details:http://de.wikipedia.org/wiki/Eulersche_Winkel#Luftfahrtnorm_.28DIN_9300.29_.28Yaw-Pitch-Roll.2C_Z.2C_Y.E2.80.99.2C_X.E2.80.99.E2.80.99.29
 Boundaries
 
-In order to avoid ambiguities the following limits are used:
+>In order to avoid ambiguities the following limits are used:
 
-<p>![theta](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgca216094d11d752ea37d852fd0bd3bb5.png)</p>
-<p>![fin](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img8788e69d4828770129160ebf916c32c8.png)</p>
-<p>![fine](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img1ec8194a0a6f561e9c3ff500cc37596d.png)</p>
+>![theta](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgca216094d11d752ea37d852fd0bd3bb5.png)</p>
+>![fin](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img8788e69d4828770129160ebf916c32c8.png)</p>
+>![fine](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img1ec8194a0a6f561e9c3ff500cc37596d.png)</p>
 
 
 Quaternion Representation
