@@ -1,48 +1,52 @@
-Frames of Reference
-==============
+#Frames of Reference
 This page gives an overview of the different frames used in the PX4 firmware.
-Coordinate Systems
-==============
+#Coordinate Systems
 
-Geographic Coordinate System
----------------------------
+##Geographic Coordinate System
 Represents position on earth with a longitude and latitude value (Geographic_coordinate_system). Additionally the altitude may may be included. The altitude can be expressed as distance from the earth center or as altitude above the mean sea level. All in all, this gives a spherical coordinate system.
 ![coordinate](https://pixhawk.org/lib/exe/fetch.php?tok=0b3ee3&media=http%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2Fthumb%2F6%2F62%2FLatitude_and_Longitude_of_the_Earth.svg%2F652px-Latitude_and_Longitude_of_the_Earth.svg.png)
-NED Coordinate System
+##NED Coordinate System
 
-The x axis is aligned with the vector to the north pole (tangent to meridians).
-The y axis points to the east side (tangent to parallels)
-The z axis points to the center of the earth
-This is a classical cartesian coordinate system where the 3 axes are orthogonal to each other.
+The x axis is aligned with the vector to the north pole (tangent to meridians)  
+
+The y axis points to the east side (tangent to parallels)  
+
+The z axis points to the center of the earth  
+
+This is a classical cartesian coordinate system where the 3 axes are orthogonal to each other.  
+
 See North east down for details.
-Frames
+#Frames
 
-Inertial frame
----------------------------
+##Inertial frame
 A fixed frame. For most low range MAV applications an earth-fixed NED frame at the starting point or aligned with the room.
 ECEF - Earth-Centered, Earth-Fixed frame
 
 Cartesian coordinate system at the center of the earth. The positive z axis goes through the north pole. The x and y axes are on the equatorial plane.
 
-Body Fixed Frame
----------------------------
+##Body Fixed Frame
 Attached to the aircraft.
 The x axis points in forward (defined by geometry and not by movement) direction. (= roll axis)
 The y axis points to the right (geometrically) (= pitch axis)
 The z axis points downwards (geometrically) (= yaw axis)
 
-Body NED Frame
----------------------------
-Attached to the aircraft.
-*The x axis points towards the north pole.
-*Th y axis points to the east
-&The z axis points downwards to the center of the earth
-Transformation between frames
----------------------------
-Read this excellent tech report on transformations to become familiar with quaternion and matrix based representations.
-Euler Angles
+##body NED Frame
+Attached to the aircraft.  
 
-Usually a conversion between a earth fixed “ground” frame and the body fixed “in-air” frame is described via Euler-Angles. There are multiple conventions of the Euler angles. In aerospace engineering the standard are the Tait–Bryan angles. The rotation order for the Tait-Bryan angles is   ![zyx](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imge68c69ae0c88ba06ed9c94b02dde7a15.png)  (see the figure):
+The x axis points towards the north pole.  
+
+The y axis points to the east  
+
+The z axis points downwards to the center of the earth  
+
+##Transformation between frames
+Read this excellent tech report on transformations to become familiar with quaternion and matrix based representations.  
+
+#Euler Angles  
+
+Usually a conversion between a earth fixed “ground” frame and the body fixed “in-air” frame is described via Euler-Angles.  
+There are multiple conventions of the Euler angles. In aerospace engineering the standard are the Tait–Bryan angles.   
+The rotation order for the Tait-Bryan angles is   ![zyx](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imge68c69ae0c88ba06ed9c94b02dde7a15.png)  (see the figure):
 rotation of ![x](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img535b15667b86f1b118010d4c218fecb9.png)around  X (yaw)  
 
 rotation of ![y](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgb35e24d8a08c0ab01195f2ad2a78fab7.png) around Y (pitch)  
@@ -53,12 +57,14 @@ rotation of ![z](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img5e16
 This gives the following transformation matrix:
 
 ![rotation matrix](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img370b7b538e045463b478370f80ec238e.png)
- transforms a vector from the inertial frame to the body fixed frame: . Or in other words  describes  in the body frame .
-See the German Wikipedia article for details:[WIKI URL][1]<
+ transforms a vector from the inertial frame to the body fixed frame: . Or in other words  describes  in the body frame .  
+ 
+See the German Wikipedia article for details:[WIKI URL][1]  
+
 Boundaries
 --------------------------
 
-In order to avoid ambiguities the following limits are used:<
+In order to avoid ambiguities the following limits are used:  
 
 ![theta](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgca216094d11d752ea37d852fd0bd3bb5.png)  
 
