@@ -57,7 +57,8 @@ rotation of ![y](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/imgb35e
 
 rotation of ![z](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img5e16cba094787c1a10e568c61c63a5fe.png) around Z (roll)  
 
-![rotation](https://pixhawk.org/lib/exe/fetch.php?tok=de1983&media=http%3A%2F%2Fmrechte.free.fr%2Fpx4%2FLagewinkel-Drehung2.png)
+![rotation](https://pixhawk.org/lib/exe/fetch.php?tok=de1983&media=http%3A%2F%2Fmrechte.free.fr%2Fpx4%2FLagewinkel-Drehung2.png)  
+
 This gives the following transformation matrix:
 
 ![rotation matrix](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img370b7b538e045463b478370f80ec238e.png)
