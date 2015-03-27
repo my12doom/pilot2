@@ -733,6 +733,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\dev_v1\BatteryVoltage.cpp</FilePath>
             </File>
+            <File>
+              <FileName>LED.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v1\LED.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

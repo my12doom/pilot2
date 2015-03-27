@@ -2,5 +2,15 @@
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
 #include <HAL/STM32F4/F4Interfaces.h>
-using namespace HAL;
-using namespace STM32F4;
+
+/*
+
+class manager
+{
+	register_adc(IADC *adc);
+	int get_adc_count();
+	IADC *adc get_adc(int index);
+};
+
+manager mananer;
+*/

@@ -7,10 +7,10 @@
 #include <BSP/devices/sensors/MS5611_SPI.h>
 #include <BSP/boards/dev_v1/RCIN.h>
 #include <BSP/boards/dev_v1/RCOUT.h>
-#include <BSP/devices/sensors/MPU6000.h>
-#include <BSP/devices/sensors/HMC5983SPI.h>
+//#include <BSP/devices/sensors/MPU6000.h>
+//#include <BSP/devices/sensors/HMC5983SPI.h>
 #include <stdio.h>
-#include "MPU9250SPI.h"
+//#include <BSP/devices/sensors/MPU9250SPI.h>
 
 //#include "F4UART.h"
 #include "stm32F4xx_gpio.h"
@@ -40,9 +40,9 @@ extern "C" void delayms(int ms)
 {
 	systimer->delayms(ms);
 }
-ITimer * pTIM1=new F4Timer(TIM1);
 int main(void)
 {
+	/*
 
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);

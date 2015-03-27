@@ -21,7 +21,7 @@ namespace STM32F4
 		~F4Timer(){};
 		virtual void set_period(uint32_t period);				// micro-second
 		virtual void set_callback(timer_callback cb);	
-		void call_callback();
+		virtual void call_callback();
 			
 	};
 }
