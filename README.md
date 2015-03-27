@@ -25,10 +25,13 @@ ECEF - Earth-Centered, Earth-Fixed frame
 Cartesian coordinate system at the center of the earth. The positive z axis goes through the north pole. The x and y axes are on the equatorial plane.
 
 ##Body Fixed Frame
-Attached to the aircraft.
-The x axis points in forward (defined by geometry and not by movement) direction. (= roll axis)
-The y axis points to the right (geometrically) (= pitch axis)
-The z axis points downwards (geometrically) (= yaw axis)
+Attached to the aircraft.  
+
+The x axis points in forward (defined by geometry and not by movement) direction. (= roll axis)  
+
+The y axis points to the right (geometrically) (= pitch axis)  
+
+The z axis points downwards (geometrically) (= yaw axis)  
 
 ##body NED Frame
 Attached to the aircraft.  
