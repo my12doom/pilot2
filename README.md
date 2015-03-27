@@ -61,8 +61,8 @@ rotation of ![z](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img5e16
 
 This gives the following transformation matrix:
 
-![rotation matrix](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img370b7b538e045463b478370f80ec238e.png)
- transforms a vector from the inertial frame to the body fixed frame: . Or in other words  describes  in the body frame .  
+![rotation matrix](https://pixhawk.org/lib/exe/fetch.php?media=wiki:latex:/img370b7b538e045463b478370f80ec238e.png)  
+transforms a vector from the inertial frame to the body fixed frame: . Or in other words  describes  in the body frame .  
  
 See the German Wikipedia article for details:[WIKI URL][1]  
 
