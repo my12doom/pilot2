@@ -77,6 +77,9 @@ In order to avoid ambiguities the following limits are used:
 
 Quaternion Representation
 ---------------------------
-Rotation Averages
-Matlab Code
+[Rotation Averages][2]  
+
+[RMatlab Code][3]
 [1]:http://de.wikipedia.org/wiki/Eulersche_Winkel#Luftfahrtnorm_.28DIN_9300.29_.28Yaw-Pitch-Roll.2C_Z.2C_Y.E2.80.99.2C_X.E2.80.99.E2.80.99.29 "Google"
+[2]:http://www.soest.hawaii.edu/wessel/courses/gg711/pdf/Gramkow_2001_JMIV.pdf
+[3]:http://www.mathworks.com/matlabcentral/fileexchange/40098-tolgabirdal-averaging-quaternions
