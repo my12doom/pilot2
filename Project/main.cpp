@@ -60,7 +60,9 @@ int main(void)
 	*/
 
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-	init_accelerometers();
+	
+	init_all_device();
+	
 	IAccelerometer * accel = manager.get_accelerometer(0);
 	IGyro * gyro = manager.get_gyroscope(0);
 	F4GPIO debug(GPIOA,GPIO_Pin_7);

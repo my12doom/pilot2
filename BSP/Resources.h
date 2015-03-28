@@ -3,10 +3,10 @@
 #include <HAL/Interface/Interfaces.h>
 #include <HAL/STM32F4/F4Interfaces.h>
 #include <BSP/devices/ILED.h>
+#include <BSP/devices/IGyro.h>
 #include <BSP/boards/dev_v1/LED.h>
 #include <BSP/boards/dev_v1/BatteryVoltage.h>
 #include <BSP/devices/IAccelerometer.h>
-#include <BSP/devices/IGyro.h>
 #include <BSP/devices/IMagnetometer.h>
 
 using namespace BSP;
@@ -18,88 +18,69 @@ class Manager
 	public :
 		Manager();
 		~Manager(){};
+		#define LED_NUM 5
+		#define UART_NUM 4
+		#define TIMER_NUM 4
+		#define BATTERYVOLTAGE_NUM 1
+			
+			
+		typedef struct{
+			char name[10];//name 
+			LED *pLED;   //pointer
+		}LED_table;
+		typedef struct{
+			char name[10];
+			IUART *pUart; 
+		}UART_table;
+		typedef struct{
+			char name[10];
+			uint8_t num;
+			ITimer *pTimer; 
+		}Timer_table;
+		typedef struct{
+			char name[10];
+			uint8_t num;
+			IBatteryVoltage *pIBatteryVoltage; 
+		}BatteryVoltage_table;
 	
-	//LED Manager:
-	#define LED_NUM 5
-	typedef struct{
-		char name[10];//name 
-		uint8_t num; //num
-		LED *pLED;   //pointer
-	}LED_table;
+	
 	private:
 		LED_table led_table[LED_NUM];
 		int led_num;
-	public :
-		virtual int  Register_LED(const char *name,LED *pLED);
-		virtual int  get_LED_Num();
-		virtual LED* getLED(const int num);
-		virtual LED* getLED(const char *name);
-	
-	//Uart Manager:
-	#define UART_NUM 4
-	typedef struct{
-		char name[10];
-		uint8_t num;
-		IUART *pUart; 
-	}UART_table;
-	private:
 		UART_table uart_table[UART_NUM];
 		int uart_num;
-	public :
-		virtual int  Register_UART(const char *name,IUART *pUart);
-		virtual int  get_UART_Num();
-		virtual IUART *getUART(const int num);
-		virtual IUART *getUART(const char *name);
-	
-	//Timer Manager:
-	#define TIMER_NUM 4
-	typedef struct{
-		char name[10];
-		uint8_t num;
-		ITimer *pTimer; 
-	}Timer_table;
-	private:
 		Timer_table timer_table[TIMER_NUM];
 		int timer_num;
-	public :
-		virtual int  Register_Timer(const char *name,ITimer *pTimer);
-		virtual int  get_Timer_Num();
-		virtual ITimer *getTimer(const int num);
-		virtual ITimer *getTimer(const char *name);
-	
-	
-	//BatteyVotage Manager:
-	#define BATTERYVOLTAGE_NUM 1
-	private:
-		typedef struct{
-		char name[10];
-		uint8_t num;
-		IBatteryVoltage *pIBatteryVoltage; 
-	}BatteryVoltage_table;
 		BatteryVoltage_table batteryvoltage_table[BATTERYVOLTAGE_NUM];
 		int batteryvoltage_num;
-	public :
-		virtual int Register_BatteryVoltage(const char *name,IBatteryVoltage *pIBatteryVoltage);
-		virtual IBatteryVoltage *getBatteryVoltage(const char *name);
-	
-	
-	
-	public:
-		int register_accelerometer(devices::IAccelerometer *accel);
-		devices::IAccelerometer * get_accelerometer(int index);
-		int get_accelerometer_count();
-	private:
 		int accelerometer_count;
 		devices::IAccelerometer * accelerometers[MAX_ACCELEROMETER_COUNT];
-
-	public:
-		int register_gyroscope(devices::IGyro *gyro);
-		devices::IGyro * get_gyroscope(int index);
-		int get_gyroscope_count();
-	private:
 		int gyroscope_count;
 		devices::IGyro * gyroscopes[MAX_ACCELEROMETER_COUNT];	
-
+	
+	public :
+		int get_LED_Num();
+		int get_UART_Num();
+		int get_Timer_Num();
+		int get_gyroscope_count();
+		int get_accelerometer_count();
+	
+		
+		//register function:
+		int register_LED(const char *name,LED *pLED);
+		int register_gyroscope(devices::IGyro *gyro);
+		int register_UART(const char *name,IUART *pUart);
+		int register_Timer(const char *name,ITimer *pTimer);
+		int register_accelerometer(devices::IAccelerometer *accel);
+		int register_BatteryVoltage(const char *name,IBatteryVoltage *pIBatteryVoltage);
+	
+		//getDevice function:
+		LED* getLED(const char *name);
+		IUART *getUART(const char *name);
+		ITimer *getTimer(const char *name);
+		IBatteryVoltage *getBatteryVoltage(const char *name);
+		devices::IAccelerometer * get_accelerometer(int index);
+		devices::IGyro * get_gyroscope(int index);
 };
 //Declear manager as global:
 extern Manager manager;

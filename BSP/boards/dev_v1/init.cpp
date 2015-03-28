@@ -26,8 +26,8 @@ void init_led()
 {
 	f4gpioC4.set_mode(MODE_OUT_PushPull);
 	f4gpioC5.set_mode(MODE_OUT_PushPull);
-	manager.Register_LED("LED_GREEN",pLED_GREEN);
-	manager.Register_LED("LED_RED",pLED_RED);
+	manager.register_LED("LED_RED",pLED_RED);
+	manager.register_LED("LED_GREEN",pLED_GREEN);
 }
 
 //Define TIMER Function:
@@ -43,7 +43,7 @@ void TIM1_Callback()
 }
 void init_timer1()
 {
-	manager.Register_Timer("Timer1",pTIM1);
+	manager.register_Timer("Timer1",pTIM1);
 	manager.getTimer("Timer1")->set_period(50000);
 	manager.getTimer("Timer1")->set_callback(TIM1_Callback);
 }
@@ -63,7 +63,7 @@ void init_uart4()
 {
 	pUART4->set_baudrate(115200);
 	pUART4->write("12345\n", 6);
-	manager.Register_UART("UART4",pUART4);
+	manager.register_UART("UART4",pUART4);
 }
 
 
@@ -100,6 +100,15 @@ BatteryVoltage battery_voltage(&f4adc,1.0);
 IBatteryVoltage * pBattery_Voltage= &battery_voltage;
 void init_BatteryVoltage()
 {
-	manager.Register_BatteryVoltage("BattertVoltage",pBattery_Voltage);
+	manager.register_BatteryVoltage("BattertVoltage",pBattery_Voltage);
 	//manager.getBatteryVoltage("BatteryVoltage")->read();
+}
+
+void init_all_device()
+{
+	init_led();
+	init_uart4();
+	init_timer1();
+	init_BatteryVoltage();
+	init_accelerometers();
 }
