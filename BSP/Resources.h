@@ -2,8 +2,9 @@
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
 #include <HAL/STM32F4/F4Interfaces.h>
-#include <BSP\devices\ILED.h>
-#include <BSP\boards\dev_v1\LED.h>
+#include <BSP/devices/ILED.h>
+#include <BSP/boards/dev_v1/LED.h>
+#include <BSP/boards/dev_v1/BatteryVoltage.h>
 #include <BSP/devices/IAccelerometer.h>
 #include <BSP/devices/IGyro.h>
 #include <BSP/devices/IMagnetometer.h>
@@ -66,6 +67,23 @@ class Manager
 		virtual ITimer *getTimer(const int num);
 		virtual ITimer *getTimer(const char *name);
 	
+	
+	//BatteyVotage Manager:
+	#define BATTERYVOLTAGE_NUM 1
+	private:
+		typedef struct{
+		char name[10];
+		uint8_t num;
+		IBatteryVoltage *pIBatteryVoltage; 
+	}BatteryVoltage_table;
+		BatteryVoltage_table batteryvoltage_table[BATTERYVOLTAGE_NUM];
+		int batteryvoltage_num;
+	public :
+		virtual int Register_BatteryVoltage(const char *name,IBatteryVoltage *pIBatteryVoltage);
+		virtual IBatteryVoltage *getBatteryVoltage(const char *name);
+	
+	
+	
 	public:
 		int register_accelerometer(devices::IAccelerometer *accel);
 		devices::IAccelerometer * get_accelerometer(int index);
@@ -81,6 +99,7 @@ class Manager
 	private:
 		int gyroscope_count;
 		devices::IGyro * gyroscopes[MAX_ACCELEROMETER_COUNT];	
+
 };
 //Declear manager as global:
 extern Manager manager;

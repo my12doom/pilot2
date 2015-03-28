@@ -8,9 +8,9 @@
 #include <BSP\devices\IBatteryVoltage.h>
 using namespace BSP;
 using namespace STM32F4;
-F4ADC f4adc(ADC1,ADC_Channel_4);
-BatteryVoltage battery_voltage(&f4adc,1.0);
-IBatteryVoltage * pBattery_Voltage= &battery_voltage;
+
+
+
 //Define LED Function Pin:
 #include <BSP\devices\ILED.h>
 #include <BSP\boards\dev_v1\LED.h>
@@ -94,3 +94,12 @@ extern "C" void DMA1_Stream4_IRQHandler()
 }
 
 
+//Define BattertVoltage Function:
+F4ADC f4adc(ADC1,ADC_Channel_4);
+BatteryVoltage battery_voltage(&f4adc,1.0);
+IBatteryVoltage * pBattery_Voltage= &battery_voltage;
+void init_BatteryVoltage()
+{
+	manager.Register_BatteryVoltage("BattertVoltage",pBattery_Voltage);
+	//manager.getBatteryVoltage("BatteryVoltage")->read();
+}

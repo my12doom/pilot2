@@ -3,4 +3,5 @@
 void init_led();
 void init_uart4();
 void init_timer1();
+void init_BatteryVoltage();
 void init_accelerometers();

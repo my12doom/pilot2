@@ -7,8 +7,8 @@
 #include <BSP/devices/sensors/MS5611_SPI.h>
 #include <BSP/boards/dev_v1/RCIN.h>
 #include <BSP/boards/dev_v1/RCOUT.h>
-#include <BSP\Resources.h>
-#include <BSP\boards\dev_v1\init.h>
+#include <BSP/Resources.h>
+#include <BSP/boards/dev_v1/init.h>
 #include <BSP/devices/sensors/MPU6000.h>
 //#include <BSP/devices/sensors/HMC5983SPI.h>
 #include <stdio.h>
@@ -47,6 +47,7 @@ int main(void)
 	init_led();
 	init_uart4();
 	init_timer1();
+	init_BatteryVoltage();
 	manager.getLED("LED_RED")->off();
 	manager.getLED("LED_GREEN")->off();
 	while(1)
