@@ -45,6 +45,7 @@ int main(void)
 	init_led();
 	init_uart4();
 	init_timer1();
+	init_BatteryVoltage();
 	manager.getLED("LED_RED")->off();
 	manager.getLED("LED_GREEN")->off();
 	while(1)

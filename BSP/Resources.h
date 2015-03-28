@@ -4,6 +4,7 @@
 #include <HAL/STM32F4/F4Interfaces.h>
 #include <BSP\devices\ILED.h>
 #include <BSP\boards\dev_v1\LED.h>
+#include <BSP\boards\dev_v1\BatteryVoltage.h>
 using namespace BSP;
 using namespace STM32F4;
 class Manager
@@ -60,7 +61,23 @@ class Manager
 		virtual int  get_Timer_Num();
 		virtual ITimer *getTimer(const int num);
 		virtual ITimer *getTimer(const char *name);
-		
+	
+	
+	//BatteyVotage Manager:
+	#define BATTERYVOLTAGE_NUM 1
+	private:
+		typedef struct{
+		char name[10];
+		uint8_t num;
+		IBatteryVoltage *pIBatteryVoltage; 
+	}BatteryVoltage_table;
+		BatteryVoltage_table batteryvoltage_table[BATTERYVOLTAGE_NUM];
+		int batteryvoltage_num;
+	public :
+		virtual int Register_BatteryVoltage(const char *name,IBatteryVoltage *pIBatteryVoltage);
+		virtual IBatteryVoltage *getBatteryVoltage(const char *name);
+	
+	
 };
 //Declear manager as global:
 extern Manager manager;

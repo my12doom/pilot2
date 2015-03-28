@@ -103,5 +103,25 @@ ITimer *Manager::getTimer(const char *name)
 	//check if not valid,return null pointer:
 	return NULL;
 }
+int Manager::Register_BatteryVoltage(const char *name,IBatteryVoltage *pIBatteryVoltage)
+{
+	strcpy(batteryvoltage_table[batteryvoltage_num].name,name);
+	batteryvoltage_table[batteryvoltage_num].pIBatteryVoltage=pIBatteryVoltage;
+	batteryvoltage_num++;
+	return 0;
+}
+IBatteryVoltage *Manager::getBatteryVoltage(const char *name)
+{
+	for(int i=0;i<BATTERYVOLTAGE_NUM;i++)
+	{
+			//check if valid,return pointer:
+			if(0==strcmp(name,batteryvoltage_table[i].name))
+			{
+				return batteryvoltage_table[i].pIBatteryVoltage;
+			}
+	}
+	//check if not valid,return null pointer:
+	return NULL;
+}
 
 Manager manager;
