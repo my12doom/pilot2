@@ -23,9 +23,5 @@ namespace sensors
 	protected:
 		HAL::ISPI *spi;
 		HAL::IGPIO *CS;
-
-		int read_reg(uint8_t reg, void *out, int count);
-		int write_reg_core(uint8_t reg, uint8_t data);
-		int write_reg(uint8_t reg, uint8_t data);
 	};
 }
