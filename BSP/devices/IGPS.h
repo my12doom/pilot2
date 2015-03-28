@@ -22,5 +22,8 @@ namespace devices
 	{
 		// return 0 if new data available, 1 if old data, negative for error.
 		int read(gps_data *out);
+
+		// return false for hardware error(still return true for signal lost)
+		bool healthy();
 	};
 }

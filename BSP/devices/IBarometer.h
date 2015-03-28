@@ -13,5 +13,8 @@ namespace devices
 	{
 		// return 0 if new data available, 1 if old data, negative for error.
 		int read(baro_data *out);
+		
+		// return false if any error/waning
+		bool healthy();
 	};
 }
