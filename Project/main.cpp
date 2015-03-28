@@ -7,6 +7,7 @@
 #include <BSP/devices/sensors/MS5611_SPI.h>
 #include <BSP/boards/dev_v1/RCIN.h>
 #include <BSP/boards/dev_v1/RCOUT.h>
+#include <BSP\Resources.h>
 //#include <BSP/devices/sensors/MPU6000.h>
 //#include <BSP/devices/sensors/HMC5983SPI.h>
 #include <stdio.h>
@@ -42,6 +43,7 @@ extern "C" void delayms(int ms)
 }
 int main(void)
 {
+	//manager
 	/*
 
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
@@ -91,7 +93,7 @@ int main(void)
 		//printf("\r%d,%d,%d,%d,%d,%d", rcs[0], rcs[1], rcs[2], rcs[3], rcs[4], rcs[5]);
 	}
 	
-	/*
+	
 	while(1)
 	{
 		int data[2];
@@ -102,14 +104,6 @@ int main(void)
  		res = res;
 	}
 	*/
-}
-extern "C" void UART4_IRQHandler(void)
-{
-	pUart4->UART4_IRQHandler();
-}
-extern "C" void DMA1_Stream4_IRQHandler()
-{
-	pUart4->DMA1_Steam4_IRQHandler();
 }
 
 

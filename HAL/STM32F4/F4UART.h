@@ -1,3 +1,4 @@
+#pragma once
 #include "IUART.h"
 #include "stm32F4xx_usart.h"
 using namespace HAL;
