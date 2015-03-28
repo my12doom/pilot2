@@ -4,13 +4,18 @@
 #include <HAL/STM32F4/F4Interfaces.h>
 #include <BSP\devices\ILED.h>
 #include <BSP\boards\dev_v1\LED.h>
+#include <BSP/devices/IAccelerometer.h>
+#include <BSP/devices/IGyro.h>
+#include <BSP/devices/IMagnetometer.h>
+
 using namespace BSP;
 using namespace STM32F4;
+#define MAX_ACCELEROMETER_COUNT 5
 class Manager
 {
 	//Manager construct:
 	public :
-		Manager(){};
+		Manager();
 		~Manager(){};
 	
 	//LED Manager:
@@ -60,7 +65,22 @@ class Manager
 		virtual int  get_Timer_Num();
 		virtual ITimer *getTimer(const int num);
 		virtual ITimer *getTimer(const char *name);
-		
+	
+	public:
+		int register_accelerometer(devices::IAccelerometer *accel);
+		devices::IAccelerometer * get_accelerometer(int index);
+		int get_accelerometer_count();
+	private:
+		int accelerometer_count;
+		devices::IAccelerometer * accelerometers[MAX_ACCELEROMETER_COUNT];
+
+	public:
+		int register_gyroscope(devices::IGyro *gyro);
+		devices::IGyro * get_gyroscope(int index);
+		int get_gyroscope_count();
+	private:
+		int gyroscope_count;
+		devices::IGyro * gyroscopes[MAX_ACCELEROMETER_COUNT];	
 };
 //Declear manager as global:
 extern Manager manager;

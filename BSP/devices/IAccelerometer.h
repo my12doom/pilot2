@@ -13,11 +13,12 @@ namespace devices
 
 	class IAccelerometer
 	{
+	public:
 		// return 0 if new data available, 1 if old data, negative for error.
-		int read(accelerometer_data *out);
+		virtual int read(accelerometer_data *out) = 0;
 
 		// return false if any error/waning
-		bool healthy();
+		virtual bool healthy() = 0;
 
 	};
 }

@@ -9,7 +9,7 @@
 #include <BSP/boards/dev_v1/RCOUT.h>
 #include <BSP\Resources.h>
 #include <BSP\boards\dev_v1\init.h>
-//#include <BSP/devices/sensors/MPU6000.h>
+#include <BSP/devices/sensors/MPU6000.h>
 //#include <BSP/devices/sensors/HMC5983SPI.h>
 #include <stdio.h>
 //#include <BSP/devices/sensors/MPU9250SPI.h>
@@ -20,6 +20,7 @@
 using namespace STM32F4;
 using namespace HAL;
 using namespace sensors;
+using namespace devices;
 
 uint8_t recv_buffer[5];
 dev_v1::RCIN rc;
@@ -42,6 +43,7 @@ extern "C" void delayms(int ms)
 }
 int main(void)
 {
+	/*
 	init_led();
 	init_uart4();
 	init_timer1();
@@ -54,9 +56,16 @@ int main(void)
 		
 		//manager.getUART("UART4")->write("12345\n",6);
 	}
-		/*
+	*/
 
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
+	init_accelerometers();
+	IAccelerometer * accel = manager.get_accelerometer(0);
+	IGyro * gyro = manager.get_gyroscope(0);
+	F4GPIO debug(GPIOA,GPIO_Pin_7);
+	debug.set_mode(MODE_OUT_PushPull);
+	
+	/*
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);
 
 	F4GPIO cs(GPIOE,GPIO_Pin_7);
@@ -73,11 +82,13 @@ int main(void)
 	//MS5611_SPI baro(&spi2, &cs);
 	//baro.init();
 	
-	//MPU6000 mpu6000;
-	//mpu6000.init(&spi2, &cs_mpu6000);
+	MPU6000 mpu6000;
+	mpu6000.init(&spi2, &cs_mpu6000);
 	
-	HMC5983 hmc5983;
-	hmc5983.init(&spi2, &cs_5983);
+	*/
+	
+	//HMC5983 hmc5983;
+	//hmc5983.init(&spi2, &cs_5983);
 	
 	//Test Timer:
 	//init_MPU9250spi();
@@ -85,12 +96,19 @@ int main(void)
 	{
 		short data[7] = {0};
 		
-		int res = hmc5983.read(data);
+		accelerometer_data adata;
+		gyro_data gdata;
+		int res = accel->read(&adata);
+		res = gyro->read(&gdata);
 		
-		printf("\r%d, %d,%d,%d,%d,%d,%d,%d", res, data[0], data[1], data[2], data[3], data[4], data[5], data[6]);
+		float scale = 180/3.1415926f;
+		//printf("\r%d, %f,%f,%f,%f, angular rate: %f,%f,%f deg/s", res, adata.x, adata.y, adata.z, adata.temperature, gdata.x * scale, gdata.y * scale, gdata.z * scale);
 		
-		systimer->delayms(10);
+		//systimer->delayms(10);
+		debug.toggle();
 	}
+	
+	/*
 	
 	while(0)
 	{		

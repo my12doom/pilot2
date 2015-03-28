@@ -5,7 +5,7 @@ namespace STM32F4
 {
 	F4GPIO::F4GPIO(GPIO_TypeDef* GPIOx,uint32_t GPIO_Pin)
 	{
-		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA|RCC_AHB1Periph_GPIOB|RCC_AHB1Periph_GPIOC|RCC_AHB1Periph_GPIOD,ENABLE);
+		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA|RCC_AHB1Periph_GPIOB|RCC_AHB1Periph_GPIOC|RCC_AHB1Periph_GPIOD | RCC_AHB1Periph_GPIOE,ENABLE);
 		this->GPIOx = GPIOx;
 		this->GPIO_Pin    = GPIO_Pin;
 	}
@@ -54,13 +54,6 @@ namespace STM32F4
 	}
 	void F4GPIO::toggle()
 	{
-		if(1==GPIO_ReadInputDataBit(this->GPIOx,this->GPIO_Pin))
-		{
-			GPIO_ResetBits(this->GPIOx,this->GPIO_Pin);
-		}
-		else
-		{
-			GPIO_SetBits(this->GPIOx,this->GPIO_Pin);
-		}
+		GPIO_ToggleBits(GPIOx, GPIO_Pin);
 	}
 }

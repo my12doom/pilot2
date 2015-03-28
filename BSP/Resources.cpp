@@ -4,6 +4,12 @@
 using namespace HAL;
 using namespace STM32F4;
 //Manager::LED part
+
+Manager::Manager()
+{
+	accelerometer_count = 0;
+	gyroscope_count = 0;
+}
 int  Manager::Register_LED(const char *name,LED *pLED)
 {
 	strcpy(led_table[led_num].name,name);
@@ -103,5 +109,44 @@ ITimer *Manager::getTimer(const char *name)
 	//check if not valid,return null pointer:
 	return NULL;
 }
+
+int Manager::register_accelerometer(devices::IAccelerometer *accel)
+{
+	if (accelerometer_count >= MAX_ACCELEROMETER_COUNT)
+		return -1;
+	
+	accelerometers[accelerometer_count++] = accel;
+	return 0;
+}
+devices::IAccelerometer * Manager::get_accelerometer(int index)
+{
+	if (index < 0 || index >= accelerometer_count)
+		return NULL;
+	return accelerometers[index];
+}
+int Manager::get_accelerometer_count()
+{
+	return accelerometer_count;
+}
+
+int Manager::register_gyroscope(devices::IGyro *gyro)
+{
+	if (gyroscope_count >= MAX_ACCELEROMETER_COUNT)
+		return -1;
+	
+	gyroscopes[gyroscope_count++] = gyro;
+	return 0;
+}
+devices::IGyro * Manager::get_gyroscope(int index)
+{
+	if (index < 0 || index >= gyroscope_count)
+		return NULL;
+	return gyroscopes[index];
+}
+int Manager::get_gyroscope_count()
+{
+	return gyroscope_count;
+}
+
 
 Manager manager;

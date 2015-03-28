@@ -13,10 +13,11 @@ namespace devices
 
 	class IMagnetometer
 	{
+	public:
 		// return 0 if new data available, 1 if old data, negative for error.
-		int read(mag_data *out);
+		virtual int read(mag_data *out);
 
 		// return false if any error/waning
-		bool healthy();
+		virtual bool healthy();
 	};
 }

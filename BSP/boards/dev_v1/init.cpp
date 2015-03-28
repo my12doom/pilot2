@@ -66,6 +66,24 @@ void init_uart4()
 	manager.Register_UART("UART4",pUART4);
 }
 
+
+#include <HAL\STM32F4\F4SPI.h>
+#include "sensors.h"
+F4SPI spi2;
+F4GPIO cs_mpu(GPIOE, GPIO_Pin_8);
+void init_accelerometers()
+{
+	spi2.init(SPI2);
+	static sensors::MPU6000 raw_device;
+	raw_device.init(&spi2, &cs_mpu);
+	
+	static dev_v1::mpu6000 device(&raw_device);
+	
+	manager.register_accelerometer(&device);
+	manager.register_gyroscope(&device);
+	
+}
+
 extern "C" void UART4_IRQHandler(void)
 {
 	f4uart.UART4_IRQHandler();
