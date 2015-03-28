@@ -22,6 +22,7 @@
 #define	GYRO_ZOUT_H		0x47
 #define	GYRO_ZOUT_L		0x48
 #define EXT_SENS_DATA	0x49
+#define	USER_CTRL		0x6A
 #define	PWR_MGMT_1		0x6B
 #define	PWR_MGMT_2		0x6C
 #define	WHO_AM_I		0x75
@@ -47,6 +48,7 @@ int MPU6000::read_reg(uint8_t reg, void *out, int count)
 {
 	int i;
 	uint8_t *p = (uint8_t*)out;
+	systimer->delayus(1);
 	CS->write(false);
 	systimer->delayus(1);
 
@@ -56,12 +58,14 @@ int MPU6000::read_reg(uint8_t reg, void *out, int count)
 
 	systimer->delayus(1);
 	CS->write(true);
+	systimer->delayus(1);
 
 	return 0;
 }
 
 int MPU6000::write_reg_core(uint8_t reg, uint8_t data)
 {
+	systimer->delayus(1);
 	CS->write(false);
 	systimer->delayus(1);
 
@@ -70,6 +74,7 @@ int MPU6000::write_reg_core(uint8_t reg, uint8_t data)
 
 	systimer->delayus(1);
 	CS->write(true);
+	systimer->delayus(1);
 
 	return 0;
 }
@@ -83,16 +88,16 @@ int MPU6000::write_reg(uint8_t reg, uint8_t data)
 		write_reg_core(reg, data);
 		read_reg(reg, &read, 1);
 
-		//if (read == data)
+		if (read == data)
 			return 0;
-		//else
-		//	TRACE("reg(%02x) error %02x/%02x\n", reg, read, data);
+		else
+			TRACE("reg(%02x) error %02x/%02x\n", reg, read, data);
 		
 		systimer->delayms(10);
 	}
 }
 
-int MPU6000::init(HAL::SPI *SPI, HAL::GPIO *CS)
+int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 {
 	uint8_t who_am_i = 0;
 	int i;
@@ -108,6 +113,7 @@ int MPU6000::init(HAL::SPI *SPI, HAL::GPIO *CS)
 	TRACE("start MPU6000\r\n");
 	write_reg_core(PWR_MGMT_1, 0x80);
 	systimer->delayms(10);
+	//write_reg(USER_CTRL, 0x10);
 	write_reg(PWR_MGMT_1, 0x00);
 	write_reg(PWR_MGMT_2, 0x00);
 	write_reg(SMPLRT_DIV, 0x01);
