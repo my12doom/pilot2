@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
 #include <HAL/STM32F4/F4Interfaces.h>
-#include <BSP\devices\ILED.h>
-#include <BSP\boards\dev_v1\LED.h>
-#include <BSP\boards\dev_v1\BatteryVoltage.h>
+#include <BSP/devices/ILED.h>
+#include <BSP/boards/dev_v1/LED.h>
+#include <BSP/boards/dev_v1/BatteryVoltage.h>
 using namespace BSP;
 using namespace STM32F4;
 class Manager

@@ -1,4 +1,4 @@
-#include <BSP\Resources.h>
+#include <BSP/Resources.h>
 #include <stdlib.h>
 #include <string.h>
 using namespace HAL;
