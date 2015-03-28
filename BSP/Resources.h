@@ -16,7 +16,7 @@ class Manager
 	//LED Manager:
 	#define LED_NUM 5
 	typedef struct{
-		char name[8];//name 
+		char name[10];//name 
 		uint8_t num; //num
 		LED *pLED;   //pointer
 	}LED_table;
@@ -32,7 +32,7 @@ class Manager
 	//Uart Manager:
 	#define UART_NUM 4
 	typedef struct{
-		char name[8];
+		char name[10];
 		uint8_t num;
 		IUART *pUart; 
 	}UART_table;
@@ -45,6 +45,22 @@ class Manager
 		virtual IUART *getUART(const int num);
 		virtual IUART *getUART(const char *name);
 	
+	//Timer Manager:
+	#define TIMER_NUM 4
+	typedef struct{
+		char name[10];
+		uint8_t num;
+		ITimer *pTimer; 
+	}Timer_table;
+	private:
+		Timer_table timer_table[TIMER_NUM];
+		int timer_num;
+	public :
+		virtual int  Register_Timer(const char *name,ITimer *pTimer);
+		virtual int  get_Timer_Num();
+		virtual ITimer *getTimer(const int num);
+		virtual ITimer *getTimer(const char *name);
 		
 };
-//Manager manager;
+//Declear manager as global:
+extern Manager manager;

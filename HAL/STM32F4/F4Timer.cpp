@@ -7,15 +7,14 @@ namespace STM32F4
 {
 	F4Timer::F4Timer(TIM_TypeDef* TIMx)
 	{	
-		TimerInit(this->TIMx);
+		this->TIMx=TIMx;
 	}
 	void F4Timer::TimerInit(TIM_TypeDef* TIMx)
 	{	
+		NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 		NVIC_InitTypeDef NVIC_InitStructure;
-		TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 		if(TIM1==TIMx)
 		{	
-			RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1,ENABLE);
 			NVIC_InitStructure.NVIC_IRQChannel = TIM1_UP_TIM10_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
@@ -23,10 +22,60 @@ namespace STM32F4
 			NVIC_Init(&NVIC_InitStructure);
 		}
 		else if(TIM2==TIMx)
-		{}
+		{
+			NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+		}
+		else if(TIM3==TIMx)
+		{
+			NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+		}
+		else if(TIM4==TIMx)
+		{
+			NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+		}
+		else if(TIM5==TIMx)
+		{
+			NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 4;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+		}
+		else if(TIM6==TIMx)
+		{
+			NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 6;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+		}
 	}
 	void F4Timer::set_period(uint32_t period)
 	{
+		if(TIM1==TIMx)
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1,ENABLE);
+		if(TIM2==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2,ENABLE);
+		if(TIM3==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3,ENABLE);
+		if(TIM4==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4,ENABLE);
+		if(TIM5==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5,ENABLE);
+		if(TIM6==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6,ENABLE);
 		TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 		TIM_DeInit(TIMx);
 		TIM_InternalClockConfig(TIMx);
@@ -40,6 +89,7 @@ namespace STM32F4
 		TIM_ARRPreloadConfig(TIMx,DISABLE);
 		TIM_ITConfig(TIMx,TIM_IT_Update,ENABLE);
 		TIM_Cmd(TIMx,ENABLE);
+		TimerInit(this->TIMx);
 	}
 	void F4Timer::set_callback(timer_callback cb)
 	{		

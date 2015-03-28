@@ -1,4 +1,5 @@
 #include <BSP\Resources.h>
+#include <BSP\boards\dev_v1\init.h>
 #include "stm32F4xx.h"
 
 
@@ -13,12 +14,20 @@ IBatteryVoltage * pBattery_Voltage= &battery_voltage;
 //Define LED Function Pin:
 #include <BSP\devices\ILED.h>
 #include <BSP\boards\dev_v1\LED.h>
-F4GPIO f4gpioC1(GPIOC,GPIO_Pin_1);
-LED led_red(&f4gpioC1);
+//set gpioc pin4:
+F4GPIO f4gpioC4(GPIOC,GPIO_Pin_4);
+LED led_red(&f4gpioC4);
 LED * pLED_RED= &led_red;
+//set gpio pin5:
+F4GPIO f4gpioC5(GPIOC,GPIO_Pin_5);
+LED led_green(&f4gpioC5);
+LED * pLED_GREEN= &led_green;
 void init_led()
 {
-	//manager.Register_LED("LED_RED",pLED_RED);
+	f4gpioC4.set_mode(MODE_OUT_PushPull);
+	f4gpioC5.set_mode(MODE_OUT_PushPull);
+	manager.Register_LED("LED_GREEN",pLED_GREEN);
+	manager.Register_LED("LED_RED",pLED_RED);
 }
 
 //Define TIMER Function:
@@ -30,16 +39,17 @@ ITimer * pTIM1 = &f4TIM1;
 
 void TIM1_Callback()
 {
-	pLED_RED->toggle();
+	manager.getLED("LED_RED")->toggle();
 }
 void init_timer1()
 {
-	pTIM1->set_period(65000);//50ms
-	pTIM1->set_callback(TIM1_Callback);
+	manager.Register_Timer("Timer1",pTIM1);
+	manager.getTimer("Timer1")->set_period(50000);
+	manager.getTimer("Timer1")->set_callback(TIM1_Callback);
 }
 extern "C" void TIM1_UP_TIM10_IRQHandler(void)
 {
-	pTIM1->call_callback();
+	f4TIM1.call_callback();
 }
 //Timer2
 
@@ -53,6 +63,7 @@ void init_uart4()
 {
 	pUART4->set_baudrate(115200);
 	pUART4->write("12345\n", 6);
+	manager.Register_UART("UART4",pUART4);
 }
 
 extern "C" void UART4_IRQHandler(void)

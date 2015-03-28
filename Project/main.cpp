@@ -8,6 +8,7 @@
 #include <BSP/boards/dev_v1/RCIN.h>
 #include <BSP/boards/dev_v1/RCOUT.h>
 #include <BSP\Resources.h>
+#include <BSP\boards\dev_v1\init.h>
 //#include <BSP/devices/sensors/MPU6000.h>
 //#include <BSP/devices/sensors/HMC5983SPI.h>
 #include <stdio.h>
@@ -20,11 +21,9 @@ using namespace STM32F4;
 using namespace HAL;
 using namespace sensors;
 
-F4UART * pUart4=new F4UART(UART4);
 uint8_t recv_buffer[5];
 dev_v1::RCIN rc;
 dev_v1::RCOUT rcout;
-
 void delay()
 {
 	int64_t t = systimer->gettime();
@@ -43,8 +42,19 @@ extern "C" void delayms(int ms)
 }
 int main(void)
 {
-	//manager
-	/*
+	init_led();
+	init_uart4();
+	init_timer1();
+	manager.getLED("LED_RED")->off();
+	manager.getLED("LED_GREEN")->off();
+	while(1)
+	{
+		//manager.getLED("LED_RED")->off();
+		//manager.getLED("LED_GREEN")->off();
+		
+		//manager.getUART("UART4")->write("12345\n",6);
+	}
+		/*
 
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);

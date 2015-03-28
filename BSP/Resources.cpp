@@ -70,3 +70,38 @@ IUART *Manager::getUART(const char *name)
 	//check if not valid,return null pointer:
 	return NULL;
 }
+	
+//Manager::Timer part:
+int Manager::Register_Timer(const char *name,ITimer *pTimer)
+{
+	strcpy(timer_table[timer_num].name,name);
+	timer_table[timer_num].num=timer_num;
+	timer_table[timer_num].pTimer=pTimer;
+	timer_num++;
+	return 0;
+}
+int Manager::get_Timer_Num()
+{
+	return timer_num;
+}
+ITimer *Manager::getTimer(const int num)
+{
+	if(num>timer_num)
+		return NULL;
+	return timer_table[num].pTimer;
+}
+ITimer *Manager::getTimer(const char *name)
+{
+	for(int i=0;i<TIMER_NUM;i++)
+	{
+			//check if valid,return pointer:
+			if(0==strcmp(name,timer_table[i].name))
+			{
+				return timer_table[i].pTimer;
+			}
+	}
+	//check if not valid,return null pointer:
+	return NULL;
+}
+
+Manager manager;

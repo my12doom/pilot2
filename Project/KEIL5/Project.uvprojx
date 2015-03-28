@@ -175,7 +175,7 @@
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2CM3.DLL</Flash2>
-          <Flash3></Flash3>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -702,6 +702,11 @@
               <FileName>F4Timer.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4Timer.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>F4Storage.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4Storage.cpp</FilePath>
             </File>
           </Files>
         </Group>
