@@ -12,7 +12,7 @@ namespace STM32F4
 		uint32_t buffer_size;
 		uint32_t start_address;
 	public:
-		F4Storage(uint32_t page__size=0x20000,uint32_t buffer_size=40000,uint32_t start_address=0x080C0000);
+		F4Storage(uint32_t page__size=0x20000,uint32_t buffer_size=0x40000,uint32_t start_address=0x080C0000);
 		~F4Storage(){};
 		virtual int init();
 		virtual int total_size();

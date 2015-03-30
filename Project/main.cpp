@@ -1,30 +1,16 @@
-#include "stm32F4xx.h"
-#include "F4GPIO.h"
-#include "F4UART.h"
-#include "F4SPI.h"
-#include "F4Timer.h"
-#include "F4SysTimer.h"
-#include <BSP/devices/sensors/MS5611_SPI.h>
-#include <BSP/boards/dev_v1/RCIN.h>
-#include <BSP/boards/dev_v1/RCOUT.h>
+#include <string.h>
+
 #include <BSP/Resources.h>
 #include <BSP/boards/dev_v1/init.h>
-#include <BSP/devices/sensors/MPU6000.h>
-//#include <BSP/devices/sensors/HMC5983SPI.h>
 #include <stdio.h>
-//#include <BSP/devices/sensors/MPU9250SPI.h>
+#include <Library/space.h>
 
-//#include "F4UART.h"
-#include "stm32F4xx_gpio.h"
 
 using namespace STM32F4;
 using namespace HAL;
-using namespace sensors;
 using namespace devices;
 
 uint8_t recv_buffer[5];
-dev_v1::RCIN rc;
-dev_v1::RCOUT rcout;
 void delay()
 {
 	int64_t t = systimer->gettime();
@@ -62,6 +48,22 @@ int main(void)
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	
 	init_all_device();
+	
+	space_init();
+	
+	char key[] = "key";
+	char value[] = "value";
+	char value_readout[15] = {0};
+	
+	while(true)
+	{
+		int got;
+		space_write(key, strlen(key), value, strlen(value), NULL);
+		space_read(key, strlen(key), value_readout, sizeof(value_readout)-1, &got);
+		
+		printf("got=%d, \"%s\"", got, value_readout);
+		systimer->delayms(100);
+	}
 	
 	IAccelerometer * accel = manager.get_accelerometer(0);
 	IGyro * gyro = manager.get_gyroscope(0);

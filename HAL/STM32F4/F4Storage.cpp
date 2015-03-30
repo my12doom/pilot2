@@ -60,4 +60,7 @@ namespace STM32F4
 		return count;
 	}
 	
+	F4Storage theDefaultStorage;
 }
+
+IStorage *default_storage = &STM32F4::theDefaultStorage;

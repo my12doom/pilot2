@@ -15,3 +15,5 @@ namespace HAL
 		virtual int read(int address, void *data, int maxsize) = 0;
 	};
 }
+
+extern HAL::IStorage *default_storage;
