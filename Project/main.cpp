@@ -65,6 +65,8 @@ int main(void)
 	
 	IAccelerometer * accel = manager.get_accelerometer(0);
 	IGyro * gyro = manager.get_gyroscope(0);
+	IBarometer * baro = manager.get_barometer(0);
+	IMagnetometer * mag = manager.get_magnetometer(0);
 	F4GPIO debug(GPIOA,GPIO_Pin_7);
 	debug.set_mode(MODE_OUT_PushPull);
 	
@@ -101,12 +103,17 @@ int main(void)
 		
 		accelerometer_data adata;
 		gyro_data gdata;
+		baro_data bdata;
+		mag_data mdata;
 		int res = accel->read(&adata);
 		res = gyro->read(&gdata);
+		res = baro->read(&bdata);
+		res = mag->read(&mdata);
 		
 		float scale = 180/3.1415926f;
 		//printf("\r%d, %f,%f,%f,%f, angular rate: %f,%f,%f deg/s", res, adata.x, adata.y, adata.z, adata.temperature, gdata.x * scale, gdata.y * scale, gdata.z * scale);
 		
+		//printf("%f, %f", bdata.pressure, bdata.temperature);
 		//systimer->delayms(10);
 		debug.toggle();
 	}

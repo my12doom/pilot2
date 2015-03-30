@@ -25,11 +25,8 @@
 namespace sensors
 {
 
-MS5611_SPI::MS5611_SPI(ISPI *spi, IGPIO *CS)
+MS5611_SPI::MS5611_SPI()
 {
-	this->spi = spi;
-	this->CS = CS;
-	CS->set_mode(MODE_OUT_PushPull);
 	
 	OSR = MS561101BA_OSR_4096;
 	temperature = 0;
@@ -45,6 +42,7 @@ MS5611_SPI::MS5611_SPI(ISPI *spi, IGPIO *CS)
 MS5611_SPI::~MS5611_SPI()
 {
 }
+
 
 int MS5611_SPI::read_regs(uint8_t start_reg, void *out, int count)
 {
@@ -72,8 +70,13 @@ int MS5611_SPI::write_reg(uint8_t reg)
 	return 0;	
 }
 
-int MS5611_SPI::init(void)
+int MS5611_SPI::init(ISPI *spi, IGPIO *CS)
 {
+	this->spi = spi;
+	this->CS = CS;
+	CS->set_mode(MODE_OUT_PushPull);
+	CS->write(true);
+
 	uint8_t tmp[3];
 	int i;
 	

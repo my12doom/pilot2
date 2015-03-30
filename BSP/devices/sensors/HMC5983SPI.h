@@ -9,7 +9,7 @@ namespace sensors
 	{
 	public:
 		HMC5983();
-		~HMC5983();
+		~HMC5983(){}
 
 		int init(HAL::ISPI *SPI, HAL::IGPIO *CS);
 

@@ -71,16 +71,27 @@ void init_uart4()
 #include "sensors.h"
 F4SPI spi2;
 F4GPIO cs_mpu(GPIOE, GPIO_Pin_8);
-void init_accelerometers()
+F4GPIO cs_ms5611(GPIOE, GPIO_Pin_7);
+F4GPIO cs_hmc5983(GPIOE, GPIO_Pin_10);
+sensors::MPU6000 mpu6000device;
+sensors::MS5611_SPI ms5611device;
+sensors::HMC5983 hmc5983device;
+void init_sensors()
 {
 	spi2.init(SPI2);
-	static sensors::MPU6000 raw_device;
-	raw_device.init(&spi2, &cs_mpu);
+	mpu6000device.init(&spi2, &cs_mpu);
+	ms5611device.init(&spi2, &cs_ms5611);
+	hmc5983device.init(&spi2, &cs_hmc5983);
 	
-	static dev_v1::mpu6000 device(&raw_device);
+	static dev_v1::mpu6000res res6000(&mpu6000device);
+	static dev_v1::HMC5983res res5983(&hmc5983device);
+	static dev_v1::MS5611res res5611(&ms5611device);
 	
-	manager.register_accelerometer(&device);
-	manager.register_gyroscope(&device);
+	
+	manager.register_accelerometer(&res6000);
+	manager.register_gyroscope(&res6000);
+	manager.register_magnetometer(&res5983);
+	manager.register_barometer(&res5611);
 	
 }
 
@@ -110,5 +121,5 @@ void init_all_device()
 	init_uart4();
 	init_timer1();
 	init_BatteryVoltage();
-	init_accelerometers();
+	init_sensors();
 }

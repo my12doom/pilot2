@@ -92,6 +92,9 @@ int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 
 	this->spi = SPI;
 	this->CS = CS;
+	SPI->set_mode(1,1);
+	CS->set_mode(HAL::MODE_OUT_PushPull);
+	CS->write(true);
 
 	for(i=0; i<3; i++)
 	{

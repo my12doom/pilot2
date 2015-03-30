@@ -8,6 +8,8 @@
 #include <BSP/boards/dev_v1/BatteryVoltage.h>
 #include <BSP/devices/IAccelerometer.h>
 #include <BSP/devices/IMagnetometer.h>
+#include <BSP/devices/IBarometer.h>
+#include <BSP/devices/IMagnetometer.h>
 
 using namespace BSP;
 using namespace STM32F4;
@@ -57,6 +59,10 @@ class Manager
 		devices::IAccelerometer * accelerometers[MAX_ACCELEROMETER_COUNT];
 		int gyroscope_count;
 		devices::IGyro * gyroscopes[MAX_ACCELEROMETER_COUNT];	
+		int barometer_count;
+		devices::IBarometer * barometers[MAX_ACCELEROMETER_COUNT];	
+		int magnetometer_count;
+		devices::IMagnetometer * magnetometers[MAX_ACCELEROMETER_COUNT];	
 	
 	public :
 		int get_LED_Num();
@@ -64,16 +70,20 @@ class Manager
 		int get_Timer_Num();
 		int get_gyroscope_count();
 		int get_accelerometer_count();
+		int get_magnetometer_count();
+		int get_barometer_count();
 	
 		
 		//register function:
 		int register_LED(const char *name,LED *pLED);
 		int register_gyroscope(devices::IGyro *gyro);
+		int register_accelerometer(devices::IAccelerometer *accel);
+		int register_barometer(devices::IBarometer *baro);
+		int register_magnetometer(devices::IMagnetometer *mag);
 		int register_UART(const char *name,IUART *pUart);
 		int register_Timer(const char *name,ITimer *pTimer);
-		int register_accelerometer(devices::IAccelerometer *accel);
 		int register_BatteryVoltage(const char *name,IBatteryVoltage *pIBatteryVoltage);
-	
+
 		//getDevice function:
 		LED* getLED(const char *name);
 		IUART *getUART(const char *name);
@@ -81,6 +91,8 @@ class Manager
 		IBatteryVoltage *getBatteryVoltage(const char *name);
 		devices::IAccelerometer * get_accelerometer(int index);
 		devices::IGyro * get_gyroscope(int index);
+		devices::IMagnetometer * get_magnetometer(int index);
+		devices::IBarometer * get_barometer(int index);
 };
 //Declear manager as global:
 extern Manager manager;

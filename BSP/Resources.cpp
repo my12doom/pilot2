@@ -146,4 +146,46 @@ int Manager::get_gyroscope_count()
 {
 	return gyroscope_count;
 }
+
+
+int Manager::register_barometer(devices::IBarometer *baro)
+{
+	if (barometer_count >= MAX_ACCELEROMETER_COUNT)
+		return -1;
+	
+	barometers[barometer_count++] = baro;
+	return 0;
+}
+devices::IBarometer * Manager::get_barometer(int index)
+{
+	if (index < 0 || index >= barometer_count)
+		return NULL;
+	return barometers[index];
+}
+int Manager::get_barometer_count()
+{
+	return barometer_count;
+}
+
+int Manager::register_magnetometer(devices::IMagnetometer *mag)
+{
+	if (magnetometer_count >= MAX_ACCELEROMETER_COUNT)
+		return -1;
+	
+	magnetometers[magnetometer_count++] = mag;
+	return 0;
+}
+devices::IMagnetometer * Manager::get_magnetometer(int index)
+{
+	if (index < 0 || index >= magnetometer_count)
+		return NULL;
+	return magnetometers[index];
+}
+int Manager::get_magnetometer_count()
+{
+	return magnetometer_count;
+}
+
+
+// the only manager instance
 Manager manager;
