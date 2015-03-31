@@ -3,7 +3,7 @@
 #include <BSP/Resources.h>
 #include <BSP/boards/dev_v1/init.h>
 #include <stdio.h>
-#include <Library/space.h>
+#include <Library/param.h>
 
 
 using namespace STM32F4;
@@ -27,6 +27,8 @@ extern "C" void delayms(int ms)
 {
 	systimer->delayms(ms);
 }
+
+param test("test", 0);
 int main(void)
 {
 	/*
@@ -48,23 +50,7 @@ int main(void)
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	
 	init_all_device();
-	
-	space_init();
-	
-	char key[] = "key";
-	char value[] = "value";
-	char value_readout[15] = {0};
-	
-	while(true)
-	{
-		int got;
-		space_write(key, strlen(key), value, strlen(value), NULL);
-		space_read(key, strlen(key), value_readout, sizeof(value_readout)-1, &got);
 		
-		printf("got=%d, \"%s\"", got, value_readout);
-		systimer->delayms(100);
-	}
-	
 	IAccelerometer * accel = manager.get_accelerometer(0);
 	IGyro * gyro = manager.get_gyroscope(0);
 	IBarometer * baro = manager.get_barometer(0);

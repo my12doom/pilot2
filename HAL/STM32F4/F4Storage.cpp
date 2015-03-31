@@ -59,8 +59,10 @@ namespace STM32F4
 		memcpy(data, (char*)start_address+address, count);
 		return count;
 	}
-	
-	F4Storage theDefaultStorage;
 }
 
-IStorage *default_storage = &STM32F4::theDefaultStorage;
+HAL::IStorage *get_default_storage()
+{
+	static STM32F4::F4Storage theDefaultStorage;
+	return &theDefaultStorage;
+}

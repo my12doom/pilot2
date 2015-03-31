@@ -16,4 +16,4 @@ namespace HAL
 	};
 }
 
-extern HAL::IStorage *default_storage;
+HAL::IStorage *get_default_storage();
