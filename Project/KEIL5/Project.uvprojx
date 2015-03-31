@@ -708,6 +708,21 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4Storage.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F4SDCard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4SDCard.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm324xg_eval.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\stm324xg_eval.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm324xg_eval_sdio_sd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\stm324xg_eval_sdio_sd.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
