@@ -6,10 +6,10 @@ title: 软件姿态解算
 ##机体坐标系(BODY系)
   ![aa](http://wellmakers.com/wp-content/uploads/2015/03/QQ图片20150331104108.png)  
   
-  #传感器坐标系  
+##传感器坐标系  
   
   ![11](http://wellmakers.com/wp-content/uploads/2015/03/plane.png)
-##软件姿态解算
+#软件姿态解算
 
 使用MPU6050硬件DMP解算姿态是非常简单的，下面介绍由三轴陀螺仪和加速度计的值来使用四元数软件解算姿态的方法。
 
