@@ -13,6 +13,10 @@ typedef unsigned char uint8_t;
 #define PI 3.14159265f
 #define LOGE printf
 #define TRACE(...) 
+#define LOG_NRF 1
+#define LOG_SDCARD 2
+#define LOG_USART1 4
+#define LOG_USART2 8
 
 enum fly_mode
 {

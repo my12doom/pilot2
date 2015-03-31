@@ -2,11 +2,11 @@
 #include <string.h>
 #include "log.h"
 
-#include "../fat/ff.h"
-#include "../common/fifo.h"
-#include "../common/RFData.h"
-#include "../common/common.h"
-#include "../common/uart4.h"
+#include <FileSystem/ff.h>
+#include <Library/fifo.h>
+#include <Protocol/RFData.h>
+#include <Library/common.h>
+#include <HAL/Interface/Interfaces.h>
 
 
 FIL *file = NULL;
@@ -30,7 +30,7 @@ int save_log_packet(rf_data &packet)
 
 extern "C"
 {
-	#include "../fat/diskio.h"
+	#include <HAL/Interface/SDCard.h>
 
 };
 
@@ -58,7 +58,7 @@ int log_init()
 
 int real_log_packet(void *data, int size)
 {
-	int64_t us = getus();
+	int64_t us = systimer->gettime();
 
 #ifdef STM32F4
 	// USART, "\r" are escaped into "\r\r"
@@ -114,14 +114,14 @@ int real_log_packet(void *data, int size)
 				LOGE("\r\nSDCARD ERROR\r\n");
 				log_ready = false;
 			}
-			if (getus() - last_log_flush_time > 1000000)
+			if (systimer->gettime() - last_log_flush_time > 1000000)
 			{
-				last_log_flush_time = getus();
+				last_log_flush_time = systimer->gettime();
 				f_sync(file);
 			}
 		}
 	}
-	if (getus() - us > 7000)
+	if (systimer->gettime() - us > 7000)
 	{
 		TRACE("log cost %d us  ", int(getus()-us));
 		TRACE("  fat R/R:%d/%d\r\n", read_count, write_count);
@@ -150,6 +150,7 @@ int log_flush()
 	if (writer_buffer->count() == 0)
 		return 1;
 
+/*
 	// disable USB interrupt to prevent sdcard dead lock
 #ifdef STM32F1
 	NVIC_DisableIRQ(USB_LP_CAN1_RX0_IRQn);
@@ -162,6 +163,7 @@ int log_flush()
 #endif
 	__DSB();
 	__ISB();
+*/
 
 	rf_data packet[256];
 	int count = 0;

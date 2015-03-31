@@ -793,6 +793,71 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\Library\param.cpp</FilePath>
             </File>
+            <File>
+              <FileName>log.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Library\log.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Algorithm</GroupName>
+          <Files>
+            <File>
+              <FileName>ahrs.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\ahrs.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>altitude_controller.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\altitude_controller.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>altitude_estimator.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\altitude_estimator.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>altitude_estimatorCF.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\altitude_estimatorCF.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>attitude_controller.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\attitude_controller.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>motor_mixer.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\motor_mixer.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>of_controller.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\of_controller.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>pos_controll.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\pos_controll.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>pos_estimator.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\pos_estimator.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>FileSystem</GroupName>
+          <Files>
+            <File>
+              <FileName>ff.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\FileSystem\ff.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
