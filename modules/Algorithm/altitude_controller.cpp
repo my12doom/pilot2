@@ -1,7 +1,7 @@
 #include "altitude_controller.h"
 #include <string.h>
-#include "../common/common.h"
-#include "../common/param.h"
+#include <Library/common.h>
+#include <Library/param.h>
 
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);

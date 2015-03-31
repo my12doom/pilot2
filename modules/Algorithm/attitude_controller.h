@@ -13,7 +13,7 @@ public:
 	int provide_states(float *alt, float *attitude, float throttle_realized, int motor_state, bool airborne);
 
 	int set_attitude_target(float *euler);
-	int set_attitude_target_from_stick()
+	int set_attitude_target_from_stick();
 
 	// update the controller
 	// dt: time interval

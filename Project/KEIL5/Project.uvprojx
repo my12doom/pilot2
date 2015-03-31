@@ -788,6 +788,11 @@
               <FileType>5</FileType>
               <FilePath>..\..\modules\Library\space.h</FilePath>
             </File>
+            <File>
+              <FileName>param.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Library\param.cpp</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

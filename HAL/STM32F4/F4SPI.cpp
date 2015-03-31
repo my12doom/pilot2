@@ -87,7 +87,28 @@ namespace STM32F4
 	
 	int F4SPI::set_speed(int speed)	// speed in hz
 	{
-		// TODO
+		// SPI1 on APB2, 84mhz
+		// SPI2 on APB1, 84mhz
+		int APB_frequency = SPIx == SPI1 ? 84000000 : 42000000;
+		if (speed > APB_frequency / 2)
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
+		else if (speed > APB_frequency / 4)
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+		else if (speed > APB_frequency / 8)
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+		else if (speed > APB_frequency / 16)
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_16;
+		else if (speed > APB_frequency / 32)
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32;
+		else if (speed > APB_frequency / 64)
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
+		else if (speed > APB_frequency / 128)
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_128;
+		else if (speed > APB_frequency / 256)
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256;
+		else
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256;
+
 		SPI_Cmd(SPIx, DISABLE);
 		SPI_Init(SPIx, &SPI_InitStructure);
 		SPI_Cmd(SPIx, ENABLE);

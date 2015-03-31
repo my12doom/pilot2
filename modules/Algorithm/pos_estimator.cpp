@@ -8,7 +8,9 @@ double _k1_xy = 3 / _time_constant_xy;
 double _k2_xy = 3 / (_time_constant_xy*_time_constant_xy);
 double _k3_xy = 1 / (_time_constant_xy*_time_constant_xy*_time_constant_xy);
 
+#ifndef PI
 #define PI 3.14159265
+#endif
 #define history_interval 50000		// 50ms, 20 point supports 1000ms max delay
 
 pos_estimator::pos_estimator()

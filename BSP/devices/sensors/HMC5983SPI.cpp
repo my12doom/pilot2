@@ -93,6 +93,7 @@ int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 	this->spi = SPI;
 	this->CS = CS;
 	SPI->set_mode(1,1);
+	SPI->set_speed(8000000);				// HMC5983 SPI can handle 8mhz max
 	CS->set_mode(HAL::MODE_OUT_PushPull);
 	CS->write(true);
 
@@ -183,9 +184,11 @@ int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 
 int HMC5983::read(short*data)
 {
-	int i;
+	spi->set_mode(1,1);
+	spi->set_speed(8000000);				// HMC5983 SPI can handle 8mhz max
+
 	int result = read_reg(0x03, (uint8_t*)data, 6);
-	for(i=0; i<3; i++)
+	for(int i=0; i<3; i++)
 		swap((uint8_t*)&data[i], 2);
 	
 	return result;

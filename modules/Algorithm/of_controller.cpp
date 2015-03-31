@@ -1,5 +1,5 @@
 #include "of_controller.h"
-#include "../common/common.h"
+#include <Library/common.h>
 
 // APM default factor: 2.5, 0.5, 0.12, 100
 // P=2.5: 100cm distance -> 2.5 degree angle

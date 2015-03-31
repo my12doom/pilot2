@@ -105,11 +105,14 @@ int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 	this->spi = SPI;
 	this->CS = CS;
 
+	// MPU6000 can handle 1mhz max for configuration register accessing
+	// 20mhz for data output and interrupt accesss
+	SPI->set_speed(1000000);
 	SPI->set_mode(1, 1);
 	CS->set_mode(HAL::MODE_OUT_PushPull);
 	CS->write(true);
-	
-	// MPU9250 register initialization
+
+	// MPU6000 register initialization
 	TRACE("start MPU6000\r\n");
 	write_reg_core(PWR_MGMT_1, 0x80);
 	systimer->delayms(10);
@@ -158,18 +161,9 @@ int MPU6000::read(short*data)
 {
 	int i;
 	int result;
-	
-	SPI_InitTypeDef  SPI_InitStructure = {0};
-	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-	SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
-	SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
-	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
- 	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
-	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-	SPI_InitStructure.SPI_CRCPolynomial = 7;
-	SPI_Init(SPI2, &SPI_InitStructure);
+	spi->set_speed(20000000);
+	spi->set_mode(1, 1);
+
 	
 	result = read_reg(ACCEL_XOUT_H, (uint8_t*)data, 14);
 	for(i=0; i<7; i++)
