@@ -110,7 +110,7 @@ gz = gz + Kp*ez + ezInt;
 ~~~
 四元数微分方程，其中T为测量周期，为陀螺仪角速度，以下都是已知量，这里使用了一阶龙哥库塔求解四元数微分方程：
 
-![](/assets/img/soft-algorithm-6.png)
+![](http://www.crazepony.com/assets/img/soft-algorithm-6.png)
 
 ~~~
 // integrate quaternion rate and normalise
@@ -121,7 +121,7 @@ q3 = q3 + (q0*gz + q1*gy - q2*gx)*halfT;
 ~~~
 最后根据四元数方向余弦阵和欧拉角的转换关系，把四元数转换成欧拉角：
 
-![](/assets/img/soft-algorithm-6.png)
+![](http://www.crazepony.com/assets/img/soft-algorithm-6.png)
 
 所以有：
 
