@@ -88,27 +88,7 @@ axyz是测量得到的重力向量，vxyz是陀螺积分后的姿态来推算出
 
 这个叉积向量仍旧是位于机体坐标系上的，而陀螺积分误差也是在机体坐标系，而且叉积的大小与陀螺积分误差成正比，正好拿来纠正陀螺。（你可以自己拿东西想象一下）由于陀螺是对机体直接积分，所以对陀螺的纠正量会直接体现在对机体坐标系的纠正。
 
-~~~
-// integral error scaled integral gain
-exInt = exInt + ex*Ki;
-eyInt = eyInt + ey*Ki;
-ezInt = ezInt + ez*Ki;
-~~~
-
-用叉积误差来做PI修正陀螺零偏
-
-~~~
-// integral error scaled integral gain
-exInt = exInt + ex*Ki;
-eyInt = eyInt + ey*Ki;
-ezInt = ezInt + ez*Ki;
-
-// adjusted gyroscope measurements
-gx = gx + Kp*ex + exInt;
-gy = gy + Kp*ey + eyInt;
-gz = gz + Kp*ez + ezInt;
-~~~
-四元数微分方程，其中T为测量周期，为陀螺仪角速度，以下都是已知量，这里使用了一阶龙哥库塔求解四元数微分方程：
+四元数微分方程，用于更新飞机的角度，其中T为测量周期，为陀螺仪角速度，以下都是已知量，这里使用了一阶龙哥库塔求解四元数微分方程：
 
 ![](http://www.crazepony.com/assets/img/soft-algorithm-6.png)
 
