@@ -115,11 +115,14 @@ void init_BatteryVoltage()
 	//manager.getBatteryVoltage("BatteryVoltage")->read();
 }
 
-void init_all_device()
+int bsp_init_all()
 {
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	init_led();
 	init_uart4();
 	init_timer1();
 	init_BatteryVoltage();
 	init_sensors();
+	
+	return 0;
 }

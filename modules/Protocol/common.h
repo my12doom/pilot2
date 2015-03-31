@@ -17,6 +17,8 @@ typedef unsigned char uint8_t;
 #define LOG_SDCARD 2
 #define LOG_USART1 4
 #define LOG_USART2 8
+#define RC_DEAD_ZONE 0.04f
+#define countof(x) (sizeof(x)/sizeof(x[0]))
 
 enum fly_mode
 {

@@ -232,7 +232,7 @@ typedef struct
 		pos_controller_data pos_controller;
 		pos_controller_data2 pos_controller2;
 		double_sensor_data double_sensor;
-		px4_frame px4flow;
+		px4flow_frame px4flow;
 	}data;
 } rf_data;
 

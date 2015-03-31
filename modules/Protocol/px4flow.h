@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-typedef struct px4_frame
+typedef struct px4flow_frame
 {
 	uint16_t frame_count;// counts created I2C frames [#frames]
 	int16_t pixel_flow_x_sum;// latest x flow measurement in pixels*10 [pixels]
@@ -16,9 +16,9 @@ typedef struct px4_frame
 	uint8_t gyro_range; // gyro range [0 .. 7] equals [50 deg/sec .. 2000 deg/sec] 
 	uint8_t sonar_timestamp;// time since last sonar update [milliseconds]
 	int16_t ground_distance;// Ground distance in meters*1000 [meters]. Positive value: distance known. Negative value: Unknown distance
-} px4_frame;
+} px4flow_frame;
 
-typedef struct px4_integral_frame
+typedef struct px4flow_integral_frame
 {
 	uint16_t frame_count_since_last_readout;//number of flow measurements since last I2C readout [#frames]
 	int16_t pixel_flow_x_integral;//accumulated flow in radians*10000 around x axis since last I2C readout [rad*10000]
@@ -31,14 +31,10 @@ typedef struct px4_integral_frame
 	int16_t ground_distance;// Ground distance in meters*1000 [meters*1000]
 	int16_t gyro_temperature;// Temperature * 100 in centi-degrees Celsius [degcelsius*100]
 	uint8_t quality;// averaged quality of accumulated flow values [0:bad quality;255: max quality]
-} px4_integral_frame;
+} px4flow_integral_frame;
 
-extern "C"
+enum px4flow_frame_type
 {
-
-int init_px4flow(void);
-int read_px4flow(px4_frame *frame);
-int read_px4flow_integral(px4_integral_frame *frame);
-int check_px4flow(void);
-
+	use_one_shot_frame = 0,
+	use_integral_frame = 1,
 };

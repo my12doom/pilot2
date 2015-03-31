@@ -3,7 +3,7 @@
 #include <BSP/Resources.h>
 #include <BSP/boards/dev_v1/init.h>
 #include <stdio.h>
-#include <Library/param.h>
+#include <utils/param.h>
 
 
 using namespace STM32F4;
@@ -49,7 +49,7 @@ int main(void)
 
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	
-	init_all_device();
+	bsp_init_all();
 		
 	IAccelerometer * accel = manager.get_accelerometer(0);
 	IGyro * gyro = manager.get_gyroscope(0);

@@ -473,6 +473,11 @@
               <FileType>8</FileType>
               <FilePath>..\main.cpp</FilePath>
             </File>
+            <File>
+              <FileName>pilot.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\main\pilot.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -808,6 +813,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\utils\space.cpp</FilePath>
             </File>
+            <File>
+              <FileName>vector.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\utils\vector.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -857,6 +867,11 @@
               <FileName>pos_estimator.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\Algorithm\pos_estimator.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>ahrs2.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\ahrs2.cpp</FilePath>
             </File>
           </Files>
         </Group>
