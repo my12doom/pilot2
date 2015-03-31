@@ -791,27 +791,22 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>Library</GroupName>
+          <GroupName>utils</GroupName>
           <Files>
             <File>
-              <FileName>space.cpp</FileName>
+              <FileName>log.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\modules\Library\space.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>space.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\..\modules\Library\space.h</FilePath>
+              <FilePath>..\..\modules\utils\log.cpp</FilePath>
             </File>
             <File>
               <FileName>param.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\modules\Library\param.cpp</FilePath>
+              <FilePath>..\..\modules\utils\param.cpp</FilePath>
             </File>
             <File>
-              <FileName>log.cpp</FileName>
+              <FileName>space.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\modules\Library\log.cpp</FilePath>
+              <FilePath>..\..\modules\utils\space.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -872,6 +867,51 @@
               <FileName>ff.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\modules\FileSystem\ff.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>NMEA</GroupName>
+          <Files>
+            <File>
+              <FileName>context.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\NMEA\context.c</FilePath>
+            </File>
+            <File>
+              <FileName>gmath.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\NMEA\gmath.c</FilePath>
+            </File>
+            <File>
+              <FileName>info.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\NMEA\info.c</FilePath>
+            </File>
+            <File>
+              <FileName>parse.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\NMEA\parse.c</FilePath>
+            </File>
+            <File>
+              <FileName>parser.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\NMEA\parser.c</FilePath>
+            </File>
+            <File>
+              <FileName>sentence.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\NMEA\sentence.c</FilePath>
+            </File>
+            <File>
+              <FileName>time.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\NMEA\time.c</FilePath>
+            </File>
+            <File>
+              <FileName>tok.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\NMEA\tok.c</FilePath>
             </File>
           </Files>
         </Group>

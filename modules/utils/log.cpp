@@ -3,9 +3,9 @@
 #include "log.h"
 
 #include <FileSystem/ff.h>
-#include <Library/fifo.h>
+#include <utils/fifo.h>
 #include <Protocol/RFData.h>
-#include <Library/common.h>
+#include <protocol/common.h>
 #include <HAL/Interface/Interfaces.h>
 
 

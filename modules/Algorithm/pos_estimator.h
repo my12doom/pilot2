@@ -8,8 +8,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <Library/common.h>
-#include <Library/fifo.h>
+#include <Protocol/common.h>
+#include <utils/fifo.h>
 
 #if 1
 #define COORDTIMES 1000000000

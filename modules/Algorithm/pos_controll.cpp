@@ -2,7 +2,7 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
-#include <Library/common.h>
+#include <Protocol/common.h>
 
 // constants
 static float g = 9.8f;
