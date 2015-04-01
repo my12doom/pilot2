@@ -11,8 +11,8 @@ int main(void)
 	char a[20];
 	while(1)
 	{
-		//manager.getUART("UART4")->write("12345\n",6);
-		manager.getUART("UART3")->write("12345\n",6);
+		manager.getUART("UART2")->write("22222\n",6);
+		manager.getUART("UART3")->write("11111\n",6);
 		//manager.getUART("UART3")->read((char *) a,5);
 	}
 }

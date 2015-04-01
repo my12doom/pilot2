@@ -59,21 +59,21 @@ extern "C" void TIM1_UP_TIM10_IRQHandler(void)
 #include <HAL\Interface\IUART.h>
 
 //For uart4:
-F4UART f4uart(UART4);
-IUART * pUART4 = &f4uart;
+F4UART f4uart4(UART4);
+IUART * pUART4 = &f4uart4;
 void init_uart4()
 {
 	pUART4->set_baudrate(115200);
-	pUART4->write("12345\n", 6);
+	pUART4->write("This is UART4\n", 6);
 	manager.register_UART("UART4",pUART4);
 }
 extern "C" void UART4_IRQHandler(void)
 {
-	f4uart.UART4_IRQHandler();
+	f4uart4.UART4_IRQHandler();
 }
 extern "C" void DMA1_Stream4_IRQHandler()
 {
-	f4uart.DMA1_Steam4_IRQHandler();
+	f4uart4.DMA1_Steam4_IRQHandler();
 }
 //For usart3:
 F4UART f4uart3(USART3);
@@ -81,7 +81,7 @@ IUART * pUART3 = &f4uart3;
 void init_uart3()
 {
 	pUART3->set_baudrate(115200);
-	pUART3->write("12345\n", 6);
+	pUART3->write("This is UART3\n", 6);
 	manager.register_UART("UART3",pUART3);
 }
 extern "C" void USART3_IRQHandler(void)
@@ -93,8 +93,25 @@ extern "C" void DMA1_Stream3_IRQHandler()
 	f4uart3.DMA1_Steam3_IRQHandler();
 }
 
+//For usart2:
+F4UART f4uart2(USART2);
+IUART * pUART2 = &f4uart2;
+void init_uart2()
+{
+	pUART2->set_baudrate(115200);
+	pUART2->write("This is UART2\n", 14);
+	manager.register_UART("UART2",pUART2);
+}
+extern "C" void USART2_IRQHandler(void)
+{
+	f4uart2.USART2_IRQHandler();
+}
+extern "C" void DMA1_Stream6_IRQHandler()
+{
+	f4uart2.DMA1_Steam6_IRQHandler();
+}
 
-/*
+
 //For usart1:
 F4UART f4uart1(USART1);
 IUART * pUART1 = &f4uart1;
@@ -112,7 +129,7 @@ extern "C" void DMA2_Stream7_IRQHandler()
 {
 	f4uart1.DMA2_Steam7_IRQHandler();
 }
-*/
+
 
 
 #include <HAL\STM32F4\F4SPI.h>
@@ -160,6 +177,7 @@ int bsp_init_all()
 	init_led();
 //	init_uart4();
 	init_uart3();
+	init_uart2();
 	init_timer1();
 	init_BatteryVoltage();
 //	init_uart1();

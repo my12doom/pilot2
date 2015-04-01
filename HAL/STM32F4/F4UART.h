@@ -44,6 +44,7 @@ namespace STM32F4
 		virtual void USART3_IRQHandler(void);
 		virtual void DMA1_Steam3_IRQHandler();
 			
-
+		virtual void USART2_IRQHandler(void);
+		virtual void DMA1_Steam6_IRQHandler();
 	};
 }
