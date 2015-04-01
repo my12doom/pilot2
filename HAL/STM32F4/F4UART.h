@@ -33,12 +33,16 @@ namespace STM32F4
 		virtual int write(const void *data, int count);
 		virtual int read(void *data, int max_count);
 		virtual void dma_init();
-		virtual void DMA1_Steam4_IRQHandler();
 		virtual int dma_handle_queue();
+			
 		virtual void UART4_IRQHandler(void);
-		virtual int UART4_ReadPacket(void *out, int maxsize);
+		virtual void DMA1_Steam4_IRQHandler();
+			
 		virtual void USART1_IRQHandler(void);
 		virtual void DMA2_Steam7_IRQHandler();
+			
+		virtual void USART3_IRQHandler(void);
+		virtual void DMA1_Steam3_IRQHandler();
 			
 
 	};
