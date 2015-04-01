@@ -1,5 +1,6 @@
 #include "sensors.h"
 #include <math.h>
+#include <Protocol/common.h>
 
 namespace dev_v1
 {
@@ -17,9 +18,9 @@ int mpu6000res::read(devices::accelerometer_data *out)
 	if (mpu->read(data)<0)
 		return -1;
 	
-	out->x = data[0] / 2048.0f;
-	out->y = data[1] / 2048.0f;
-	out->z = data[2] / 2048.0f;
+	out->x = -data[1] * G_in_ms2 / 2048.0f;
+	out->y = -data[0] * G_in_ms2 / 2048.0f;
+	out->z = data[2] * G_in_ms2 / 2048.0f;
 	out->temperature = data[3] / 340.0f + 36.53f;
 	
 	return 0;
@@ -31,9 +32,9 @@ int mpu6000res::read(devices::gyro_data *out)
 	if (mpu->read(data)<0)
 		return -1;
 	
-	out->x = data[4] * 0.000266316f;		// to radians
-	out->y = data[5] * 0.000266316f;
-	out->z = data[6] * 0.000266316f;
+	out->x = data[5] * 0.000266316f;		// to radians
+	out->y = data[4] * 0.000266316f;
+	out->z = -data[6] * 0.000266316f;
 	out->temperature = data[3] / 340.0f + 36.53f;
 	
 	return 0;

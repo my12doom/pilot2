@@ -18,6 +18,7 @@ typedef unsigned char uint8_t;
 #define LOG_USART1 4
 #define LOG_USART2 8
 #define RC_DEAD_ZONE 0.04f
+#define G_in_ms2 9.8065f			// gravity in m/s^2
 #define countof(x) (sizeof(x)/sizeof(x[0]))
 
 enum fly_mode

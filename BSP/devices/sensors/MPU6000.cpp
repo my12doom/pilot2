@@ -154,9 +154,6 @@ int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 
 // data[0 ~ 7] :
 // accel_x, accel_y, accel_z, raw_temperature, gyro_x, gyro_y, gyro_z
-static short gyro_o[3];
-static short gyro_raw[3];
-static int64_t lastus = -1;
 int MPU6000::read(short*data)
 {
 	int i;

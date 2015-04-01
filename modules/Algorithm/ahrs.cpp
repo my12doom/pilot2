@@ -49,7 +49,7 @@ void NonlinearSO3AHRSinit(float ax, float ay, float az, float mx, float my, floa
 	gyro_bias[2] = -gz;
 
     initialRoll = atan2(-ay, -az);
-    initialPitch = atan2(-ax, -az);
+    initialPitch = atan2(ax, -az);
 
     cosRoll = cosf(initialRoll);
     sinRoll = sinf(initialRoll);
@@ -91,7 +91,7 @@ void NonlinearSO3AHRSinit(float ax, float ay, float az, float mx, float my, floa
 	bFilterInit = true;
 }
 
-void NonlinearSO3AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz, float twoKp, float twoKi, float twoKpMag, float twoKiMag, float dt) 
+void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz, float twoKp, float twoKi, float twoKpMag, float twoKiMag, float dt) 
 {
 	float recipNorm;
 	float halfexA = 0.0f, halfeyA = 0.0f, halfezA = 0.0f;

@@ -58,7 +58,7 @@ extern float acc_ned[3];
 //---------------------------------------------------------------------------------------------------
 // Function declarations
 void NonlinearSO3AHRSinit(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz);
-void NonlinearSO3AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz, float twoKp, float twoKi, float twoKpMag, float twoKiMag, float dt);
+void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz, float twoKp, float twoKi, float twoKpMag, float twoKiMag, float dt);
 
 
 //=====================================================================================================

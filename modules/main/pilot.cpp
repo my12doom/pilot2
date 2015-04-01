@@ -140,7 +140,7 @@ static param rc_setting[8][4] =
 };
 
 static param QUADCOPTER_MAX_YAW_OFFSET("offy", PI/4);
-static param QUADCOPTER_ACRO_YAW_RATE("offy", PI);
+static param QUADCOPTER_ACRO_YAW_RATE("raty", PI);
 static param hall_sensor_sensitivity("hall", 0.0666f);
 static param motor_matrix("mat", 0);
 static param THROTTLE_IDLE("idle", 1176);
@@ -268,7 +268,6 @@ vector mag_gain = {0.7924,0.8354,0.8658};
 vector accel_earth_frame_mwc;
 vector accel_earth_frame;
 vector mag_earth_frame;
-param voltage_divider_factor("vfac",6);
 int ms5611[2];
 int ms5611_result = -1;
 int64_t time;
@@ -276,7 +275,7 @@ float error_pid[3][3] = {0};		// error_pid[roll, pitch, yaw][p,i,d]
 const int lpf_order = 5;
 float errorD_lpf[lpf_order][3] = {0};			// variable for high order low pass filter, [order][roll, pitch, yaw]
 
-int64_t last_tick = systimer->gettime();
+int64_t last_tick = 0;
 int64_t last_gps_tick = 0;
 static unsigned short gps_id = 0;
 pos_estimator estimator;
@@ -314,7 +313,7 @@ float mah_consumed = 0;
 float wh_consumed = 0;
 
 float sonar_distance = NAN;
-int64_t last_sonar_time = systimer->gettime();
+int64_t last_sonar_time = 0;
 
 short adxrs453_value = 0;
 short mpu9250_value[7] = {0};
