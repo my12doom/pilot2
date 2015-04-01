@@ -1,6 +1,6 @@
 #pragma once
 
-#define MAX_PARAM_COUNT 128
+#define MAX_PARAM_COUNT 256
 
 #ifdef __cplusplus
 class param
