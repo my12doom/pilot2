@@ -1,7 +1,8 @@
 #include <BSP\Resources.h>
 #include <BSP\boards\dev_v1\init.h>
 #include "stm32F4xx.h"
-
+#include "RCIN.h"
+#include "RCOUT.h"
 
 //Define Battery Voltage Funtion Pin and channel:
 #include <BSP\boards\dev_v1\BatteryVoltage.h>
@@ -131,7 +132,6 @@ extern "C" void DMA2_Stream7_IRQHandler()
 }
 
 
-
 #include <HAL\STM32F4\F4SPI.h>
 #include "sensors.h"
 F4SPI spi2;
@@ -156,10 +156,19 @@ void init_sensors()
 	manager.register_accelerometer(&res6000);
 	manager.register_gyroscope(&res6000);
 	manager.register_magnetometer(&res5983);
-	manager.register_barometer(&res5611);
-	
+	manager.register_barometer(&res5611);	
 }
 
+int init_RC()
+{
+	static dev_v1::RCIN rcin;
+	static dev_v1::RCOUT rcout;
+	
+	manager.register_RCIN(&rcin);
+	manager.register_RCOUT(&rcout);
+	
+	return 0;
+}
 
 //Define BattertVoltage Function:
 F4ADC f4adc(ADC1,ADC_Channel_4);
@@ -181,7 +190,7 @@ int bsp_init_all()
 	init_timer1();
 	init_BatteryVoltage();
 //	init_uart1();
-//	init_sensors();
+	init_sensors();
 	
 	return 0;
 }

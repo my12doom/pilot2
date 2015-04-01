@@ -20,6 +20,28 @@ typedef unsigned char uint8_t;
 #define RC_DEAD_ZONE 0.04f
 #define G_in_ms2 9.8065f			// gravity in m/s^2
 #define countof(x) (sizeof(x)/sizeof(x[0]))
+#define CRASH_TILT_IMMEDIATE	1
+#define CRASH_COLLISION_IMMEDIATE	2
+
+static const char * critical_error_desc[] = 
+{
+	"error_gyro",
+	"error_accelerometer",
+	"error_magnet",
+	"error_baro",
+	"error_RC",
+	"error_MAX",
+};
+
+enum critical_error
+{
+	error_gyro = 1,
+	error_accelerometer = 2,
+	error_magnet = 4,
+	error_baro = 8,
+	error_RC = 16,
+	error_MAX,
+} ;
 
 enum fly_mode
 {

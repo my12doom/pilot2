@@ -9,6 +9,9 @@ Manager::Manager()
 {
 	accelerometer_count = 0;
 	gyroscope_count = 0;
+	gps_count = 0;
+	rcin = NULL;
+	rcout = NULL;
 }
 int  Manager::register_LED(const char *name,LED *pLED)
 {
@@ -147,7 +150,6 @@ int Manager::get_gyroscope_count()
 	return gyroscope_count;
 }
 
-
 int Manager::register_barometer(devices::IBarometer *baro)
 {
 	if (barometer_count >= MAX_ACCELEROMETER_COUNT)
@@ -186,6 +188,46 @@ int Manager::get_magnetometer_count()
 	return magnetometer_count;
 }
 
+int Manager::register_GPS(devices::IGPS *gps)
+{
+	if (gps_count >= MAX_GPS_COUNT)
+		return -1;
+	
+	GPSs[gps_count++] = gps;
+	return 0;
+}
+devices::IGPS * Manager::get_GPS(int index)
+{
+	if (index < 0 || index >= gps_count)
+		return NULL;
+	return GPSs[index];
+}
+int Manager::get_GPS_count()
+{
+	return gps_count;
+}
 
+
+
+int Manager::register_RCIN(IRCIN* rcin)
+{
+	this->rcin = rcin;
+	return 0;
+}
+
+int Manager::register_RCOUT(IRCOUT* rcin)
+{
+	this->rcout = rcout;
+	return 0;
+}
+IRCIN * Manager::get_RCIN()
+{
+	return rcin;
+}
+
+IRCOUT * Manager::get_RCOUT()
+{
+	return rcout;
+}
 // the only manager instance
 Manager manager;

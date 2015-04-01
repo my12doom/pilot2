@@ -14,6 +14,7 @@ namespace devices
 		uint16_t DOP[3];				// DOP[3]: PDOP, HDOP, VOP, unit base: 0.01
 		uint8_t satelite_in_view;
 		uint8_t satelite_in_use;
+		uint8_t declination; 			// Magnetic variation in 0.01 degrees (Easterly var. subtracts from true course)
 		unsigned sig				: 4;// GPS quality indicator (0 = Invalid; 1 = Fix; 2 = Differential, 3 = Sensitive)
 		unsigned fix				: 4;// Operating mode, used for navigation (1 = Fix not available; 2 = 2D; 3 = 3D)
 	} gps_data;
@@ -22,9 +23,9 @@ namespace devices
 	{
 	public:
 		// return 0 if new data available, 1 if old data, negative for error.
-		virtual int read(gps_data *out);
+		virtual int read(gps_data *out) = 0;
 
 		// return false for hardware error(still return true for signal lost)
-		virtual bool healthy();
+		virtual bool healthy() = 0;
 	};
 }

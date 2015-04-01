@@ -2,18 +2,39 @@
 #include <stdio.h>
 #include <Algorithm/ahrs.h>
 #include <utils/log.h>
+#include <BSP/devices/sensors/UartNMEAGPS.h>
 
 using namespace devices;
+using namespace sensors;
 
 int main(void)
 {	
 	bsp_init_all();
 	char a[20];
+	
+	IUART *uart3 = manager.getUART("UART3");
+	
+	/*
 	while(1)
 	{
-		manager.getUART("UART2")->write("22222\n",6);
-		manager.getUART("UART3")->write("11111\n",6);
-		//manager.getUART("UART3")->read((char *) a,5);
+		char data[1024];
+		int count = uart3->read(data, 1024);
+		for(int i=0; i<count; i++)
+			fputc(data[i], NULL);
+	}
+	*/
+	
+	UartNMEAGPS gps;
+	gps.init(uart3, 115200);
+	
+	while(1)
+	{
+		gps_data data;
+		int res = gps.read(&data);
+		
+		systimer->delayms(10);
+		
+		printf("\r%d       ", res);
 	}
 }
 

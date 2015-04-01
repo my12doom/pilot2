@@ -6,7 +6,6 @@
 #include <Protocol/RFData.h>
 #include <Protocol/common.h>
 #include <utils/vector.h>
-//#include "../common/matrix.h"
 #include <utils/param.h>
 #include <utils/log.h>
 
@@ -22,25 +21,20 @@
 #include <HAL/Interface/Interfaces.h>
 #include <BSP/Resources.h>
 using namespace HAL;
-//#include "../common/crc32.h"
-
-//#include "../common/gps.h"
-//#include "../common/uart4.h"
-
+using namespace devices;
 #include <FileSystem/ff.h>
-//#include "../common/console.h"
-//#include "../sensors/px4flow.h"
 
 #define THROTTLE_STOP (max((int)(rc_setting[2][0]-20),1000))
 #define THROTTLE_MAX (min((int)(rc_setting[2][2]-20),2000))
+#define SAFE_ON(x) if(x) (x)->on()
+#define SAFE_OFF(x) if(x) (x)->on()
 
-ILED *power_led;
+ILED *state_led;
 ILED *SD_led;
 ILED *flashlight;
 IRCIN *rcin;
 IRCOUT *rcout;
-int rcout_count;
-int16_t rcout_tmp[16] = {0};
+
 
 /*
 extern "C"
@@ -64,34 +58,11 @@ extern "C"
 */
 
 
-enum
-{
-	error_gyro = 1,
-	error_accelerometer = 2,
-	error_magnet = 4,
-	error_baro = 8,
-	error_RC = 16,
-	error_MAX,
-} critical_error;
-
-const char * critical_error_desc[] = 
-{
-	"error_gyro",
-	"error_accelerometer",
-	"error_magnet",
-	"error_baro",
-	"error_RC",
-	"error_MAX",
-};
-
-int critical_errors = 0;
+// parameters
 
 static param crash_protect("prot", 0);		// crash protection
-#define CRASH_TILT_IMMEDIATE	1
-#define CRASH_COLLISION_IMMEDIATE	2
 
 static param simple_mode("simp", 0.0f) ;
-static param use_adis16405("16xx", 0.0f) ;
 static param pid_factor[3][4] = 			// pid_factor[roll,pitch,yaw][p,i,d,i_limit]
 {
 	{param("rP1",0.60), param("rI1",0.80), param("rD1",0.03),param("rM1",PI)},
@@ -161,7 +132,7 @@ static param mag_scale[3] =
 	param("mgx", 1), param("mgy", 1), param("mgz", 1),
 };
 #define MAX_MOTOR_COUNT 8
-static int quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
+static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
 {
 	{							// + mode
 		{0, +1, -1},			// rear, CCW
@@ -198,34 +169,39 @@ static float f_max(float a, float b)
 
 void led_all_on()
 {
-	power_led->on();;
-	SD_led->on();
+	SAFE_ON(state_led);
+	SAFE_ON(SD_led);
 }
 
 void led_all_off()
 {
-	power_led->off();
-	SD_led->off();
+	SAFE_OFF(state_led);
+	SAFE_OFF(SD_led);
 }
 
 int64_t g_pwm_input_update[16] = {0};
 int16_t g_ppm_output[16] = {0};
 int16_t g_pwm_input[16] = {0};
-void STOP_ALL_MOTORS()
-{
-	static int16_t data[16] = {THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP, THROTTLE_STOP};
-	rcout->write(data, 0,  rcout->get_channel_count());	
-}
 
 void output_rc()
 {
 	rcout->write(g_ppm_output, 0,  min(rcout->get_channel_count(), countof(g_ppm_output)));
 }
 
+void STOP_ALL_MOTORS()
+{
+	for(int i=0; i<16; i++)
+		g_ppm_output[i] = THROTTLE_STOP;
+	output_rc();
+}
+int handle_uart4_cli();
+int handle_uart4_controll();
+
 // states
-float mpu6050_temperature = 0;
+devices::gps_data gps;
+bool new_gps_data = false;
+int critical_errors = 0;
 float angle_pos[3] = {0};
-float angle_posD[3] = {0};
 float angle_target_unrotated[3] = {0};	// for quadcopter only currently, for fixed-wing, pos is also angle_pos
 float angle_target[3] = {0};	// for quadcopter only currently, for fixed-wing, pos is also angle_pos
 float angle_error[3] = {0};
@@ -234,22 +210,12 @@ float angle_errorI[3] = {0};
 float pos[3] = {0};
 float target[3] = {0};		// target [roll, pitch, yaw] (pid controller target, can be angle or angle rate)
 int cycle_counter = 0;
-int imu_packet_counter = 0;
-int64_t last_imu_packet_time = 0;
-int byte_count;
-float gyro620 = 0;
-struct
-{
-	float data[16];
-	unsigned long crc;
-} packets[3], imupacket;
 float ground_pressure = 0;
 float ground_temperature = 0;
 float rc[8] = {0};			// ailerron : full left -1, elevator : full down -1, throttle: full down 0, rudder, full left -1
 float rc_mobile[4] = {0};	// rc from mobile devices
 float accelz = 0;
 bool airborne = false;
-bool nearground = false;
 float takeoff_ground_altitude = 0;
 fly_mode mode = initializing;
 copter_mode submode = basic;
@@ -259,17 +225,16 @@ uint8_t data[32];
 static sensor_data *p = (sensor_data*)data;
 bool gyro_bias_estimating_end = false;
 vector gyro_radian;
-vector gyro_LSB;
 vector accel = {NAN, NAN, NAN};
 vector mag;
 float mag_radius = -999;
 vector mag_zero = {0};
-vector mag_gain = {0.7924,0.8354,0.8658};
 vector accel_earth_frame_mwc;
 vector accel_earth_frame;
 vector mag_earth_frame;
 int ms5611[2];
 int ms5611_result = -1;
+bool new_baro_data = false;
 int64_t time;
 float error_pid[3][3] = {0};		// error_pid[roll, pitch, yaw][p,i,d]
 const int lpf_order = 5;
@@ -281,7 +246,6 @@ static unsigned short gps_id = 0;
 pos_estimator estimator;
 pos_controller controller;
 altitude_estimator alt_estimator;
-float ground_altitude;
 altitude_estimatorCF alt_estimatorCF;
 altitude_controller alt_controller;
 OpticalFlowController of_controller;
@@ -330,6 +294,8 @@ vector gyro_temp_k = {0};		// gyro temperature compensating curve (linear)
 vector gyro_temp_a = {0};
 float temperature0 = 0;
 
+volatile vector imu_statics[3][4] = {0};		//	[accel, gyro, mag][min, current, max, avg]
+int avg_count = 0;
 px4flow_frame frame;
 int loop_hz = 0;
 
@@ -366,7 +332,7 @@ int prepare_pid()
 	// the quadcopter's main pid lock on angle rate
 	for(int i=0; i<3; i++)
 	{
-		pos[i] = angle_posD[i] = ::gyro_radian.array[i];
+		pos[i] = ::gyro_radian.array[i];
 		angle_pos[i] = new_angle_pos[i];
 	}
 
@@ -451,7 +417,7 @@ int prepare_pid()
 
 					float flow_roll = frame.flow_comp_m_y/1000.0f;
 					float flow_pitch = -frame.flow_comp_m_x/1000.0f;
-					of_controller.update_controller(flow_roll, flow_pitch, stick_roll, stick_pitch, interval);		// TODO: correct axises
+					of_controller.update_controller(flow_roll, flow_pitch, stick_roll, stick_pitch, interval);
 					of_controller.get_result(&angle_target[0], &angle_target[1]);
 				}
 				else
@@ -689,26 +655,6 @@ int save_logs()
 	log(&imu, TAG_IMU_DATA, time);
 	log(&frame, TAG_PX4FLOW_DATA, time);
 	
-	if (last_imu_packet_time > systimer->gettime() - 1000000)
-	{
-		adv_sensor_data adv_sensor1 = 
-		{
-			imupacket.data[0], imupacket.data[1], imupacket.data[2], imupacket.data[3], imupacket.data[4], imupacket.data[5],
-		};
-		adv_sensor_data adv_sensor2 = 
-		{
-			imupacket.data[6], imupacket.data[7], imupacket.data[8], imupacket.data[9], imupacket.data[10], imupacket.data[11],
-		};
-		adv_sensor_data adv_sensor3 = 
-		{
-			imupacket.data[12], imupacket.data[13], imupacket.data[14], imupacket.data[15],
-		};
-
-// 		log(&adv_sensor1, TAG_ADV_SENSOR_DATA1);
-// 		log(&adv_sensor2, TAG_ADV_SENSOR_DATA2);
-// 		log(&adv_sensor3, TAG_ADV_SENSOR_DATA3);
-	}
-
 	position p = estimator.get_estimation();
 	ned_data ned = 
 	{
@@ -855,57 +801,83 @@ int save_logs()
 	return 0;
 }
 
-
-volatile vector imu_statics[3][4] = {0};		//	[accel, gyro, mag][min, current, max, avg]
-int avg_count = 0;
-
 int read_sensors()
 {
-	// TODO: read from device manager
+	int64_t reading_start = systimer->gettime();
+	vector acc = {0};
+	vector gyro = {0};
+	vector mag = {0};
+	
+	// TODO: read px4flow from a "IRawDevice"
 	/*
-	bool imu_error = false;
-	if (read_MPU6050(&p->accel[0]) < 0 && read_MPU6050(&p->accel[0]) < 0)
+	if (read_px4flow(&frame) < 0)
+		sonar_distance = NAN;
+	else
+		sonar_distance = frame.ground_distance <= 0.30f ? NAN : frame.ground_distance / 1000.0f;
+	*/
+
+	// read usart source
+	handle_uart4_controll();
+
+	
+
+	// read gyros
+	int healthy_gyro_count = 0;
+	for(int i=0; i<manager.get_gyroscope_count(); i++)
 	{
-		LOGE("MPU6050 Error\n");
-		critical_errors |= error_accelerometer | error_gyro;
-		imu_error = true;
+		IGyro* gyroscope = manager.get_gyroscope(i);
+		
+		gyro_data data;
+		if (!gyroscope->healthy() || gyroscope->read(&data) < 0)
+			continue;
+
+		healthy_gyro_count ++;
 	}
-	if (read_HMC5883(&p->mag[0]) < 0 && read_HMC5883(&p->mag[0]) < 0)
+
+	// read accelerometers
+	int healthy_acc_count = 0;
+	for(int i=0; i<manager.get_accelerometer_count(); i++)
 	{
-		TRACE("HMC5883 Error\n");
-		critical_errors |= error_magnet;
+		IAccelerometer* accelerometer = manager.get_accelerometer(i);
+		
+		accelerometer_data data;
+		if (!accelerometer->healthy() || accelerometer->read(&data) < 0)
+			continue;
+
+		healthy_acc_count ++;		
 	}
 
-	for(int i=0; i<3; i++)
-		p->mag[i] *= mag_gain.array[i];
+	// read magnetometers
+	int healthy_mag_count = 0;
+	for(int i=0; i<manager.get_magnetometer_count(); i++)
+	{
+		IMagnetometer* magnetometer = manager.get_magnetometer(i);
+		
+		mag_data data;
+		if (!magnetometer->healthy() || magnetometer->read(&data) < 0)
+			continue;
+		
+		healthy_mag_count ++ ;
+	}
+	
+	// read barometers
+	int healthy_baro_count = 0;
+	for(int i=0; i<manager.get_barometer_count(); i++)
+	{
+		IBarometer* barometer = manager.get_barometer(i);
+		
+		baro_data data;
+		if (!barometer->healthy() || barometer->read(&data) < 0)
+			continue;
+		
+		healthy_baro_count ++;
+	}
 
-	ms5611_result = read_baro(ms5611);
-	if (ms5611_result < 0)
-		critical_errors |= error_baro;
+	// read GPSs
 
-	mpu6050_temperature = p->temperature1  / 340.0f + 36.53f;
 
 	// universal
-	float GYRO_SCALE = 500.0f * PI / 180 / 32767;		// full scale: +/-2000 deg/s  +/-32767
-	float dt = mpu6050_temperature - temperature0;
-	vector gyro_bias = 
-	{
-		dt * gyro_temp_k.array[0] + gyro_temp_a.array[0],
-		dt * gyro_temp_k.array[1] + gyro_temp_a.array[1],
-		dt * gyro_temp_k.array[2] + gyro_temp_a.array[2],
-	};
-
-// 	vector acc = {-p->accel[1], p->accel[0], p->accel[2]};
-// 	vector gyro = {-p->gyro[0], -p->gyro[1], -p->gyro[2]};
-// 	vector mag = {(p->mag[2]-mag_zero.array[2]), -(p->mag[0]-mag_zero.array[0]), -(p->mag[1]-mag_zero.array[1])};
-	vector acc = {p->accel[1], p->accel[0], -p->accel[2]};
-	vector gyro = {-p->gyro[0], p->gyro[1], p->gyro[2]};
-	vector mag = {(p->mag[0]), (p->mag[2]), (p->mag[1])};
 	
-// 	gyro.array[1] = mpu9250_value[6];
-
-// 	LOGE("\rmag:%d,%d,%d,%d, %.2f   ", int(mag.array[0]), int(mag.array[1]), int(mag.array[2]), (int)sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]), yaw_est*PI180);
-
 	for(int i=0; i<3; i++)
 	{
 		acc.array[i] += acc_bias[i];
@@ -915,11 +887,8 @@ int read_sensors()
 
 		acc.array[i] /= 2048.0f;
 	}
-	float tmp = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
-	TRACE("\rmag_size:%.3f", tmp);
-	gyro_LSB = gyro;
-	vector_sub(&gyro, &gyro_bias);
-	vector_multiply(&gyro, GYRO_SCALE);
+	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
+	TRACE("\rmag_size:%.3f", mag_size);
 	::gyro_radian = gyro;
 	::mag = mag;
 
@@ -939,29 +908,24 @@ int read_sensors()
 
 	for(int i=0; i<3; i++)
 	{
-		imu_statics[0][0].array[i] = f_min(accel.array[i], imu_statics[0][0].array[i])* 2048.0f;
-		imu_statics[0][1].array[i] = accel.array[i]* 2048.0f;
-		imu_statics[0][2].array[i] = f_max(accel.array[i], imu_statics[0][2].array[i])* 2048.0f;
-		imu_statics[0][3].array[i] = accel.array[i] + imu_statics[0][3].array[i]* 2048.0f;
+		imu_statics[0][0].array[i] = f_min(accel.array[i], imu_statics[0][0].array[i]);
+		imu_statics[0][1].array[i] = accel.array[i];
+		imu_statics[0][2].array[i] = f_max(accel.array[i], imu_statics[0][2].array[i]);
+		imu_statics[0][3].array[i] = accel.array[i] + imu_statics[0][3].array[i];
 
-		imu_statics[1][0].array[i] = f_min(gyro_LSB.array[i], imu_statics[1][0].array[i]);
-		imu_statics[1][1].array[i] = gyro_LSB.array[i];
-		imu_statics[1][2].array[i] = f_max(gyro_LSB.array[i], imu_statics[1][2].array[i]);
-		imu_statics[1][3].array[i] = gyro_LSB.array[i] + imu_statics[1][3].array[i];
+		imu_statics[1][0].array[i] = f_min(gyro.array[i], imu_statics[1][0].array[i]);
+		imu_statics[1][1].array[i] = gyro.array[i];
+		imu_statics[1][2].array[i] = f_max(gyro.array[i], imu_statics[1][2].array[i]);
+		imu_statics[1][3].array[i] = gyro.array[i] + imu_statics[1][3].array[i];
 	}
 	avg_count ++;
 
-	// TODO
-	mah_consumed += interval / 3600 * p->current;
-	wh_consumed += interval / 3600 * p->current * p->voltage / 1000000.0f;
-
-	TRACE("\rvoltage=%.2fV, current=%.2fA", p->voltage/1000.0f, p->current/1000.0f);
-	*/
+	// TODO : voltage and current sensors
 
 	return 0;
 }
 
-int calculate_attitude()
+int calculate_state()
 {
 	if (interval <=0 || interval > 0.2f)
 		return -1;
@@ -1018,10 +982,36 @@ int calculate_attitude()
 	accelz_mwc = accelz;
 	accelz = acc_ned[2];
 
-	alt_estimator.set_land_effect(mode == quadcopter && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - ground_altitude) < 1.0f));
+	alt_estimator.set_land_effect(mode == quadcopter && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
 	alt_estimator.update(accelz, ms5611_result == 0 ? a_raw_altitude : NAN, interval);
-	alt_estimatorCF.set_land_effect(mode == quadcopter && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - ground_altitude) < 1.0f));
+	alt_estimatorCF.set_land_effect(mode == quadcopter && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
 	alt_estimatorCF.update(accelz, ms5611_result == 0 ? a_raw_altitude : NAN, interval);
+	estimator.update_accel(accel_earth_frame.array[0], accel_earth_frame.array[1], systimer->gettime());
+
+	if (new_gps_data)
+	{
+		// fuse gps data
+		gps_id++;
+
+		if (gps.DOP[1] > 0 && (gps.DOP[1]/100.0f) < (estimator.healthy ? 3.5f : 2.5f) && gps.fix>=3)
+		{
+			estimator.update_gps(COORDTIMES * gps.latitude, COORDTIMES * gps.longitude, gps.DOP[1]/100.0f, systimer->gettime());
+		}
+// 		else
+		{
+			//estimator.reset();
+			//estimator2.reset();
+		}
+
+		float yaw_gps = gps.direction * PI / 180;
+		if (yaw_gps > PI)
+			yaw_gps -= 2 * PI;
+
+		ground_speed_east = sin(yaw_gps) * gps.speed;
+		ground_speed_north = cos(yaw_gps) * gps.speed;
+
+		// TODO: compute acceleration and use it to compensate roll and pitch
+	}
 
 	return 0;
 }
@@ -1064,8 +1054,6 @@ int sensor_calibration()
 		temperature0 = group != 0 ? _gyro_bias[group][0] : 0;
 	}
 
-
-
 	// static base value detection
 	vector mag_avg = {0};
 	vector accel_avg = {0};
@@ -1089,7 +1077,7 @@ int sensor_calibration()
 			ground_temperature += ms5611[1];
 		}
 
-		mpu6050_temperature += p->temperature1  / 340.0f + 36.53f;
+		//mpu6050_temperature += p->temperature1  / 340.0f + 36.53f;
 
 		vector_add(&accel_avg, &accel);
 		vector_add(&mag_avg, &mag);
@@ -1119,7 +1107,7 @@ int sensor_calibration()
 	vector_divide(&accel_avg, calibrating_count);
 	vector_divide(&mag_avg, calibrating_count);
 	vector_divide(&gyro_avg, calibrating_count);
-	mpu6050_temperature /= calibrating_count;
+//	mpu6050_temperature /= calibrating_count;
 	ground_pressure /= baro_counter * 100;
 	ground_temperature /= baro_counter * 100;
 
@@ -1392,7 +1380,7 @@ int handle_uart4_cli()
 #ifdef STM32F4
 	char line[1024];
 	char out[1024];
-	byte_count = UART4_ReadPacket(line, sizeof(line));
+	int byte_count = UART4_ReadPacket(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;
 	
@@ -1412,7 +1400,7 @@ int handle_uart4_controll()
 {
 #ifdef STM32F4
 	char line[1024];
-	byte_count = UART4_ReadPacket(line, sizeof(line));
+	int byte_count = UART4_ReadPacket(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;
 	
@@ -1509,15 +1497,10 @@ int handle_uart4_controll()
 	return 0;
 }
 
-int64_t tic = 0;
-int loop(void)
+int read_rc()
 {
-	// the main loop
-	int64_t round_start_tick = systimer->gettime();
-	interval = (round_start_tick-last_tick)/1000000.0f;
-	last_tick = round_start_tick;
-
-	// rc inputs
+	rcin->get_channel_data(g_pwm_input, 0, 6);
+	rcin->get_channel_update_time(g_pwm_input_update, 0, 6);
 	TRACE("\rRC");
 	for(int i=0; i<8; i++)
 	{
@@ -1527,89 +1510,52 @@ int loop(void)
 
 	rc[2] = (rc[2]+1)/2;
 
+	return 0;
+}
+
+int main_loop(void)
+{
+	// calculate time interval
+	static int64_t tic = 0;
+	int64_t round_start_tick = systimer->gettime();
+	interval = (round_start_tick-last_tick)/1000000.0f;
+	last_tick = round_start_tick;
+
+	// rc inputs
+	read_rc();
 
 	// usb
 	usb_lock();	// lock the system if usb transfer occurred
 
-
 	led_all_off();
 	
+	// performance counter
+	cycle_counter++;
 	if (systimer->gettime() - tic > 1000000)
 	{
 		tic = systimer->gettime();
-		LOGE("speed: %d/%d\r\n", cycle_counter, imu_packet_counter);
+		LOGE("speed: %d\r\n", cycle_counter);
 		loop_hz = cycle_counter;
 		cycle_counter = 0;
-		imu_packet_counter = 0;
 	}
 
-	cycle_counter++;
-
-	// flashlight
+	// flashlight, tripple flash if SDCARD running, double flash if SDCARD failed
 	time = systimer->gettime();
 	int time_mod_1500 = (time%1500000)/1000;
 	if (time_mod_1500 < 150 || (time_mod_1500 > 200 && time_mod_1500 < 350) || (time_mod_1500 > 400 && time_mod_1500 < 550 && log_ready))
-		flashlight->on();
+		SAFE_ON(flashlight);
 	else
-		flashlight->off();
+		SAFE_OFF(flashlight);
 
 	// RC modes and RC fail detection
 	check_mode();
 
-	// read sensors and update altitude if new air pressure data arrived.
-	int64_t us = systimer->gettime();
+	// read sensors
 	read_sensors();
-	int64_t us2 = systimer->gettime();
 	
-	// TODO: read px4flow from a "IRawDevice"
-	/*
-	if (read_px4flow(&frame) < 0)
-		sonar_distance = NAN;
-	else
-		sonar_distance = frame.ground_distance <= 0.30f ? NAN : frame.ground_distance / 1000.0f;
-	*/
-	TRACE("\rreading sensors cost %d+%dms, ground = %f m, roll=%.2f", int(us2-us), int(systimer->gettime()-us2), frame.ground_distance/1000.0f, euler[0] * PI180);
-//  	read_advsensor_packets();
-//  	read_advsensor_packets();
-//  	read_advsensor_packets();
-	handle_uart4_controll();
-//  	handle_uart4_cli();
+	// all state estimating, AHRS, position, altitude, etc
+	calculate_state();
 
-	// attitude and  heading
-	calculate_attitude();
-
-	// gps
-	/*
-	if (GPS_ParseBuffer() > 0)
-	{
-		last_gps_tick = systimer->gettime();
-		gps_id++;
-		nmeaINFO *info = GPS_GetInfo();
-
-		if (info->HDOP > 0 && info->HDOP < (estimator.healthy ? 3.5f : 2.5f) && info->fix>=3)
-		{
-			estimator.update_gps(COORDTIMES * NDEG2DEG(info->lat), COORDTIMES * NDEG2DEG(info->lon), info->HDOP, systimer->gettime());
-		}
-// 		else
-		{
-			//estimator.reset();
-			//estimator2.reset();
-		}
-
-		float yaw_gps = info->direction * PI / 180;
-		if (yaw_gps > PI)
-			yaw_gps -= 2 * PI;
-
-		ground_speed_east = sin(yaw_gps) * info->speed / 3.6f;
-		ground_speed_north = cos(yaw_gps) * info->speed / 3.6f;
-
-		// TODO: compute acceleration and use it to compensate roll and pitch
-	}
-	*/
-
-	estimator.update_accel(accel_earth_frame.array[0], accel_earth_frame.array[1], systimer->gettime());
-
-// 	osd();
 	prepare_pid();
 	pid();
 	output();
@@ -1623,34 +1569,15 @@ int loop(void)
 	else
 		land_detect_us = 0;
 
-
-
-	TRACE("\rroll,pitch,yaw/yaw2 = %f,%f,%f,%f, target roll,pitch,yaw = %f,%f,%f, error = %f,%f,%f", roll*PI180, pitch*PI180, yaw_est*PI180, yaw_gyro*PI180, target[0]*PI180, target[1]*PI180, target[2]*PI180,
-		error_pid[0][0]*PI180, error_pid[1][0]*PI180, error_pid[2][0]*PI180);
-
-	TRACE("time=%.2f,inte=%.4f,out= %d, %d, %d, %d, input=%f,%f,%f,%f\n", systimer->gettime()/1000000.0f, interval, g_ppm_output[0], g_ppm_output[1], g_ppm_output[2], g_ppm_output[3], g_pwm_input[0], g_pwm_input[1], g_pwm_input[3], g_pwm_input[5]);
-	TRACE ("\r mag=%.2f,%.2f,%.2f  acc=%.2f,%.2f,%.2f ", estMagGyro.V.x, estMagGyro.V.y, estMagGyro.V.z, estAccGyro.V.x, estAccGyro.V.y, estAccGyro.V.z);
-	TRACE ("\racc=%d,%d,%d ", p->accel[0], p->accel[1], p->accel[2]);
-	TRACE("\rinput= %.2f, %.2f, %.2f, %.2f,%.2f,%.2f", g_pwm_input[0], g_pwm_input[1], g_pwm_input[2], g_pwm_input[3], g_pwm_input[4], g_pwm_input[5]);
-	TRACE("\rinput:%.2f,%.2f,%.2f,%.2f,%.2f,%.2f, ADC=%.2f", (float)g_ppm_output[0], (float)g_ppm_output[1], (float)g_ppm_output[2], (float)g_ppm_output[3], (float)g_ppm_output[0], (float)g_ppm_output[1], p->voltage/1000.0 );
-
-	TRACE("\ryaw=%.2f, yt=%.2f, mag=%d,%d,%d           ", yaw_est *PI180, yaw_launch*PI180, p->mag[0], p->mag[1], p->mag[2]);
-
-	TRACE("\rv/a=%dmV, %dmA, %.1f mah, %.1f Wh   ", p->voltage, p->current, mah_consumed, wh_consumed);
-	TRACE("\rgyroI=%.2f", yaw_est * PI180);
-
 	led_all_on();
 
 	if (log_ready)
 	{
 		// flash one of the LED(A4) at 10hz
 		if ((systimer->gettime() % 100000) < 50000)
-			GPIO_SetBits(GPIOC, GPIO_Pin_4);
-	}
-
-	if (ms5611_result == 0)
-	{
-// 		LOGE("%.2f    %.2f    %.2f    %.2f\n", systimer->gettime()/1000000.0f, a_raw_altitude, alt_estimator.state[0], mpu6050_temperature);
+			SAFE_ON(SD_led);
+		else
+			SAFE_OFF(SD_led);
 	}
 
 	return 0;
@@ -1658,20 +1585,16 @@ int loop(void)
 
 int pilot_main(void)
 {
-
-	// priority settings
-	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-	
-	//Basic Initialization
 	bsp_init_all();
+	
+	state_led = manager.getLED("state");
+	SD_led = manager.getLED("SD");
+	flashlight = manager.getLED("flashlight");
+	rcin = manager.get_RCIN();
+	rcout = manager.get_RCOUT();
 	
 
 	// USB
-#if defined(STM32F1)
-	Set_USBClock();
-	USB_Interrupts_Config();
-	USB_Init();
-#endif
 
 /*
 #ifdef STM32F4
@@ -1687,23 +1610,13 @@ int pilot_main(void)
 #endif
 */
 
+	
 
-	log_init();
-//	if (init_MPU6050() < 0)
-//		critical_errors |= error_accelerometer | error_gyro;
-	
-// 	if (init_MPU9250() < 0)
-// 		critical_errors |= error_accelerometer | error_gyro;
-	
+
+	log_init();	
 	estimator.set_gps_latency(0);
-//	if (init_MS5611() < 0)
-//		critical_errors |= error_baro;
-//	if (init_HMC5883() < 0)
-//		critical_errors |= error_magnet;	
-	flashlight->on();
+	SAFE_ON(flashlight);
 
-
-	// magnet_calibration();
 
 	int res;
 	do
@@ -1713,6 +1626,7 @@ int pilot_main(void)
 			break;
 	}while (res < 0);
 
+	read_rc();
 	has_5th_channel = g_pwm_input_update[4] > systimer->gettime()-500000;
 	has_6th_channel = g_pwm_input_update[5] > systimer->gettime()-500000;
 
@@ -1728,7 +1642,7 @@ int pilot_main(void)
 		LOGE(" )\n");
 
 		led_all_off();
-		flashlight->off();
+		SAFE_OFF(flashlight);
 
 		while (1)
 		{
@@ -1736,7 +1650,7 @@ int pilot_main(void)
 			for(int i=1; i<error_MAX; i<<=1)
 			{
 				led_all_on();
-				flashlight->on();
+				SAFE_ON(flashlight);
 
 				handle_uart4_cli();
 
@@ -1746,7 +1660,7 @@ int pilot_main(void)
 					systimer->delayms(150);
 
 				led_all_off();
-				flashlight->off();
+				SAFE_OFF(flashlight);
 				systimer->delayms(150);
 			}
 
@@ -1754,7 +1668,7 @@ int pilot_main(void)
 		}
 	}
 	
-	// TODO: malloc two timer for main loop and SDCARD logging loop
+	// TODO: malloc two timer, one for main loop and one for SDCARD logging loop
 
 	while(1)
 	{
@@ -1764,20 +1678,11 @@ int pilot_main(void)
 }
 
 
-extern "C"
+void sdcard_logging_loop(void)
 {
-void loop_func(void)
-{
-	TIM_ClearITPendingBit(TIM1 , TIM_FLAG_Update);
-	loop();
-}
-
-int64_t tick;
-void TIM8_BRK_TIM12_IRQHandler(void)
-{
-
-
+	static int64_t tick = systimer->gettime();
 	int64_t t = systimer->gettime();
+
 	int dt = t-tick;
 	if (dt > 15000)
 		TRACE("long log interval:%d\n", dt);
@@ -1793,5 +1698,4 @@ void TIM8_BRK_TIM12_IRQHandler(void)
 	if (res == 0)
 		tick = t;
 	TIM_ClearITPendingBit(TIM12 , TIM_FLAG_Update);
-}
 }

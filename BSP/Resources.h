@@ -10,10 +10,13 @@
 #include <BSP/devices/IMagnetometer.h>
 #include <BSP/devices/IBarometer.h>
 #include <BSP/devices/IMagnetometer.h>
+#include <BSP/devices/IGPS.h>
 
 using namespace BSP;
 using namespace STM32F4;
 #define MAX_ACCELEROMETER_COUNT 5
+#define MAX_GPS_COUNT 3
+
 class Manager
 {
 	//Manager construct:
@@ -47,6 +50,8 @@ class Manager
 	
 	
 	private:
+		IRCIN *rcin;
+		IRCOUT *rcout;
 		LED_table led_table[LED_NUM];
 		int led_num;
 		UART_table uart_table[UART_NUM];
@@ -62,7 +67,9 @@ class Manager
 		int barometer_count;
 		devices::IBarometer * barometers[MAX_ACCELEROMETER_COUNT];	
 		int magnetometer_count;
-		devices::IMagnetometer * magnetometers[MAX_ACCELEROMETER_COUNT];	
+		devices::IMagnetometer * magnetometers[MAX_ACCELEROMETER_COUNT];
+		int gps_count;
+		devices::IGPS * GPSs[MAX_GPS_COUNT];
 	
 	public :
 		int get_LED_Num();
@@ -72,7 +79,7 @@ class Manager
 		int get_accelerometer_count();
 		int get_magnetometer_count();
 		int get_barometer_count();
-	
+		int get_GPS_count();	
 		
 		//register function:
 		int register_LED(const char *name,LED *pLED);
@@ -80,9 +87,12 @@ class Manager
 		int register_accelerometer(devices::IAccelerometer *accel);
 		int register_barometer(devices::IBarometer *baro);
 		int register_magnetometer(devices::IMagnetometer *mag);
+		int register_GPS(devices::IGPS *gps);
 		int register_UART(const char *name,IUART *pUart);
 		int register_Timer(const char *name,ITimer *pTimer);
 		int register_BatteryVoltage(const char *name,IBatteryVoltage *pIBatteryVoltage);
+		int register_RCIN(IRCIN *rcin);
+		int register_RCOUT(IRCOUT *rcout);
 
 		//getDevice function:
 		LED* getLED(const char *name);
@@ -93,7 +103,11 @@ class Manager
 		devices::IGyro * get_gyroscope(int index);
 		devices::IMagnetometer * get_magnetometer(int index);
 		devices::IBarometer * get_barometer(int index);
+		devices::IGPS * get_GPS(int index);
+		IRCIN * get_RCIN();
+		IRCOUT * get_RCOUT();
 };
+
 //Declear manager as global:
 extern Manager manager;
 
