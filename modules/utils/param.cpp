@@ -28,6 +28,7 @@ param::param()
 void param::init(const char *fourcc, float default_value)
 {
 	// TODO : locks
+	return;
 
 	if (all_param_count<0)
 		init_all();

@@ -57,6 +57,8 @@ extern "C" void TIM1_UP_TIM10_IRQHandler(void)
 //Define UART Funtion:
 #include <HAL\STM32F4\F4UART.h>
 #include <HAL\Interface\IUART.h>
+/*
+//For uart4:
 F4UART f4uart(UART4);
 IUART * pUART4 = &f4uart;
 void init_uart4()
@@ -65,6 +67,33 @@ void init_uart4()
 	pUART4->write("12345\n", 6);
 	manager.register_UART("UART4",pUART4);
 }
+extern "C" void UART4_IRQHandler(void)
+{
+	f4uart.UART4_IRQHandler();
+}
+extern "C" void DMA1_Stream4_IRQHandler()
+{
+	f4uart.DMA1_Steam4_IRQHandler();
+}
+*/
+//For usart1:
+F4UART f4uart1(USART1);
+IUART * pUART1 = &f4uart1;
+void init_uart1()
+{
+	pUART1->set_baudrate(115200);
+	pUART1->write("12345\n", 6);
+	manager.register_UART("UART1",pUART1);
+}
+extern "C" void USART1_IRQHandler(void)
+{
+	f4uart1.USART1_IRQHandler();
+}
+extern "C" void DMA2_Stream7_IRQHandler()
+{
+	f4uart1.DMA2_Steam7_IRQHandler();
+}
+
 
 
 #include <HAL\STM32F4\F4SPI.h>
@@ -95,15 +124,6 @@ void init_sensors()
 	
 }
 
-extern "C" void UART4_IRQHandler(void)
-{
-	f4uart.UART4_IRQHandler();
-}
-extern "C" void DMA1_Stream4_IRQHandler()
-{
-	f4uart.DMA1_Steam4_IRQHandler();
-}
-
 
 //Define BattertVoltage Function:
 F4ADC f4adc(ADC1,ADC_Channel_4);
@@ -119,10 +139,11 @@ int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	init_led();
-	init_uart4();
+//	init_uart4();
 	init_timer1();
 	init_BatteryVoltage();
-	init_sensors();
+	init_uart1();
+//	init_sensors();
 	
 	return 0;
 }
