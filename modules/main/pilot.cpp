@@ -135,16 +135,16 @@ static param mag_scale[3] =
 static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
 {
 	{							// + mode
-		{0, +1, +1},			// rear, CCW
+		{0, -1, +1},			// rear, CCW
 		{-1, 0, -1},			// right, CW
-		{0, -1, +1},			// front, CCW
+		{0, +1, +1},			// front, CCW
 		{+1, 0, -1},			// left, CW
 	},
 	{							// X mode
-		{-1,+1,+1},				//REAR_R, CCW
-		{-1,-1,-1},				//FRONT_R, CW
-		{+1,-1,+1},				//FRONT_L, CCW
-		{+1,+1,-1},				//REAR_L, CW
+		{-1,-1,+1},				//REAR_R, CCW
+		{-1,+1,-1},				//FRONT_R, CW
+		{+1,+1,+1},				//FRONT_L, CCW
+		{+1,-1,-1},				//REAR_L, CW
 	}
 };
 
@@ -517,12 +517,6 @@ int pid()
 	{
 		float new_p = (target[i]-pos[i]);
 
-		if (i == 1)
-			new_p = -new_p;
-
-		TRACE("p[%d]=%f", i, new_p*PI180);
-
-
 		// I
 		if (airborne)		// only integrate after takeoff
 		error_pid[i][1] += new_p * interval;
@@ -540,9 +534,6 @@ int pid()
 
 		// P
 		error_pid[i][0] = new_p;
-
-		if (mode == fly_by_wire)		// D disabled for fly by wire for now
-			error_pid[i][2] = 0;
 
 		// sum
 		pid_result[i] = 0;
