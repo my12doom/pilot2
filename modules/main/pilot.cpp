@@ -290,6 +290,7 @@ int64_t mobile_last_update = 0;
 vector gyro_temp_k = {0};		// gyro temperature compensating curve (linear)
 vector gyro_temp_a = {0};
 float temperature0 = 0;
+float mpu6050_temperature;
 
 volatile vector imu_statics[3][4] = {0};		//	[accel, gyro, mag][min, current, max, avg]
 int avg_count = 0;
@@ -814,7 +815,8 @@ int read_sensors()
 		gyro_data data;
 		if (!gyroscope->healthy() || gyroscope->read(&data) < 0)
 			continue;
-
+		
+		mpu6050_temperature = data.temperature;
 		gyro.V.x += data.x;
 		gyro.V.y += data.y;
 		gyro.V.z += data.z;

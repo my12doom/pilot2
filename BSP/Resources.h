@@ -113,3 +113,6 @@ extern Manager manager;
 
 // board bsp implements and starts from this function
 extern int bsp_init_all();
+
+// board bsp implements this
+extern void reset_system();

@@ -208,3 +208,8 @@ int bsp_init_all()
 	
 	return 0;
 }
+
+void reset_system()
+{
+	NVIC_SystemReset();
+}

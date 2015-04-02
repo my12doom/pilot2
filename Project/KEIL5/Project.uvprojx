@@ -823,6 +823,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\modules\utils\vector.c</FilePath>
             </File>
+            <File>
+              <FileName>console.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\utils\console.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -6,7 +6,7 @@
 
 static int64_t rc_update[6];
 static int16_t rc_input[6];
-static int16_t rc_static[8][2];
+static int16_t rc_static[2][8];
 
 static int last_high_tim = -1;
 static int ppm_channel_id = 0;
@@ -47,8 +47,8 @@ int handle_ppm(int now)
 	else if (ppm_channel_id < sizeof(rc_input)/sizeof(rc_input[0]))
 	{
 		rc_input[ppm_channel_id] = delta;
-		rc_static[ppm_channel_id][0] = f_min(rc_static[ppm_channel_id][0], rc_input[ppm_channel_id]);
-		rc_static[ppm_channel_id][1] = f_max(rc_static[ppm_channel_id][1], rc_input[ppm_channel_id]);
+		rc_static[0][ppm_channel_id] = f_min(rc_static[ppm_channel_id][0], rc_input[ppm_channel_id]);
+		rc_static[1][ppm_channel_id] = f_max(rc_static[ppm_channel_id][1], rc_input[ppm_channel_id]);
 		//TRACE("%.0f,", g_pwm_input[ppm_channel_id-1]);
 
 		rc_update[ppm_channel_id] = systimer->gettime();
@@ -117,7 +117,28 @@ int dev_v1::RCIN::get_channel_data(int16_t *out, int start_channel, int max_coun
 int dev_v1::RCIN::get_channel_update_time(int64_t *out, int start_channel, int max_count)
 {
 	int count = f_min(ppm_channel_count - start_channel, max_count);
-	memcpy(out, rc_static + start_channel, count * sizeof(int64_t));
+	memcpy(out, rc_update + start_channel, count * sizeof(int64_t));
 	
 	return count;
+}
+
+// statistics functions is mainly for RC calibration purpose.
+int dev_v1::RCIN::get_statistics_data(int16_t *min_out, int16_t *max_out, int start_channel, int max_count)
+{
+	int count = f_min(ppm_channel_count - start_channel, max_count);
+	memcpy(min_out, rc_static[0] + start_channel, count * sizeof(int64_t));
+	memcpy(max_out, rc_static[1] + start_channel, count * sizeof(int64_t));
+	
+	return count;
+}
+int dev_v1::RCIN::reset_statistics()
+{
+	int i;
+	for(i=0; i<8; i++)
+	{
+		rc_static[0][i] = 32767;			// min
+		rc_static[1][i] = 0;				// max
+	}
+
+	return 0;
 }
