@@ -215,7 +215,7 @@ int Manager::register_RCIN(IRCIN* rcin)
 	return 0;
 }
 
-int Manager::register_RCOUT(IRCOUT* rcin)
+int Manager::register_RCOUT(IRCOUT* rcout)
 {
 	this->rcout = rcout;
 	return 0;

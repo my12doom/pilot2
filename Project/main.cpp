@@ -7,12 +7,13 @@
 using namespace devices;
 using namespace sensors;
 
-int main(void)
+int tmain(void)
 {	
 	bsp_init_all();
 	char a[20];
 	
-	IUART *uart3 = manager.getUART("UART3");
+	IGPS *gps = manager.get_GPS(0);
+	IBarometer *baro = manager.get_barometer(0);
 	
 	/*
 	while(1)
@@ -24,17 +25,24 @@ int main(void)
 	}
 	*/
 	
-	UartNMEAGPS gps;
-	gps.init(uart3, 115200);
+	F4GPIO debug(GPIOA, GPIO_Pin_7);
+	debug.set_mode(MODE_OUT_PushPull);
+	
 	
 	while(1)
 	{
-		gps_data data;
-		int res = gps.read(&data);
+		//gps_data data;
+		//int res = gps->read(&data);
 		
-		systimer->delayms(10);
+		baro_data data;
+		baro->read(&data);
 		
-		printf("\r%d       ", res);
+		systimer->delayms(3);
+		
+		printf("%f, %f       \n", data.pressure, data.temperature);
+		if (data.temperature < 0)
+			printf("WTF\n");
+		debug.toggle();
 	}
 }
 

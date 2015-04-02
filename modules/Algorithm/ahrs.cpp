@@ -1,7 +1,8 @@
+#include "ahrs.h"
 #include <stdint.h>
 #include <string.h>
-#include "ahrs.h"
 #include <math.h>
+#include <Protocol/common.h>
 
 //---------------------------------------------------------------------------------------------------
 //! Auxiliary variables to reduce number of repeated operations
@@ -97,7 +98,7 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	float halfexA = 0.0f, halfeyA = 0.0f, halfezA = 0.0f;
 	float halfexM = 0.0f, halfeyM = 0.0f, halfezM = 0.0f;
 	float acc_bodyframe[3] = {ax, ay, az};
-	float g_force = sqrt(ax*ax + ay*ay + az*az) / 9.8065f;
+	float g_force = sqrt(ax*ax + ay*ay + az*az) / G_in_ms2;
 	bool g_force_ok = g_force > 0.85f && g_force < 1.15f;
 	float mag_length = sqrt(mx*mx + my*my + mz*mz);
 	if (ground_mag_length != 0)
@@ -256,7 +257,7 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 			acc_ned[i] += BODY2NED[i][j] * acc_bodyframe[j];
 		}
 	}
-	acc_ned[2] -= 9.8065f;
+	acc_ned[2] -= G_in_ms2;
 
 
 //   	LOGE("accz=%f/%f, acc=%f,%f,%f, raw=%f,%f,%f\n", accz_NED, accelz, acc[0], acc[1], acc[2], BODY2NED[0][0], BODY2NED[0][1], BODY2NED[0][2]);

@@ -7,6 +7,7 @@
 //Define Battery Voltage Funtion Pin and channel:
 #include <BSP\boards\dev_v1\BatteryVoltage.h>
 #include <BSP\devices\IBatteryVoltage.h>
+#include <BSP/devices/sensors/UartNMEAGPS.h>
 using namespace BSP;
 using namespace STM32F4;
 
@@ -35,23 +36,24 @@ void init_led()
 #include <HAL\STM32F4\F4Timer.h>
 #include <HAL\Interface\ITimer.h>
 //Timer1
-F4Timer f4TIM1(TIM1);
-ITimer * pTIM1 = &f4TIM1;
 
-void TIM1_Callback()
-{
-	manager.getLED("LED_RED")->toggle();
-}
+static F4Timer f4TIM1(TIM1);
+static F4Timer f4TIM4(TIM4);
 void init_timer1()
 {
-	manager.register_Timer("Timer1",pTIM1);
-	manager.getTimer("Timer1")->set_period(50000);
-	manager.getTimer("Timer1")->set_callback(TIM1_Callback);
+	manager.register_Timer("mainloop", &f4TIM1);
+	manager.register_Timer("log", &f4TIM4);
 }
 extern "C" void TIM1_UP_TIM10_IRQHandler(void)
 {
 	f4TIM1.call_callback();
 }
+
+extern "C" void TIM4_IRQHandler(void)
+{
+	f4TIM4.call_callback();
+}
+
 //Timer2
 
 
@@ -170,6 +172,16 @@ int init_RC()
 	return 0;
 }
 
+int init_GPS()
+{
+	static sensors::UartNMEAGPS gps;
+	gps.init(&f4uart3, 115200);
+	
+	manager.register_GPS(&gps);
+	
+	return 0;
+}
+
 //Define BattertVoltage Function:
 F4ADC f4adc(ADC1,ADC_Channel_4);
 BatteryVoltage battery_voltage(&f4adc,1.0);
@@ -190,7 +202,9 @@ int bsp_init_all()
 	init_timer1();
 	init_BatteryVoltage();
 //	init_uart1();
+	init_RC();
 	init_sensors();
+	init_GPS();
 	
 	return 0;
 }

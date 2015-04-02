@@ -17,6 +17,7 @@ namespace STM32F4
 	{
 		reload = SystemCoreClock / 100;		// ~ 10ms reload period
 		SysTick_Config(reload);
+		NVIC_SetPriority(SysTick_IRQn, 0x0);
 	}
 	
 	

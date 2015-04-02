@@ -1,6 +1,7 @@
 #include "altitude_estimator.h"
 #include <string.h>
 #include <Protocol/common.h>
+#include <HAL/Interface/Interfaces.h>
 
 static float P[16] = 
 {
@@ -103,7 +104,7 @@ int altitude_estimator::inverse_matrix2x2(float *m)
 
 int altitude_estimator::update(float accelz, float baro, float dt)
 {
-	if (dt > 0.2f)
+	if (dt > 0.2f || dt < 0)
 		return -1;
 
 	// near ground, reject ground effected baro data
@@ -223,7 +224,7 @@ int altitude_estimator::update(float accelz, float baro, float dt)
 	matrix_sub(I, tmp, 4, 4);
 	matrix_mul(P, I, 4, 4, P1, 4, 4);
 
-	TRACE("\rtime=%.3f,state:%.2f,%.2f,%.2f,%.2f, raw:%.3f, accelz:%.3f      ", getus()/1000000.0f, state[0], state[1], state[2], state[3], baro, accelz);
+	TRACE("time=%.3f,state:%.2f,%.2f,%.2f,%.2f, raw:%.3f, accelz:%.3f      \n", systimer->gettime()/1000000.0f, state[0], state[1], state[2], state[3], baro, accelz);
 
 	TRACE("pressure=%.2f\r", a_raw_pressure);
 

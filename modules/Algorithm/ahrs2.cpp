@@ -73,7 +73,7 @@ int ahrs_mwc_update(vector gyro, vector accel, vector mag, float dt)
 
 	float dot = accel.V.x * estAccGyro.V.x + accel.V.y * estAccGyro.V.y + accel.V.z * estAccGyro.V.z;
 	dot /= vector_length(&estAccGyro);
-	accelz_mwc = 9.80f * (dot-1);
+	accelz_mwc = G_in_ms2 * (dot-1);
 	// calculate attitude, unit is radian, range +/-PI
 	roll = radian_add(atan2(estAccGyro.V.x, estAccGyro.V.z), PI);
 	pitch = atan2(estAccGyro.V.y, (estAccGyro.V.z > 0 ? 1 : -1) * sqrt(estAccGyro.V.x*estAccGyro.V.x + estAccGyro.V.z * estAccGyro.V.z));

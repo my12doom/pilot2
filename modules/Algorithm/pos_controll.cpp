@@ -5,7 +5,6 @@
 #include <Protocol/common.h>
 
 // constants
-static float g = 9.8f;
 static float leash_pos = 10.0f;
 static float leash = 5.0f;
 static float linear_distance = 5.0f;
@@ -48,7 +47,7 @@ pos_controller::pos_controller()
 	fprintf(f, "time,v,tv,p,sp\r\n");
 	tick = GetTickCount();
 
-	float v = atan2(1, 9.8);
+	float v = atan2(1, G_in_ms2);
 	printf("%f\n", v * 180 / PI);
 #endif
 }
@@ -114,8 +113,8 @@ int pos_controller::set_setpoint(float *pos)
 
 	// lean angle to accel
 	float accel_target[2];		// [forward, right]
-	accel_target[0] = g * (-sin(eulers[1])/cos(eulers[1]));		// lean forward = negetive pitch angle
-	accel_target[1] = g * (sin(eulers[0])/cos(eulers[0]));
+	accel_target[0] = G_in_ms2 * (-sin(eulers[1])/cos(eulers[1]));		// lean forward = negetive pitch angle
+	accel_target[1] = G_in_ms2 * (sin(eulers[0])/cos(eulers[0]));
 
 	// rotate accel from forward-right to north-east axis
 	float accel_north = cos_yaw * accel_target[0] - sin_yaw * accel_target[1];
@@ -283,8 +282,8 @@ int pos_controller::accel_to_lean_angles()
 	float accel_right = -sin_yaw * target_accel[0] + cos_yaw * target_accel[1];
 
 	// accel to lean angle
-	target_euler[1] = atan2(-accel_forward, g);
-	target_euler[0] = atan2(accel_right/**cos(eulers[1])*/, g);		// maybe target_pitch not needed?
+	target_euler[1] = atan2(-accel_forward, G_in_ms2);
+	target_euler[0] = atan2(accel_right/**cos(eulers[1])*/, G_in_ms2);		// maybe target_pitch not needed?
 
 	// TODO: handle angle limitation correctly
 	target_euler[0] = limit(target_euler[0], -PI/4, PI/4);

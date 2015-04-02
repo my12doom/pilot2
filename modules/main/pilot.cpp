@@ -135,16 +135,16 @@ static param mag_scale[3] =
 static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
 {
 	{							// + mode
-		{0, +1, -1},			// rear, CCW
-		{-1, 0, +1},			// right, CW
-		{0, -1, -1},			// front, CCW
-		{+1, 0, +1},			// left, CW
+		{0, +1, +1},			// rear, CCW
+		{-1, 0, -1},			// right, CW
+		{0, -1, +1},			// front, CCW
+		{+1, 0, -1},			// left, CW
 	},
 	{							// X mode
-		{-1,+1,-1},				//REAR_R, CCW
-		{-1,-1,+1},				//FRONT_R, CW
-		{+1,-1,-1},				//FRONT_L, CCW
-		{+1,+1,+1},				//REAR_L, CW
+		{-1,+1,+1},				//REAR_R, CCW
+		{-1,-1,-1},				//FRONT_R, CW
+		{+1,-1,+1},				//FRONT_L, CCW
+		{+1,+1,-1},				//REAR_L, CW
 	}
 };
 
@@ -221,8 +221,6 @@ fly_mode mode = initializing;
 copter_mode submode = basic;
 int64_t collision_detected = 0;	// remember to clear it before arming
 int64_t tilt_us = 0;	// remember to clear it before arming
-uint8_t data[32];
-static sensor_data *p = (sensor_data*)data;
 bool gyro_bias_estimating_end = false;
 vector gyro_radian;
 vector accel = {NAN, NAN, NAN};
@@ -232,9 +230,8 @@ vector mag_zero = {0};
 vector accel_earth_frame_mwc;
 vector accel_earth_frame;
 vector mag_earth_frame;
-int ms5611[2];
-int ms5611_result = -1;
 bool new_baro_data = false;
+baro_data baro_reading;
 int64_t time;
 float error_pid[3][3] = {0};		// error_pid[roll, pitch, yaw][p,i,d]
 const int lpf_order = 5;
@@ -299,18 +296,6 @@ int avg_count = 0;
 px4flow_frame frame;
 int loop_hz = 0;
 
-double_sensor_data double_sensor = {0};
-
-
-double NDEG2DEG(double ndeg)
-{
-	int degree = ndeg / 100;
-	int minute = int(floor(ndeg)) % 100;	
-
-	return degree + minute/60.0 + modf(ndeg, &ndeg)/60.0;
-}
-
-
 int calculate_baro_altitude()
 {
 	// raw altitude
@@ -319,6 +304,8 @@ int calculate_baro_altitude()
 	a_raw_altitude = 153.8462f * temp * (1.0f - exp(0.190259f * log(scaling)));
 	if (fabs(a_raw_altitude) < 5.0f)
 		ground_temperature = a_raw_temperature;
+	else
+		printf("WTF?");
 
 	return 0;
 }
@@ -327,7 +314,7 @@ int prepare_pid()
 {
 	// calculate current core pid position
 
-	float new_angle_pos[3] = {euler[0], euler[1], -euler[2]};
+	float new_angle_pos[3] = {euler[0], euler[1], euler[2]};
 
 	// the quadcopter's main pid lock on angle rate
 	for(int i=0; i<3; i++)
@@ -336,6 +323,7 @@ int prepare_pid()
 		angle_pos[i] = new_angle_pos[i];
 	}
 
+	LOGE("\r%.2f,%.2f,%.2f", pos[0]*PI180, pos[1]*PI180, pos[2]*PI180);
 
 	switch (mode)
 	{
@@ -467,10 +455,10 @@ int prepare_pid()
 			}
 
 			// yaw:
-			float delta_yaw = ((fabs(rc[3]) < RC_DEAD_ZONE) ? 0 : -rc[3]) * interval * QUADCOPTER_ACRO_YAW_RATE;
+			float delta_yaw = ((fabs(rc[3]) < RC_DEAD_ZONE) ? 0 : rc[3]) * interval * QUADCOPTER_ACRO_YAW_RATE;
 
 			float new_target = radian_add(angle_target[2], delta_yaw);
-			float new_error = abs(radian_sub(angle_pos[2], new_target));
+			float new_error = abs(radian_sub(new_target, angle_pos[2]));
 			if (new_error > (airborne?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) && new_error > abs(angle_error[2]))
 				;
 			else
@@ -483,7 +471,7 @@ int prepare_pid()
 			// based on a PID stablizer
 			for(int i=0; i<3; i++)
 			{
-				float new_angle_error = radian_sub(angle_pos[i], angle_target[i]);	// use radian_sub mainly for yaw
+				float new_angle_error = radian_sub(angle_target[i], angle_pos[i]);	// use radian_sub mainly for yaw
 
 
 				// 5hz low pass filter for D, you won't be that crazy, right?
@@ -499,7 +487,7 @@ int prepare_pid()
 				angle_error[i] = new_angle_error;
 
 				// apply angle pid
-				target[i] = - (angle_error[i] * pid_factor2[i][0] + angle_errorI[i] * pid_factor2[i][1] + angle_errorD[i] * pid_factor2[i][2]);
+				target[i] = angle_error[i] * pid_factor2[i][0] + angle_errorI[i] * pid_factor2[i][1] + angle_errorD[i] * pid_factor2[i][2];
 
 				// max target rate: 180 degree/second
 				target[i] = limit(target[i], -PI, PI);
@@ -638,16 +626,13 @@ int save_logs()
 
 	// send/store debug data
 	time = systimer->gettime();
-// 	packet.data.sensor.gyro[2] = adxrs453_value;
-// 	packet.data.sensor.gyro[0] = mpu9250_value[6];
-	log(p, TAG_SENSOR_DATA, time);
-	log(&double_sensor, TAG_DOUBLE_SENSOR_DATA, time);
-
+	sensor_data sensor;
+	log(&sensor, TAG_SENSOR_DATA, time);
 
 	imu_data imu = 
 	{
-		ms5611[1],
-		ms5611[0],
+		a_raw_pressure,
+		a_raw_temperature,
 		{estAccGyro.array[0], estAccGyro.array[1], estAccGyro.array[2]},
 		{estGyro.array[0], estGyro.array[1], estGyro.array[2]},
 		{estMagGyro.array[0], estMagGyro.array[1], estMagGyro.array[2]},
@@ -658,7 +643,6 @@ int save_logs()
 	position p = estimator.get_estimation();
 	ned_data ned = 
 	{
-// 		{accel_earth_frame_mwc.array[0] * 1000* 9.8f, accel_earth_frame_mwc.array[1] * 1000* 9.8f, -accel_earth_frame_mwc.array[2] * 1000* 9.8f-9800.0f},
 		0,
 		{accel_earth_frame.array[0] * 1000, accel_earth_frame.array[1] * 1000, accel_earth_frame.array[2] * 1000},
 		p.latitude * double(10000000.0/COORDTIMES), 
@@ -831,8 +815,15 @@ int read_sensors()
 		if (!gyroscope->healthy() || gyroscope->read(&data) < 0)
 			continue;
 
+		gyro.V.x += data.x;
+		gyro.V.y += data.y;
+		gyro.V.z += data.z;
+
 		healthy_gyro_count ++;
 	}
+	gyro.V.x /= healthy_gyro_count;
+	gyro.V.y /= healthy_gyro_count;
+	gyro.V.z /= healthy_gyro_count;
 
 	// read accelerometers
 	int healthy_acc_count = 0;
@@ -844,8 +835,15 @@ int read_sensors()
 		if (!accelerometer->healthy() || accelerometer->read(&data) < 0)
 			continue;
 
-		healthy_acc_count ++;		
+		acc.V.x += data.x;
+		acc.V.y += data.y;
+		acc.V.z += data.z;
+
+		healthy_acc_count ++;
 	}
+	acc.V.x /= healthy_acc_count;
+	acc.V.y /= healthy_acc_count;
+	acc.V.z /= healthy_acc_count;
 
 	// read magnetometers
 	int healthy_mag_count = 0;
@@ -857,8 +855,15 @@ int read_sensors()
 		if (!magnetometer->healthy() || magnetometer->read(&data) < 0)
 			continue;
 		
+		mag.V.x += data.x;
+		mag.V.y += data.y;
+		mag.V.z += data.z;
+
 		healthy_mag_count ++ ;
 	}
+	mag.V.x /= healthy_mag_count;
+	mag.V.y /= healthy_mag_count;
+	mag.V.z /= healthy_mag_count;
 	
 	// read barometers
 	int healthy_baro_count = 0;
@@ -867,28 +872,51 @@ int read_sensors()
 		IBarometer* barometer = manager.get_barometer(i);
 		
 		baro_data data;
-		if (!barometer->healthy() || barometer->read(&data) < 0)
+		if (!barometer->healthy())
 			continue;
-		
+		int res = barometer->read(&data);
+		if (res < 0)
+			continue;
+
+		new_baro_data = res == 0;
+		a_raw_temperature = data.temperature;
+		a_raw_pressure = data.pressure;
+
 		healthy_baro_count ++;
 	}
 
 	// read GPSs
+	int lowest_hdop = 100000;
+	for(int i=0; i<manager.get_GPS_count(); i++)
+	{
+		IGPS *gps = manager.get_GPS(i);
+		if (!gps->healthy())
+			continue;
 
+		devices::gps_data data;
+		gps->read(&data);
 
-	// universal
-	
+		// TODO: select best GPS correctly
+		if (data.DOP[1] > 0 && data.DOP[1] < lowest_hdop)
+		{
+			lowest_hdop = data.DOP[1];
+			::gps = data;
+		}
+	}
+
+	// bias and scale calibrating	
 	for(int i=0; i<3; i++)
 	{
 		acc.array[i] += acc_bias[i];
 		acc.array[i] *= acc_scale[i];
 		mag.array[i] += mag_bias[i];
 		mag.array[i] *= mag_scale[i];
-
-		acc.array[i] /= 2048.0f;
 	}
+
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
 	TRACE("\rmag_size:%.3f", mag_size);
+	
+	
 	::gyro_radian = gyro;
 	::mag = mag;
 
@@ -906,6 +934,7 @@ int read_sensors()
 		vector_add(&::accel, &acc);
 	}
 
+	// statics
 	for(int i=0; i<3; i++)
 	{
 		imu_statics[0][0].array[i] = f_min(accel.array[i], imu_statics[0][0].array[i]);
@@ -930,20 +959,10 @@ int calculate_state()
 	if (interval <=0 || interval > 0.2f)
 		return -1;
 
-	//LOGE("\rdeg:%.2f,%.2f", adxrs453_value / 80.0f, ::gyro.array[0] * PI180);
-
-	static float mag_tolerate = 0.25f;
-
-	vector acc_norm = accel;
-	vector_multiply(&acc_norm, 9.8065f);
-	float pix_acc[3] = {acc_norm.V.y, -acc_norm.V.x, -acc_norm.V.z};
-	float pix_mag[3] = {mag.V.y, -mag.V.x, -mag.V.z};
-
 	NonlinearSO3AHRSupdate(
-		gyro_radian.array[0], gyro_radian.array[1], -gyro_radian.array[2],
-// 		0,0,0,
-		pix_acc[0], pix_acc[1], pix_acc[2],
-		pix_mag[0], pix_mag[1], pix_mag[2], 
+		accel.array[0], accel.array[1], accel.array[2], 
+		mag.array[0], mag.array[1], mag.array[2],
+		gyro_radian.array[0], gyro_radian.array[1], gyro_radian.array[2],
 		0.15f, 0.0015f, 0.15f, 0.0015f, interval);
 // 	MadgwickAHRSupdateIMU(gyro.array[0] /*+ (systimer->gettime() > 15000000 ? PI*5.0f/180.0f : 0)*/, gyro.array[1], -gyro.array[2], -acc_norm.V.y, acc_norm.V.x, acc_norm.V.z, 1.5f, interval);
 
@@ -960,7 +979,12 @@ int calculate_state()
 // 	LOGE("angle target:%.2f,%.2f,%.2f\n", angle_target[0]*PI180, angle_target[1]*PI180, angle_target[2]*PI180);
 
 
-	ahrs_mwc_update(gyro_radian, accel, mag, interval);
+	vector mwc_acc = {accel.V.y, -accel.V.x, -accel.V.z};
+	vector mwc_gyro = {gyro_radian.array[0], gyro_radian.array[1], -gyro_radian.array[2]};
+	vector mwc_mag = {mag.V.y, -mag.V.x, -mag.V.z};
+	vector_multiply(&mwc_acc, 1.0f/G_in_ms2);
+
+	ahrs_mwc_update(mwc_gyro, mwc_acc, mwc_mag, interval);
 	roll = radian_add(roll, quadcopter_trim[0]);
 	pitch = radian_add(pitch, quadcopter_trim[1]);
 	yaw_mag = radian_add(yaw_mag, quadcopter_trim[2]);
@@ -970,22 +994,16 @@ int calculate_state()
 
 
 	// calculate altitude
-	if (ms5611_result == 0)
-	{
-		TRACE("\r\npressure,temperature=%f, %f, ground pressure & temperature=%f, %f, height=%f, climb_rate=%f, time=%f\r\n", pressure, temperature, ground_pressure, ground_temperature, altitude, climb_rate_kalman, (float)systimer->gettime()/1000000);
-
-		a_raw_pressure = ms5611[0] / 100.0f;
-		a_raw_temperature = ms5611[1] / 100.0f;
+	if (new_baro_data)
 		calculate_baro_altitude();
-	}
 
 	accelz_mwc = accelz;
 	accelz = acc_ned[2];
 
 	alt_estimator.set_land_effect(mode == quadcopter && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
-	alt_estimator.update(accelz, ms5611_result == 0 ? a_raw_altitude : NAN, interval);
+	alt_estimator.update(accelz, new_baro_data ? a_raw_altitude : NAN, interval);
 	alt_estimatorCF.set_land_effect(mode == quadcopter && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
-	alt_estimatorCF.update(accelz, ms5611_result == 0 ? a_raw_altitude : NAN, interval);
+	alt_estimatorCF.update(accelz, new_baro_data ? a_raw_altitude : NAN, interval);
 	estimator.update_accel(accel_earth_frame.array[0], accel_earth_frame.array[1], systimer->gettime());
 
 	if (new_gps_data)
@@ -1070,11 +1088,11 @@ int sensor_calibration()
 		LOGE("\r%d/%d", i, calibrating_count);
 
 		read_sensors();
-		if (ms5611_result == 0)
+		if (new_baro_data)
 		{
 			baro_counter ++;
-			ground_pressure += ms5611[0];
-			ground_temperature += ms5611[1];
+			ground_pressure += a_raw_pressure;
+			ground_temperature += a_raw_temperature;
 		}
 
 		//mpu6050_temperature += p->temperature1  / 340.0f + 36.53f;
@@ -1108,22 +1126,22 @@ int sensor_calibration()
 	vector_divide(&mag_avg, calibrating_count);
 	vector_divide(&gyro_avg, calibrating_count);
 //	mpu6050_temperature /= calibrating_count;
-	ground_pressure /= baro_counter * 100;
-	ground_temperature /= baro_counter * 100;
+	ground_pressure /= baro_counter;
+	ground_temperature /= baro_counter;
 
 	LOGE("base value measured\n");
 
 	// init ahrs
-	vector pix_acc = {accel_avg.V.y, -accel_avg.V.x, -accel_avg.V.z};
-	float pix_gyro[3] = {gyro_avg.array[0], gyro_avg.array[1], -gyro_avg.array[2]};
-	vector_multiply(&pix_acc, 9.8065f);
-	float pix_mag[3] = {mag_avg.V.y, -mag_avg.V.x, -mag_avg.V.z};
+	vector mwc_acc = {accel_avg.V.y, -accel_avg.V.x, -accel_avg.V.z};
+	float mwc_gyro[3] = {gyro_avg.array[0], gyro_avg.array[1], -gyro_avg.array[2]};
+	float mwc_mag[3] = {mag_avg.V.y, -mag_avg.V.x, -mag_avg.V.z};
+	vector_multiply(&mwc_acc, 1.0f/G_in_ms2);
 
 	ahrs_mwc_init(gyro_avg, accel_avg, mag_avg);
 
-	NonlinearSO3AHRSinit(pix_acc.array[0], pix_acc.array[1], pix_acc.array[2],
-		pix_mag[0], pix_mag[1], pix_mag[2],
-		pix_gyro[0], pix_gyro[1], pix_gyro[2]);
+	NonlinearSO3AHRSinit(accel_avg.V.x, accel_avg.V.y, accel_avg.V.z, 
+		mag_avg.V.x, mag_avg.V.y, mag_avg.V.z, 
+		gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
 
 	return 0;
 }
@@ -1513,7 +1531,7 @@ int read_rc()
 	return 0;
 }
 
-int main_loop(void)
+void main_loop(void)
 {
 	// calculate time interval
 	static int64_t tic = 0;
@@ -1579,13 +1597,34 @@ int main_loop(void)
 		else
 			SAFE_OFF(SD_led);
 	}
-
-	return 0;
 }
 
-int pilot_main(void)
+
+void sdcard_logging_loop(void)
+{
+	static int64_t tick = systimer->gettime();
+	int64_t t = systimer->gettime();
+
+	int dt = t-tick;
+	if (dt > 15000)
+		TRACE("long log interval:%d\n", dt);
+
+
+	int64_t starttick = systimer->gettime();
+	int res = log_flush();
+	starttick = systimer->gettime() - starttick;
+
+	if (starttick > 10000)
+		TRACE("long log time:%d\n", int(starttick));
+
+	if (res == 0)
+		tick = t;
+}
+
+int main(void)
 {
 	bsp_init_all();
+	
 	
 	state_led = manager.getLED("state");
 	SD_led = manager.getLED("SD");
@@ -1593,6 +1632,7 @@ int pilot_main(void)
 	rcin = manager.get_RCIN();
 	rcout = manager.get_RCOUT();
 	
+	STOP_ALL_MOTORS();
 
 	// USB
 
@@ -1669,33 +1709,14 @@ int pilot_main(void)
 	}
 	
 	// TODO: malloc two timer, one for main loop and one for SDCARD logging loop
+	manager.getTimer("mainloop")->set_period(3000);
+	manager.getTimer("mainloop")->set_callback(main_loop);
+	manager.getTimer("log")->set_period(10000);
+	manager.getTimer("log")->set_callback(sdcard_logging_loop);
 
 	while(1)
 	{
 
 	}
 
-}
-
-
-void sdcard_logging_loop(void)
-{
-	static int64_t tick = systimer->gettime();
-	int64_t t = systimer->gettime();
-
-	int dt = t-tick;
-	if (dt > 15000)
-		TRACE("long log interval:%d\n", dt);
-
-
-	int64_t starttick = systimer->gettime();
-	int res = log_flush();
-	starttick = systimer->gettime() - starttick;
-
-	if (starttick > 10000)
-		TRACE("long log time:%d\n", int(starttick));
-
-	if (res == 0)
-		tick = t;
-	TIM_ClearITPendingBit(TIM12 , TIM_FLAG_Update);
 }
