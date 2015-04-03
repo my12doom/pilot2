@@ -226,7 +226,5 @@ int altitude_estimator::update(float accelz, float baro, float dt)
 
 	TRACE("time=%.3f,state:%.2f,%.2f,%.2f,%.2f, raw:%.3f, accelz:%.3f      \n", systimer->gettime()/1000000.0f, state[0], state[1], state[2], state[3], baro, accelz);
 
-	TRACE("pressure=%.2f\r", a_raw_pressure);
-
 	return 0;
 }

@@ -3,7 +3,7 @@
 #include "stm32f4xx.h"
 namespace STM32F4
 {
-	F4UART::F4UART(USART_TypeDef * USARTx):tx_start(0),ongoing_tx_size(0),dma_running(0),tx_end(0),end(0),end_sentence(0),start(0)
+	F4UART::F4UART(USART_TypeDef * USARTx):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),dma_running(0),end_sentence(0)
 	{
 		
 		this->USARTx=USARTx;
@@ -345,7 +345,41 @@ namespace STM32F4
 		start = i;
 		return j;
 	}
-		int F4UART::dma_handle_queue()
+	int F4UART::peak(void *data, int max_count)
+	{
+		char *p = (char*)data;
+		int _end_sentence = end_sentence;
+		int j=0;
+		int i;
+		int size;
+		int lastR = 0;
+		if (_end_sentence == start)
+			return -1;
+		size = _end_sentence - start;
+		if (size<0)
+			size += sizeof(buffer);
+		if (size >= max_count)
+			return -2;
+		for(i=start; i!= _end_sentence; i=(i+1)%sizeof(buffer))
+		{
+			if (buffer[i] == '\r')
+			{
+				if (lastR)
+					p[j++] = buffer[i];
+				lastR = !lastR;
+			}
+
+			p[j++] = buffer[i];
+			if (buffer[i] == '\n')
+			{
+				i=(i+1)%sizeof(buffer);
+				break;
+			}
+		}
+		p[j] = 0;
+		return j;
+	}
+	int F4UART::dma_handle_queue()
 	{
 		
 		if (dma_running)

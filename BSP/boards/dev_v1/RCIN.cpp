@@ -47,8 +47,8 @@ int handle_ppm(int now)
 	else if (ppm_channel_id < sizeof(rc_input)/sizeof(rc_input[0]))
 	{
 		rc_input[ppm_channel_id] = delta;
-		rc_static[0][ppm_channel_id] = f_min(rc_static[ppm_channel_id][0], rc_input[ppm_channel_id]);
-		rc_static[1][ppm_channel_id] = f_max(rc_static[ppm_channel_id][1], rc_input[ppm_channel_id]);
+		rc_static[0][ppm_channel_id] = f_min(rc_static[0][ppm_channel_id], rc_input[ppm_channel_id]);
+		rc_static[1][ppm_channel_id] = f_max(rc_static[1][ppm_channel_id], rc_input[ppm_channel_id]);
 		//TRACE("%.0f,", g_pwm_input[ppm_channel_id-1]);
 
 		rc_update[ppm_channel_id] = systimer->gettime();
@@ -126,8 +126,8 @@ int dev_v1::RCIN::get_channel_update_time(int64_t *out, int start_channel, int m
 int dev_v1::RCIN::get_statistics_data(int16_t *min_out, int16_t *max_out, int start_channel, int max_count)
 {
 	int count = f_min(ppm_channel_count - start_channel, max_count);
-	memcpy(min_out, rc_static[0] + start_channel, count * sizeof(int64_t));
-	memcpy(max_out, rc_static[1] + start_channel, count * sizeof(int64_t));
+	memcpy(min_out, rc_static[0] + start_channel, count * sizeof(int16_t));
+	memcpy(max_out, rc_static[1] + start_channel, count * sizeof(int16_t));
 	
 	return count;
 }

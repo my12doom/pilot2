@@ -177,9 +177,7 @@ extern "C" int parse_command_line(const char *line, char *out)
 		int16_t current[6];
 		
 		rcin->get_channel_data(current, 0, 6);
-		rcin->get_statistics_data(static_min, static_max, 0, 6);
-		
-		
+		rcin->get_statistics_data(static_min, static_max, 0, 6);		
 		
 		for(i=0; i<6; i++)
 		{

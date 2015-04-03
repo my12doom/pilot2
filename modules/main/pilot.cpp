@@ -8,6 +8,7 @@
 #include <utils/vector.h>
 #include <utils/param.h>
 #include <utils/log.h>
+#include <utils/console.h>
 
 #include <Algorithm/ahrs.h>
 #include <Algorithm/ahrs2.h>
@@ -36,15 +37,13 @@ IRCIN *rcin;
 IRCOUT *rcout;
 
 
-/*
 extern "C"
 {
 
-#ifdef STM32F4
-	#include "../usb_comF4/cdc/usbd_cdc_core.h"
-	#include "../usb_comF4/core/usbd_usr.h"
-	#include "../usb_comF4/usb_conf/usbd_desc.h"
-	#include "../usb_comF4/usb_conf/usb_conf.h"
+	#include <HAL/STM32F4/usb_comF4/cdc/usbd_cdc_core.h>
+	#include <HAL/STM32F4/usb_comF4/core/usbd_usr.h>
+	#include <HAL/STM32F4/usb_comF4/usb_conf/usbd_desc.h>
+	#include <HAL/STM32F4/usb_comF4/usb_conf/usb_conf.h>
 
 	#ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
 	#if defined ( __ICCARM__ ) //!< IAR Compiler 
@@ -53,9 +52,7 @@ extern "C"
 	#endif // USB_OTG_HS_INTERNAL_DMA_ENABLED
 
 	__ALIGN_BEGIN USB_OTG_CORE_HANDLE     USB_OTG_dev  __ALIGN_END ;
-#endif
 }
-*/
 
 
 // parameters
@@ -324,7 +321,7 @@ int prepare_pid()
 		angle_pos[i] = new_angle_pos[i];
 	}
 
-	LOGE("\r%.2f,%.2f,%.2f", pos[0]*PI180, pos[1]*PI180, pos[2]*PI180);
+	TRACE("\r%.2f,%.2f,%.2f", pos[0]*PI180, pos[1]*PI180, pos[2]*PI180);
 
 	switch (mode)
 	{
@@ -793,7 +790,7 @@ int read_sensors()
 	*/
 
 	// read usart source
-	handle_uart4_controll();
+	handle_uart4_cli();
 
 	
 
@@ -1141,11 +1138,6 @@ int sensor_calibration()
 
 extern "C" int Mal_Accessed(void);
 
-int Mal_Accessed(void)
-{
-	return 0;
-}
-
 int usb_lock()
 {
 	if (Mal_Accessed())
@@ -1388,10 +1380,10 @@ float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert
 
 int handle_uart4_cli()
 {
-#ifdef STM32F4
 	char line[1024];
 	char out[1024];
-	int byte_count = UART4_ReadPacket(line, sizeof(line));
+	IUART *uart = manager.getUART("UART2");
+	int byte_count = uart->read(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;
 	
@@ -1399,10 +1391,11 @@ int handle_uart4_cli()
 	
 	int out_count = parse_command_line(line, out);
 	if (out_count>0)
-		UART4_SendPacket(out, out_count);
-	
-	printf("%s,%s\n", line, out);
-#endif
+	{
+		out[out_count] = 0;
+		printf("%s,%s\n", line, out);
+		uart->write(out, out_count);
+	}
 
 	return 0;
 }
