@@ -183,12 +183,21 @@ int init_GPS()
 }
 
 //Define BattertVoltage Function:
-F4ADC f4adc(ADC1,ADC_Channel_4);
-BatteryVoltage battery_voltage(&f4adc,1.0);
+F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
+BatteryVoltage battery_voltage(&f4adc1_Ch2,1.0);
 IBatteryVoltage * pBattery_Voltage= &battery_voltage;
 void init_BatteryVoltage()
 {
-	manager.register_BatteryVoltage("BattertVoltage",pBattery_Voltage);
+	manager.register_BatteryVoltage("BatteryVoltage",pBattery_Voltage);
+	//manager.getBatteryVoltage("BatteryVoltage")->read();
+}
+//Define BattertVoltage Function:
+F4ADC f4adc2_Ch8(ADC2,ADC_Channel_8);
+BatteryVoltage battery_current(&f4adc2_Ch8,1.0);
+IBatteryVoltage * pBattery_Current= &battery_current;
+void init_BatteryCurrent()
+{
+	manager.register_BatteryVoltage("BatteryCurrent",pBattery_Voltage);
 	//manager.getBatteryVoltage("BatteryVoltage")->read();
 }
 
@@ -196,14 +205,15 @@ int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	init_led();
+	init_BatteryVoltage();
+	init_BatteryCurrent();
 //	init_uart4();
 	init_uart3();
 	init_uart2();
 	init_timer1();
-	init_BatteryVoltage();
 //	init_uart1();
 	init_RC();
-	init_sensors();
+//	init_sensors();
 	init_GPS();
 	
 	return 0;

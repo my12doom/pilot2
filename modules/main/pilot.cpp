@@ -1607,7 +1607,7 @@ void sdcard_logging_loop(void)
 		tick = t;
 }
 
-int main(void)
+int pmain(void)
 {
 	bsp_init_all();
 	

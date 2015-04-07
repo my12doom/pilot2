@@ -6,14 +6,15 @@
 
 using namespace devices;
 using namespace sensors;
-
-int tmain(void)
+int readval=0;
+int main(void)
 {	
+	
 	bsp_init_all();
 	char a[20];
 	
-	IGPS *gps = manager.get_GPS(0);
-	IBarometer *baro = manager.get_barometer(0);
+//	IGPS *gps = manager.get_GPS(0);
+//	IBarometer *baro = manager.get_barometer(0);
 	
 	/*
 	while(1)
@@ -25,25 +26,27 @@ int tmain(void)
 	}
 	*/
 	
-	F4GPIO debug(GPIOA, GPIO_Pin_7);
-	debug.set_mode(MODE_OUT_PushPull);
+	//F4GPIO debug(GPIOA, GPIO_Pin_7);
+	//debug.set_mode(MODE_OUT_PushPull);
 	
 	
 	while(1)
 	{
 		//gps_data data;
 		//int res = gps->read(&data);
+		readval=manager.getBatteryVoltage("BatteryVoltage")->read();
+	//	baro_data data;
+	//	baro->read(&data);
 		
-		baro_data data;
-		baro->read(&data);
-		
-		systimer->delayms(3);
+	/*	systimer->delayms(3);
 		
 		printf("%f, %f       \n", data.pressure, data.temperature);
 		if (data.temperature < 0)
 			printf("WTF\n");
 		debug.toggle();
+	*/
 	}
+		
 }
 
 
