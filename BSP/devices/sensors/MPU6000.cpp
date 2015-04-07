@@ -29,6 +29,8 @@
 
 #define TRACE(...)
 
+#define FAIL_RETURN(x) if((x)<0) return-1
+
 namespace sensors
 {
 
@@ -82,7 +84,7 @@ int MPU6000::write_reg_core(uint8_t reg, uint8_t data)
 int MPU6000::write_reg(uint8_t reg, uint8_t data)
 {
 	uint8_t read;
-	while(1)
+	for(int i=0; i<10; i++)
 	{
 		read = data - 1;
 		write_reg_core(reg, data);
@@ -91,10 +93,12 @@ int MPU6000::write_reg(uint8_t reg, uint8_t data)
 		if (read == data)
 			return 0;
 		else
-			TRACE("reg(%02x) error %02x/%02x\n", reg, read, data);
+			printf("reg(%02x) error %02x/%02x\n", reg, read, data);
 		
 		systimer->delayms(10);
 	}
+
+	return -1;
 }
 
 int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
@@ -140,7 +144,7 @@ int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 	
 	systimer->delayms(10);
 
-	if (who_am_i != 0x71)
+	if (who_am_i != 0x68)
 		return -1;
 
 	// enter SPI high speed mode for data only access

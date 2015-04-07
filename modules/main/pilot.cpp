@@ -248,6 +248,8 @@ float ground_speed_east;		// unit: m/s
 float airspeed_sensor_data;
 int adc_voltage = 0;
 int adc_current = 0;
+float voltage = 0;
+float current = 0;
 float interval = 0;
 
 int64_t last_rc_work = 0;
@@ -263,10 +265,6 @@ float a_raw_altitude = 0;
 float throttle_real = 0;
 float throttle_result = 0;
 
-int16_t ads1115_2_5V = 0;
-int16_t ads1115_airspeed = 0;
-int16_t ads1115_voltage = 0;
-int16_t ads1115_current = 0;
 float mah_consumed = 0;
 float wh_consumed = 0;
 
@@ -615,7 +613,15 @@ int save_logs()
 
 	// send/store debug data
 	time = systimer->gettime();
-	sensor_data sensor;
+	sensor_data sensor =
+	{
+		{mag.array[0] * 10, mag.array[1] * 10, mag.array[0] * 10},
+		{accel.array[0] * 1000, accel.array[1] * 1000, accel.array[0] * 1000},
+		mpu6050_temperature * 100 - 10000,
+		{gyro_radian.array[0] * 1000, gyro_radian.array[1] * 1000, gyro_radian.array[0] * 1000},
+		voltage * 1000,
+		current * 1000,
+	};
 	log(&sensor, TAG_SENSOR_DATA, time);
 
 	imu_data imu = 
@@ -811,6 +817,8 @@ int read_sensors()
 
 		healthy_gyro_count ++;
 	}
+	if (healthy_gyro_count == 0)
+		critical_errors |= error_gyro;
 	gyro.V.x /= healthy_gyro_count;
 	gyro.V.y /= healthy_gyro_count;
 	gyro.V.z /= healthy_gyro_count;
@@ -831,6 +839,8 @@ int read_sensors()
 
 		healthy_acc_count ++;
 	}
+	if (healthy_acc_count == 0)
+		critical_errors |= error_accelerometer;
 	acc.V.x /= healthy_acc_count;
 	acc.V.y /= healthy_acc_count;
 	acc.V.z /= healthy_acc_count;
@@ -851,6 +861,8 @@ int read_sensors()
 
 		healthy_mag_count ++ ;
 	}
+	if (healthy_mag_count == 0)
+		critical_errors |= error_magnet;
 	mag.V.x /= healthy_mag_count;
 	mag.V.y /= healthy_mag_count;
 	mag.V.z /= healthy_mag_count;
@@ -874,6 +886,8 @@ int read_sensors()
 
 		healthy_baro_count ++;
 	}
+	if (healthy_baro_count == 0)
+		critical_errors |= error_baro;
 
 	// read GPSs
 	int lowest_hdop = 100000;
@@ -902,6 +916,7 @@ int read_sensors()
 		mag.array[i] += mag_bias[i];
 		mag.array[i] *= mag_scale[i];
 	}
+	acc.array[2] += -1.8f;
 
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
 	TRACE("\rmag_size:%.3f", mag_size);
@@ -1607,7 +1622,7 @@ void sdcard_logging_loop(void)
 		tick = t;
 }
 
-int pmain(void)
+int main(void)
 {
 	bsp_init_all();
 	

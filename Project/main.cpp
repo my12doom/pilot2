@@ -7,7 +7,7 @@
 using namespace devices;
 using namespace sensors;
 int readval=0;
-int main(void)
+int tmain(void)
 {	
 	
 	bsp_init_all();

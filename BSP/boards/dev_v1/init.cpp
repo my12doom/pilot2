@@ -154,19 +154,24 @@ void init_sensors()
 	cs_ms5611.write(true);
 	cs_hmc5983.write(true);
 	
-	mpu6000device.init(&spi2, &cs_mpu);
-	ms5611device.init(&spi2, &cs_ms5611);
-	hmc5983device.init(&spi2, &cs_hmc5983);
-	
-	static dev_v1::mpu6000res res6000(&mpu6000device);
-	static dev_v1::HMC5983res res5983(&hmc5983device);
-	static dev_v1::MS5611res res5611(&ms5611device);
-	
-	
-	manager.register_accelerometer(&res6000);
-	manager.register_gyroscope(&res6000);
-	manager.register_magnetometer(&res5983);
-	manager.register_barometer(&res5611);	
+	if (mpu6000device.init(&spi2, &cs_mpu) == 0)
+	{
+		static dev_v1::mpu6000res res6000(&mpu6000device);
+		manager.register_accelerometer(&res6000);
+		manager.register_gyroscope(&res6000);
+	}
+
+	if (ms5611device.init(&spi2, &cs_ms5611) == 0)
+	{
+		static dev_v1::MS5611res res5611(&ms5611device);
+		manager.register_barometer(&res5611);
+	}
+
+	if (hmc5983device.init(&spi2, &cs_hmc5983) == 0)
+	{
+		static dev_v1::HMC5983res res5983(&hmc5983device);	
+		manager.register_magnetometer(&res5983);
+	}	
 }
 
 int init_RC()

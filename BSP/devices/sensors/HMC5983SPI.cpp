@@ -10,6 +10,7 @@
 
 #define LOGE printf
 #define TRACE printf
+#define FAIL_RETURN(x) if((x)<0) return-1
 
 static int16_t min(int16_t a, int16_t b)
 {
@@ -66,17 +67,21 @@ int HMC5983::write_reg_core(uint8_t reg, uint8_t data)
 int HMC5983::write_reg(uint8_t reg, uint8_t data)
 {
 	uint8_t read;
-	while(1)
+	for(int i=0; i<10; i++)
 	{
 		read = data - 1;
 		write_reg_core(reg, data);
 		read_reg(reg, &read, 1);
-		
+
 		if (read == data)
 			return 0;
 		else
-			LOGE("reg error %08x/%08x", read, data);
+			printf("reg(%02x) error %02x/%02x\n", reg, read, data);
+		
+		systimer->delayms(10);
 	}
+
+	return -1;
 }
 
 HMC5983::HMC5983()
@@ -97,87 +102,19 @@ int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 	CS->set_mode(HAL::MODE_OUT_PushPull);
 	CS->write(true);
 
-	for(i=0; i<3; i++)
-	{
-		
-		CS->write(false);
-		
-		spi->txrx(0x00);
-		
-		spi->txrx(0x33);
-		
-		CS->write(true);
-		
-				
-		CS->write(false);
-		
-		spi->txrx(0x80);
-		
-		spi->txrx(0x00);
-		
-		CS->write(true);
-		
-		systimer->delayms(10);
-	}
-
 	// HMC5983 initialization
 	for(i=0; i<3; i++)
 		read_reg(0x0a+i, identification+i, 1);
-	//write_reg(HMC58X3_R_CONFB, 0x40);  //Set the Gain
-	//read_reg(HMC58X3_R_CONFB, identification, 2);
-	//write_reg(HMC58X3_R_CONFB, 0x20);  //Set the Gain
-	//read_reg(HMC58X3_R_CONFB, identification, 2);
+
 	if (identification[0] != 'H' || identification[1] != '4' || identification[2] != '3')
 	{
 		LOGE("HMC5983 not found\n");
-		//return -2;
-	}
-
-	write_reg(HMC58X3_R_CONFA, 0x010 + HMC_POS_BIAS);	// Reg A DOR=0x010 + MS1,MS0 set to pos bias
-	write_reg(HMC58X3_R_CONFB, 0x40);  //Set the Gain
-	write_reg(HMC58X3_R_MODE, 1);
-				// Note that the  very first measurement after a gain change maintains the same gain as the previous setting. 
-											// The new gain setting is effective from the second measurement and on.
-	read_reg(0x03, (uint8_t*)data, 6);
-	
-	for(j=0; j<10; j++)
-	{
-		write_reg(HMC58X3_R_MODE, 1);
-		
-		read_reg(0x03, (uint8_t*)data, 6);
-		for(i=0; i<3; i++)
-		{
-			swap(&data[i], 2);
-		}
-		
-		if (-(1<<12) >= min(data[0],min(data[1],data[2])))
-		{
-			LOGE("mag saturation detected\n");
-			//return -1;
-		}
-	}
-	
-	write_reg(HMC58X3_R_CONFA, 0x010 + HMC_NEG_BIAS); // Reg A DOR=0x010 + MS1,MS0 set to negative bias.
-	write_reg(HMC58X3_R_MODE, 1);
-	
-	read_reg(0x03, (uint8_t*)data, 6);
-	
-	for(j=0; j<10; j++)
-	{
-		write_reg(HMC58X3_R_MODE, 1);
-		
-		read_reg(0x03, (uint8_t*)data, 6);
-				
-		if (-(1<<12) >= min(data[0],min(data[1],data[2])))
-		{
-			LOGE("mag saturation detected\n");
-			//return -1;
-		}
+		return -2;
 	}
 		
-	write_reg(HMC58X3_R_CONFA, 0x70); //Configuration Register A  -- 0 11 100 00  num samples: 8 ; output rate: 15Hz ; normal measurement mode
-	write_reg(HMC58X3_R_CONFB, 0x20); //Configuration Register B  -- 001 00000    configuration gain 1.3Ga
-	write_reg(HMC58X3_R_MODE, 0x00);
+	FAIL_RETURN(write_reg(HMC58X3_R_CONFA, 0x70)); //Configuration Register A  -- 0 11 100 00  num samples: 8 ; output rate: 15Hz ; normal measurement mode
+	FAIL_RETURN(write_reg(HMC58X3_R_CONFB, 0x20)); //Configuration Register B  -- 001 00000    configuration gain 1.3Ga
+	FAIL_RETURN(write_reg(HMC58X3_R_MODE, 0x00));
 	
 	return 0;
 }
