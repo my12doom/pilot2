@@ -221,7 +221,7 @@ int bsp_init_all()
 	init_timer1();
 //	init_uart1();
 	init_RC();
-//	init_sensors();
+	init_sensors();
 	init_GPS();
 	
 	return 0;
