@@ -119,8 +119,8 @@ int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 	//write_reg(USER_CTRL, 0x10);
 	write_reg(PWR_MGMT_1, 0x00);
 	write_reg(PWR_MGMT_2, 0x00);
-	write_reg(SMPLRT_DIV, 0x01);
-	write_reg(MPU9250_CONFIG, 0x2);
+	write_reg(SMPLRT_DIV, 0x00);
+	write_reg(MPU9250_CONFIG, 0x4);
 	write_reg(GYRO_CONFIG, 1 << 3);			// full scale : 500 degree/s, ~65.5 LSB/degree/s
 	write_reg(ACCEL_CONFIG, 0x18);			// full scale : 16g, 2048 = 1g
 	
