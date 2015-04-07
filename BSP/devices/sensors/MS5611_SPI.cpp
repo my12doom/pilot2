@@ -76,7 +76,7 @@ int MS5611_SPI::init(ISPI *spi, IGPIO *CS)
 	this->CS = CS;
 	CS->set_mode(MODE_OUT_PushPull);
 	CS->write(true);
-	spi->set_mode(0, 0);
+	spi->set_mode(1, 1);
 	spi->set_speed(10000000);	// MS5611 SPI can handle 20mhz max
 
 	uint8_t tmp[3];
@@ -121,7 +121,7 @@ int MS5611_SPI::read(int *data)
 	int rtn = 1;
 	uint8_t tmp[3];
 
-	spi->set_mode(0,0);
+	spi->set_mode(1,1);
 	spi->set_speed(10000000);	// MS5611 SPI can handle 20mhz max
 
 	do

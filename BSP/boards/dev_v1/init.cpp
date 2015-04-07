@@ -146,6 +146,14 @@ sensors::HMC5983 hmc5983device;
 void init_sensors()
 {
 	spi2.init(SPI2);
+	
+	cs_mpu.set_mode(MODE_OUT_PushPull);
+	cs_ms5611.set_mode(MODE_OUT_PushPull);
+	cs_hmc5983.set_mode(MODE_OUT_PushPull);
+	cs_mpu.write(true);
+	cs_ms5611.write(true);
+	cs_hmc5983.write(true);
+	
 	mpu6000device.init(&spi2, &cs_mpu);
 	ms5611device.init(&spi2, &cs_ms5611);
 	hmc5983device.init(&spi2, &cs_hmc5983);
