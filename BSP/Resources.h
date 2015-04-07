@@ -26,7 +26,7 @@ class Manager
 		#define LED_NUM 5
 		#define UART_NUM 4
 		#define TIMER_NUM 4
-		#define BATTERYVOLTAGE_NUM 1
+		#define BATTERYVOLTAGE_NUM 2
 			
 			
 		typedef struct{
@@ -43,7 +43,7 @@ class Manager
 			ITimer *pTimer; 
 		}Timer_table;
 		typedef struct{
-			char name[10];
+			char name[18];
 			uint8_t num;
 			IBatteryVoltage *pIBatteryVoltage; 
 		}BatteryVoltage_table;

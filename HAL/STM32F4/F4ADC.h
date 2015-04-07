@@ -11,6 +11,7 @@ namespace STM32F4
 		uint8_t ADC_Channel;
 	public:
 		F4ADC(ADC_TypeDef* ADCx,uint8_t ADC_Channe);
+		int ADC1_SelectChannel();
 		~F4ADC(){};
 		virtual int read();
 	};
