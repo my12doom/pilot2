@@ -616,9 +616,9 @@ int save_logs()
 	sensor_data sensor =
 	{
 		{mag.array[0] * 10, mag.array[1] * 10, mag.array[0] * 10},
-		{accel.array[0] * 1000, accel.array[1] * 1000, accel.array[0] * 1000},
+		{accel.array[0] * 100, accel.array[1] * 100, accel.array[2] * 100},
 		mpu6050_temperature * 100 - 10000,
-		{gyro_radian.array[0] * 1000, gyro_radian.array[1] * 1000, gyro_radian.array[0] * 1000},
+		{gyro_radian.array[0] * 18000/PI, gyro_radian.array[1] * 18000/PI, gyro_radian.array[2] * 18000/PI},
 		voltage * 1000,
 		current * 1000,
 	};

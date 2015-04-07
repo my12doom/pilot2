@@ -9,10 +9,10 @@ typedef __int64 int64_t;
 
 typedef struct
 {
-	short mag[3];
-	short accel[3];
-	short temperature1;		// raw temperature by MPU6050
-	short gyro[3];			// roll, pitch, yaw
+	short mag[3];			// unit: 0.1 milli-gauss
+	short accel[3];			// unit: mg
+	short temperature1;		// unit: °„C, degree * 100 - 10000
+	short gyro[3];			// unit: 0.01 degree/s
 	short voltage;			// unit base: mV
 	short current;			// unit base: mA
 } sensor_data;
