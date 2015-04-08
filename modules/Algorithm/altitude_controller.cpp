@@ -3,6 +3,8 @@
 #include <Protocol/common.h>
 #include <utils/param.h>
 
+#define default_throttle_hover 0.45f
+
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
 static param quadcopter_max_acceleration("maxA", 4.5);
@@ -32,14 +34,14 @@ static param pid_quad_accel[4] =		// P, I, D, IMAX
 										// In yetanotherpilot implementation, default P=0.075 converts 1 m/s^2 into 0.075 of full throttle
 										// the max accel error in default value is around +- 6.66 m/s^2, but should not use that much
 {
-	param("accP", 0.050f),
-	param("accI", 0.100f),
+	param("accP", 0.060f),
+	param("accI", 0.120f),
 	param("accD", 0.0f),
 	param("accM", 2.5f),
 };
 
 altitude_controller::altitude_controller()
-:throttle_hover(0.45f)
+:throttle_hover(default_throttle_hover)
 ,target_altitude(0)
 ,target_climb_rate(0)
 ,target_accel(0)
@@ -127,9 +129,13 @@ int altitude_controller::update(float dt, float user_rate)
 		float leash_up = calc_leash_length(quadcopter_max_climb_rate, quadcopter_max_acceleration, pid_quad_altitude[0]);
 		float leash_down = calc_leash_length(quadcopter_max_descend_rate, quadcopter_max_acceleration, pid_quad_altitude[0]);
 		
-		// only move altitude target if throttle didn't hit limits
-		if ((!(m_motor_state & MOTOR_LIMIT_MAX) && user_rate > 0) || (!(m_motor_state & MOTOR_LIMIT_MIN) && user_rate < 0))
+		// only move altitude target if throttle and target climb rate didn't hit limits
+		if ((!(m_motor_state & MOTOR_LIMIT_MAX) && user_rate > 0 && (target_climb_rate < quadcopter_max_climb_rate)) || 
+			(!(m_motor_state & MOTOR_LIMIT_MIN) && user_rate < 0 && (target_climb_rate > -quadcopter_max_descend_rate))
+			)
+		{
 			target_altitude += user_rate * dt;
+		}
 
 		target_altitude = limit(target_altitude, m_states[0]-leash_down, m_states[0]+leash_up);
 
@@ -203,7 +209,7 @@ int altitude_controller::update(float dt, float user_rate)
 	output += accel_error_pid[0] * pid_quad_accel[0];
 	output += accel_error_pid[1] * pid_quad_accel[1];
 	output += accel_error_pid[2] * pid_quad_accel[2];
-	output *= throttle_hover / 0.50f;			// normalize throttle output PID, from throttle percentage to acceleration
+	output *= throttle_hover / default_throttle_hover;			// normalize throttle output PID, from throttle percentage to acceleration
 
 	throttle_result  = output + throttle_hover;
 	float angle_boost_factor = limit(1/ cos(m_attitude[0]) / cos(m_attitude[1]), 1.0f, 1.5f);
@@ -224,7 +230,7 @@ int altitude_controller::update(float dt, float user_rate)
 		m_motor_state = 0;
 	}
 
-	TRACE("\rthrottle=%f, altitude = %.2f/%.2f, pid=%.2f,%.2f,%.2f, limit=%d", throttle_result, alt_estimator.state[0], target_altitude,
+	LOGE("\rthrottle=%f, altitude = %.2f/%.2f, pid=%.2f,%.2f,%.2f, limit=%d", throttle_result, m_states[0], target_altitude,
 		accel_error_pid[0], accel_error_pid[1], accel_error_pid[2], m_motor_state);
 
 	// update throttle_real_crusing if we're in near level state and no violent climbing/descending action

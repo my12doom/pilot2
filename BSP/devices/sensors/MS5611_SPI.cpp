@@ -90,30 +90,7 @@ int MS5611_SPI::init(ISPI *spi, IGPIO *CS)
 		refdata[i] = (tmp[0] << 8) + tmp[1];
 	}
 	
-	if (read_regs(MS561101BA_PROM_BASE_ADDR+12, tmp, 2) < 0)
-		return -1;
-	crc = (tmp[0] << 8) + tmp[1];
-	
-	// Temperature
-	write_reg(MS561101BA_D2 + OSR);
-	systimer->delayms(10);
-	read_regs(0x00, tmp, 3);
-	
-	rawTemperature = ((int)tmp[0] << 16) + ((int)tmp[1] << 8) + (int)tmp[2];
-	DeltaTemp = rawTemperature - (((int32_t)refdata[4]) << 8);
-	temperature = ((1<<EXTRA_PRECISION)*2000l + ((DeltaTemp * refdata[5]) >> (23-EXTRA_PRECISION))) / ((1<<EXTRA_PRECISION));
-		
-	// Pressure
-	write_reg(MS561101BA_D1 + OSR);
-	systimer->delayms(10);
-	read_regs(0x00, tmp, 3);
-	
-	rawPressure = ((int)tmp[0] << 16) + ((int)tmp[1] << 8) + (int)tmp[2];
-	off  = (((int64_t)refdata[1]) << 16) + ((refdata[3] * DeltaTemp) >> 7);
-	sens = (((int64_t)refdata[0]) << 15) + ((refdata[2] * DeltaTemp) >> 8);
-	pressure = ((((rawPressure * sens) >> 21) - off) >> (15-EXTRA_PRECISION)) / ((1<<EXTRA_PRECISION));
-	
-	return 0;
+	return healthy() ? 0 : -1;
 }
 
 int MS5611_SPI::read(int *data)
@@ -181,6 +158,60 @@ int MS5611_SPI::read(int *data)
 	data[0] = pressure;
 	data[1] = temperature;
 	return rtn;
+}
+bool MS5611_SPI::healthy()
+{
+	uint8_t tmp[2];
+	uint16_t data[8];
+	for(int i=0; i<8; i++)
+	{
+		read_regs(0xA0+i*2, tmp, 2);
+		data[i] = (tmp[0] << 8) + tmp[1];
+	}
+	
+	return check_crc(data);
+}
+
+bool MS5611_SPI::check_crc(uint16_t *n_prom)
+{
+	int16_t cnt;
+	uint16_t n_rem;
+	uint16_t crc_read;
+	uint8_t n_bit;
+
+	n_rem = 0x00;
+
+	/* save the read crc */
+	crc_read = n_prom[7];
+
+	/* remove CRC byte */
+	n_prom[7] = (0xFF00 & (n_prom[7]));
+
+	for (cnt = 0; cnt < 16; cnt++) {
+		/* uneven bytes */
+		if (cnt & 1) {
+			n_rem ^= (uint8_t)((n_prom[cnt >> 1]) & 0x00FF);
+
+		} else {
+			n_rem ^= (uint8_t)(n_prom[cnt >> 1] >> 8);
+		}
+
+		for (n_bit = 8; n_bit > 0; n_bit--) {
+			if (n_rem & 0x8000) {
+				n_rem = (n_rem << 1) ^ 0x3000;
+
+			} else {
+				n_rem = (n_rem << 1);
+			}
+		}
+	}
+
+	/* final 4 bit remainder is CRC value */
+	n_rem = (0x000F & (n_rem >> 12));
+	n_prom[7] = crc_read;
+
+	/* return true if CRCs match */
+	return (0x000F & crc_read) == (n_rem ^ 0x00);
 }
 
 }

@@ -222,8 +222,9 @@ bool gyro_bias_estimating_end = false;
 vector gyro_radian;
 vector accel = {NAN, NAN, NAN};
 vector mag;
+vector accel_uncalibrated;
+vector mag_uncalibrated;
 float mag_radius = -999;
-vector mag_zero = {0};
 vector accel_earth_frame_mwc;
 vector accel_earth_frame;
 vector mag_earth_frame;
@@ -615,8 +616,8 @@ int save_logs()
 	time = systimer->gettime();
 	sensor_data sensor =
 	{
-		{mag.array[0] * 10, mag.array[1] * 10, mag.array[0] * 10},
-		{accel.array[0] * 100, accel.array[1] * 100, accel.array[2] * 100},
+		{mag_uncalibrated.array[0] * 10, mag_uncalibrated.array[1] * 10, mag_uncalibrated.array[2] * 10},
+		{accel_uncalibrated.array[0] * 100, accel_uncalibrated.array[1] * 100, accel_uncalibrated.array[2] * 100},
 		mpu6050_temperature * 100 - 10000,
 		{gyro_radian.array[0] * 18000/PI, gyro_radian.array[1] * 18000/PI, gyro_radian.array[2] * 18000/PI},
 		voltage * 1000,
@@ -757,25 +758,21 @@ int save_logs()
 
 	log(&pc2, TAG_POS_CONTROLLER_DATA2, time);
 
-	/*
 	if (last_gps_tick > systimer->gettime() - 2000000)
 	{
-		nmeaINFO &info = *GPS_GetInfo();
-
-		gps_data gps = 
+		::gps_data data = 
 		{
-			{info.PDOP*100, info.HDOP*100, info.VDOP*100},
-			info.speed/3.6*100,
-			NDEG2DEG(info.lon) * 10000000, NDEG2DEG(info.lat) * 10000000, info.elv,
-			info.satinfo.inview, info.satinfo.inuse,
-			info.sig, info.fix,
+			{gps.DOP[0], gps.DOP[1], gps.DOP[2]},
+			gps.speed*100,
+			gps.longitude * 10000000, gps.latitude * 10000000, gps.altitude,
+			gps.satelite_in_view, gps.satelite_in_use,
+			gps.sig, gps.fix,
 			gps_id & 0xf,
-			info.direction,
+			gps.direction,
 		};
 
-		log(&gps, TAG_GPS_DATA, time);
+		log(&data, TAG_GPS_DATA, time);
 	}
-	*/
 	
 	return 0;
 }
@@ -908,7 +905,9 @@ int read_sensors()
 		}
 	}
 
-	// bias and scale calibrating	
+	// bias and scale calibrating
+	accel_uncalibrated = acc;
+	mag_uncalibrated = mag;
 	for(int i=0; i<3; i++)
 	{
 		acc.array[i] += acc_bias[i];
@@ -922,9 +921,10 @@ int read_sensors()
 	TRACE("\rmag_size:%.3f", mag_size);
 	
 	
-	::gyro_radian = gyro;
 	::mag = mag;
 
+	// TODO: apply a high order LPF to gyro readings
+	::gyro_radian = gyro;
 
 	// apply a 5hz LPF to accelerometer readings
 	const float RC20 = 1.0f/(2*3.1415926 * 20.0f);
@@ -1626,7 +1626,6 @@ int main(void)
 {
 	bsp_init_all();
 	
-	
 	state_led = manager.getLED("state");
 	SD_led = manager.getLED("SD");
 	flashlight = manager.getLED("flashlight");
@@ -1709,7 +1708,7 @@ int main(void)
 		}
 	}
 	
-	// TODO: malloc two timer, one for main loop and one for SDCARD logging loop
+	// get two timers, one for main loop and one for SDCARD logging loop
 	manager.getTimer("mainloop")->set_period(3000);
 	manager.getTimer("mainloop")->set_callback(main_loop);
 	manager.getTimer("log")->set_period(10000);
