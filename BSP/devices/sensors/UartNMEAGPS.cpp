@@ -87,6 +87,12 @@ int UartNMEAGPS::read(devices::gps_data *data)
 
 bool UartNMEAGPS::healthy()
 {
+	if (!m_healthy)
+	{
+		devices::gps_data tmp;
+		read(&tmp);
+	}
+	
 	return m_healthy;
 }
 

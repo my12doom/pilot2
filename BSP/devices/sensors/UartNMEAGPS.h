@@ -23,6 +23,7 @@ namespace sensors
 		int buffer_count;
 		nmeaINFO info;
 		nmeaPARSER parser;
+		char black_magic[1024];			// magic buffer to fix unknown buffer overrun in nmea parser library.
 		bool m_healthy;
 	};
 }

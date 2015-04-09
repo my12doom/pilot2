@@ -90,6 +90,25 @@ int MS5611_SPI::init(ISPI *spi, IGPIO *CS)
 		refdata[i] = (tmp[0] << 8) + tmp[1];
 	}
 	
+	// Temperature
+	write_reg(MS561101BA_D2 + OSR);
+	systimer->delayms(10);
+	read_regs(0x00, tmp, 3);
+	
+	rawTemperature = ((int)tmp[0] << 16) + ((int)tmp[1] << 8) + (int)tmp[2];
+	DeltaTemp = rawTemperature - (((int32_t)refdata[4]) << 8);
+	temperature = ((1<<EXTRA_PRECISION)*2000l + ((DeltaTemp * refdata[5]) >> (23-EXTRA_PRECISION))) / ((1<<EXTRA_PRECISION));
+		
+	// Pressure
+	write_reg(MS561101BA_D1 + OSR);
+	systimer->delayms(10);
+	read_regs(0x00, tmp, 3);
+	
+	rawPressure = ((int)tmp[0] << 16) + ((int)tmp[1] << 8) + (int)tmp[2];
+	off  = (((int64_t)refdata[1]) << 16) + ((refdata[3] * DeltaTemp) >> 7);
+	sens = (((int64_t)refdata[0]) << 15) + ((refdata[2] * DeltaTemp) >> 8);
+	pressure = ((((rawPressure * sens) >> 21) - off) >> (15-EXTRA_PRECISION)) / ((1<<EXTRA_PRECISION));	
+	
 	return healthy() ? 0 : -1;
 }
 

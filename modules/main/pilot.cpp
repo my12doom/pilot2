@@ -904,6 +904,14 @@ int read_sensors()
 			::gps = data;
 		}
 	}
+	
+	mag_bias[0] = 137.9f;
+	mag_bias[1] = 59.9f;
+	mag_bias[2] = 76.7f;
+	mag_scale[0] = 1.2185f;
+	mag_scale[1] = 1.2188f;
+	mag_scale[2] = 1.2039f;
+	
 
 	// bias and scale calibrating
 	accel_uncalibrated = acc;
@@ -1635,7 +1643,6 @@ int main(void)
 	STOP_ALL_MOTORS();
 
 	// USB
-
 /*
 #ifdef STM32F4
 	USBD_Init(&USB_OTG_dev,
@@ -1650,10 +1657,7 @@ int main(void)
 #endif
 */
 
-	
-
-
-	log_init();	
+	log_init();
 	estimator.set_gps_latency(0);
 	SAFE_ON(flashlight);
 
