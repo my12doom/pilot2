@@ -895,19 +895,20 @@ int read_sensors()
 			continue;
 
 		devices::gps_data data;
-		gps->read(&data);
+		int res = gps->read(&data);
 
 		// TODO: select best GPS correctly
 		if (data.DOP[1] > 0 && data.DOP[1] < lowest_hdop)
 		{
 			lowest_hdop = data.DOP[1];
 			::gps = data;
+			new_gps_data = (res == 0);
 		}
 	}
 	
-	mag_bias[0] = 137.9f;
-	mag_bias[1] = 59.9f;
-	mag_bias[2] = 76.7f;
+	mag_bias[0] = -137.9f;
+	mag_bias[1] = -59.9f;
+	mag_bias[2] = -76.7f;
 	mag_scale[0] = 1.2185f;
 	mag_scale[1] = 1.2188f;
 	mag_scale[2] = 1.2039f;
@@ -924,7 +925,7 @@ int read_sensors()
 		mag.array[i] *= mag_scale[i];
 	}
 	acc.array[2] += -1.8f;
-
+	
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
 	TRACE("\rmag_size:%.3f", mag_size);
 	
