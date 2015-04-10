@@ -50,7 +50,7 @@ void NonlinearSO3AHRSinit(float ax, float ay, float az, float mx, float my, floa
 	gyro_bias[2] = -gz;
 
     initialRoll = atan2(-ay, -az);
-    initialPitch = atan2(ax, -az);
+    initialPitch = atan2(-ax, -az);
 
     cosRoll = cosf(initialRoll);
     sinRoll = sinf(initialRoll);

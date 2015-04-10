@@ -903,6 +903,7 @@ int read_sensors()
 			lowest_hdop = data.DOP[1];
 			::gps = data;
 			new_gps_data = (res == 0);
+			last_gps_tick = systimer->gettime();
 		}
 	}
 	

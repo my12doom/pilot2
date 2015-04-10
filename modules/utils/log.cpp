@@ -12,21 +12,37 @@
 FIL *file = NULL;
 FRESULT res;
 FATFS fs;
-CircularQueue<rf_data, 256> log_buffer;
-CircularQueue<rf_data, 256> log_buffer2;
-CircularQueue<rf_data, 256> *plog_buffer = &log_buffer;
+
+class write_buffer
+{
+public:
+	write_buffer(){byte_count=0;}
+	~write_buffer(){}
+	int push(const void *data, int size)
+	{
+		if (size+byte_count > sizeof(buffer))
+			return -1;
+		
+		memcpy(buffer + byte_count, data, size);
+		byte_count += size;
+		
+		return 0;
+	}
+	void clear()
+	{
+		byte_count = 0;
+	}
+	int byte_count;
+	char buffer[8192];
+};
+
+write_buffer log_buffer;
+write_buffer log_buffer2;
+write_buffer *plog_buffer = &log_buffer;
 int log_pending = 0;
 int last_log_flush_time = 0;
 bool log_ready;
 int LOG_LEVEL = LOG_SDCARD;
-
-int save_log_packet(rf_data &packet)
-{
-	if (log_pending)
-		return -1;
-
-	return plog_buffer->push(packet);
-}
 
 extern "C"
 {
@@ -56,32 +72,9 @@ int log_init()
 	return 0;
 }
 
-int real_log_packet(void *data, int size)
+int write_to_disk(void *data, int size)
 {
 	int64_t us = systimer->gettime();
-
-#ifdef STM32F4
-	// USART, "\r" are escaped into "\r\r"
-	if (LOG_LEVEL & LOG_USART1)
-	{
-		const char *string = (const char*)data;
-		char escaped[256];
-		int i,j;		// j = escaped size
-		for(i=0,j=0; i<size; i++,j++)
-		{
-			escaped[j] = string[i];
-			if (string[i] == '\r')
-				escaped[j++] = '\r';
-		}
-
-		escaped[j++] = '\r';
-		escaped[j++] = '\n';
-
-		UART4_SendPacket(escaped, j);
-	}
-#endif
-
-
 
 	// fatfs
 	if (LOG_LEVEL & LOG_SDCARD)
@@ -126,13 +119,9 @@ int real_log_packet(void *data, int size)
 		TRACE("log cost %d us  ", int(getus()-us));
 		TRACE("  fat R/R:%d/%d\r\n", read_count, write_count);
 	}
-	// 	LOGE("\rfat R/R:%d/%d", read_count, write_count);
-	// 	if (read_count + write_count > 1)
-	// 		LOGE("\r\n");
+	
+	
 	read_count = write_count = 0;
-
-
-
 
 	return 0;
 }
@@ -141,53 +130,30 @@ int log_flush()
 {
 	log_pending = 1;
 
-	CircularQueue<rf_data, 256> *writer_buffer = plog_buffer;
+	write_buffer *writer_buffer = plog_buffer;
 	plog_buffer = (plog_buffer == &log_buffer) ? &log_buffer2 : &log_buffer;
 
 	log_pending = 0;
 
 	// real saving / sending
-	if (writer_buffer->count() == 0)
+	if (writer_buffer->byte_count == 0)
 		return 1;
 
-/*
-	// disable USB interrupt to prevent sdcard dead lock
-#ifdef STM32F1
-	NVIC_DisableIRQ(USB_LP_CAN1_RX0_IRQn);
-#endif
-#ifdef STM32F4
-	NVIC_DisableIRQ(OTG_HS_IRQn);
-	//NVIC_DisableIRQ(OTG_FS_IRQn);
-	NVIC_DisableIRQ(OTG_HS_EP1_IN_IRQn);
-	NVIC_DisableIRQ(OTG_HS_EP1_OUT_IRQn);
-#endif
-	__DSB();
-	__ISB();
-*/
-
-	rf_data packet[256];
-	int count = 0;
-	while(writer_buffer->pop(&packet[count]) == 0)
-		count++;
-	real_log_packet(&packet[0], sizeof(rf_data)*count);
-
-	// 	printf("%d\n", sizeof(rf_data)*count);
-
-	// restore USB
-#ifdef STM32F1
-	NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
-#endif
-#ifdef STM32F4
-	NVIC_EnableIRQ(OTG_HS_IRQn);
-	NVIC_EnableIRQ(OTG_FS_IRQn);
-	NVIC_EnableIRQ(OTG_HS_EP1_IN_IRQn);
-	NVIC_EnableIRQ(OTG_HS_EP1_OUT_IRQn);
-#endif
+	write_to_disk(writer_buffer->buffer, writer_buffer->byte_count);
+	writer_buffer->clear();
 
 	return 0;
 }
 
-int log(void *packet, uint8_t tag, int64_t timestamp)
+int log(const void *data, int size)
+{
+	if (log_pending)
+		return -1;
+
+	return plog_buffer->push(data, size);
+}
+
+int log(const void *packet, uint8_t tag, int64_t timestamp)
 {
 	timestamp &= ~((uint64_t)0xff << 56);
 	timestamp |= (uint64_t)tag << 56;
@@ -196,5 +162,5 @@ int log(void *packet, uint8_t tag, int64_t timestamp)
 	rf.time = timestamp;
 	memcpy(&rf.data, packet, sizeof(rf.data));
 
-	return save_log_packet(rf);
+	return log(&rf, sizeof(rf));
 }
