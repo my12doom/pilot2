@@ -9,6 +9,7 @@
 #include <utils/param.h>
 #include <utils/log.h>
 #include <utils/console.h>
+#include <utils/gauss_newton.h>
 
 #include <Algorithm/ahrs.h>
 #include <Algorithm/ahrs2.h>
@@ -18,6 +19,7 @@
 #include <Algorithm/pos_estimator.h>
 #include <Algorithm/pos_controll.h>
 #include <Algorithm/of_controller.h>
+#include <Algorithm/mag_calibration.h>
 
 #include <HAL/Interface/Interfaces.h>
 #include <BSP/Resources.h>
@@ -92,8 +94,6 @@ static param _gyro_bias[2][4] =	//[p1,p2][temperature,g0,g1,g2]
 	{param("gbt1", NAN), param("gb11", 0), param("gb21", 0), param("gb31", 0),},
 	{param("gbt2", NAN), param("gb12", 0), param("gb22", 0), param("gb32", 0),},
 };
-
-static param power_factor("pfac", 1.0f);
 
 static param rc_setting[8][4] = 
 {
@@ -536,7 +536,7 @@ int pid()
 		float p_rc = limit(rc[5]+1, 0, 2);
 		for(int j=0; j<3; j++)
 		{
-			pid_result[i] += error_pid[i][j] * pid_factor[i][j] * power_factor;
+			pid_result[i] += error_pid[i][j] * pid_factor[i][j];
 		}
 	}
 	TRACE(", pid=%.2f, %.2f, %.2f\n", pid_result[0], pid_result[1], pid_result[2]);
@@ -1582,6 +1582,18 @@ void main_loop(void)
 	// read sensors
 	read_sensors();
 	
+	// test calibration
+	mag_calibrator.provide_data(mag.array, euler, gyro_radian.array, interval);
+	
+	if (mag_calibrator.get_stage() == stage_ready_to_calibrate)
+	{
+		mag_calibrator.do_calibration();
+		mag_calibration_result result;
+		int res = mag_calibrator.get_result(&result);
+		
+		printf("result:%d, bias:%f,%f,%f, scale:%f,%f,%f\n", res, result.bias[0], result.bias[1], result.bias[2], result.scale[0], result.scale[1], result.scale[2]);
+	}
+
 	// all state estimating, AHRS, position, altitude, etc
 	calculate_state();
 
@@ -1643,7 +1655,7 @@ int main(void)
 	rcout = manager.get_RCOUT();
 	
 	STOP_ALL_MOTORS();
-
+	
 	// USB
 /*
 #ifdef STM32F4

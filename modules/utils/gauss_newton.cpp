@@ -60,8 +60,8 @@ void gauss_newton_sphere_fitting::update_calibration_matrices(const float* data)
 		b = beta[3+j];
 		dx = data[j] - beta[j];
 		residual -= b*b*dx*dx;
-		jacobian[j] = 2.0*b*b*dx;
-		jacobian[3+j] = -2.0*b*dx*dx;
+		jacobian[j] = 2.0f*b*b*dx;
+		jacobian[3+j] = -2.0f*b*dx*dx;
 	}
 
 	for(j=0;j<6;++j) {
@@ -99,7 +99,6 @@ int gauss_newton_sphere_fitting::calculate(const float *data, int vector_count)	
 	{
 		beta[j] = (max_value[j] + min_value[j]) / 2;
 		beta[j+3] = 2 / (max_value[j] - min_value[j]);
-		beta[j+3] = 1/beta[j+3];
 	}
 
 	// iterate
@@ -136,7 +135,7 @@ void gauss_newton_sphere_fitting::find_delta() {
 		//eliminate all nonzero entries below JS[i][i]
 		for(j=i+1;j<6;++j) {
 			mu = JS[i][j]/JS[i][i];
-			if(mu != 0.0) {
+			if(mu != 0.0f) {
 				dS[j] -= mu*dS[i];
 				for(k=j;k<6;++k) {
 					JS[k][j] -= mu*JS[k][i];
