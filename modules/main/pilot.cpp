@@ -37,7 +37,7 @@ ILED *SD_led;
 ILED *flashlight;
 IRCIN *rcin;
 IRCOUT *rcout;
-
+mag_calibration mag_calibrator;
 
 extern "C"
 {
@@ -907,12 +907,22 @@ int read_sensors()
 		}
 	}
 	
+	
+	/*
 	mag_bias[0] = -137.9f;
 	mag_bias[1] = -59.9f;
 	mag_bias[2] = -76.7f;
 	mag_scale[0] = 1.2185f;
 	mag_scale[1] = 1.2188f;
 	mag_scale[2] = 1.2039f;
+	*/
+	
+	mag_bias[0] = -174.0f;
+	mag_bias[1] = -64.8f;
+	mag_bias[2] = 86.54f;
+	mag_scale[0] = 0.002414f * 500;
+	mag_scale[1] = 0.002618f * 500;
+	mag_scale[2] = 0.002765f * 500;
 	
 
 	// bias and scale calibrating
@@ -1583,7 +1593,7 @@ void main_loop(void)
 	read_sensors();
 	
 	// test calibration
-	mag_calibrator.provide_data(mag.array, euler, gyro_radian.array, interval);
+	mag_calibrator.provide_data(mag_uncalibrated.array, euler, gyro_radian.array, interval);
 	
 	if (mag_calibrator.get_stage() == stage_ready_to_calibrate)
 	{
