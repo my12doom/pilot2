@@ -142,10 +142,15 @@ int mag_calibration::do_calibration()
 		float residual = fabs(1 - sqrt(x*x+y*y+z*z));
 		result.residual_average += residual;
 		result.residual_max = fmax(result.residual_max, residual);
-		result.residual_min = fmax(result.residual_min, residual);
+		result.residual_min = fmin(result.residual_min, residual);
 	}
 	result.residual_average /= count;
 
+	// normalize scale factor
+	result.scale[0] *= NORM_SCALE;
+	result.scale[1] *= NORM_SCALE;
+	result.scale[2] *= NORM_SCALE;
+	
 	// check for possible failure
 	calibration_error_code = 0;
 	if (result.residual_average > MAX_AVG_RESIDUAL || result.residual_max > MAX_MAX_RESIDUAL)
