@@ -37,6 +37,7 @@ ILED *SD_led;
 ILED *flashlight;
 IRCIN *rcin;
 IRCOUT *rcout;
+int mag_calibration_state = 0;		// 0: not running, 1: collecting data, 2: calibrating
 mag_calibration mag_calibrator;
 
 extern "C"
@@ -917,12 +918,14 @@ int read_sensors()
 	mag_scale[2] = 1.2039f;
 	*/
 	
+	/*
 	mag_bias[0] = -174.0f;
 	mag_bias[1] = -64.8f;
 	mag_bias[2] = 86.54f;
 	mag_scale[0] = 0.002414f * 500;
 	mag_scale[1] = 0.002618f * 500;
 	mag_scale[2] = 0.002765f * 500;
+	*/
 	
 
 	// bias and scale calibrating
@@ -1286,13 +1289,31 @@ int check_mode()
 		if (mode == initializing)
 			set_mode(_shutdown);
 
+		
 		// emergency switch
+		// magnetometer calibration starts if flip emergency switch 10 times, interval time between each flip should be less than 1 second.
 		static float last_ch4 = 0;
 		if (fabs(rc[4]-last_ch4) > 0.20f)
 		{
 			set_mode(_shutdown);
 			last_ch4 = rc[4];
 			LOGE("shutdown!\n");
+			
+			static int flip_count = 0;
+			static int64_t last_flip_time = 0;
+			
+			if (systimer->gettime() - last_flip_time < 1000000)
+				flip_count ++;
+			else
+				flip_count = 1;
+			last_flip_time = systimer->gettime();
+			
+			if (flip_count >10 && mag_calibration_state == 0)
+			{
+				LOGE("start magnetometer calibrating");
+				mag_calibrator.reset();
+				mag_calibration_state = 1;
+			}
 		}
 
 		// arm action check: RC first four channel active, throttle minimum, elevator stick down, rudder max or min, aileron max or min, for 0.5second
@@ -1552,6 +1573,37 @@ int read_rc()
 	return 0;
 }
 
+void mag_calibrating_worker(int parameter)
+{
+	mag_calibrator.do_calibration();
+	mag_calibration_result result;
+	int res = mag_calibrator.get_result(&result);	
+	LOGE("result:%d, bias:%f,%f,%f, scale:%f,%f,%f\n, residual:%f/%f", res, result.bias[0], result.bias[1], result.bias[2], result.scale[0], result.scale[1], result.scale[2], result.residual_average, result.residual_max);
+	mag_calibration_state = 0;
+	
+	// do checks and flash RGB LED if error occured
+	if (res == 0)
+	{
+		// TODO: flash RGB LED to indicate a successs
+		LOGE("mag calibration success\n");
+		
+		for(int i=0; i<3; i++)
+		{
+			mag_bias[i] = result.bias[i];
+			mag_scale[i] = result.scale[i];
+			mag_bias[i].save();
+			mag_scale[i].save();
+		}		
+		
+		// TODO: update ahrs state
+	}
+	else
+	{
+		// TODO: flash RGB LED to indicate a failure
+		LOGE("mag calibration failed\n");
+	}
+}
+
 void main_loop(void)
 {
 	// calculate time interval
@@ -1559,7 +1611,7 @@ void main_loop(void)
 	int64_t round_start_tick = systimer->gettime();
 	interval = (round_start_tick-last_tick)/1000000.0f;
 	last_tick = round_start_tick;
-
+	
 	// rc inputs
 	read_rc();
 
@@ -1592,16 +1644,20 @@ void main_loop(void)
 	// read sensors
 	read_sensors();
 	
-	// test calibration
-	mag_calibrator.provide_data(mag_uncalibrated.array, euler, gyro_radian.array, interval);
-	
-	if (mag_calibrator.get_stage() == stage_ready_to_calibrate)
+	// provide mag calibration with data
+	if (mag_calibration_state == 1)
 	{
-		mag_calibrator.do_calibration();
-		mag_calibration_result result;
-		int res = mag_calibrator.get_result(&result);
+		// TODO: update RGB LED for user interaction
 		
-		printf("result:%d, bias:%f,%f,%f, scale:%f,%f,%f\n", res, result.bias[0], result.bias[1], result.bias[2], result.scale[0], result.scale[1], result.scale[2]);
+		// data
+		mag_calibrator.provide_data(mag_uncalibrated.array, euler, gyro_radian.array, interval);
+	
+		// make a async call if data ready and change mag_calibration_state to calibrating
+		if (mag_calibrator.get_stage() == stage_ready_to_calibrate)
+		{
+			mag_calibration_state = 2;
+			manager.get_asyncworker()->add_work(mag_calibrating_worker, 0);
+		}
 	}
 
 	// all state estimating, AHRS, position, altitude, etc

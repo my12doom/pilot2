@@ -9,3 +9,4 @@
 #include "ISysTimer.h"
 #include "IRCIN.h"
 #include "IRCOUT.h"
+#include "IAsyncWorker.h"

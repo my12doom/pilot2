@@ -15,7 +15,8 @@ enum mag_calibration_stage
 	stage_horizontal = 0,
 	stage_vertical = 1,
 	stage_ready_to_calibrate = 2,
-	stage_data_calibrated = 3,
+	stage_calibrating = 3,
+	stage_data_calibrated = 4,
 };
 
 typedef struct

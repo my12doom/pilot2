@@ -788,6 +788,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\BSP\devices\sensors\PX4Flow.cpp</FilePath>
             </File>
+            <File>
+              <FileName>AsyncWorker.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v1\AsyncWorker.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

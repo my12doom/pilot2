@@ -70,6 +70,7 @@ class Manager
 		devices::IMagnetometer * magnetometers[MAX_ACCELEROMETER_COUNT];
 		int gps_count;
 		devices::IGPS * GPSs[MAX_GPS_COUNT];
+		IAsyncWorker * async_worker;
 	
 	public :
 		int get_LED_Num();
@@ -93,6 +94,7 @@ class Manager
 		int register_BatteryVoltage(const char *name,IBatteryVoltage *pIBatteryVoltage);
 		int register_RCIN(IRCIN *rcin);
 		int register_RCOUT(IRCOUT *rcout);
+		int register_asyncworker(IAsyncWorker *worker);
 
 		//getDevice function:
 		LED* getLED(const char *name);
@@ -106,6 +108,7 @@ class Manager
 		devices::IGPS * get_GPS(int index);
 		IRCIN * get_RCIN();
 		IRCOUT * get_RCOUT();
+		IAsyncWorker *get_asyncworker();
 };
 
 //Declear manager as global:

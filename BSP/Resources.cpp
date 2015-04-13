@@ -12,6 +12,7 @@ Manager::Manager()
 	gps_count = 0;
 	rcin = NULL;
 	rcout = NULL;
+	async_worker = NULL;
 }
 int  Manager::register_LED(const char *name,LED *pLED)
 {
@@ -220,6 +221,13 @@ int Manager::register_RCOUT(IRCOUT* rcout)
 	this->rcout = rcout;
 	return 0;
 }
+
+int Manager::register_asyncworker(IAsyncWorker* worker)
+{
+	async_worker = worker;
+	return 0;
+}
+
 IRCIN * Manager::get_RCIN()
 {
 	return rcin;
@@ -229,5 +237,11 @@ IRCOUT * Manager::get_RCOUT()
 {
 	return rcout;
 }
+
+IAsyncWorker *Manager::get_asyncworker()
+{
+	return async_worker;
+}
+
 // the only manager instance
 Manager manager;

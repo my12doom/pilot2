@@ -24,6 +24,7 @@ mag_calibration::~mag_calibration()
 // reset all
 int mag_calibration::reset()
 {
+	calibration_error_code = -1;
 	stage = stage_horizontal;
 	count = 0;
 	rotation = 0;
@@ -114,17 +115,16 @@ mag_calibration_stage mag_calibration::get_stage()
 // do the calibration, this will take longger time, don't call this in main loop or any time-criticial functions.
 // you may call this in a lower priority timer.
 // return value:
-// -1 immediatly if not enough data collected.
+// -1 immediatly if not enough data collected or calibrating.
 // other values are same as get_result()
 int mag_calibration::do_calibration()
 {
 	if (stage == stage_data_calibrated)
 		return 0;
 	if (stage != stage_ready_to_calibrate)
-	{
-		calibration_error_code = -1;
 		return -1;
-	}
+
+	stage = stage_calibrating;
 
 	gauss_newton_sphere_fitting fitter;
 	fitter.calculate(data, count);
@@ -178,7 +178,7 @@ int mag_calibration::do_calibration()
 // get calibration result
 // return value:
 //  0: everything fine.
-//	-1 for not enough data collected.
+//	-1 for not enough data collected or calibrating.
 //  negtive value for other criticial error.
 //  1 for possible large residual or large magnetic interference, threshold values are defined in beginning of header file.
 //  2 for very large offset or scale factor, this usually indicate a sensor error.

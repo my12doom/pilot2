@@ -3,6 +3,7 @@
 #include "stm32F4xx.h"
 #include "RCIN.h"
 #include "RCOUT.h"
+#include "AsyncWorker.h"
 
 //Define Battery Voltage Funtion Pin and channel:
 #include <BSP\boards\dev_v1\BatteryVoltage.h>
@@ -195,6 +196,14 @@ int init_GPS()
 	return 0;
 }
 
+static dev_v1::AsyncWorker worker;
+int init_asyncworker()
+{
+	manager.register_asyncworker(&worker);
+	
+	return 0;
+}
+
 //Define BattertVoltage Function:
 F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
 BatteryVoltage battery_voltage(&f4adc1_Ch2,1.0);
@@ -228,6 +237,7 @@ int bsp_init_all()
 	init_RC();
 	init_sensors();
 	init_GPS();
+	init_asyncworker();
 	
 	return 0;
 }
