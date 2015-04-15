@@ -84,8 +84,8 @@ int HMC5983res::read(devices::mag_data *out)
 	if (hmc5983->read(data)<0)
 		return -1;
 	
-	out->x = -data[2] * 0.92f;		// to milli-gauss
-	out->y = -data[0] * 0.92f;
+	out->x = data[0] * 0.92f;		// to milli-gauss
+	out->y = -data[2] * 0.92f;
 	out->z = -data[1] * 0.92f;
 	out->temperature = NAN;
 	

@@ -6,7 +6,7 @@
 
 #include <Protocol/common.h>
 
-#define period 10000
+#define period 36000
 
 namespace dev_v2
 {
@@ -30,14 +30,14 @@ RGBLED::RGBLED()
 
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_TIM4);
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_TIM4);
-	GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM3);
+	//GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM3);
 	
 
 
 	// Time base configuration
 	TIM_OCInitTypeDef  TIM_OCInitStructure;
-	TIM_TimeBaseStructure.TIM_Period = period;
-	TIM_TimeBaseStructure.TIM_Prescaler = 84-1;
+	TIM_TimeBaseStructure.TIM_Period = period-1;
+	TIM_TimeBaseStructure.TIM_Prescaler = 7-1;	// due to timer confliction, see RCOUT.cpp for definition.
 	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
 

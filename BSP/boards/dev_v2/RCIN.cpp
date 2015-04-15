@@ -58,23 +58,23 @@ int handle_ppm(int now)
 	return 0;
 }
 
-extern "C" void EXTI9_5_IRQHandler(void)
+extern "C" void EXTI1_IRQHandler(void)
 {
-	if (EXTI_GetITStatus(EXTI_Line5) != RESET)
+	if (EXTI_GetITStatus(EXTI_Line1) != RESET)
 	{
 		handle_ppm(systimer->gettime());
-		EXTI_ClearITPendingBit(EXTI_Line5);
+		EXTI_ClearITPendingBit(EXTI_Line1);
 	}
 }
 
 dev_v2::RCIN::RCIN()
 {
-	// open PC5 as input
+	// open PC1 as input
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG,ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 	
 	GPIO_InitTypeDef GPIO_InitStructure = {0};
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 	GPIO_Init(GPIOC, &GPIO_InitStructure);
@@ -86,12 +86,12 @@ dev_v2::RCIN::RCIN()
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 
-	EXTI_ClearITPendingBit(EXTI_Line5);
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource5);
-	EXTI_InitStructure.EXTI_Line = EXTI_Line5;
+	EXTI_ClearITPendingBit(EXTI_Line1);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource1);
+	EXTI_InitStructure.EXTI_Line = EXTI_Line1;
 	EXTI_Init(&EXTI_InitStructure);
 
-	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI1_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;

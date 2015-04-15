@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <HAL/Interface/IRCOUT.h>
 
-#define MAX_CHANNEL 6
+#define MAX_CHANNEL 4
 
 namespace dev_v2
 {

@@ -34,20 +34,20 @@ void init_led()
 //Timer1
 
 static F4Timer f4TIM1(TIM1);
-static F4Timer f4TIM4(TIM4);
+static F4Timer f4TIM2(TIM2);
 void init_timer1()
 {
 	manager.register_Timer("mainloop", &f4TIM1);
-	manager.register_Timer("log", &f4TIM4);
+	manager.register_Timer("log", &f4TIM2);
 }
 extern "C" void TIM1_UP_TIM10_IRQHandler(void)
 {
 	f4TIM1.call_callback();
 }
 
-extern "C" void TIM4_IRQHandler(void)
+extern "C" void TIM2_IRQHandler(void)
 {
-	f4TIM4.call_callback();
+	f4TIM2.call_callback();
 }
 
 //Timer2
