@@ -1,12 +1,27 @@
 #pragma once
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
-#include <HAL/STM32F4/F4Interfaces.h>
-#include "stm32F4xx_adc.h"
-using namespace HAL;
-using namespace STM32F4;
+
+namespace devices
+{
+
 class IBatteryVoltage
 {
 	public :
 		virtual float read()=0;
 };
+
+class ADCBatteryVoltage :public IBatteryVoltage
+{
+	private:
+		int scale;
+		IADC * adc;
+	public :
+		ADCBatteryVoltage(){}
+		ADCBatteryVoltage(IADC * adc,float scale){init(adc, scale);}
+		void init(IADC * adc,float scale){this->scale = scale; this->adc = adc;}
+		~ADCBatteryVoltage(){};
+		virtual float read(){return adc->read()*scale;}
+};
+
+}

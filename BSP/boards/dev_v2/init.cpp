@@ -1,36 +1,30 @@
 #include <BSP\Resources.h>
-#include <BSP\boards\dev_v1\init.h>
-#include "stm32F4xx.h"
 #include "RCIN.h"
 #include "RCOUT.h"
 #include "AsyncWorker.h"
 
-//Define Battery Voltage Funtion Pin and channel:
-#include <BSP\boards\dev_v1\BatteryVoltage.h>
-#include <BSP\devices\IBatteryVoltage.h>
 #include <BSP/devices/sensors/UartNMEAGPS.h>
-using namespace BSP;
+#include <BSP\devices\ILED.h>
+using namespace devices;
 using namespace STM32F4;
 
 
 
 //Define LED Function Pin:
-#include <BSP\devices\ILED.h>
-#include <BSP\boards\dev_v1\LED.h>
 //set gpioc pin4:
 F4GPIO f4gpioC4(GPIOC,GPIO_Pin_4);
-LED led_red(&f4gpioC4);
-LED * pLED_RED= &led_red;
+GPIOLED led_red(&f4gpioC4);
+GPIOLED * pLED_RED= &led_red;
 //set gpio pin5:
-F4GPIO f4gpioC5(GPIOC,GPIO_Pin_5);
-LED led_green(&f4gpioC5);
-LED * pLED_GREEN= &led_green;
+F4GPIO f4gpioC5(GPIOB,GPIO_Pin_9);
+GPIOLED led_green(&f4gpioC5);
+GPIOLED * pLED_GREEN= &led_green;
 void init_led()
 {
 	f4gpioC4.set_mode(MODE_OUT_PushPull);
 	f4gpioC5.set_mode(MODE_OUT_PushPull);
-	manager.register_LED("LED_RED",pLED_RED);
-	manager.register_LED("LED_GREEN",pLED_GREEN);
+	manager.register_LED("SD",pLED_RED);
+	manager.register_LED("state",pLED_GREEN);
 }
 
 //Define TIMER Function:
@@ -172,7 +166,7 @@ void init_sensors()
 	{
 		static dev_v1::HMC5983res res5983(&hmc5983device);	
 		manager.register_magnetometer(&res5983);
-	}	
+	}
 }
 
 int init_RC()
@@ -206,7 +200,7 @@ int init_asyncworker()
 
 //Define BattertVoltage Function:
 F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
-BatteryVoltage battery_voltage(&f4adc1_Ch2,1.0);
+ADCBatteryVoltage battery_voltage(&f4adc1_Ch2,1.0);
 IBatteryVoltage * pBattery_Voltage= &battery_voltage;
 void init_BatteryVoltage()
 {
@@ -215,7 +209,7 @@ void init_BatteryVoltage()
 }
 //Define BattertVoltage Function:
 F4ADC f4adc2_Ch8(ADC2,ADC_Channel_8);
-BatteryVoltage battery_current(&f4adc2_Ch8,1.0);
+ADCBatteryVoltage battery_current(&f4adc2_Ch8,1.0);
 IBatteryVoltage * pBattery_Current= &battery_current;
 void init_BatteryCurrent()
 {

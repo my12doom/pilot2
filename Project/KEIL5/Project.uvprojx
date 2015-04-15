@@ -363,7 +363,7 @@
             <useXO>0</useXO>
             <VariousControls>
               <MiscControls>--diag_suppress 177,550,1,1295 --gnu</MiscControls>
-              <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=24000000,__FPU_USED=1</Define>
+              <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=8000000,__FPU_USED=1</Define>
               <Undefine></Undefine>
               <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface;..\..\HAL\STM32F4;..\..\;..\..\modules</IncludePath>
             </VariousControls>
@@ -734,39 +734,19 @@
           <GroupName>Device</GroupName>
           <Files>
             <File>
-              <FileName>init.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\init.cpp</FilePath>
+              <FileName>Resources.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\BSP\Resources.h</FilePath>
             </File>
             <File>
-              <FileName>sensors.cpp</FileName>
+              <FileName>Resources.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\sensors.cpp</FilePath>
+              <FilePath>..\..\BSP\Resources.cpp</FilePath>
             </File>
             <File>
               <FileName>MS5611_SPI.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\devices\sensors\MS5611_SPI.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>RCIN.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\RCIN.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>RCOUT.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\RCOUT.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>BatteryVoltage.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\BatteryVoltage.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>LED.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\LED.cpp</FilePath>
             </File>
             <File>
               <FileName>HMC5983SPI.cpp</FileName>
@@ -787,26 +767,6 @@
               <FileName>PX4Flow.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\devices\sensors\PX4Flow.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>AsyncWorker.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v1\AsyncWorker.cpp</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>Resources</GroupName>
-          <Files>
-            <File>
-              <FileName>Resources.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\Resources.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>Resources.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\..\BSP\Resources.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -1022,6 +982,36 @@
               <FileName>interrupt.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\HAL\STM32F4\usb_comF4\interrupt.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>BSP</GroupName>
+          <Files>
+            <File>
+              <FileName>AsyncWorker.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v2\AsyncWorker.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>init.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v2\init.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RCIN.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v2\RCIN.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RCOUT.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v2\RCOUT.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>sensors.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v2\sensors.cpp</FilePath>
             </File>
           </Files>
         </Group>

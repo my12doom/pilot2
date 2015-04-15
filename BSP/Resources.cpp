@@ -1,8 +1,7 @@
-#include <BSP/Resources.h>
+#include "Resources.h"
 #include <stdlib.h>
 #include <string.h>
 using namespace HAL;
-using namespace STM32F4;
 //Manager::LED part
 
 Manager::Manager()
@@ -14,7 +13,7 @@ Manager::Manager()
 	rcout = NULL;
 	async_worker = NULL;
 }
-int  Manager::register_LED(const char *name,LED *pLED)
+int  Manager::register_LED(const char *name,devices::ILED *pLED)
 {
 	strcpy(led_table[led_num].name,name);
 	led_table[led_num].pLED=pLED;
@@ -25,7 +24,7 @@ int  Manager::get_LED_Num()
 {
 	return led_num;
 }
-LED* Manager::getLED(const char *name)
+devices::ILED* Manager::getLED(const char *name)
 {
 	for(int i=0;i<LED_NUM;i++)
 	{
@@ -92,14 +91,14 @@ ITimer *Manager::getTimer(const char *name)
 	//check if not valid,return null pointer:
 	return NULL;
 }
-int Manager::register_BatteryVoltage(const char *name,IBatteryVoltage *pIBatteryVoltage)
+int Manager::register_BatteryVoltage(const char *name,devices::IBatteryVoltage *pIBatteryVoltage)
 {
 	strcpy(batteryvoltage_table[batteryvoltage_num].name,name);
 	batteryvoltage_table[batteryvoltage_num].pIBatteryVoltage=pIBatteryVoltage;
 	batteryvoltage_num++;
 	return 0;
 }
-IBatteryVoltage *Manager::getBatteryVoltage(const char *name)
+devices::IBatteryVoltage *Manager::getBatteryVoltage(const char *name)
 {
 	for(int i=0;i<BATTERYVOLTAGE_NUM;i++)
 	{

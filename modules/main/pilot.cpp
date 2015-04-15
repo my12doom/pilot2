@@ -30,7 +30,7 @@ using namespace devices;
 #define THROTTLE_STOP (max((int)(rc_setting[2][0]-20),1000))
 #define THROTTLE_MAX (min((int)(rc_setting[2][2]-20),2000))
 #define SAFE_ON(x) if(x) (x)->on()
-#define SAFE_OFF(x) if(x) (x)->on()
+#define SAFE_OFF(x) if(x) (x)->off()
 
 ILED *state_led;
 ILED *SD_led;
@@ -1679,12 +1679,17 @@ void main_loop(void)
 	led_all_on();
 
 	if (log_ready)
-	{
+	{		
 		// flash one of the LED(A4) at 10hz
-		if ((systimer->gettime() % 100000) < 50000)
+		int t = int(systimer->gettime() % 100000);
+		if (t < 50000)
+		{
 			SAFE_ON(SD_led);
+		}
 		else
+		{
 			SAFE_OFF(SD_led);
+		}
 	}
 }
 
