@@ -5,7 +5,7 @@
 
 #define MAX_ASYNC_WORKER 5
 
-namespace dev_v1
+namespace dev_v2
 {
 	typedef struct
 	{

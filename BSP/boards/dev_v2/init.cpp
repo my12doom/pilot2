@@ -5,26 +5,27 @@
 
 #include <BSP/devices/sensors/UartNMEAGPS.h>
 #include <BSP\devices\ILED.h>
+#include "RGBLED.h"
 using namespace devices;
 using namespace STM32F4;
+using namespace dev_v2;
 
 
 
-//Define LED Function Pin:
-//set gpioc pin4:
-F4GPIO f4gpioC4(GPIOC,GPIO_Pin_4);
-GPIOLED led_red(&f4gpioC4);
-GPIOLED * pLED_RED= &led_red;
-//set gpio pin5:
-F4GPIO f4gpioC5(GPIOB,GPIO_Pin_9);
-GPIOLED led_green(&f4gpioC5);
-GPIOLED * pLED_GREEN= &led_green;
+
 void init_led()
 {
+	static F4GPIO f4gpioC4(GPIOC,GPIO_Pin_4);
+	static GPIOLED led_red(&f4gpioC4);
+	static F4GPIO f4gpioC5(GPIOC,GPIO_Pin_5);
+	static GPIOLED led_green(&f4gpioC5);
+	static RGBLED rgb;
+	
 	f4gpioC4.set_mode(MODE_OUT_PushPull);
 	f4gpioC5.set_mode(MODE_OUT_PushPull);
-	manager.register_LED("SD",pLED_RED);
-	manager.register_LED("state",pLED_GREEN);
+	manager.register_LED("SD",&led_red);
+	manager.register_LED("state",&led_green);
+	manager.register_RGBLED("rgb", &rgb);
 }
 
 //Define TIMER Function:
@@ -151,28 +152,28 @@ void init_sensors()
 	
 	if (mpu6000device.init(&spi1, &cs_mpu) == 0)
 	{
-		static dev_v1::mpu6000res res6000(&mpu6000device);
+		static dev_v2::mpu6000res res6000(&mpu6000device);
 		manager.register_accelerometer(&res6000);
 		manager.register_gyroscope(&res6000);
 	}
 
 	if (ms5611device.init(&spi1, &cs_ms5611) == 0)
 	{
-		static dev_v1::MS5611res res5611(&ms5611device);
+		static dev_v2::MS5611res res5611(&ms5611device);
 		manager.register_barometer(&res5611);
 	}
 
 	if (hmc5983device.init(&spi1, &cs_hmc5983) == 0)
 	{
-		static dev_v1::HMC5983res res5983(&hmc5983device);	
+		static dev_v2::HMC5983res res5983(&hmc5983device);	
 		manager.register_magnetometer(&res5983);
 	}
 }
 
 int init_RC()
 {
-	static dev_v1::RCIN rcin;
-	static dev_v1::RCOUT rcout;
+	static dev_v2::RCIN rcin;
+	static dev_v2::RCOUT rcout;
 	
 	manager.register_RCIN(&rcin);
 	manager.register_RCOUT(&rcout);
@@ -190,7 +191,7 @@ int init_GPS()
 	return 0;
 }
 
-static dev_v1::AsyncWorker worker;
+static dev_v2::AsyncWorker worker;
 int init_asyncworker()
 {
 	manager.register_asyncworker(&worker);
@@ -220,7 +221,7 @@ void init_BatteryCurrent()
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-	init_led();
+//	init_led();
 	init_BatteryVoltage();
 	init_BatteryCurrent();
 //	init_uart4();
@@ -232,6 +233,7 @@ int bsp_init_all()
 	init_sensors();
 	init_GPS();
 	init_asyncworker();
+	init_led();
 	
 	return 0;
 }

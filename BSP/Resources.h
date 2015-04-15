@@ -10,9 +10,14 @@
 #include <BSP/devices/IMagnetometer.h>
 #include <BSP/devices/IGPS.h>
 #include <BSP/devices/IBatteryVoltage.h>
+#include <BSP/devices/IRGBLED.h>
 
 #define MAX_ACCELEROMETER_COUNT 5
 #define MAX_GPS_COUNT 3
+#define LED_NUM 5
+#define UART_NUM 4
+#define TIMER_NUM 4
+#define BATTERYVOLTAGE_NUM 2
 
 class Manager
 {
@@ -20,16 +25,16 @@ class Manager
 	public :
 		Manager();
 		~Manager(){};
-		#define LED_NUM 5
-		#define UART_NUM 4
-		#define TIMER_NUM 4
-		#define BATTERYVOLTAGE_NUM 2
 			
 			
 		typedef struct{
 			char name[10];//name 
 			devices::ILED *pLED;   //pointer
 		}LED_table;
+		typedef struct{
+			char name[10];//name 
+			devices::IRGBLED *pLED;   //pointer
+		}RGBLED_table;
 		typedef struct{
 			char name[10];
 			IUART *pUart; 
@@ -51,6 +56,8 @@ class Manager
 		IRCOUT *rcout;
 		LED_table led_table[LED_NUM];
 		int led_num;
+		RGBLED_table rgbled_table[LED_NUM];
+		int rgbled_num;
 		UART_table uart_table[UART_NUM];
 		int uart_num;
 		Timer_table timer_table[TIMER_NUM];
@@ -70,6 +77,7 @@ class Manager
 		IAsyncWorker * async_worker;
 	
 	public :
+		int get_RGBLED_Num();
 		int get_LED_Num();
 		int get_UART_Num();
 		int get_Timer_Num();
@@ -81,6 +89,7 @@ class Manager
 		
 		//register function:
 		int register_LED(const char *name,devices::ILED *pLED);
+		int register_RGBLED(const char *name,devices::IRGBLED *pLED);
 		int register_gyroscope(devices::IGyro *gyro);
 		int register_accelerometer(devices::IAccelerometer *accel);
 		int register_barometer(devices::IBarometer *baro);
@@ -95,6 +104,7 @@ class Manager
 
 		//getDevice function:
 		devices::ILED* getLED(const char *name);
+		devices::IRGBLED* getRGBLED(const char *name);
 		IUART *getUART(const char *name);
 		ITimer *getTimer(const char *name);
 		devices::IBatteryVoltage *getBatteryVoltage(const char *name);

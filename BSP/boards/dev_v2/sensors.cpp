@@ -2,7 +2,7 @@
 #include <math.h>
 #include <Protocol/common.h>
 
-namespace dev_v1
+namespace dev_v2
 {
 	
 mpu6000res::mpu6000res(sensors::MPU6000 *mpu_device)

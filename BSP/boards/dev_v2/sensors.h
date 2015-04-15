@@ -9,7 +9,7 @@
 #include <BSP/devices/IMagnetometer.h>
 #include <BSP/devices/IBarometer.h>
 
-namespace dev_v1
+namespace dev_v2
 {
 	class mpu6000res : public devices::IAccelerometer, public devices::IGyro
 	{

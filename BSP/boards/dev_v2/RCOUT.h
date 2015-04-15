@@ -5,7 +5,7 @@
 
 #define MAX_CHANNEL 6
 
-namespace dev_v1
+namespace dev_v2
 {
 	// channel index starts from 0
 	class RCOUT : public HAL::IRCOUT

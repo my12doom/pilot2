@@ -9,12 +9,46 @@ Manager::Manager()
 	accelerometer_count = 0;
 	gyroscope_count = 0;
 	gps_count = 0;
+	led_num = 0;
+	rgbled_num = 0;
 	rcin = NULL;
 	rcout = NULL;
 	async_worker = NULL;
 }
+
+int  Manager::register_RGBLED(const char *name,devices::IRGBLED *pLED)
+{
+	if (rgbled_num >= LED_NUM)
+		return -1;
+	
+	strcpy(rgbled_table[rgbled_num].name,name);
+	rgbled_table[rgbled_num].pLED=pLED;
+	rgbled_num++;
+	return 0;
+}
+int  Manager::get_RGBLED_Num()
+{
+	return rgbled_num;
+}
+devices::IRGBLED* Manager::getRGBLED(const char *name)
+{
+	for(int i=0;i<rgbled_num;i++)
+	{
+		//check if valid,return pointer:
+		if(0==strcmp(name, rgbled_table[i].name))
+		{
+			return rgbled_table[i].pLED;
+		}
+	}
+	//check if not valid,return null pointer:
+	return NULL;
+}
+
 int  Manager::register_LED(const char *name,devices::ILED *pLED)
 {
+	if (led_num >= LED_NUM)
+		return -1;
+	
 	strcpy(led_table[led_num].name,name);
 	led_table[led_num].pLED=pLED;
 	led_num++;
@@ -26,13 +60,13 @@ int  Manager::get_LED_Num()
 }
 devices::ILED* Manager::getLED(const char *name)
 {
-	for(int i=0;i<LED_NUM;i++)
+	for(int i=0;i<led_num;i++)
 	{
-			//check if valid,return pointer:
-			if(0==strcmp(name,led_table[i].name))
-			{
-				return led_table[i].pLED;
-			}
+		//check if valid,return pointer:
+		if(0==strcmp(name,led_table[i].name))
+		{
+			return led_table[i].pLED;
+		}
 	}
 	//check if not valid,return null pointer:
 	return NULL;

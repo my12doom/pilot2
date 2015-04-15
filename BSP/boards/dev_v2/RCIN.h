@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
 
-namespace dev_v1
+namespace dev_v2
 {
 	// channel index starts from 0
 	class RCIN : public HAL::IRCIN

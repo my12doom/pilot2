@@ -1013,6 +1013,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\dev_v2\sensors.cpp</FilePath>
             </File>
+            <File>
+              <FileName>RGBLED.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v2\RGBLED.cpp</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
