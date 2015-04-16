@@ -2,6 +2,7 @@
 #include "RCIN.h"
 #include "RCOUT.h"
 #include "AsyncWorker.h"
+#include <HAL\STM32F4\F4Timer.h>
 
 #include <BSP/devices/sensors/UartNMEAGPS.h>
 #include <BSP\devices\ILED.h>
@@ -29,13 +30,11 @@ void init_led()
 }
 
 //Define TIMER Function:
-#include <HAL\STM32F4\F4Timer.h>
-#include <HAL\Interface\ITimer.h>
 //Timer1
 
 static F4Timer f4TIM1(TIM1);
 static F4Timer f4TIM2(TIM2);
-void init_timer1()
+void init_timers()
 {
 	manager.register_Timer("mainloop", &f4TIM1);
 	manager.register_Timer("log", &f4TIM2);
@@ -49,7 +48,6 @@ extern "C" void TIM2_IRQHandler(void)
 {
 	f4TIM2.call_callback();
 }
-
 //Timer2
 
 
@@ -58,6 +56,7 @@ extern "C" void TIM2_IRQHandler(void)
 #include <HAL\Interface\IUART.h>
 
 //For uart4:
+/*
 F4UART f4uart4(UART4);
 IUART * pUART4 = &f4uart4;
 void init_uart4()
@@ -74,6 +73,8 @@ extern "C" void DMA1_Stream4_IRQHandler()
 {
 	f4uart4.DMA1_Steam4_IRQHandler();
 }
+*/
+
 //For usart3:
 F4UART f4uart3(USART3);
 IUART * pUART3 = &f4uart3;
@@ -191,9 +192,9 @@ int init_GPS()
 	return 0;
 }
 
-static dev_v2::AsyncWorker worker;
 int init_asyncworker()
 {
+	static dev_v2::AsyncWorker worker;
 	manager.register_asyncworker(&worker);
 	
 	return 0;
@@ -227,7 +228,7 @@ int bsp_init_all()
 //	init_uart4();
 	init_uart3();
 	init_uart2();
-	init_timer1();
+	init_timers();
 //	init_uart1();
 	init_RC();
 	init_sensors();

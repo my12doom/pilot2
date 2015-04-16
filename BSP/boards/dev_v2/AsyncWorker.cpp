@@ -1,7 +1,19 @@
 #include "AsyncWorker.h"
-
+#include <BSP\Resources.h>
 #include <string.h>
 #include <stm32f4xx_exti.h>
+#include <HAL\STM32F4\F4Timer.h>
+
+static STM32F4::F4Timer f4TIM5(TIM5);
+extern "C" void TIM5_IRQHandler(void)
+{
+	f4TIM5.call_callback();
+}
+
+void workcb()
+{
+	int left = dev_v2::AsyncWorker::interrupt();
+}
 
 int dev_v2::AsyncWorker::work_count = 0;
 int dev_v2::AsyncWorker::lock = 0;
@@ -19,13 +31,18 @@ dev_v2::AsyncWorker::AsyncWorker()
 	EXTI_InitStructure.EXTI_Line = EXTI_Line0;
 	EXTI_Init(&EXTI_InitStructure);
 
-	NVIC_InitStructure.NVIC_IRQChannel = EXTI0_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 5;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannel = TIM5_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 	
-	EXTI_GenerateSWInterrupt(EXTI_Line0);
+	
+	//manager.getTimer("log")->set_period(10000);
+	//manager.getTimer("log")->set_callback(workcb);
+
+	f4TIM5.set_period(1000);
+	f4TIM5.set_callback(workcb);
 }
 
 // the callback will be called once and only once for each add_work()
@@ -35,23 +52,23 @@ int dev_v2::AsyncWorker::add_work(HAL::worker_callback cb, int parameter/* = 0*/
 	if (work_count >= MAX_ASYNC_WORKER)
 		return -1;
 	
-	NVIC_DisableIRQ(EXTI0_IRQn);
+	NVIC_DisableIRQ(TIM5_IRQn);
 	__DSB();
 	__ISB();
 	
 	if (lock)
 	{
-		NVIC_EnableIRQ(EXTI0_IRQn);
+		NVIC_EnableIRQ(TIM5_IRQn);
 		return -1;
 	}
 	
 	async_work work = {cb, parameter};
 	works[work_count++] = work;	
 	
-	NVIC_EnableIRQ(EXTI0_IRQn);	
+	NVIC_EnableIRQ(TIM5_IRQn);
 	__DSB();
 	__ISB();
-	EXTI_GenerateSWInterrupt(EXTI_Line0);
+	//EXTI_GenerateSWInterrupt(EXTI_Line0);
 	return 0;
 }
 
@@ -68,7 +85,8 @@ int dev_v2::AsyncWorker::interrupt()
 	}
 	
 	volatile async_work work = works[0];
-	memmove(works, works+1, (work_count-1) * sizeof(works[0]));
+	if (work_count > 1)
+		memmove(works, works+1, (work_count-1) * sizeof(works[0]));
 	work_count --;
 	__DSB();
 	__ISB();
@@ -77,8 +95,7 @@ int dev_v2::AsyncWorker::interrupt()
 	work.cb(work.parameter);
 	return work_count;
 }
-
-
+/*
 extern "C" void EXTI0_IRQHandler(void)
 {
 	if (EXTI_GetITStatus(EXTI_Line0) != RESET)
@@ -90,3 +107,4 @@ extern "C" void EXTI0_IRQHandler(void)
 			EXTI_GenerateSWInterrupt(EXTI_Line0);
 	}
 }
+*/

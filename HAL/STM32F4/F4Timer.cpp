@@ -47,8 +47,8 @@ namespace STM32F4
 		else if(TIM5==TIMx)
 		{
 			NVIC_InitStructure.NVIC_IRQChannel = TIM5_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
-			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 4;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);
 		}

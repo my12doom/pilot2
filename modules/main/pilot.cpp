@@ -37,6 +37,7 @@ ILED *SD_led;
 ILED *flashlight;
 IRCIN *rcin;
 IRCOUT *rcout;
+IRGBLED *rgb;
 int mag_calibration_state = 0;		// 0: not running, 1: collecting data, 2: calibrating
 mag_calibration mag_calibrator;
 
@@ -139,10 +140,10 @@ static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixi
 		{+1, 0, -1},			// left, CW
 	},
 	{							// X mode
-		{-1,-1,+1},				//REAR_R, CCW
-		{-1,+1,-1},				//FRONT_R, CW
-		{+1,+1,+1},				//FRONT_L, CCW
-		{+1,-1,-1},				//REAR_L, CW
+		{-0.707f,-0.707f,+0.707f},				//REAR_R, CCW
+		{-0.707f,+0.707f,-0.707f},				//FRONT_R, CW
+		{+0.707f,+0.707f,+0.707f},				//FRONT_L, CCW
+		{+0.707f,-0.707f,-0.707f},				//REAR_L, CW
 	}
 };
 
@@ -1584,7 +1585,6 @@ void mag_calibrating_worker(int parameter)
 	// do checks and flash RGB LED if error occured
 	if (res == 0)
 	{
-		// TODO: flash RGB LED to indicate a successs
 		LOGE("mag calibration success\n");
 		
 		for(int i=0; i<3; i++)
@@ -1595,13 +1595,43 @@ void mag_calibrating_worker(int parameter)
 			mag_scale[i].save();
 		}		
 		
+		// flash RGB LED to indicate a successs
+		for(int i=0; i<10; i++)
+		{
+			if (rgb)
+			{
+				systimer->delayms(300);				
+				rgb->write(0,1,0);
+				systimer->delayms(300);
+				rgb->write(0,0,0);
+			}
+		}
+
 		// TODO: update ahrs state
 	}
 	else
 	{
-		// TODO: flash RGB LED to indicate a failure
+		// flash RGB LED to indicate a failure
 		LOGE("mag calibration failed\n");
+		for(int i=0; i<10; i++)
+		{
+			if (rgb)
+			{
+				systimer->delayms(300);				
+				rgb->write(0,0,1);
+				systimer->delayms(300);
+				rgb->write(0,0,0);
+			}
+		}
 	}
+}
+
+void test(int i)
+{
+	systimer->delayms(300);
+	rgb->write(0,1,0);
+	systimer->delayms(300);
+	rgb->write(0,0,0);	
 }
 
 void main_loop(void)
@@ -1611,6 +1641,9 @@ void main_loop(void)
 	int64_t round_start_tick = systimer->gettime();
 	interval = (round_start_tick-last_tick)/1000000.0f;
 	last_tick = round_start_tick;
+	
+	//manager.get_asyncworker()->add_work(test, 0);
+	//systimer->delayms(300);
 	
 	// rc inputs
 	read_rc();
@@ -1634,9 +1667,17 @@ void main_loop(void)
 	time = systimer->gettime();
 	int time_mod_1500 = (time%1500000)/1000;
 	if (time_mod_1500 < 150 || (time_mod_1500 > 200 && time_mod_1500 < 350) || (time_mod_1500 > 400 && time_mod_1500 < 550 && log_ready))
+	{
+		//if (rgb)
+		//	rgb->write(1,1,1);
 		SAFE_ON(flashlight);
+	}
 	else
+	{
+		//if(rgb)
+		//	rgb->write(0,0,0);
 		SAFE_OFF(flashlight);
+	}
 
 	// RC modes and RC fail detection
 	check_mode();
@@ -1647,7 +1688,17 @@ void main_loop(void)
 	// provide mag calibration with data
 	if (mag_calibration_state == 1)
 	{
-		// TODO: update RGB LED for user interaction
+		// update RGB LED for user interaction
+		if (rgb)
+		{
+			if (mag_calibrator.get_stage() == stage_horizontal)
+				rgb->write(0,1,0);
+			else if (mag_calibrator.get_stage() == stage_vertical)
+				rgb->write(0,0,1);
+			else
+				rgb->write(0,0,0);
+		}
+
 		
 		// data
 		mag_calibrator.provide_data(mag_uncalibrated.array, euler, gyro_radian.array, interval);
@@ -1698,7 +1749,6 @@ void sdcard_logging_loop(void)
 {
 	static int64_t tick = systimer->gettime();
 	int64_t t = systimer->gettime();
-
 	int dt = t-tick;
 	if (dt > 15000)
 		TRACE("long log interval:%d\n", dt);
@@ -1718,12 +1768,37 @@ void sdcard_logging_loop(void)
 int main(void)
 {
 	bsp_init_all();
+	motor_matrix = 1;
+	motor_matrix.save();
+	
+	pid_factor[0][0] = 0.3f;
+	pid_factor[0][1] = 0.4f;
+	pid_factor[0][2] = 0.012f;
+	pid_factor[1][0] = 0.45f;
+	pid_factor[1][1] = 0.5f;
+	pid_factor[1][2] = 0.02f;
+	//pid_factor2[0][0] = 4.5f;
+	//pid_factor2[1][0] = 4.5f;
+	/*
+	while(1)
+	{
+		float t = systimer->gettime()/5000000.0f * 2 * PI;
+		float t2 = systimer->gettime()/15000000.0f * 2 * PI;
+		t2 = sin(t2)/2+0.6f;
+		float r = t2*(sin(t)/2+0.5f);
+		float g = t2*(sin(t+PI*2/3)/2+0.5f);
+		float b = t2*(sin(t+PI*4/3)/2+0.5f);
+		
+		manager.getRGBLED("rgb")->write(r,g,b);
+	}
+	*/
 	
 	state_led = manager.getLED("state");
 	SD_led = manager.getLED("SD");
 	flashlight = manager.getLED("flashlight");
 	rcin = manager.get_RCIN();
 	rcout = manager.get_RCOUT();
+	rgb = manager.getRGBLED("rgb");
 	
 	STOP_ALL_MOTORS();
 	

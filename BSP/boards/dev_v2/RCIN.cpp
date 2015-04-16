@@ -37,7 +37,7 @@ int handle_ppm(int now)
 		delta = now + 60000 - last_high_tim;
 
 	last_high_tim = now;
-
+	
 	if (delta > 2100)
 	{
 		ppm_channel_count = ppm_channel_id;
@@ -62,7 +62,8 @@ extern "C" void EXTI1_IRQHandler(void)
 {
 	if (EXTI_GetITStatus(EXTI_Line1) != RESET)
 	{
-		handle_ppm(systimer->gettime());
+		if (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1))
+			handle_ppm(systimer->gettime());
 		EXTI_ClearITPendingBit(EXTI_Line1);
 	}
 }

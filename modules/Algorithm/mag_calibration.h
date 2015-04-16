@@ -1,6 +1,7 @@
 #pragma once
 
 #define MIN_DISTANCE_SQ2 100.0f
+#define MIN_DATA_COUNT 50
 #define MAX_DATA_COUNT 500
 #define MAX_OFFSET 500.0f
 #define NORM_SCALE 500.0f			// normalized output magnetic field intensity in milli-gauss.

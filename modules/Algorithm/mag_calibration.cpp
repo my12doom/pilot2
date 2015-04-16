@@ -116,6 +116,7 @@ mag_calibration_stage mag_calibration::get_stage()
 // you may call this in a lower priority timer.
 // return value:
 // -1 immediatly if not enough data collected or calibrating.
+// -2 if collection completed but very little data collected, this usually indicate failure in compass hardware
 // other values are same as get_result()
 int mag_calibration::do_calibration()
 {
@@ -123,6 +124,12 @@ int mag_calibration::do_calibration()
 		return 0;
 	if (stage != stage_ready_to_calibrate)
 		return -1;
+	if (count < MIN_DATA_COUNT)
+	{
+		stage = stage_data_calibrated;
+		calibration_error_code = -2;
+		return -2;
+	}
 
 	stage = stage_calibrating;
 

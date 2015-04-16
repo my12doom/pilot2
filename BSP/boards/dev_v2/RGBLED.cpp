@@ -71,7 +71,7 @@ int RGBLED::write(float R, float G, float B)
 	G = limit(G, 0, 1);
 	B = limit(B, 0, 1);
 	
-	TIM_SetCompare1(TIM3, R*period);
+	//TIM_SetCompare1(TIM3, R*period);
 	TIM_SetCompare3(TIM4, B*period);
 	TIM_SetCompare4(TIM4, G*period);
 	
