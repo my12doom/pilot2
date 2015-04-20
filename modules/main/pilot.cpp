@@ -292,7 +292,7 @@ float mpu6050_temperature;
 
 volatile vector imu_statics[3][4] = {0};		//	[accel, gyro, mag][min, current, max, avg]
 int avg_count = 0;
-px4flow_frame frame;
+sensors::px4flow_frame frame;
 int loop_hz = 0;
 
 int calculate_baro_altitude()
@@ -786,13 +786,15 @@ int read_sensors()
 	vector gyro = {0};
 	vector mag = {0};
 	
-	// TODO: read px4flow from a "IRawDevice"
-	/*
-	if (read_px4flow(&frame) < 0)
-		sonar_distance = NAN;
-	else
-		sonar_distance = frame.ground_distance <= 0.30f ? NAN : frame.ground_distance / 1000.0f;
-	*/
+	if (manager.get_flow_count())
+	{
+		sensors::IFlow *flow = manager.get_flow(0);
+
+		if (flow->read_flow(&frame) < 0)
+			sonar_distance = NAN;
+		else
+			sonar_distance = frame.ground_distance <= 0.30f ? NAN : frame.ground_distance / 1000.0f;
+	}
 
 	// read usart source
 	handle_uart4_cli();
