@@ -35,7 +35,7 @@ int I2C_SW::init(IGPIO *SCL, IGPIO *SDA)
 int I2C_SW::set_speed(int speed)		// speed in hz
 {
 	// TODO: calculate speed tick
-	m_speed_tick = 999;
+	m_speed_tick = 5;
 	
 	return 0;
 }

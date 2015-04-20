@@ -4,7 +4,6 @@
 #include <Interfaces.h>
 #include <BSP\devices\IFlow.h>
 using namespace HAL;
-using namespace devices;
 namespace sensors
 {
 	class PX4Flow :public IFlow
@@ -13,8 +12,8 @@ namespace sensors
 		HAL::II2C *I2C;
 
 	public:
-		PX4Flow();
-		~PX4Flow();
+		PX4Flow(){}
+		~PX4Flow(){}
 		virtual int init(HAL::II2C *I2C);
 		virtual int read_flow(px4flow_frame *out);
 		virtual int read_integral(px4flow_integral_frame *out);

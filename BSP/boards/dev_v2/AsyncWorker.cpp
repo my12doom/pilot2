@@ -7,7 +7,9 @@
 static STM32F4::F4Timer f4TIM5(TIM5);
 extern "C" void TIM5_IRQHandler(void)
 {
-	f4TIM5.call_callback();
+	//f4TIM5.call_callback();
+	int left = dev_v2::AsyncWorker::interrupt();
+	TIM_ClearITPendingBit(TIM5 , TIM_FLAG_Update);
 }
 
 void workcb()
@@ -21,28 +23,8 @@ dev_v2::async_work dev_v2::AsyncWorker::works[MAX_ASYNC_WORKER] = {0};
 
 dev_v2::AsyncWorker::AsyncWorker()
 {
-	EXTI_InitTypeDef EXTI_InitStructure;
-	NVIC_InitTypeDef NVIC_InitStructure;
-
-	EXTI_ClearITPendingBit(EXTI_Line0);
-	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
-	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-	EXTI_InitStructure.EXTI_Line = EXTI_Line0;
-	EXTI_Init(&EXTI_InitStructure);
-
-	NVIC_InitStructure.NVIC_IRQChannel = TIM5_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
-	
-	
-	//manager.getTimer("log")->set_period(10000);
-	//manager.getTimer("log")->set_callback(workcb);
-
 	f4TIM5.set_period(1000);
-	f4TIM5.set_callback(workcb);
+	//f4TIM5.set_callback(workcb);
 }
 
 // the callback will be called once and only once for each add_work()
@@ -95,16 +77,3 @@ int dev_v2::AsyncWorker::interrupt()
 	work.cb(work.parameter);
 	return work_count;
 }
-/*
-extern "C" void EXTI0_IRQHandler(void)
-{
-	if (EXTI_GetITStatus(EXTI_Line0) != RESET)
-	{
-		int left = dev_v2::AsyncWorker::interrupt();
-		EXTI_ClearITPendingBit(EXTI_Line0);
-		
-		if (left>0)
-			EXTI_GenerateSWInterrupt(EXTI_Line0);
-	}
-}
-*/

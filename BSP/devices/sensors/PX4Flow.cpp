@@ -6,12 +6,12 @@ namespace sensors
 	int PX4Flow::init(HAL::II2C *I2C)
 	{
 		this->I2C=I2C;
-		px4flow_frame frame= {};
-		read_flow(&frame);
+		px4flow_frame frame= {0};
+		int res = read_flow(&frame);
 		//read integral:
 		//px4flow_integral_frame integral_frame= {};
 		//read_integral(&integral_frame);
-		return frame.frame_count > 0 ? 0 : -1;
+		return (res == 0 && frame.frame_count > 0) ? 0 : -1;
 	}
 	int PX4Flow::read_flow(px4flow_frame *out)
 	{
@@ -23,13 +23,12 @@ namespace sensors
 	{
 		//Note: use this u should change this I2C start address
 		//I2C->read_regs(PX4FLOW_ADDRESS,0,(uint8_t*)out,sizeof(px4flow_frame));
-		return 0;
+		return -1;
 	}
 	// return false if any error/waning
 	bool PX4Flow::healthy()
 	{
-		//ToDo
-		return 0;
+		return init(I2C) == 0;
 	}
 }
 /*

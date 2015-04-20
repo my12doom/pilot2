@@ -942,7 +942,7 @@ int read_sensors()
 	acc.array[2] += -1.8f;
 	
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
-	TRACE("\rmag_size:%.3f", mag_size);
+	TRACE("\rmag_size:%.3f, %.0f, %.0f, %.0f    ", mag_size, mag.array[0], mag.array[1], mag.array[2]);
 	
 	
 	::mag = mag;
@@ -1618,7 +1618,7 @@ void mag_calibrating_worker(int parameter)
 			if (rgb)
 			{
 				systimer->delayms(300);				
-				rgb->write(0,0,1);
+				rgb->write(1,0,0);
 				systimer->delayms(300);
 				rgb->write(0,0,0);
 			}
@@ -1692,9 +1692,9 @@ void main_loop(void)
 		if (rgb)
 		{
 			if (mag_calibrator.get_stage() == stage_horizontal)
-				rgb->write(0,1,0);
+				rgb->write(1,0,0);
 			else if (mag_calibrator.get_stage() == stage_vertical)
-				rgb->write(0,0,1);
+				rgb->write(0,1,0);
 			else
 				rgb->write(0,0,0);
 		}
@@ -1803,8 +1803,6 @@ int main(void)
 	STOP_ALL_MOTORS();
 	
 	// USB
-/*
-#ifdef STM32F4
 	USBD_Init(&USB_OTG_dev,
 #ifdef USE_USB_OTG_HS
 		USB_OTG_HS_CORE_ID,
@@ -1814,8 +1812,6 @@ int main(void)
 		&USR_desc,
 		&USBD_CDC_cb,
 		&USR_cb);
-#endif
-*/
 
 	log_init();
 	estimator.set_gps_latency(0);

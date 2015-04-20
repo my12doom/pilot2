@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-namespace devices
+namespace sensors
 {
 	typedef struct px4flow_frame
 	{

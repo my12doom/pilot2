@@ -11,6 +11,7 @@
 #include <BSP/devices/IGPS.h>
 #include <BSP/devices/IBatteryVoltage.h>
 #include <BSP/devices/IRGBLED.h>
+#include <BSP/devices/sensors/PX4Flow.h>
 
 #define MAX_ACCELEROMETER_COUNT 5
 #define MAX_GPS_COUNT 3
@@ -18,6 +19,7 @@
 #define UART_NUM 4
 #define TIMER_NUM 4
 #define BATTERYVOLTAGE_NUM 2
+#define MAX_FLOW_COUNT 2
 
 class Manager
 {
@@ -75,6 +77,8 @@ class Manager
 		int gps_count;
 		devices::IGPS * GPSs[MAX_GPS_COUNT];
 		IAsyncWorker * async_worker;
+		int flow_count;
+		sensors::IFlow * Flows[MAX_FLOW_COUNT];
 	
 	public :
 		int get_RGBLED_Num();
@@ -84,6 +88,7 @@ class Manager
 		int get_gyroscope_count();
 		int get_accelerometer_count();
 		int get_magnetometer_count();
+		int get_flow_count();	
 		int get_barometer_count();
 		int get_GPS_count();	
 		
@@ -99,6 +104,7 @@ class Manager
 		int register_Timer(const char *name,ITimer *pTimer);
 		int register_BatteryVoltage(const char *name,devices::IBatteryVoltage *pIBatteryVoltage);
 		int register_RCIN(IRCIN *rcin);
+		int register_flow(sensors::IFlow *worker);
 		int register_RCOUT(IRCOUT *rcout);
 		int register_asyncworker(IAsyncWorker *worker);
 
@@ -116,6 +122,7 @@ class Manager
 		IRCIN * get_RCIN();
 		IRCOUT * get_RCOUT();
 		IAsyncWorker *get_asyncworker();
+		sensors::IFlow *get_flow(int index);
 };
 
 //Declear manager as global:

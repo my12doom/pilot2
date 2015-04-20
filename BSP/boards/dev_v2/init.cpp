@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <protocol/common.h>
 #include <BSP\Resources.h>
 #include "RCIN.h"
 #include "RCOUT.h"
@@ -10,9 +12,7 @@
 using namespace devices;
 using namespace STM32F4;
 using namespace dev_v2;
-
-
-
+using namespace sensors;
 
 void init_led()
 {
@@ -219,6 +219,30 @@ void init_BatteryCurrent()
 	//manager.getBatteryVoltage("BatteryVoltage")->read();
 }
 
+int init_flow()
+{
+	F4GPIO SCL(GPIOC, GPIO_Pin_13);
+	F4GPIO SDA(GPIOC, GPIO_Pin_14);
+	I2C_SW i2c(&SCL, &SDA);
+	
+	sensors::PX4Flow px4flow;
+	px4flow.init(&i2c);
+	
+	if (px4flow.healthy())
+	{
+		LOGE("found PX4FLOW on I2C(PC13,PC14)\n");
+		static F4GPIO SCL(GPIOC, GPIO_Pin_13);
+		static F4GPIO SDA(GPIOC, GPIO_Pin_14);
+		static I2C_SW i2c(&SCL, &SDA);
+		static sensors::PX4Flow px4flow;
+		px4flow.init(&i2c);
+
+		manager.register_flow(&px4flow);
+	}
+
+	return 0;	
+}
+
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
@@ -235,6 +259,7 @@ int bsp_init_all()
 	init_GPS();
 	init_asyncworker();
 	init_led();
+	init_flow();
 	
 	return 0;
 }

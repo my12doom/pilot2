@@ -14,6 +14,7 @@ Manager::Manager()
 	rcin = NULL;
 	rcout = NULL;
 	async_worker = NULL;
+	flow_count = 0;
 }
 
 int  Manager::register_RGBLED(const char *name,devices::IRGBLED *pLED)
@@ -241,7 +242,25 @@ int Manager::get_GPS_count()
 	return gps_count;
 }
 
-
+// flow
+int Manager::register_flow(sensors::IFlow *flow)
+{
+	if (flow_count >= MAX_FLOW_COUNT)
+		return -1;
+	
+	Flows[flow_count++] = flow;
+	return 0;
+}
+sensors::IFlow * Manager::get_flow(int index)
+{
+	if (index < 0 || index >= flow_count)
+		return NULL;
+	return Flows[index];
+}
+int Manager::get_flow_count()
+{
+	return flow_count;
+}
 
 int Manager::register_RCIN(IRCIN* rcin)
 {
