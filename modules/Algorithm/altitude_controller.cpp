@@ -42,7 +42,7 @@ static param pid_quad_accel[4] =		// P, I, D, IMAX
 
 altitude_controller::altitude_controller()
 :throttle_hover(default_throttle_hover)
-,target_altitude(0)
+,baro_target(0)
 ,target_climb_rate(0)
 ,target_accel(0)
 ,throttle_result(0)
@@ -69,25 +69,19 @@ altitude_controller::~altitude_controller()
 // airborne: if the aircraft has liftoff
 int altitude_controller::provide_states(float *alt, float sonar, float *attitude, float throttle_realized, int motor_state, bool airborne)
 {
-	m_states[0] = alt[0];
-	m_states[1] = alt[1];
-	m_states[2] = alt[2];
+	m_baro_states[0] = alt[0];
+	m_baro_states[1] = alt[1];
+	m_baro_states[2] = alt[2];
 	m_attitude[0] = attitude[0];
 	m_attitude[1] = attitude[1];
 	m_attitude[2] = attitude[2];
 	m_throttle_realized = throttle_realized;
 // 	m_motor_state = motor_state;
 	m_airborne = airborne;
-
-	if (isnan(m_sonar) ^ isnan(sonar))				// reset ticker if sonar state changed
-	{
-		if (isnan(sonar) ^ isnan(m_sonar_target))	// changed ?
-			m_sonar_ticker = 0;
-	}
-
 	m_sonar = sonar;
-	if (!isnan(m_sonar))
-		m_last_valid_sonar = m_sonar;
+	
+	if (!isnan(sonar))
+		m_last_valid_sonar = sonar;
 
 	return 0;
 }
@@ -104,51 +98,56 @@ int altitude_controller::set_altitude_target(float new_target)
 // user_rate: user desired climb rate, usually from stick.
 int altitude_controller::update(float dt, float user_rate)
 {
-	// sonar switching
-	if (m_sonar_ticker < 0.5f)
+	// sonar switching	
+	if (isnan(m_sonar) == isnan(m_sonar_target))				// reset ticker if sonar state didn't changed
+		m_sonar_ticker = 0;
+
+	if (m_sonar_ticker < 0.3f)
 	{
 		m_sonar_ticker += dt;
 
-		if (m_sonar_ticker > 0.5f)
+		if (m_sonar_ticker > 0.3f)
 		{
 			// sonar state changed more than 0.5 second.
 			if (isnan(m_sonar))
 			{
+				baro_target = m_baro_states[0] + m_sonar_target - m_last_valid_sonar;
 				m_sonar_target = NAN;
+				LOGE("changed to baro: %f/%f,%f,%f\n", m_sonar_target, m_sonar, baro_target, m_baro_states[0]);
 			}
 			else
 			{
-				m_sonar_target = m_sonar + target_altitude - m_states[0];
-			}			
-			LOGE("sonar changed: %f/%f,%f,%f\n", m_sonar_target, m_sonar, target_altitude, m_states[0]);
+				m_sonar_target = m_sonar + baro_target - m_baro_states[0];
+				LOGE("changed to sonar: %f/%f,%f,%f\n", m_sonar_target, m_sonar, baro_target, m_baro_states[0]);
+			}
 		}
 	}
 
-	if (!isnan(target_altitude))
+	float leash_up = calc_leash_length(quadcopter_max_climb_rate, quadcopter_max_acceleration, pid_quad_altitude[0]);
+	float leash_down = calc_leash_length(quadcopter_max_descend_rate, quadcopter_max_acceleration, pid_quad_altitude[0]);
+	float &alt_target = isnan(m_sonar_target) ? baro_target : m_sonar_target;
+	float &alt_state = isnan(m_sonar_target) ? m_baro_states[0]: m_last_valid_sonar;
+	
+	if (isnan(alt_target) || isnan(alt_state))
 	{
-		float leash_up = calc_leash_length(quadcopter_max_climb_rate, quadcopter_max_acceleration, pid_quad_altitude[0]);
-		float leash_down = calc_leash_length(quadcopter_max_descend_rate, quadcopter_max_acceleration, pid_quad_altitude[0]);
-		
-		// only move altitude target if throttle and target climb rate didn't hit limits
-		if ((!(m_motor_state & MOTOR_LIMIT_MAX) && user_rate > 0 && (target_climb_rate < quadcopter_max_climb_rate)) || 
-			(!(m_motor_state & MOTOR_LIMIT_MIN) && user_rate < 0 && (target_climb_rate > -quadcopter_max_descend_rate))
-			)
-		{
-			target_altitude += user_rate * dt;
-		}
-
-		target_altitude = limit(target_altitude, m_states[0]-leash_down, m_states[0]+leash_up);
-
-		// new target rate, directly use linear approach since we use very tight limit 
-		// TODO: use sqrt approach on large errors (see get_throttle_althold() in Attitude.pde)
-		altitude_error_pid[0] = target_altitude - m_states[0];
-		altitude_error_pid[0] = limit(altitude_error_pid[0], -2.5f, 2.5f);
-		target_climb_rate = pid_quad_altitude[0] * altitude_error_pid[0];
+		printf("NAN");		
 	}
-	else
+	
+	// only move altitude target if throttle and target climb rate didn't hit limits
+	if ((!(m_motor_state & MOTOR_LIMIT_MAX) && user_rate > 0 && (target_climb_rate < quadcopter_max_climb_rate)) || 
+		(!(m_motor_state & MOTOR_LIMIT_MIN) && user_rate < 0 && (target_climb_rate > -quadcopter_max_descend_rate))
+		)
 	{
-		target_climb_rate = 0;
+		alt_target += user_rate * dt;
 	}
+
+	alt_target = limit(alt_target, alt_state-leash_down, alt_state+leash_up);
+
+	// new target rate, directly use linear approach since we use very tight limit 
+	// TODO: use sqrt approach on large errors (see get_throttle_althold() in Attitude.pde)
+	altitude_error_pid[0] = alt_target - alt_state;
+	altitude_error_pid[0] = limit(altitude_error_pid[0], -2.5f, 2.5f);
+	target_climb_rate = pid_quad_altitude[0] * altitude_error_pid[0];
 
 	// feed forward
 	// 
@@ -160,7 +159,7 @@ int altitude_controller::update(float dt, float user_rate)
 
 
 	// new climb rate error
-	float climb_rate_error = target_climb_rate - m_states[1];
+	float climb_rate_error = target_climb_rate - m_baro_states[1];
 	climb_rate_error = limit(climb_rate_error, -quadcopter_max_descend_rate, quadcopter_max_climb_rate);
 
 	// apply a 2Hz LPF to rate error
@@ -182,7 +181,7 @@ int altitude_controller::update(float dt, float user_rate)
 
 
 	// new accel error, +2Hz LPF
-	float accel_error = target_accel - m_states[2];
+	float accel_error = target_accel - m_baro_states[2];
 	if (isnan(accel_error_pid[0]))
 	{
 		accel_error_pid[0] = accel_error;
@@ -230,11 +229,11 @@ int altitude_controller::update(float dt, float user_rate)
 		m_motor_state = 0;
 	}
 
-	LOGE("\rthrottle=%f, altitude = %.2f/%.2f, pid=%.2f,%.2f,%.2f, limit=%d", throttle_result, m_states[0], target_altitude,
+	LOGE("\rthrottle=%f, altitude = %.2f/%.2f, pid=%.2f,%.2f,%.2f, limit=%d", throttle_result, m_baro_states[0], baro_target,
 		accel_error_pid[0], accel_error_pid[1], accel_error_pid[2], m_motor_state);
 
 	// update throttle_real_crusing if we're in near level state and no violent climbing/descending action
-	if (m_airborne && m_throttle_realized>0 && fabs(m_states[1]) < 0.5f && fabs(m_states[2])<0.5f && fabs(m_attitude[0])<5*PI/180 && fabs(m_attitude[1])<5*PI/180
+	if (m_airborne && m_throttle_realized>0 && fabs(m_baro_states[1]) < 0.5f && fabs(m_baro_states[2])<0.5f && fabs(m_attitude[0])<5*PI/180 && fabs(m_attitude[1])<5*PI/180
 		&& fabs(user_rate) < 0.001f)
 	{
 		// 0.2Hz low pass filter
@@ -256,13 +255,14 @@ int altitude_controller::update(float dt, float user_rate)
 // or maintain current altitude.
 int altitude_controller::reset()
 {
-	target_altitude = m_airborne ? m_states[0] : (m_states[0]);
+	baro_target = m_airborne ? m_baro_states[0] : (m_baro_states[0]);
 	feed_forward_factor = m_airborne ? 0.35f : 0.8f;
 	accel_error_pid[0] = NAN;
 	accel_error_pid[1] = 0;
 	accel_error_pid[2] = NAN;
 	climb_rate_error_pid[0] = NAN;
 	m_sonar_ticker = 0;
+	m_sonar_target = NAN;
 
 	return 0;
 }

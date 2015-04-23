@@ -49,14 +49,14 @@ public:
 	// estimated hover throttle
 	float throttle_hover;
 
-	float m_states[3];
+	float m_baro_states[3];
 	float m_attitude[3];
 	float m_throttle_realized;
 	int m_motor_state;
 	bool m_airborne;
 
 
-	float target_altitude;// = 0;
+	float baro_target;// = 0;
 	float target_climb_rate;// = 0;
 	float target_accel;// = 0;
 	float altitude_error_pid[3];// = {0};

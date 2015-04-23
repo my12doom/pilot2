@@ -9,8 +9,8 @@
 
 float pid_factor[2][4] =
 {
-	{2.5f, 0.2f, 1.2f, 15},
-	{2.5f, 0.2f, 1.2f, 15},
+	{2.7f, 0.2f, 1.5f, 15},
+	{2.7f, 0.2f, 1.5f, 15},
 };
 
 OpticalFlowController::OpticalFlowController()

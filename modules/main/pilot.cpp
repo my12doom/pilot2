@@ -716,7 +716,7 @@ int save_logs()
 
 	quadcopter_data3 quad3 = 
 	{
-		alt_controller.target_altitude * 100,
+		alt_controller.baro_target * 100,
 		alt_estimatorCF.state[0] * 100,
 		alt_controller.target_climb_rate * 100,
 		alt_estimatorCF.state[1] * 100,
@@ -1668,7 +1668,7 @@ void main_loop(void)
 	// flashlight, tripple flash if SDCARD running, double flash if SDCARD failed
 	time = systimer->gettime();
 	int time_mod_1500 = (time%1500000)/1000;
-	if (time_mod_1500 < 150 || (time_mod_1500 > 200 && time_mod_1500 < 350) || (time_mod_1500 > 400 && time_mod_1500 < 550 && log_ready))
+	if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
 	{
 		if (rgb)
 			rgb->write(0,1,0);
