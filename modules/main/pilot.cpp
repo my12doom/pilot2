@@ -402,8 +402,8 @@ int prepare_pid()
 					float stick_roll = rc[0] * quadcopter_range[0];
 					float stick_pitch = -rc[1] * quadcopter_range[1];	// pitch stick and coordinate are reversed
 
-					float flow_roll = frame.flow_comp_m_y/1000.0f;
-					float flow_pitch = -frame.flow_comp_m_x/1000.0f;
+					float flow_roll = frame.flow_comp_m_x/1000.0f;
+					float flow_pitch = frame.flow_comp_m_y/1000.0f;
 					of_controller.update_controller(flow_roll, flow_pitch, stick_roll, stick_pitch, interval);
 					of_controller.get_result(&angle_target[0], &angle_target[1]);
 				}
@@ -902,7 +902,7 @@ int read_sensors()
 		int res = gps->read(&data);
 
 		// TODO: select best GPS correctly
-		if (data.DOP[1] > 0 && data.DOP[1] < lowest_hdop)
+		if (res == 0 && data.DOP[1] > 0 && data.DOP[1] < lowest_hdop)
 		{
 			lowest_hdop = data.DOP[1];
 			::gps = data;
@@ -1278,9 +1278,9 @@ int check_mode()
 		else if (rc[5] < -0.6f)
 			newmode = basic;
 		else if (rc[5] > 0.6f)
-// 			newmode = airborne ? optical_flow : althold;
+ 			newmode = airborne ? optical_flow : althold;
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-			newmode = (estimator.healthy && airborne) ? poshold : althold;
+//			newmode = (estimator.healthy && airborne) ? poshold : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
 			newmode = althold;
 
@@ -1670,14 +1670,14 @@ void main_loop(void)
 	int time_mod_1500 = (time%1500000)/1000;
 	if (time_mod_1500 < 150 || (time_mod_1500 > 200 && time_mod_1500 < 350) || (time_mod_1500 > 400 && time_mod_1500 < 550 && log_ready))
 	{
-		//if (rgb)
-		//	rgb->write(1,1,1);
+		if (rgb)
+			rgb->write(0,1,0);
 		SAFE_ON(flashlight);
 	}
 	else
 	{
-		//if(rgb)
-		//	rgb->write(0,0,0);
+		if(rgb)
+			rgb->write(0,0,0);
 		SAFE_OFF(flashlight);
 	}
 
@@ -1773,6 +1773,7 @@ int main(void)
 	motor_matrix = 1;
 	motor_matrix.save();
 	
+	/*
 	pid_factor[0][0] = 0.3f;
 	pid_factor[0][1] = 0.4f;
 	pid_factor[0][2] = 0.012f;
@@ -1781,7 +1782,7 @@ int main(void)
 	pid_factor[1][2] = 0.02f;
 	//pid_factor2[0][0] = 4.5f;
 	//pid_factor2[1][0] = 4.5f;
-	/*
+	
 	while(1)
 	{
 		float t = systimer->gettime()/5000000.0f * 2 * PI;

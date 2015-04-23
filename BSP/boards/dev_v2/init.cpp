@@ -111,6 +111,21 @@ extern "C" void DMA1_Stream6_IRQHandler()
 	f4uart2.DMA1_Steam6_IRQHandler();
 }
 
+//For usart4:
+F4UART f4uart4(UART4);
+void init_uart4()
+{
+	f4uart4.set_baudrate(115200);
+	//manager.register_UART("UART4", &f4uart4);
+}
+extern "C" void UART4_IRQHandler(void)
+{
+	f4uart4.UART4_IRQHandler();
+}
+extern "C" void DMA1_Stream4_IRQHandler()
+{
+	f4uart4.DMA1_Steam4_IRQHandler();
+}
 
 //For usart1:
 F4UART f4uart1(USART1);
@@ -185,7 +200,7 @@ int init_RC()
 int init_GPS()
 {
 	static sensors::UartNMEAGPS gps;
-	gps.init(&f4uart3, 115200);
+	gps.init(&f4uart4, 115200);
 	
 	manager.register_GPS(&gps);
 	
@@ -249,7 +264,7 @@ int bsp_init_all()
 //	init_led();
 	init_BatteryVoltage();
 	init_BatteryCurrent();
-//	init_uart4();
+	init_uart4();
 	init_uart3();
 	init_uart2();
 	init_timers();

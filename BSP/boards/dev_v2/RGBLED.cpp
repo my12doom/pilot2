@@ -25,6 +25,7 @@ RGBLED::RGBLED()
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;	
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_6;
 	GPIO_Init(GPIOC, &GPIO_InitStructure);
 
@@ -74,6 +75,11 @@ int RGBLED::write(float R, float G, float B)
 	//TIM_SetCompare1(TIM3, B*period);
 	TIM_SetCompare3(TIM4, R*period);
 	TIM_SetCompare4(TIM4, G*period);
+
+	if (B>0.5f)
+		GPIO_SetBits(GPIOC, GPIO_Pin_6);
+	else
+		GPIO_ResetBits(GPIOC, GPIO_Pin_6);
 	
 	return 0;
 }
