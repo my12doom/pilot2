@@ -1547,8 +1547,8 @@ int handle_uart4_controll()
 
 int read_rc()
 {
-	rcin->get_channel_data(g_pwm_input, 0, 6);
-	rcin->get_channel_update_time(g_pwm_input_update, 0, 6);
+	rcin->get_channel_data(g_pwm_input, 0, 8);
+	rcin->get_channel_update_time(g_pwm_input_update, 0, 8);
 	TRACE("\rRC");
 	for(int i=0; i<8; i++)
 	{

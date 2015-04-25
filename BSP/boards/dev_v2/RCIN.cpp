@@ -3,9 +3,10 @@
 #include <string.h>
 #include <stm32f4xx_exti.h>
 
+#define MAX_CHANNEL 8
 
-static int64_t rc_update[6];
-static int16_t rc_input[6];
+static int64_t rc_update[MAX_CHANNEL];
+static int16_t rc_input[MAX_CHANNEL];
 static int16_t rc_static[2][8];
 
 static int last_high_tim = -1;
