@@ -33,6 +33,9 @@ public:
 	// (not yet implemented)
 	int set_altitude_target(float new_target);
 
+	//set the desired delt altitude target 
+	int set_delt_altitude(float delt_altitude);
+	
 	// update the controller
 	// dt: time interval
 	// user_rate: user desired climb rate, usually from stick.
@@ -43,7 +46,9 @@ public:
 	// the controller will try to output low throttle if not airborne,
 	// or maintain current altitude.
 	int reset();
-
+	//get altitude target 
+	float get_altitude_target();
+	
 	float get_result();
 
 	// estimated hover throttle

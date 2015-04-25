@@ -293,6 +293,7 @@ int avg_count = 0;
 sensors::px4flow_frame frame;
 int loop_hz = 0;
 
+bool islanding = false ;
 int calculate_baro_altitude()
 {
 	// raw altitude
@@ -350,7 +351,11 @@ int prepare_pid()
 
 				float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
 				alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, MOTOR_LIMIT_NONE, airborne);
-				alt_controller.update(interval, user_rate);
+				
+				//attention : this is for landing mode
+				if(true==islanding)	alt_controller.update(interval,-0.5f);
+				else alt_controller.update(interval, user_rate);
+				
 				throttle_result = alt_controller.get_result();
 
 				TRACE("\rthr=%f/%f", throttle_result, alt_controller.get_result());
@@ -450,7 +455,6 @@ int prepare_pid()
 					}
 				}
 			}
-
 			// yaw:
 			float delta_yaw = ((fabs(rc[3]) < RC_DEAD_ZONE) ? 0 : rc[3]) * interval * QUADCOPTER_ACRO_YAW_RATE;
 
@@ -1178,7 +1182,6 @@ int set_submode(copter_mode newmode)
 {
 	if (mode != quadcopter)
 		newmode = invalid;
-	
 	if (newmode == submode)
 		return 0;
 
@@ -1186,7 +1189,7 @@ int set_submode(copter_mode newmode)
 	bool to_use_pos_controller = newmode == poshold;
 	bool has_alt_controller = submode == poshold || submode == althold || submode == bluetooth || submode == optical_flow;
 	bool to_use_alt_controller = newmode == poshold || newmode == althold || newmode == bluetooth || newmode == optical_flow;
-
+	
 	if (!has_pos_controller && to_use_pos_controller)
 	{
 		// reset pos controller
@@ -1233,7 +1236,7 @@ int set_mode(fly_mode newmode)
 	tilt_us = 0;
 	throttle_result = 0;
 	airborne = false;
-
+	islanding = false;
 	float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
 	alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, MOTOR_LIMIT_NONE, airborne);
 	alt_controller.reset();
@@ -1245,9 +1248,8 @@ int set_mode(fly_mode newmode)
 		error_pid[i][1] = 0;	//reset integration
 		angle_errorI[i] = 0;
 	}
-
+	
 	mode = newmode;
-
 	return 0;
 }
 
@@ -1340,11 +1342,48 @@ int check_mode()
 
 	return 0;
 }
+void check_takeoff_OR_landing()
+{
+	static float last_ch7 = NAN;
+	static float read_time;
+	static bool iswait=false;
+	float time_now;
+	//first start
+	if(isnan(last_ch7))last_ch7=rc[7];
+	if (fabs(rc[7]-last_ch7) > 0.20f)
+	{
+		last_ch7 = rc[7];
+		if(airborne==true)
+		{
+			LOGE("\nauto landing!\n");
+			islanding=true;
+		}
+		else if(iswait==false&&mode==_shutdown)
+		{
+			LOGE("\nauto take off \n");
+			set_mode(quadcopter);	
+			LOGE("\narmed!\n");	
+			//1s=1000000us		
+			read_time=systimer->gettime();
+			iswait=true;
+		}
+	}
+	if(iswait==true)
+	{
+		time_now=systimer->gettime();
+		if(time_now>=read_time+2000000)
+		{
+			iswait=false;
+			alt_controller.set_altitude_target(alt_controller.get_altitude_target()+2.0f);
+			LOGE("\nalread take off\n");			
+		}
+	}
+}
 
 int64_t land_detect_us = 0;
 int land_detector()
 {
-	if (rc[2] < 0.1f				// low throttle
+	if ((rc[2] < 0.1f || islanding)				// low throttle
 		&& fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f)			// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
 // 		&& fabs(alt_estimator.state[2] + alt_estimator.state[3]) < 0.5f			// low acceleration
 	)
@@ -1665,7 +1704,7 @@ void main_loop(void)
 
 	// RC modes and RC fail detection
 	check_mode();
-
+	check_takeoff_OR_landing();
 	// read sensors
 	read_sensors();
 	
