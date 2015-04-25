@@ -87,7 +87,7 @@ namespace STM32F4
 	
 	int F4SPI::set_speed(int speed)	// speed in hz
 	{
-		// SPI1 on APB2, 84mhz
+		// SPI1 on APB2, 42mhz
 		// SPI2 on APB1, 84mhz
 		int APB_frequency = SPIx == SPI1 ? 84000000 : 42000000;
 		if (speed > APB_frequency / 2)

@@ -14,7 +14,7 @@ class IBatteryVoltage
 class ADCBatteryVoltage :public IBatteryVoltage
 {
 	private:
-		int scale;
+		float scale;
 		IADC * adc;
 	public :
 		ADCBatteryVoltage(){}

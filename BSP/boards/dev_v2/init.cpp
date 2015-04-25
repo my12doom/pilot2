@@ -217,12 +217,12 @@ int init_asyncworker()
 
 //Define BattertVoltage Function:
 F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
-ADCBatteryVoltage battery_voltage(&f4adc1_Ch2,1.0);
+ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4096*4.0f);
 IBatteryVoltage * pBattery_Voltage= &battery_voltage;
 void init_BatteryVoltage()
 {
 	manager.register_BatteryVoltage("BatteryVoltage",pBattery_Voltage);
-	//manager.getBatteryVoltage("BatteryVoltage")->read();
+	manager.getBatteryVoltage("BatteryVoltage")->read();
 }
 //Define BattertVoltage Function:
 F4ADC f4adc2_Ch8(ADC2,ADC_Channel_8);

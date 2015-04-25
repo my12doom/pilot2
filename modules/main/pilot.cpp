@@ -249,8 +249,6 @@ OpticalFlowController of_controller;
 float ground_speed_north;		// unit: m/s
 float ground_speed_east;		// unit: m/s
 float airspeed_sensor_data;
-int adc_voltage = 0;
-int adc_current = 0;
 float voltage = 0;
 float current = 0;
 float interval = 0;
@@ -909,27 +907,7 @@ int read_sensors()
 			new_gps_data = (res == 0);
 			last_gps_tick = systimer->gettime();
 		}
-	}
-	
-	
-	/*
-	mag_bias[0] = -137.9f;
-	mag_bias[1] = -59.9f;
-	mag_bias[2] = -76.7f;
-	mag_scale[0] = 1.2185f;
-	mag_scale[1] = 1.2188f;
-	mag_scale[2] = 1.2039f;
-	*/
-	
-	/*
-	mag_bias[0] = -174.0f;
-	mag_bias[1] = -64.8f;
-	mag_bias[2] = 86.54f;
-	mag_scale[0] = 0.002414f * 500;
-	mag_scale[1] = 0.002618f * 500;
-	mag_scale[2] = 0.002765f * 500;
-	*/
-	
+	}	
 
 	// bias and scale calibrating
 	accel_uncalibrated = acc;
@@ -980,7 +958,14 @@ int read_sensors()
 	}
 	avg_count ++;
 
-	// TODO : voltage and current sensors
+	// voltage and current sensors	
+	float alpha = interval / (interval + 1.0f/(2*PI * 2.0f));		// 2hz low pass filter
+	if (manager.getBatteryVoltage("BatteryVoltage"))
+		voltage = voltage * (1-alpha) + alpha * manager.getBatteryVoltage("BatteryVoltage")->read();
+	if (manager.getBatteryVoltage("BatteryCurrent"))
+		current = current * (1-alpha) + alpha * manager.getBatteryVoltage("BatteryCurrent")->read();	
+	
+	mah_consumed += fabs(current) * interval / 3.6f;	// 3.6 mah = 1As
 
 	return 0;
 }
@@ -1644,9 +1629,6 @@ void main_loop(void)
 	interval = (round_start_tick-last_tick)/1000000.0f;
 	last_tick = round_start_tick;
 	
-	//manager.get_asyncworker()->add_work(test, 0);
-	//systimer->delayms(300);
-	
 	// rc inputs
 	read_rc();
 
@@ -1660,7 +1642,7 @@ void main_loop(void)
 	if (systimer->gettime() - tic > 1000000)
 	{
 		tic = systimer->gettime();
-		LOGE("speed: %d\r\n", cycle_counter);
+		LOGE("speed: %d, time:%.2f\r\n", cycle_counter, systimer->gettime()/1000000.0f);
 		loop_hz = cycle_counter;
 		cycle_counter = 0;
 	}
