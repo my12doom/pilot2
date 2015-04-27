@@ -1353,13 +1353,24 @@ void check_takeoff_OR_landing()
 	if (fabs(rc[7]-last_ch7) > 0.20f)
 	{
 		last_ch7 = rc[7];
-		if(airborne==true)
+		static int flip_count = 0;
+		static int64_t last_flip_time = 0;
+		
+		if (systimer->gettime() - last_flip_time < 1000000)
+			flip_count ++;
+		else
+			flip_count = 0;
+		last_flip_time = systimer->gettime();
+			
+		if(airborne==true && flip_count >=2)
 		{
+			flip_count=0;
 			LOGE("\nauto landing!\n");
 			islanding=true;
 		}
-		else if(iswait==false&&mode==_shutdown)
+		else if(iswait==false&&mode==_shutdown && flip_count >=2)
 		{
+			flip_count=0;
 			LOGE("\nauto take off \n");
 			set_mode(quadcopter);	
 			LOGE("\narmed!\n");	
@@ -1383,7 +1394,7 @@ void check_takeoff_OR_landing()
 int64_t land_detect_us = 0;
 int land_detector()
 {
-	if ((rc[2] < 0.1f || islanding)				// low throttle
+	if ((throttle_result < 0.2f)				// low throttle
 		&& fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f)			// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
 // 		&& fabs(alt_estimator.state[2] + alt_estimator.state[3]) < 0.5f			// low acceleration
 	)
