@@ -2,6 +2,8 @@
 #include <math.h>
 #include <stdio.h>
 
+
+#define	HMC5883SlaveAddress 0x3C
 #define HMC58X3_R_CONFA 0
 #define HMC58X3_R_CONFB 1
 #define HMC58X3_R_MODE 2
@@ -34,6 +36,9 @@ namespace sensors
 
 int HMC5983::read_reg(uint8_t reg, void *out, int count)
 {
+	if (i2c)
+		return i2c->read_regs(HMC5883SlaveAddress, reg, (uint8_t*)out, count);
+	
 	int i;
 	uint8_t *p = (uint8_t*)out;
 	CS->write(false);
@@ -51,6 +56,9 @@ int HMC5983::read_reg(uint8_t reg, void *out, int count)
 
 int HMC5983::write_reg_core(uint8_t reg, uint8_t data)
 {
+	if (i2c)
+		return i2c->write_reg(HMC5883SlaveAddress, reg, data);
+
 	int count = 1;
 	CS->write(false);
 	
@@ -86,6 +94,8 @@ int HMC5983::write_reg(uint8_t reg, uint8_t data)
 
 HMC5983::HMC5983()
 {
+	i2c = NULL;
+	spi = NULL;
 }
 
 int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
@@ -95,6 +105,7 @@ int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 	short data[3];
 	uint8_t identification[3] = {0};
 
+	i2c = NULL;
 	this->spi = SPI;
 	this->CS = CS;
 	SPI->set_mode(1,1);
@@ -115,14 +126,46 @@ int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 	FAIL_RETURN(write_reg(HMC58X3_R_CONFA, 0x70)); //Configuration Register A  -- 0 11 100 00  num samples: 8 ; output rate: 15Hz ; normal measurement mode
 	FAIL_RETURN(write_reg(HMC58X3_R_CONFB, 0x20)); //Configuration Register B  -- 001 00000    configuration gain 1.3Ga
 	FAIL_RETURN(write_reg(HMC58X3_R_MODE, 0x00));
+
+
+	return 0;
+}
+
+int HMC5983::init(HAL::II2C *i2c)
+{
+	int i;
+	int j;
+	short data[3];
+	uint8_t identification[3] = {0};
+
+	this->i2c = i2c;
+	this->spi = NULL;
+
+	// HMC5983 initialization
+	for(i=0; i<3; i++)
+		read_reg(0x0a+i, identification+i, 1);
+
+	if (identification[0] != 'H' || identification[1] != '4' || identification[2] != '3')
+	{
+		LOGE("HMC5983 not found\n");
+		return -2;
+	}
+		
+	FAIL_RETURN(write_reg(HMC58X3_R_CONFA, 0x70)); //Configuration Register A  -- 0 11 100 00  num samples: 8 ; output rate: 15Hz ; normal measurement mode
+	FAIL_RETURN(write_reg(HMC58X3_R_CONFB, 0x20)); //Configuration Register B  -- 001 00000    configuration gain 1.3Ga
+	FAIL_RETURN(write_reg(HMC58X3_R_MODE, 0x00));
+
 	
 	return 0;
 }
 
 int HMC5983::read(short*data)
 {
-	spi->set_mode(1,1);
-	spi->set_speed(8000000);				// HMC5983 SPI can handle 8mhz max
+	if (spi)
+	{
+		spi->set_mode(1,1);
+		spi->set_speed(8000000);				// HMC5983 SPI can handle 8mhz max
+	}
 
 	int result = read_reg(0x03, (uint8_t*)data, 6);
 	for(int i=0; i<3; i++)

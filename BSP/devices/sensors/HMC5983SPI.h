@@ -12,6 +12,7 @@ namespace sensors
 		~HMC5983(){}
 
 		int init(HAL::ISPI *SPI, HAL::IGPIO *CS);
+		int init(HAL::II2C *i2c);
 
 		// data[0 ~ 7] :
 		// accel_x, accel_y, accel_z, raw_temperature, gyro_x, gyro_y, gyro_z
@@ -21,6 +22,7 @@ namespace sensors
 		int write_reg(uint8_t reg, uint8_t data);
 
 	protected:
+		HAL::II2C *i2c;
 		HAL::ISPI *spi;
 		HAL::IGPIO *CS;
 	};

@@ -353,7 +353,7 @@ int prepare_pid()
 				alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, MOTOR_LIMIT_NONE, airborne);
 				
 				//attention : this is for landing mode
-				if(true==islanding)	alt_controller.update(interval,-0.5f);
+				if(true==islanding)	alt_controller.update(interval,user_rate-0.5f);
 				else alt_controller.update(interval, user_rate);
 				
 				throttle_result = alt_controller.get_result();
@@ -1265,9 +1265,9 @@ int check_mode()
 		else if (rc[5] < -0.6f)
 			newmode = basic;
 		else if (rc[5] > 0.6f)
- 			newmode = airborne ? optical_flow : althold;
+// 			newmode = airborne ? optical_flow : althold;
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-//			newmode = (estimator.healthy && airborne) ? poshold : althold;
+			newmode = (estimator.healthy && airborne) ? poshold : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
 			newmode = althold;
 
@@ -1362,13 +1362,13 @@ void check_takeoff_OR_landing()
 			flip_count = 0;
 		last_flip_time = systimer->gettime();
 			
-		if(airborne==true && flip_count >=2)
+		if(airborne==true && flip_count >=1)
 		{
 			flip_count=0;
 			LOGE("\nauto landing!\n");
 			islanding=true;
 		}
-		else if(iswait==false&&mode==_shutdown && flip_count >=2)
+		else if(iswait==false&&mode==_shutdown && flip_count >=1)
 		{
 			flip_count=0;
 			LOGE("\nauto take off \n");
@@ -1702,14 +1702,14 @@ void main_loop(void)
 	int time_mod_1500 = (time%1500000)/1000;
 	if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
 	{
-		if (rgb)
-			rgb->write(0,1,0);
+		//if (rgb)
+		//	rgb->write(0,1,0);
 		SAFE_ON(flashlight);
 	}
 	else
 	{
-		if(rgb)
-			rgb->write(0,0,0);
+		//if(rgb)
+		//	rgb->write(0,0,0);
 		SAFE_OFF(flashlight);
 	}
 
