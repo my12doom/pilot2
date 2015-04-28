@@ -1,6 +1,7 @@
 #include "mag_calibration.h"
 #include <Protocol/common.h>
 #include <utils/gauss_newton.h>
+#include <math.h>
 
 static inline float fmax(float a, float b)
 {
@@ -111,6 +112,10 @@ mag_calibration_stage mag_calibration::get_stage()
 	return stage;
 }
 
+bool invalid_float(float v)
+{
+	return isnan(v) || !isfinite(v);
+}
 
 // do the calibration, this will take longger time, don't call this in main loop or any time-criticial functions.
 // you may call this in a lower priority timer.
@@ -170,6 +175,11 @@ int mag_calibration::do_calibration()
 		for(int i=0; i<3; i++)
 		{
 			if (fabs(result.bias[i]) > MAX_OFFSET || result.scale[i] < MIN_SCALE || result.scale[i] > MAX_SCALE)
+			{
+				calibration_error_code = 2;
+			}
+
+			if (invalid_float(result.bias[i]) || invalid_float(result.scale[i]))
 			{
 				calibration_error_code = 2;
 			}

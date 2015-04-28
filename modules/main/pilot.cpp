@@ -353,7 +353,7 @@ int prepare_pid()
 				alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, MOTOR_LIMIT_NONE, airborne);
 				
 				//attention : this is for landing mode
-				if(true==islanding)	alt_controller.update(interval,user_rate-0.5f);
+				if(islanding)	alt_controller.update(interval,user_rate-0.5f);
 				else alt_controller.update(interval, user_rate);
 				
 				throttle_result = alt_controller.get_result();
@@ -925,8 +925,6 @@ int read_sensors()
 	}
 	acc.array[2] += -1.8f;
 	
-	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
-	TRACE("\rmag_size:%.3f, %.0f, %.0f, %.0f    ", mag_size, mag.array[0], mag.array[1], mag.array[2]);
 	
 	
 	::mag = mag;
@@ -991,6 +989,8 @@ int calculate_state()
 	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
 	euler[2] = radian_add(euler[2], quadcopter_trim[2]);
 
+	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
+	TRACE("mag_size:%.3f, %.0f, %.0f, %.0f    \n", mag_size, mag.array[0], mag.array[1], mag.array[2]);
 	TRACE("euler:%.2f,%.2f,%.2f,%.2f,%.2f,%.2f, time:%f, bias:%.2f/%.2f/%.2f, pressure=%.2f \n ", euler[0]*PI180, euler[1]*PI180, euler[2]*PI180, roll*PI180, pitch*PI180, yaw_mag*PI180, systimer->gettime()/1000000.0f, gyro_bias[0]*PI180, gyro_bias[1]*PI180, gyro_bias[2]*PI180, a_raw_pressure);
 
 	for(int i=0; i<3; i++)
@@ -1056,6 +1056,15 @@ int calculate_state()
 
 int sensor_calibration()
 {
+	for(int i=0; i<3; i++)
+	{
+		if (isnan(mag_bias[i]))
+			mag_bias[i] = 0;
+		if (isnan(mag_scale[i]))
+			mag_scale[i] = 1;
+	}
+
+	
 	// update gyro temperature compensation
 	if (!isnan((float)_gyro_bias[0][0]) && !isnan((float)_gyro_bias[1][0]))
 	{
@@ -1372,8 +1381,10 @@ void check_takeoff_OR_landing()
 		{
 			flip_count=0;
 			LOGE("\nauto take off \n");
-			set_mode(quadcopter);	
-			LOGE("\narmed!\n");	
+			set_mode(quadcopter);
+			check_mode();	// to set submode and reset all controller
+			alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
+			LOGE("\narmed!\n");
 			//1s=1000000us		
 			read_time=systimer->gettime();
 			iswait=true;
@@ -1386,7 +1397,7 @@ void check_takeoff_OR_landing()
 		{
 			iswait=false;
 			alt_controller.set_altitude_target(alt_controller.get_altitude_target()+2.0f);
-			LOGE("\nalread take off\n");			
+			LOGE("\nalread take off\n");
 		}
 	}
 }
@@ -1394,8 +1405,8 @@ void check_takeoff_OR_landing()
 int64_t land_detect_us = 0;
 int land_detector()
 {
-	if ((throttle_result < 0.2f)				// low throttle
-		&& fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f)			// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
+	if ((rc[2] < 0.1f || (islanding && throttle_result < 0.2f))					// landing and low throttle output, or just throttle stick down
+		&& fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f)	// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
 // 		&& fabs(alt_estimator.state[2] + alt_estimator.state[3]) < 0.5f			// low acceleration
 	)
 	{
@@ -1617,7 +1628,6 @@ void mag_calibrating_worker(int parameter)
 	mag_calibration_result result;
 	int res = mag_calibrator.get_result(&result);	
 	LOGE("result:%d, bias:%f,%f,%f, scale:%f,%f,%f\n, residual:%f/%f", res, result.bias[0], result.bias[1], result.bias[2], result.scale[0], result.scale[1], result.scale[2], result.residual_average, result.residual_max);
-	mag_calibration_state = 0;
 	
 	// do checks and flash RGB LED if error occured
 	if (res == 0)
@@ -1661,6 +1671,9 @@ void mag_calibrating_worker(int parameter)
 			}
 		}
 	}
+
+	// ends
+	mag_calibration_state = 0;	
 }
 
 void test(int i)
@@ -1702,14 +1715,14 @@ void main_loop(void)
 	int time_mod_1500 = (time%1500000)/1000;
 	if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
 	{
-		//if (rgb)
-		//	rgb->write(0,1,0);
+		if (rgb && mag_calibration_state == 0)
+			rgb->write(0,1,0);
 		SAFE_ON(flashlight);
 	}
 	else
 	{
-		//if(rgb)
-		//	rgb->write(0,0,0);
+		if(rgb && mag_calibration_state == 0)
+			rgb->write(0,0,0);
 		SAFE_OFF(flashlight);
 	}
 
@@ -1807,7 +1820,7 @@ int main(void)
 	
 	/*
 	pid_factor[0][0] = 0.3f;
-	pid_factor[0][1] = 0.4f;
+	pid_factor[0][1] = 0.4f;8`f
 	pid_factor[0][2] = 0.012f;
 	pid_factor[1][0] = 0.45f;
 	pid_factor[1][1] = 0.5f;
