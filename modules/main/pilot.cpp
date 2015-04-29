@@ -78,6 +78,7 @@ static param pid_factor2[3][4] = 			// pid_factor2[roll,pitch,yaw][p,i,d,i_limit
 };
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
+static param quadcopter_auto_landing_rate("lrat", 0.5f);		// absolute value of automated landing speed in meter/s
 static param quadcopter_trim[3] = 
 {
 	param("trmR", 0 * PI / 18),				// roll
@@ -341,7 +342,7 @@ int prepare_pid()
 				else if (v>= 0.05f)
 				{
 					user_rate = (v-0.05f)/0.45f;
-					user_rate = user_rate * user_rate * quadcopter_max_climb_rate;
+					user_rate = user_rate * user_rate * (islanding ? quadcopter_auto_landing_rate*2 : quadcopter_max_climb_rate);	// very low climbe rate even if max throttle 
 				}
 				else
 				{
@@ -352,9 +353,11 @@ int prepare_pid()
 				float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
 				alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, MOTOR_LIMIT_NONE, airborne);
 				
-				//attention : this is for landing mode
-				if(islanding)	alt_controller.update(interval,user_rate-0.5f);
-				else alt_controller.update(interval, user_rate);
+				// landing?
+				if(islanding)
+					user_rate -= quadcopter_auto_landing_rate;
+
+				alt_controller.update(interval, user_rate);
 				
 				throttle_result = alt_controller.get_result();
 
@@ -1274,9 +1277,9 @@ int check_mode()
 		else if (rc[5] < -0.6f)
 			newmode = basic;
 		else if (rc[5] > 0.6f)
-// 			newmode = airborne ? optical_flow : althold;
+ 			newmode = airborne ? optical_flow : althold;
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-			newmode = (estimator.healthy && airborne) ? poshold : althold;
+//			newmode = (estimator.healthy && airborne) ? poshold : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
 			newmode = althold;
 

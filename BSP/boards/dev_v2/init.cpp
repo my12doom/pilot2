@@ -186,6 +186,29 @@ void init_sensors()
 	}
 }
 
+int init_external_compass()
+{
+	F4GPIO SCL(GPIOC, GPIO_Pin_13);
+	F4GPIO SDA(GPIOC, GPIO_Pin_14);
+	I2C_SW i2c(&SCL, &SDA);
+	
+	sensors::HMC5983 hmc5983;
+	if (hmc5983.init(&i2c) == 0)
+	{
+		LOGE("found HMC5983 on I2C(PC13,PC14)\n");
+		static F4GPIO SCL(GPIOC, GPIO_Pin_13);
+		static F4GPIO SDA(GPIOC, GPIO_Pin_14);
+		static I2C_SW i2c(&SCL, &SDA);
+		static sensors::HMC5983 hmc5983;
+		static HMC5983res res(&hmc5983);
+		hmc5983.init(&i2c);
+
+		manager.register_magnetometer(&res);
+	}
+
+	return 0;	
+}
+
 int init_RC()
 {
 	static dev_v2::RCIN rcin;
@@ -271,6 +294,7 @@ int bsp_init_all()
 //	init_uart1();
 	init_RC();
 	init_sensors();
+	init_external_compass();
 	init_GPS();
 	init_asyncworker();
 	init_led();
