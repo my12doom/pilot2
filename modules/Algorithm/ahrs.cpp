@@ -14,6 +14,7 @@ float euler[3];
 float NED2BODY[3][3];
 float BODY2NED[3][3];
 float acc_ned[3];
+float halfvx, halfvy, halfvz;
 
 static float q0q0, q0q1, q0q2, q0q3;
 static float q1q1, q1q2, q1q3;
@@ -163,7 +164,6 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 
 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
 	if(g_force_ok && !((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
-		float halfvx, halfvy, halfvz;
 	
 		// Normalise accelerometer measurement
 		recipNorm = invSqrt(ax * ax + ay * ay + az * az);

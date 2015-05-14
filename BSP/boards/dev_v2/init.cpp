@@ -22,8 +22,6 @@ void init_led()
 	static GPIOLED led_green(&f4gpioC5);
 	static RGBLED rgb;
 	
-	f4gpioC4.set_mode(MODE_OUT_PushPull);
-	f4gpioC5.set_mode(MODE_OUT_PushPull);
 	manager.register_LED("SD",&led_red);
 	manager.register_LED("state",&led_green);
 	manager.register_RGBLED("rgb", &rgb);

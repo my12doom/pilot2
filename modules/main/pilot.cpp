@@ -222,7 +222,8 @@ copter_mode submode = basic;
 int64_t collision_detected = 0;	// remember to clear it before arming
 int64_t tilt_us = 0;	// remember to clear it before arming
 bool gyro_bias_estimating_end = false;
-vector gyro_radian;
+vector gyro_reading;
+vector body_rate;
 vector accel = {NAN, NAN, NAN};
 vector mag;
 vector accel_uncalibrated;
@@ -312,13 +313,12 @@ int calculate_baro_altitude()
 int prepare_pid()
 {
 	// calculate current core pid position
-
 	float new_angle_pos[3] = {euler[0], euler[1], euler[2]};
 
 	// the quadcopter's main pid lock on angle rate
 	for(int i=0; i<3; i++)
 	{
-		pos[i] = ::gyro_radian.array[i];
+		pos[i] = body_rate.array[i];
 		angle_pos[i] = new_angle_pos[i];
 	}
 
@@ -626,7 +626,7 @@ int save_logs()
 		{mag_uncalibrated.array[0] * 10, mag_uncalibrated.array[1] * 10, mag_uncalibrated.array[2] * 10},
 		{accel_uncalibrated.array[0] * 100, accel_uncalibrated.array[1] * 100, accel_uncalibrated.array[2] * 100},
 		mpu6050_temperature * 100 - 10000,
-		{gyro_radian.array[0] * 18000/PI, gyro_radian.array[1] * 18000/PI, gyro_radian.array[2] * 18000/PI},
+		{gyro_reading.array[0] * 18000/PI, gyro_reading.array[1] * 18000/PI, gyro_reading.array[2] * 18000/PI},
 		voltage * 1000,
 		current * 1000,
 	};
@@ -850,6 +850,9 @@ int read_sensors()
 	acc.V.x /= healthy_acc_count;
 	acc.V.y /= healthy_acc_count;
 	acc.V.z /= healthy_acc_count;
+	
+	// TODO: apply a high order LPF to gyro readings
+	::gyro_reading = gyro;
 
 	// read magnetometers
 	int healthy_mag_count = 0;
@@ -872,6 +875,8 @@ int read_sensors()
 	mag.V.x /= healthy_mag_count;
 	mag.V.y /= healthy_mag_count;
 	mag.V.z /= healthy_mag_count;
+	
+	::mag = mag;
 	
 	// read barometers
 	int healthy_baro_count = 0;
@@ -929,11 +934,6 @@ int read_sensors()
 	acc.array[2] += -1.8f;
 	
 	
-	
-	::mag = mag;
-
-	// TODO: apply a high order LPF to gyro readings
-	::gyro_radian = gyro;
 
 	// apply a 5hz LPF to accelerometer readings
 	const float RC20 = 1.0f/(2*3.1415926 * 20.0f);
@@ -983,7 +983,7 @@ int calculate_state()
 	NonlinearSO3AHRSupdate(
 		accel.array[0], accel.array[1], accel.array[2], 
 		mag.array[0], mag.array[1], mag.array[2],
-		gyro_radian.array[0], gyro_radian.array[1], gyro_radian.array[2],
+		gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
 		0.15f, 0.0015f, 0.15f, 0.0015f, interval);
 // 	MadgwickAHRSupdateIMU(gyro.array[0] /*+ (systimer->gettime() > 15000000 ? PI*5.0f/180.0f : 0)*/, gyro.array[1], -gyro.array[2], -acc_norm.V.y, acc_norm.V.x, acc_norm.V.z, 1.5f, interval);
 
@@ -991,6 +991,10 @@ int calculate_state()
 	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
 	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
 	euler[2] = radian_add(euler[2], quadcopter_trim[2]);
+	
+	body_rate.array[0] = gyro_reading.array[0] + gyro_bias[0];
+	body_rate.array[1] = gyro_reading.array[1] + gyro_bias[1];
+	body_rate.array[2] = gyro_reading.array[2] + gyro_bias[2];
 
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
 	TRACE("mag_size:%.3f, %.0f, %.0f, %.0f    \n", mag_size, mag.array[0], mag.array[1], mag.array[2]);
@@ -1003,7 +1007,7 @@ int calculate_state()
 
 
 	vector mwc_acc = {accel.V.y, -accel.V.x, -accel.V.z};
-	vector mwc_gyro = {gyro_radian.array[0], gyro_radian.array[1], -gyro_radian.array[2]};
+	vector mwc_gyro = {gyro_reading.array[0], gyro_reading.array[1], -gyro_reading.array[2]};
 	vector mwc_mag = {mag.V.y, -mag.V.x, -mag.V.z};
 	vector_multiply(&mwc_acc, 1.0f/G_in_ms2);
 
@@ -1131,14 +1135,14 @@ int sensor_calibration()
 
 		vector_add(&accel_avg, &accel);
 		vector_add(&mag_avg, &mag);
-		vector_add(&gyro_avg, &gyro_radian);
+		vector_add(&gyro_avg, &gyro_reading);
 
 		if (i>calibrating_count/10 && 
-			  ((fabs(gyro_radian.array[0]*PI180)>5.0f || fabs(gyro_radian.array[1]*PI180)>5.0f || fabs(gyro_radian.array[2]*PI180)>5.0f))
+			  ((fabs(gyro_reading.array[0]*PI180)>5.0f || fabs(gyro_reading.array[1]*PI180)>5.0f || fabs(gyro_reading.array[2]*PI180)>5.0f))
 			)
 		{
-			LOGE("wtf %f,%f,%f,%f,%f,%f, %d\n", fabs(gyro_radian.array[0]*PI180), fabs(gyro_radian.array[1]*PI180), fabs(gyro_radian.array[2]*PI180), 
-				 fabs(gyro_radian.array[0]*PI180), fabs(gyro_radian.array[1]*PI180), fabs(gyro_radian.array[2]*PI180), i);
+			LOGE("wtf %f,%f,%f,%f,%f,%f, %d\n", fabs(gyro_reading.array[0]*PI180), fabs(gyro_reading.array[1]*PI180), fabs(gyro_reading.array[2]*PI180), 
+				 fabs(gyro_reading.array[0]*PI180), fabs(gyro_reading.array[1]*PI180), fabs(gyro_reading.array[2]*PI180), i);
 			return -1;
 		}
 
@@ -1432,12 +1436,31 @@ int land_detector()
 int crash_detector()
 {
 	// always detect high G force
-	vector ground = {0,0,-2000};		// not very precise, but should be enough
 	vector accel_delta;
-	for(int i=0; i<3; i++)
-		accel_delta.array[i] = accel.array[i] - estAccGyro.array[i];
+	
+	accel_delta.array[0] = accel.array[0]/G_in_ms2 - 2 * halfvx;
+	accel_delta.array[1] = accel.array[1]/G_in_ms2 - 2 * halfvy;
+	accel_delta.array[2] = accel.array[2]/G_in_ms2 - 2 * halfvz;
 
 	float gforce = vector_length(&accel_delta);
+	
+	static float gforce_sum = 0;
+	static float gforce_sum2 = 0;
+	static int gforce_count = 0;
+	float gforce_avg = 1.0f;
+	float gforce_variance = 1.0f;
+	if (airborne)
+	{
+		gforce_count ++;
+		gforce_sum += gforce;
+		gforce_sum2 += gforce * gforce;
+	}
+	if (gforce_count > 0)
+	{
+		gforce_avg =  gforce_sum / gforce_count;
+		gforce_variance = gforce_sum2 / gforce_count - gforce_avg * gforce_avg;
+	}
+	
 	if (gforce > 1.75f)
 	{
 		TRACE("high G force (%.2f) detected\n", gforce);
@@ -1447,7 +1470,7 @@ int crash_detector()
 	// forced shutdown if >3g external force
 	if (gforce > 3.0f)
 	{
-		TRACE("very high G force (%.2f) detected (%.0f,%.0f,%.0f)\n", gforce, accel.array[0], accel.array[1], accel.array[2]);
+		LOGE("very high G force (%.2f) detected (%.0f,%.0f,%.0f)\n", gforce, accel.array[0], accel.array[1], accel.array[2]);
 		//set_mode(_shutdown);
 	}
 
@@ -1456,8 +1479,10 @@ int crash_detector()
 	// tilt detection
 	if (rc[2] < 0.1f || prot & CRASH_TILT_IMMEDIATE)
 	{
-		float tilt = sqrt(euler[0]*euler[0] + euler[1]*euler[1]);
-		if (vector_angle(&ground, &estAccGyro) < 0.33f)		// around 70 degree
+		float cos0 = cos(euler[0]);
+		float cos1 = cos(euler[1]);
+		float tilt = sqrt(cos0*cos0 + cos1*cos1);
+		if (tilt < 0.33f || cos0 < 0 || cos1 < 0)		// around 70 degree
 			tilt_us = tilt_us > 0 ? tilt_us : systimer->gettime();
 		else
 			tilt_us = 0;
@@ -1466,7 +1491,7 @@ int crash_detector()
 	if (((collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) && (rc[2] < 0.1f || prot & CRASH_COLLISION_IMMEDIATE)) 
 		|| (tilt_us> 0 && systimer->gettime()-tilt_us > 1000000))	// more than 1 second
 	{
-		TRACE("crash landing detected(%s)\n", (collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) ? "collision" : "tilt");
+		LOGE("crash landing detected(%s)\n", (collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) ? "collision" : "tilt");
 
 		set_mode(_shutdown);
 	}
@@ -1751,7 +1776,7 @@ void main_loop(void)
 
 		
 		// data
-		mag_calibrator.provide_data(mag_uncalibrated.array, euler, gyro_radian.array, interval);
+		mag_calibrator.provide_data(mag_uncalibrated.array, euler, body_rate.array, interval);
 	
 		// make a async call if data ready and change mag_calibration_state to calibrating
 		if (mag_calibrator.get_stage() == stage_ready_to_calibrate)
@@ -1772,7 +1797,7 @@ void main_loop(void)
 	if (mode == quadcopter)
 	{
 		land_detector();
-// 		crash_detector();
+ 		crash_detector();
 	}
 	else
 		land_detect_us = 0;
