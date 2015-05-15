@@ -16,6 +16,9 @@ public:
 	// set to true to lower baro factor for land effect compensating
 	void set_land_effect(bool compensate_land_effect){this->compensate_land_effect = compensate_land_effect;}
 
+	// set static_mode to true to tell the estimator that the machine is not flying, and estimator should trust more baro data.
+	void set_static_mode(bool static_mode);
+
 protected:
 	
 	bool compensate_land_effect;

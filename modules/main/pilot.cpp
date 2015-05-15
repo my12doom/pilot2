@@ -1029,6 +1029,7 @@ int calculate_state()
 
 	alt_estimator.set_land_effect(mode == quadcopter && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
 	alt_estimator.update(accelz, new_baro_data ? a_raw_altitude : NAN, interval);
+	alt_estimator.set_static_mode(mode == _shutdown);
 	alt_estimatorCF.set_land_effect(mode == quadcopter && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
 	alt_estimatorCF.update(accelz, new_baro_data ? a_raw_altitude : NAN, interval);
 	estimator.update_accel(accel_earth_frame.array[0], accel_earth_frame.array[1], systimer->gettime());
@@ -1843,8 +1844,6 @@ void sdcard_logging_loop(void)
 int main(void)
 {
 	bsp_init_all();
-	motor_matrix = 1;
-	motor_matrix.save();
 	
 	/*
 	pid_factor[0][0] = 0.3f;

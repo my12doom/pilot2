@@ -14,7 +14,7 @@ static float Q[16] =
 {
 	4e-6, 0, 0, 0,
 	0, 1e-6, 0, 0,
-	0, 0, 1e-6, 0,
+	0, 0, 1e-3, 0,
 	0, 0, 0, 1e-7,
 };
 static float R[4] = 
@@ -227,4 +227,10 @@ int altitude_estimator::update(float accelz, float baro, float dt)
 	TRACE("time=%.3f,state:%.2f,%.2f,%.2f,%.2f, raw:%.3f, accelz:%.3f      \n", systimer->gettime()/1000000.0f, state[0], state[1], state[2], state[3], baro, accelz);
 
 	return 0;
+}
+
+// set static_mode to true to tell the estimator that the machine is not flying, and estimator should trust more baro data.
+void altitude_estimator::set_static_mode(bool static_mode)
+{
+	Q[15] = static_mode ? 1e-3 : 1e-7;
 }
