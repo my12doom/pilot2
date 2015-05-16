@@ -112,6 +112,7 @@ int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 	SPI->set_speed(8000000);				// HMC5983 SPI can handle 8mhz max
 	CS->set_mode(HAL::MODE_OUT_PushPull);
 	CS->write(true);
+	m_healthy = false;
 
 	// HMC5983 initialization
 	for(i=0; i<3; i++)
@@ -127,7 +128,7 @@ int HMC5983::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 	FAIL_RETURN(write_reg(HMC58X3_R_CONFB, 0x20)); //Configuration Register B  -- 001 00000    configuration gain 1.3Ga
 	FAIL_RETURN(write_reg(HMC58X3_R_MODE, 0x00));
 
-
+	m_healthy = true;
 	return 0;
 }
 
@@ -140,6 +141,7 @@ int HMC5983::init(HAL::II2C *i2c)
 
 	this->i2c = i2c;
 	this->spi = NULL;
+	m_healthy = false;
 
 	// HMC5983 initialization
 	for(i=0; i<3; i++)
@@ -155,7 +157,8 @@ int HMC5983::init(HAL::II2C *i2c)
 	FAIL_RETURN(write_reg(HMC58X3_R_CONFB, 0x20)); //Configuration Register B  -- 001 00000    configuration gain 1.3Ga
 	FAIL_RETURN(write_reg(HMC58X3_R_MODE, 0x00));
 
-	
+	m_healthy = true;
+
 	return 0;
 }
 
@@ -172,6 +175,39 @@ int HMC5983::read(short*data)
 		swap((uint8_t*)&data[i], 2);
 	
 	return result;
+}
+
+
+int HMC5983::read(devices::mag_data *out)
+{
+	short data[3];
+	if (read(data)<0)
+		return -1;
+	
+	out->x = data[axis[0]] * 0.92f * negtive[0];		// to milli-gauss
+	out->y = data[axis[1]] * 0.92f * negtive[1];
+	out->z = data[axis[2]] * 0.92f * negtive[2];
+	out->temperature = NAN;
+	
+	return 0;
+}
+
+int HMC5983::axis_config(int x, int y, int z, int negtivex, int negtivey, int negtivez)
+{
+	axis[0] = x;
+	axis[1] = y;
+	axis[2] = z;
+	negtive[0] = negtivex;
+	negtive[1] = negtivey;
+	negtive[2] = negtivez;
+
+	return 0;
+}
+
+// return false if any error/waning
+bool HMC5983::healthy()
+{
+	return m_healthy;
 }
 
 }

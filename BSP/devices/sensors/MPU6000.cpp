@@ -1,6 +1,6 @@
 #include "MPU6000.h"
 #include <stdio.h>
-#include <stm32f4xx_spi.h>
+#include <Protocol/common.h>
 
 // Gyro and accelerator registers
 #define	SMPLRT_DIV		0x19
@@ -146,13 +146,9 @@ int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 
 	if (who_am_i != 0x68)
 		return -1;
-
-	// enter SPI high speed mode for data only access
- 	//SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
- 	//SPI_Init(SPI2, &SPI_InitStructure);
-
-	//
 	
+	m_healthy = true;
+
 	return 0;
 }
 
@@ -172,5 +168,59 @@ int MPU6000::read(short*data)
 
 	return result;
 }
+
+int MPU6000::accelerometer_axis_config(int x, int y, int z, int negtivex, int negtivey, int negtivez)
+{
+	axis[0] = x;
+	axis[1] = y;
+	axis[2] = z;
+	negtive[0] = negtivex;
+	negtive[1] = negtivey;
+	negtive[2] = negtivez;
+
+	return 0;
+}
+
+int MPU6000::gyro_axis_config(int x, int y, int z, int negtivex, int negtivey, int negtivez)
+{
+	axis[3] = x+4;
+	axis[4] = y+4;
+	axis[5] = z+4;
+	negtive[3] = negtivex;
+	negtive[4] = negtivey;
+	negtive[5] = negtivez;
+
+	return 0;
+}
+
+
+int MPU6000::read(devices::accelerometer_data *out)
+{
+	short data[7];
+	if (read(data)<0)
+		return -1;
+	
+	out->x = data[axis[0]] * negtive[0] * G_in_ms2 / 2048.0f;
+	out->y = data[axis[1]] * negtive[1] * G_in_ms2 / 2048.0f;
+	out->z = data[axis[2]] * negtive[2] * G_in_ms2 / 2048.0f;
+	out->temperature = data[3] / 340.0f + 36.53f;
+	
+	return 0;
+}
+
+int MPU6000::read(devices::gyro_data *out)
+{
+	short data[7];
+	if (read(data)<0)
+		return -1;
+	
+	out->x = data[axis[3]] * negtive[3] * 0.000266316f;		// to radians
+	out->y = data[axis[4]] * negtive[4] * 0.000266316f;
+	out->z = data[axis[5]] * negtive[5] * 0.000266316f;
+	out->temperature = data[3] / 340.0f + 36.53f;
+	
+	return 0;
+}
+
 
 }

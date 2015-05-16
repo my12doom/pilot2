@@ -2,11 +2,12 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
+#include <BSP/devices/IBarometer.h>
 
 using namespace HAL;
 namespace sensors
 {
-	class MS5611_SPI
+	class MS5611_SPI : public devices::IBarometer
 	{
 	public:
 		MS5611_SPI();
@@ -14,7 +15,10 @@ namespace sensors
 		
 		int init(ISPI *SPI, IGPIO *CS);
 		int read(int *data);
-		bool healthy();
+
+		// IBarometer
+		virtual bool healthy();
+		virtual int read(devices::baro_data *out);
 
 	protected:
 		ISPI *spi;

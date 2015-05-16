@@ -145,7 +145,9 @@ extern "C" void DMA2_Stream7_IRQHandler()
 
 
 #include <HAL\STM32F4\F4SPI.h>
-#include "sensors.h"
+#include <BSP/devices/sensors/MPU6000.h>
+#include <BSP/devices/sensors/HMC5983SPI.h>
+#include <BSP/devices/sensors/MS5611_SPI.h>
 F4SPI spi1;
 F4GPIO cs_mpu(GPIOA, GPIO_Pin_15);
 F4GPIO cs_ms5611(GPIOC, GPIO_Pin_2);
@@ -166,21 +168,21 @@ void init_sensors()
 	
 	if (mpu6000device.init(&spi1, &cs_mpu) == 0)
 	{
-		static dev_v2::mpu6000res res6000(&mpu6000device);
-		manager.register_accelerometer(&res6000);
-		manager.register_gyroscope(&res6000);
+		mpu6000device.accelerometer_axis_config(1, 0, 2, -1, -1, +1);
+		mpu6000device.gyro_axis_config(1, 0, 2, +1, +1, -1);
+		manager.register_accelerometer(&mpu6000device);
+		manager.register_gyroscope(&mpu6000device);
 	}
 
 	if (ms5611device.init(&spi1, &cs_ms5611) == 0)
 	{
-		static dev_v2::MS5611res res5611(&ms5611device);
-		manager.register_barometer(&res5611);
+		manager.register_barometer(&ms5611device);
 	}
 
 	if (hmc5983device.init(&spi1, &cs_hmc5983) == 0)
 	{
-		static dev_v2::HMC5983res res5983(&hmc5983device);	
-		manager.register_magnetometer(&res5983);
+		hmc5983device.axis_config(0, 2, 1, +1, -1, -1);
+		manager.register_magnetometer(&hmc5983device);
 	}
 }
 
@@ -198,10 +200,10 @@ int init_external_compass()
 		static F4GPIO SDA(GPIOC, GPIO_Pin_14);
 		static I2C_SW i2c(&SCL, &SDA);
 		static sensors::HMC5983 hmc5983;
-		static HMC5983res res(&hmc5983);
 		hmc5983.init(&i2c);
+		hmc5983.axis_config(0, 2, 1, +1, +1, +1);
 
-		manager.register_magnetometer(&res);
+		manager.register_magnetometer(&hmc5983);
 	}
 
 	return 0;	

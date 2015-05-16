@@ -2,10 +2,12 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
+#include <BSP/devices/IAccelerometer.h>
+#include <BSP/devices/IGyro.h>
 
 namespace sensors
 {
-	class MPU6000
+	class MPU6000 : public devices::IAccelerometer, public devices::IGyro
 	{
 	public:
 		MPU6000(){}
@@ -20,8 +22,23 @@ namespace sensors
 		int write_reg_core(uint8_t reg, uint8_t data);
 		int write_reg(uint8_t reg, uint8_t data);
 
+		// IAccelerometer
+		virtual int read(devices::accelerometer_data *out);
+		int accelerometer_axis_config(int x, int y, int z, int negtivex, int negtivey, int negtivez);
+
+		// IGyro
+		virtual int read(devices::gyro_data *out);
+		int gyro_axis_config(int x, int y, int z, int negtivex, int negtivey, int negtivez);
+
+		// return false if any error/waning
+		virtual bool healthy(){return m_healthy;}
+
 	protected:
 		HAL::ISPI *spi;
 		HAL::IGPIO *CS;
+		bool m_healthy;
+
+		int axis[6];
+		int negtive[6];
 	};
 }
