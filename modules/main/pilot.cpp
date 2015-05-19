@@ -78,7 +78,8 @@ static param pid_factor2[3][4] = 			// pid_factor2[roll,pitch,yaw][p,i,d,i_limit
 };
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
-static param quadcopter_auto_landing_rate("lrat", 0.5f);		// absolute value of automated landing speed in meter/s
+static param quadcopter_auto_landing_rate_fast("flrt", 1.5f);		// absolute value of fast automated landing speed in meter/s, 
+static param quadcopter_auto_landing_rate_final("lrat", 0.5f);		// absolute value of final approach speed in meter/s
 static param quadcopter_trim[3] = 
 {
 	param("trmR", 0 * PI / 18),				// roll
@@ -335,6 +336,9 @@ int prepare_pid()
 			// throttle
 			if (submode == althold || submode == poshold || submode == bluetooth || submode == optical_flow)
 			{
+				float landing_rate = (alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
+				float max_climb_rate = islanding ? (landing_rate + quadcopter_auto_landing_rate_final) : quadcopter_max_climb_rate;	// very low climbe rate even if max throttle in landing state
+				
 				float v = rc[2] - 0.5f;
 				float user_rate;
 				if (fabs(v)<0.05f)
@@ -342,7 +346,7 @@ int prepare_pid()
 				else if (v>= 0.05f)
 				{
 					user_rate = (v-0.05f)/0.45f;
-					user_rate = user_rate * user_rate * (islanding ? quadcopter_auto_landing_rate*2 : quadcopter_max_climb_rate);	// very low climbe rate even if max throttle 
+					user_rate = user_rate * user_rate * max_climb_rate;
 				}
 				else
 				{
@@ -355,7 +359,7 @@ int prepare_pid()
 				
 				// landing?
 				if(islanding)
-					user_rate -= quadcopter_auto_landing_rate;
+					user_rate -= landing_rate;
 
 				alt_controller.update(interval, user_rate);
 				
@@ -1282,9 +1286,9 @@ int check_mode()
 		else if (rc[5] < -0.6f)
 			newmode = basic;
 		else if (rc[5] > 0.6f)
- 			newmode = airborne ? optical_flow : althold;
+// 			newmode = airborne ? optical_flow : althold;
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-//			newmode = (estimator.healthy && airborne) ? poshold : althold;
+			newmode = (estimator.healthy && airborne) ? poshold : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
 			newmode = althold;
 
