@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <protocol/common.h>
-#include <BSP\Resources.h>
+#include <HAL\Resources.h>
 #include "RCIN.h"
 #include "RCOUT.h"
 #include "AsyncWorker.h"
 #include <HAL\STM32F4\F4Timer.h>
 
-#include <BSP/devices/sensors/UartNMEAGPS.h>
-#include <BSP\devices\ILED.h>
+#include <HAL/sensors/UartNMEAGPS.h>
+#include <HAL\devices\ILED.h>
 #include "RGBLED.h"
 using namespace devices;
 using namespace STM32F4;
@@ -145,9 +145,9 @@ extern "C" void DMA2_Stream7_IRQHandler()
 
 
 #include <HAL\STM32F4\F4SPI.h>
-#include <BSP/devices/sensors/MPU6000.h>
-#include <BSP/devices/sensors/HMC5983SPI.h>
-#include <BSP/devices/sensors/MS5611_SPI.h>
+#include <HAL/sensors/MPU6000.h>
+#include <HAL/sensors/HMC5983SPI.h>
+#include <HAL/sensors/MS5611_SPI.h>
 F4SPI spi1;
 F4GPIO cs_mpu(GPIOA, GPIO_Pin_15);
 F4GPIO cs_ms5611(GPIOC, GPIO_Pin_2);

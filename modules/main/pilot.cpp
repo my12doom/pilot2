@@ -22,7 +22,7 @@
 #include <Algorithm/mag_calibration.h>
 
 #include <HAL/Interface/Interfaces.h>
-#include <BSP/Resources.h>
+#include <HAL/Resources.h>
 using namespace HAL;
 using namespace devices;
 #include <FileSystem/ff.h>

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
-#include <BSP/devices/IBarometer.h>
+#include <HAL/devices/IBarometer.h>
 
 using namespace HAL;
 namespace sensors

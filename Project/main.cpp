@@ -1,8 +1,8 @@
-#include <BSP/Resources.h>
+#include <HAL/Resources.h>
 #include <stdio.h>
 #include <Algorithm/ahrs.h>
 #include <utils/log.h>
-#include <BSP/devices/sensors/UartNMEAGPS.h>
+#include <HAL/sensors/UartNMEAGPS.h>
 
 using namespace devices;
 using namespace sensors;

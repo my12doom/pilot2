@@ -2,16 +2,16 @@
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
 #include <HAL/STM32F4/F4Interfaces.h>
-#include <BSP/devices/ILED.h>
-#include <BSP/devices/IGyro.h>
-#include <BSP/devices/IAccelerometer.h>
-#include <BSP/devices/IMagnetometer.h>
-#include <BSP/devices/IBarometer.h>
-#include <BSP/devices/IMagnetometer.h>
-#include <BSP/devices/IGPS.h>
-#include <BSP/devices/IBatteryVoltage.h>
-#include <BSP/devices/IRGBLED.h>
-#include <BSP/devices/sensors/PX4Flow.h>
+#include <HAL/devices/ILED.h>
+#include <HAL/devices/IGyro.h>
+#include <HAL/devices/IAccelerometer.h>
+#include <HAL/devices/IMagnetometer.h>
+#include <HAL/devices/IBarometer.h>
+#include <HAL/devices/IMagnetometer.h>
+#include <HAL/devices/IGPS.h>
+#include <HAL/devices/IBatteryVoltage.h>
+#include <HAL/devices/IRGBLED.h>
+#include <HAL/sensors/PX4Flow.h>
 
 #define MAX_ACCELEROMETER_COUNT 5
 #define MAX_GPS_COUNT 3

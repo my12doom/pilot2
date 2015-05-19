@@ -734,39 +734,59 @@
           <GroupName>Device</GroupName>
           <Files>
             <File>
-              <FileName>Resources.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\..\BSP\Resources.h</FilePath>
-            </File>
-            <File>
               <FileName>Resources.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\BSP\Resources.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>MS5611_SPI.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\devices\sensors\MS5611_SPI.cpp</FilePath>
+              <FilePath>..\..\HAL\Resources.cpp</FilePath>
             </File>
             <File>
               <FileName>HMC5983SPI.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\BSP\devices\sensors\HMC5983SPI.cpp</FilePath>
+              <FilePath>..\..\HAL\sensors\HMC5983SPI.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>HMC5983SPI.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\HAL\sensors\HMC5983SPI.h</FilePath>
             </File>
             <File>
               <FileName>MPU6000.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\BSP\devices\sensors\MPU6000.cpp</FilePath>
+              <FilePath>..\..\HAL\sensors\MPU6000.cpp</FilePath>
             </File>
             <File>
-              <FileName>UartNMEAGPS.cpp</FileName>
+              <FileName>MPU6000.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\HAL\sensors\MPU6000.h</FilePath>
+            </File>
+            <File>
+              <FileName>MS5611_SPI.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\BSP\devices\sensors\UartNMEAGPS.cpp</FilePath>
+              <FilePath>..\..\HAL\sensors\MS5611_SPI.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>MS5611_SPI.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\HAL\sensors\MS5611_SPI.h</FilePath>
             </File>
             <File>
               <FileName>PX4Flow.cpp</FileName>
               <FileType>8</FileType>
-              <FilePath>..\..\BSP\devices\sensors\PX4Flow.cpp</FilePath>
+              <FilePath>..\..\HAL\sensors\PX4Flow.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>PX4Flow.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\HAL\sensors\PX4Flow.h</FilePath>
+            </File>
+            <File>
+              <FileName>UartNMEAGPS.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\UartNMEAGPS.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>UartNMEAGPS.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\HAL\sensors\UartNMEAGPS.h</FilePath>
             </File>
           </Files>
         </Group>

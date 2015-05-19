@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
-#include <BSP\devices\IFlow.h>
+#include <HAL\devices\IFlow.h>
 using namespace HAL;
 namespace sensors
 {

@@ -1,5 +1,5 @@
 #include "AsyncWorker.h"
-#include <BSP\Resources.h>
+#include <HAL\Resources.h>
 #include <string.h>
 #include <stm32f4xx_exti.h>
 #include <HAL\STM32F4\F4Timer.h>

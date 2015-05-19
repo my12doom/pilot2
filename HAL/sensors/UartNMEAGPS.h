@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
-#include <BSP/devices/IGPS.h>
+#include <HAL/devices/IGPS.h>
 #include <NMEA/nmea.h>
 
 using namespace HAL;
