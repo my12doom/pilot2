@@ -1,4 +1,4 @@
-// sphere fitting of (b*(x+a))^2 + (d*(y+c))^2 + (f*(z+e))^2 = 1
+// sphere fitting of (d*(x+a))^2 + (e*(y+b))^2 + (f*(z+c))^2 = 1
 // see https://chionophilous.wordpress.com/author/rolfeschmidt/ for detail.
 // the original artical use definition | (x-b0)*b3, (y-b1)*b4, (z-b2)*b5 | = 1
 
@@ -14,7 +14,7 @@ public:
 
 	int calculate(const float *data, int vector_count);		// data is a array of [x, y, z] * vector_count floats
 	int get_result(float *result);							// get the fitting result of sphere (ax+b)^2 + (cy+d)^2 + (ez+f) = 1
-															// result[0--6] = [a, b, c, d, e, f]
+															// result[0--5] = [a, b, c, d, e, f]
 
 protected:
 	void calibrate_model_matrices();

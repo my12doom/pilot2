@@ -717,9 +717,14 @@ int save_logs()
 
 	log(&quad2, TAG_QUADCOPTER_DATA2, time);
 
+	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
 	quadcopter_data4 quad4 = 
 	{
 		isnan(alt_controller.m_sonar_target) ? 0 : alt_controller.m_sonar_target*100,
+		mag_size,
+		mag.array[0],
+		mag.array[1],
+		mag.array[2],
 	};
 	log(&quad4, TAG_QUADCOPTER_DATA4, time);
 
@@ -879,9 +884,7 @@ int read_sensors()
 	mag.V.x /= healthy_mag_count;
 	mag.V.y /= healthy_mag_count;
 	mag.V.z /= healthy_mag_count;
-	
-	::mag = mag;
-	
+
 	// read barometers
 	int healthy_baro_count = 0;
 	for(int i=0; i<manager.get_barometer_count(); i++)
@@ -935,8 +938,8 @@ int read_sensors()
 		mag.array[i] += mag_bias[i];
 		mag.array[i] *= mag_scale[i];
 	}
-	acc.array[2] += -1.8f;
 	
+	::mag = mag;
 	
 
 	// apply a 5hz LPF to accelerometer readings
@@ -1043,15 +1046,7 @@ int calculate_state()
 		// fuse gps data
 		gps_id++;
 
-		if (gps.DOP[1] > 0 && (gps.DOP[1]/100.0f) < (estimator.healthy ? 3.5f : 2.5f) && gps.fix>=3)
-		{
-			estimator.update_gps(COORDTIMES * gps.latitude, COORDTIMES * gps.longitude, gps.DOP[1]/100.0f, systimer->gettime());
-		}
-// 		else
-		{
-			//estimator.reset();
-			//estimator2.reset();
-		}
+		estimator.update_gps(COORDTIMES * gps.latitude, COORDTIMES * gps.longitude, gps.DOP[1]/100.0f, systimer->gettime());
 
 		float yaw_gps = gps.direction * PI / 180;
 		if (yaw_gps > PI)
@@ -1749,7 +1744,7 @@ void main_loop(void)
 	if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
 	{
 		if (rgb && mag_calibration_state == 0)
-			rgb->write(0,1,0);
+			rgb->write(estimator.healthy ? 0 : 0.1,1,0);
 		SAFE_ON(flashlight);
 	}
 	else
@@ -1858,8 +1853,9 @@ int main(void)
 	pid_factor[1][2] = 0.02f;
 	//pid_factor2[0][0] = 4.5f;
 	//pid_factor2[1][0] = 4.5f;
+	*/
 	
-	while(1)
+	while(0)
 	{
 		float t = systimer->gettime()/5000000.0f * 2 * PI;
 		float t2 = systimer->gettime()/15000000.0f * 2 * PI;
@@ -1868,9 +1864,8 @@ int main(void)
 		float g = t2*(sin(t+PI*2/3)/2+0.5f);
 		float b = t2*(sin(t+PI*4/3)/2+0.5f);
 		
-		manager.getRGBLED("rgb")->write(r,g,b);
+		manager.getRGBLED("rgb")->write(0.1,1,0);
 	}
-	*/
 	
 	state_led = manager.getLED("state");
 	SD_led = manager.getLED("SD");

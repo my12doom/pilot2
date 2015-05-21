@@ -13,6 +13,8 @@ double _k3_xy = 1 / (_time_constant_xy*_time_constant_xy*_time_constant_xy);
 #endif
 #define history_interval 50000		// 50ms, 20 point supports 1000ms max delay
 
+#define GPS_TIMEOUT 1000000
+
 pos_estimator::pos_estimator()
 {
 	latency = 400000;
@@ -53,7 +55,7 @@ int pos_estimator::update_accel(double accel_lat, double accel_lon, int64_t time
 {
 	if (!home_set)
 		return -1;
-
+	
 	double dt = (timestamp - last_accel_update)/1000000.0f;
 	last_accel_update = timestamp;
 	if (dt <=0 || dt > 1)
@@ -98,7 +100,10 @@ int pos_estimator::update_accel(double accel_lat, double accel_lon, int64_t time
 
 int pos_estimator::update_gps(COORDTYPE lat, COORDTYPE lon, float hdop, int64_t timestamp)			// unit: degree
 {
-	if (!home_set || !healthy && hdop < 2.5f)
+	if (hdop <= 0.05f)		// this might be wrong...
+		return -1;
+
+	if (!healthy && hdop < 2.0f)
 	{
 		if (!home_set)
 		{
@@ -114,7 +119,7 @@ int pos_estimator::update_gps(COORDTYPE lat, COORDTYPE lon, float hdop, int64_t 
 
 	if (hdop > 3.5f)
 	{
-		if (timestamp - last_gps_update > 8000000)
+		if (timestamp - last_gps_update > GPS_TIMEOUT)
 			healthy = false;
 
 		return -1;

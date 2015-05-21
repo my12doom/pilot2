@@ -177,6 +177,10 @@ typedef struct
 typedef struct
 {
 	short sonar_target;
+	short mag_size;
+	short mx;
+	short my;
+	short mz;
 } quadcopter_data4;
 
 
