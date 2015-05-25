@@ -1154,6 +1154,21 @@ int sensor_calibration()
 		else
 			led_all_off();
 
+		if (rgb)
+		{
+			float color[5][3] = 
+			{
+				{1,0,0},
+				{0,1,0},
+				{0,0,1},
+				{0.2,0,1},
+				{0.2,1,0},
+			};
+
+			int i = (systimer->gettime() / 150000) % 5;
+			rgb->write(color[i][0], color[i][01], color[i][2]);
+		}
+
 		while(systimer->gettime() - us < 3000)
 			;
 	}
