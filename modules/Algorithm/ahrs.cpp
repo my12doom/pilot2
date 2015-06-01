@@ -15,6 +15,7 @@ float NED2BODY[3][3];
 float BODY2NED[3][3];
 float acc_ned[3];
 float halfvx, halfvy, halfvz;
+float acc_hbf[2];
 
 static float q0q0, q0q1, q0q2, q0q3;
 static float q1q1, q1q2, q1q3;
@@ -259,9 +260,6 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	}
 	acc_ned[2] -= G_in_ms2;
 
-
-//   	LOGE("accz=%f/%f, acc=%f,%f,%f, raw=%f,%f,%f\n", accz_NED, accelz, acc[0], acc[1], acc[2], BODY2NED[0][0], BODY2NED[0][1], BODY2NED[0][2]);
-
 	//1-2-3 Representation.
 	//Equation (290) 
 	//Representing Attitude: Euler Angles, Unit Quaternions, and Rotation Vectors, James Diebel.
@@ -269,6 +267,14 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	euler[0] = atan2f(Rot_matrix[5], Rot_matrix[8]);	//! Roll
 	euler[1] = -asinf(Rot_matrix[2]);	//! Pitch
 	euler[2] = atan2f(-Rot_matrix[1], -Rot_matrix[0]);		//! Yaw, 0 = north, PI/-PI = south, PI/2 = east, -PI/2 = west
+
+	// NED frame to horizontal body frame
+	float cos_yaw = cos(euler[2]);
+	float sin_yaw = sin(euler[2]);
+	acc_hbf[0] = cos_yaw * acc_ned[0] + sin_yaw * acc_ned[1];
+	acc_hbf[1] = -sin_yaw * acc_ned[0] + cos_yaw * acc_ned[1];
+
+	//   	LOGE("accz=%f/%f, acc=%f,%f,%f, raw=%f,%f,%f\n", accz_NED, accelz, acc[0], acc[1], acc[2], BODY2NED[0][0], BODY2NED[0][1], BODY2NED[0][2]);
 }
 
 //---------------------------------------------------------------------------------------------------

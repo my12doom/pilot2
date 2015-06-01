@@ -54,6 +54,7 @@ extern float euler[3];
 extern float NED2BODY[3][3];
 extern float BODY2NED[3][3];
 extern float acc_ned[3];				// acceleration rotated to north-east-down frame
+extern float acc_horizontal[2]; // acceleration rotated to horizontal body frame, [0] points forward, [1] points right
 extern float halfvx, halfvy, halfvz;	// estimated gravity vector in body frame
 
 
