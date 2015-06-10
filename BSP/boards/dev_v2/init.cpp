@@ -79,7 +79,6 @@ IUART * pUART3 = &f4uart3;
 void init_uart3()
 {
 	pUART3->set_baudrate(115200);
-	pUART3->write("This is UART3\n", 6);
 	manager.register_UART("UART3",pUART3);
 }
 extern "C" void USART3_IRQHandler(void)
@@ -97,7 +96,6 @@ IUART * pUART2 = &f4uart2;
 void init_uart2()
 {
 	pUART2->set_baudrate(115200);
-	pUART2->write("This is UART2\n", 14);
 	manager.register_UART("UART2",pUART2);
 }
 extern "C" void USART2_IRQHandler(void)
@@ -131,7 +129,6 @@ IUART * pUART1 = &f4uart1;
 void init_uart1()
 {
 	pUART1->set_baudrate(115200);
-	pUART1->write("12345\n", 6);
 	manager.register_UART("UART1",pUART1);
 }
 extern "C" void USART1_IRQHandler(void)
@@ -182,7 +179,7 @@ void init_sensors()
 	if (hmc5983device.init(&spi1, &cs_hmc5983) == 0)
 	{
 		hmc5983device.axis_config(0, 2, 1, +1, -1, -1);
-		manager.register_magnetometer(&hmc5983device);
+		//manager.register_magnetometer(&hmc5983device);
 	}
 }
 
@@ -291,7 +288,7 @@ int bsp_init_all()
 	init_uart3();
 	init_uart2();
 	init_timers();
-//	init_uart1();
+	init_uart1();
 	init_RC();
 	init_sensors();
 	init_external_compass();

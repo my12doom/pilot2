@@ -14,7 +14,7 @@ namespace STM32F4
 		//choose which uart will be inital:
 		if(USART1 == USARTx)
 		{
-			RCC_APB1PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
 			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 			//Set Uart4 bind to GPIOA pin9|pin10
 			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
@@ -27,8 +27,8 @@ namespace STM32F4
 			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
 			GPIO_Init(GPIOA, &GPIO_InitStructure);
-			GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_USART1);
 			GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_USART1);
+			GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1);
 			// NVIC config
 			NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
