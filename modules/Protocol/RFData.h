@@ -181,7 +181,21 @@ typedef struct
 	short mx;
 	short my;
 	short mz;
+	short raw_yaw;
+	short accel_horizontal_forward;
+	short accel_horizontal_right;
+	short ahrs_err[3];
 } quadcopter_data4;
+
+typedef struct 
+{
+	int16_t bias[3];
+	int16_t scale[3];
+	int16_t residual_average;
+	int16_t residual_max;
+	int16_t residual_min;
+	int16_t result;
+} mag_calibration_data;
 
 
 typedef struct
@@ -237,6 +251,7 @@ typedef struct
 		pos_controller_data2 pos_controller2;
 		double_sensor_data double_sensor;
 		px4flow_frame px4flow;
+		mag_calibration_data mag_cal;
 	}data;
 } rf_data;
 
@@ -261,6 +276,7 @@ typedef struct
 #define TAG_DOUBLE_SENSOR_DATA	0x44
 #define TAG_PX4FLOW_DATA	0x45
 #define TAG_QUADCOPTER_DATA4	0x46
+#define TAG_MAG_CALIBRATION_DATA 0x47
 
 #define TAG_PILOT_DATA	0x65
 #define TAG_PILOT_DATA2	0x66

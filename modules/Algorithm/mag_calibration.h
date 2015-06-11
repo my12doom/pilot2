@@ -8,7 +8,7 @@
 #define MAX_SCALE 2.5f				// http://en.wikipedia.org/wiki/Earth%27s_magnetic_field, The field ranges between approximately 25,000 and 65,000 nT (0.25¨C0.65 G)
 #define MIN_SCALE 0.33f				// we accept 0.2 ~ 1.5 G due to soft-iron (100 - 1500 milli-gauss)
 #define MAX_MAX_RESIDUAL 0.25f		// 25%, same as ahrs magnetic interference detection threshold
-#define MAX_AVG_RESIDUAL 0.05f		// twice of HMC5983 non-linearity + cross-axis sensitivity.
+#define MAX_AVG_RESIDUAL 0.08f		// twice of HMC5983 non-linearity + cross-axis sensitivity.
 #define MAX_TILT 20.0f				// 20 degreee max tilt
 
 enum mag_calibration_stage

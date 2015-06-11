@@ -15,7 +15,10 @@ float NED2BODY[3][3];
 float BODY2NED[3][3];
 float acc_ned[3];
 float halfvx, halfvy, halfvz;
-float acc_hbf[2];
+float acc_horizontal[2];
+float raw_yaw;
+bool mag_ok = true;
+float err_a[3];
 
 static float q0q0, q0q1, q0q2, q0q3;
 static float q1q1, q1q2, q1q3;
@@ -24,12 +27,16 @@ static float q3q3;
 static bool bFilterInit = false;
 static float ground_mag_length;
 static float mag_tolerate = 0.25f;
+#define min_mag_tolerate 0.25f
 
 //---------------------------------------------------------------------------------------------------
 // Function declarations
-
 float invSqrt(float x);
 int inverse_matrix3x3(const float src[3][3], float dst[3][3]);
+static inline float fmax(float a, float b)
+{
+	return a>b?a:b;
+}
 
 //====================================================================================================
 // Functions
@@ -102,18 +109,20 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	float acc_bodyframe[3] = {ax, ay, az};
 	float g_force = sqrt(ax*ax + ay*ay + az*az) / G_in_ms2;
 	bool g_force_ok = g_force > 0.85f && g_force < 1.15f;
+	mag_ok = true;
 	float mag_length = sqrt(mx*mx + my*my + mz*mz);
 	if (ground_mag_length != 0)
 	{
 		// check for magnetic interference
-		float mag_diff = fabs(mag_length / ground_mag_length - 1.0f);
+		float mag_diff = (mag_length / 500.0f);
+		mag_diff = fabs(mag_diff - 1.0f);
 		if ( mag_diff < mag_tolerate)
 		{
-			mag_tolerate = mag_diff;
+			mag_tolerate = fmax(min_mag_tolerate, mag_diff);
 		}
 		else
 		{
-			mx = my = mz = 0;
+			mag_ok = false;
 			mag_tolerate += 0.05f * dt;
 			//TRACE("warning: possible magnetic interference");
 		}
@@ -134,7 +143,7 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	}
         	
 	//! If magnetometer measurement is available, use it.
-	if(!((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f))) {
+	if(mag_ok && !((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f))) {
 		float hx, hy, hz, bx, bz;
 		float halfwx, halfwy, halfwz;
 	
@@ -181,6 +190,10 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 		halfexA += ay * halfvz - az * halfvy;
 		halfeyA += az * halfvx - ax * halfvz;
 		halfezA += ax * halfvy - ay * halfvx;
+
+		err_a[0] = halfexA;
+		err_a[1] = halfexA;
+		err_a[2] = halfexA;
 	}
 
 	// Compute and apply integral feedback if enabled
@@ -271,10 +284,23 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	// NED frame to horizontal body frame
 	float cos_yaw = cos(euler[2]);
 	float sin_yaw = sin(euler[2]);
-	acc_hbf[0] = cos_yaw * acc_ned[0] + sin_yaw * acc_ned[1];
-	acc_hbf[1] = -sin_yaw * acc_ned[0] + cos_yaw * acc_ned[1];
+	acc_horizontal[0] = cos_yaw * acc_ned[0] + sin_yaw * acc_ned[1];
+	acc_horizontal[1] = -sin_yaw * acc_ned[0] + cos_yaw * acc_ned[1];
+
+	// tilt compensated raw mag yaw
+	float cosRoll = cosf(euler[0]);
+    float sinRoll = sinf(euler[0]);
+    float cosPitch = cosf(euler[1]+PI);
+    float sinPitch = sinf(euler[1]+PI);
+
+    float magX = mx * cosPitch + my * sinRoll * sinPitch + mz * cosRoll * sinPitch;
+    float magY = my * cosRoll - mz * sinRoll;
+
+    raw_yaw = atan2f(-magY, magX);
+
 
 	//   	LOGE("accz=%f/%f, acc=%f,%f,%f, raw=%f,%f,%f\n", accz_NED, accelz, acc[0], acc[1], acc[2], BODY2NED[0][0], BODY2NED[0][1], BODY2NED[0][2]);
+	TRACE("\raccel fr:%f,%f,  ned:%f,%f,%f,", acc_horizontal[0], acc_horizontal[1], acc_ned[0], acc_ned[1], acc_ned[2]);
 }
 
 //---------------------------------------------------------------------------------------------------

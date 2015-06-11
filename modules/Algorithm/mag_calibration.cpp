@@ -145,7 +145,7 @@ int mag_calibration::do_calibration()
 	// statistics
 	result.residual_average = 0;
 	result.residual_min = 1e+9;
-	result.residual_min = -1e+9;
+	result.residual_max = -1e+9;
 	for(int i=0; i<count; i++)
 	{
 		float x = (data[3*i+0] + result.bias[0]) * result.scale[0];

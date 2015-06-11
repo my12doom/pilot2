@@ -197,6 +197,7 @@ void STOP_ALL_MOTORS()
 }
 int handle_uart4_cli();
 int handle_uart4_controll();
+int handle_wifi_controll();
 
 // states
 devices::gps_data gps;
@@ -305,8 +306,6 @@ int calculate_baro_altitude()
 	a_raw_altitude = 153.8462f * temp * (1.0f - exp(0.190259f * log(scaling)));
 	if (fabs(a_raw_altitude) < 5.0f)
 		ground_temperature = a_raw_temperature;
-	else
-		printf("WTF?");
 
 	return 0;
 }
@@ -435,10 +434,10 @@ int prepare_pid()
 			}
 			else if (submode == poshold)
 			{
-				// 10hz pos controller rate
+				// 100hz pos controller rate
 				static int64_t last_pos_controll_time = 0;
 				float dt = (systimer->gettime() - last_pos_controll_time) / 1000000.0f;
-				if (dt > 0.1f)
+				if (dt > 0.01f)
 				{
 					last_pos_controll_time = systimer->gettime();
 					if (dt < 1.0f)
@@ -725,6 +724,10 @@ int save_logs()
 		mag.array[0],
 		mag.array[1],
 		mag.array[2],
+		raw_yaw * 18000 / PI,
+		acc_horizontal[0] * 1000,
+		acc_horizontal[1] * 1000,
+		{err_a[0] * 18000/PI, err_a[1] * 18000/PI, err_a[2] * 18000/PI},
 	};
 	log(&quad4, TAG_QUADCOPTER_DATA4, time);
 
@@ -987,11 +990,14 @@ int calculate_state()
 	if (interval <=0 || interval > 0.2f)
 		return -1;
 
+	float factor = mode == quadcopter ? 1 : 15;
+	float factor_mag = 1;
+	
 	NonlinearSO3AHRSupdate(
 		accel.array[0], accel.array[1], accel.array[2], 
 		mag.array[0], mag.array[1], mag.array[2],
 		gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
-		0.15f, 0.0015f, 0.15f, 0.0015f, interval);
+		0.15f*factor, 0.0015f*factor, 0.15f*factor_mag, 0.0015f*factor_mag, interval);
 // 	MadgwickAHRSupdateIMU(gyro.array[0] /*+ (systimer->gettime() > 15000000 ? PI*5.0f/180.0f : 0)*/, gyro.array[1], -gyro.array[2], -acc_norm.V.y, acc_norm.V.x, acc_norm.V.z, 1.5f, interval);
 
 
@@ -1046,6 +1052,7 @@ int calculate_state()
 		// fuse gps data
 		gps_id++;
 
+		if (gps.fix > 2)
 		estimator.update_gps(COORDTIMES * gps.latitude, COORDTIMES * gps.longitude, gps.DOP[1]/100.0f, systimer->gettime());
 
 		float yaw_gps = gps.direction * PI / 180;
@@ -1373,11 +1380,12 @@ int check_mode()
 
 	return 0;
 }
+
+static float takeoff_arming_time = 0;
+static bool is_taking_off=false;
 void check_takeoff_OR_landing()
 {
 	static float last_ch7 = NAN;
-	static float read_time;
-	static bool iswait=false;
 	float time_now;
 	//first start
 	if(isnan(last_ch7))last_ch7=rc[7];
@@ -1399,7 +1407,7 @@ void check_takeoff_OR_landing()
 			LOGE("\nauto landing!\n");
 			islanding=true;
 		}
-		else if(iswait==false&&mode==_shutdown && flip_count >=1)
+		else if(is_taking_off==false&&mode==_shutdown && flip_count >=1)
 		{
 			flip_count=0;
 			LOGE("\nauto take off \n");
@@ -1408,16 +1416,16 @@ void check_takeoff_OR_landing()
 			alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
 			LOGE("\narmed!\n");
 			//1s=1000000us		
-			read_time=systimer->gettime();
-			iswait=true;
+			takeoff_arming_time=systimer->gettime();
+			is_taking_off=true;
 		}
 	}
-	if(iswait==true)
+	if(is_taking_off==true)
 	{
 		time_now=systimer->gettime();
-		if(time_now>=read_time+2000000)
+		if(time_now>=takeoff_arming_time+2000000)
 		{
-			iswait=false;
+			is_taking_off=false;
 			alt_controller.set_altitude_target(alt_controller.get_altitude_target()+2.0f);
 			LOGE("\nalread take off\n");
 		}
@@ -1491,8 +1499,10 @@ int crash_detector()
 
 	int prot = (float)::crash_protect;
 
+	bool landing_requested = rc[2] < 0.1f || (islanding && throttle_result < 0.2f);
+		
 	// tilt detection
-	if (rc[2] < 0.1f || prot & CRASH_TILT_IMMEDIATE)
+	if (landing_requested || prot & CRASH_TILT_IMMEDIATE)
 	{
 		float cos0 = cos(euler[0]);
 		float cos1 = cos(euler[1]);
@@ -1503,10 +1513,10 @@ int crash_detector()
 			tilt_us = 0;
 	}
 
-	if (((collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) && (rc[2] < 0.1f || prot & CRASH_COLLISION_IMMEDIATE)) 
+	if (((collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) && (landing_requested || prot & CRASH_COLLISION_IMMEDIATE)) 
 		|| (tilt_us> 0 && systimer->gettime()-tilt_us > 1000000))	// more than 1 second
 	{
-		LOGE("crash landing detected(%s)\n", (collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) ? "collision" : "tilt");
+		LOGE("landing impact detected(%s)\n", (collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) ? "collision" : "tilt");
 
 		set_mode(_shutdown);
 	}
@@ -1548,9 +1558,90 @@ int handle_uart4_cli()
 	return 0;
 }
 
+int handle_wifi_controll()
+{
+	char line[1024];
+	char out[1024];
+	IUART *uart = manager.getUART("UART1");
+	int byte_count = uart->read(line, sizeof(line));
+	if (byte_count <= 0)
+		return 0;
+	
+	line[byte_count] = 0;
+	int len = strlen(line);
+	const char * keyword2 = ",stick\n";
+	
+	TRACE("%s\n", line);
+
+	if (strstr(line, keyword2) == (line+len-strlen(keyword2)))
+	{
+		if (sscanf(line, "%f,%f,%f,%f", &rc_mobile[0], &rc_mobile[1], &rc_mobile[2], &rc_mobile[3] ) == 4)
+		{
+			mobile_last_update = systimer->gettime();
+			TRACE("stick:%f,%f,%f,%f\n", rc_mobile[0], rc_mobile[1], rc_mobile[2], rc_mobile[3]);
+		}
+	}
+
+	else if (strcmp(line, "arm\n") == 0)
+	{
+		LOGE("mobile arm\n");
+		set_mode(quadcopter);
+
+		const char *armed = "armed\n";
+		uart->write(armed, strlen(armed));
+	}
+
+	else if (strcmp(line, "disarm\n") == 0)
+	{
+		LOGE("mobile disarm\n");
+
+		set_mode(_shutdown);
+		const char *disarmed = "disarmed\n";
+		uart->write(disarmed, strlen(disarmed));
+	}
+	
+	else if (strcmp(line, "takeoff\n") == 0)
+	{
+		const char *tak = "taking off\n";
+		uart->write(tak, strlen(tak));
+
+		LOGE("\nauto take off \n");
+		set_mode(quadcopter);
+		check_mode();	// to set submode and reset all controller
+		alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
+		LOGE("\narmed!\n");
+		//1s=1000000us		
+		takeoff_arming_time=systimer->gettime();
+		is_taking_off=true;
+	}
+
+	else if (strcmp(line, "land\n") == 0)
+	{
+		LOGE("mobile land\n");
+		const char *land = "landing\n";
+		uart->write(land, strlen(land));
+
+		islanding = true;
+	}
+	
+	else if (strcmp(line, "RTL\n") == 0)
+	{
+		LOGE("mobile RTL\n");
+		const char *rtl = "RTLing\n";
+		uart->write(rtl, strlen(rtl));
+	}
+
+	else
+	{
+		// invalid packet
+	}
+
+	return 0;
+}
+
 int handle_uart4_controll()
 {
-#ifdef STM32F4
+#if 0
 	char line[1024];
 	int byte_count = UART4_ReadPacket(line, sizeof(line));
 	if (byte_count <= 0)
@@ -1715,16 +1806,24 @@ void mag_calibrating_worker(int parameter)
 		}
 	}
 
+	// log
+	mag_calibration_data d =
+	{
+		{result.bias[0] * 10, result.bias[1] * 10, result.bias[2] * 10},
+		{result.scale[0] * 1000, result.scale[1] * 1000, result.scale[2] * 1000},
+		result.residual_average * 1000,
+		result.residual_max * 1000,
+		result.residual_min * 1000,
+		res,
+	};
+
+	// assume blocking async worker won't do any harm
+	int64_t timestamp = systimer->gettime();
+	while (log(&d, TAG_MAG_CALIBRATION_DATA, timestamp) != 0)
+		LOGE("writing log failed");// retry
+
 	// ends
 	mag_calibration_state = 0;	
-}
-
-void test(int i)
-{
-	systimer->delayms(300);
-	rgb->write(0,1,0);
-	systimer->delayms(300);
-	rgb->write(0,0,0);	
 }
 
 void main_loop(void)
@@ -1753,25 +1852,42 @@ void main_loop(void)
 		cycle_counter = 0;
 	}
 
-	// flashlight, tripple flash if SDCARD running, double flash if SDCARD failed
-	time = systimer->gettime();
-	int time_mod_1500 = (time%1500000)/1000;
-	if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
+	// TODO: light word
+	if (mag_ok)
 	{
-		if (rgb && mag_calibration_state == 0)
-			rgb->write(estimator.healthy ? 0 : 0.1,1,0);
-		SAFE_ON(flashlight);
+		// flashlight, tripple flash if SDCARD running, double flash if SDCARD failed
+		time = systimer->gettime();
+		int time_mod_1500 = (time%1500000)/1000;
+		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
+		{
+			if (rgb && mag_calibration_state == 0)
+				rgb->write(estimator.healthy ? 0 : 0.1,1,0);
+			SAFE_ON(flashlight);
+		}
+		else
+		{
+			if(rgb && mag_calibration_state == 0)
+				rgb->write(0,0,0);
+			SAFE_OFF(flashlight);
+		}
 	}
 	else
 	{
-		if(rgb && mag_calibration_state == 0)
+		// fast red flash (10hz) if magnetic interference
+		time = systimer->gettime();
+		if (rgb && mag_calibration_state == 0)
+		if (time % 100000 < 50000)
+			rgb->write(1,0,0);
+		else
 			rgb->write(0,0,0);
-		SAFE_OFF(flashlight);
+
 	}
 
-	// RC modes and RC fail detection
+	// RC modes and RC fail detection, or alternative RC source
 	check_mode();
 	check_takeoff_OR_landing();
+	handle_wifi_controll();
+
 	// read sensors
 	read_sensors();
 	

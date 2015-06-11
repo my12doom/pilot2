@@ -506,7 +506,7 @@ namespace STM32F4
 		}
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
-		USART3->SR = (uint16_t)~0x20;
+		USART2->SR = (uint16_t)~0x20;
 		if (c>0)
 		{
 			buffer[end] = c;
