@@ -195,7 +195,14 @@ typedef struct
 	int16_t residual_max;
 	int16_t residual_min;
 	int16_t result;
+	int16_t num_points_collected;
 } mag_calibration_data;
+
+typedef struct 
+{
+	int16_t data[3];
+	bool last;
+} mag_collecting_data;
 
 
 typedef struct
@@ -252,6 +259,7 @@ typedef struct
 		double_sensor_data double_sensor;
 		px4flow_frame px4flow;
 		mag_calibration_data mag_cal;
+		mag_collecting_data mag_collecting;
 	}data;
 } rf_data;
 
@@ -277,6 +285,7 @@ typedef struct
 #define TAG_PX4FLOW_DATA	0x45
 #define TAG_QUADCOPTER_DATA4	0x46
 #define TAG_MAG_CALIBRATION_DATA 0x47
+#define TAG_MAG_COLLECTING_DATA 0x48
 
 #define TAG_PILOT_DATA	0x65
 #define TAG_PILOT_DATA2	0x66

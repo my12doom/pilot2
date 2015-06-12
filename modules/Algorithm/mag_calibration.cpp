@@ -1,7 +1,10 @@
 #include "mag_calibration.h"
 #include <Protocol/common.h>
+#include <Protocol/RFData.h>
 #include <utils/gauss_newton.h>
+#include <utils/log.h>
 #include <math.h>
+#include <HAL/resources.h>
 
 static inline float fmax(float a, float b)
 {
@@ -125,6 +128,7 @@ bool invalid_float(float v)
 // other values are same as get_result()
 int mag_calibration::do_calibration()
 {
+	result.num_points_collected = count;
 	if (stage == stage_data_calibrated)
 		return 0;
 	if (stage != stage_ready_to_calibrate)
@@ -134,6 +138,25 @@ int mag_calibration::do_calibration()
 		stage = stage_data_calibrated;
 		calibration_error_code = -2;
 		return -2;
+	}
+
+	// do logging!
+	if (log_ready)
+	for(int i=0; i<count; i++)
+	{
+		mag_collecting_data d = 
+		{
+			{data[i*3]*10, data[i*3+1]*10, data[i*3+2]*10,},
+			i == count-1,
+		};
+
+		int64_t timestamp = systimer->gettime();
+		int res;
+		do
+		{
+			res = log(&d, TAG_MAG_COLLECTING_DATA, timestamp);
+		}
+		while(res != 0 && log_ready);
 	}
 
 	stage = stage_calibrating;

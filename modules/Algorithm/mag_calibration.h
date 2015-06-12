@@ -27,6 +27,7 @@ typedef struct
 	float residual_average;
 	float residual_max;
 	float residual_min;
+	int num_points_collected;
 } mag_calibration_result;
 
 

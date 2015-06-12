@@ -1815,11 +1815,12 @@ void mag_calibrating_worker(int parameter)
 		result.residual_max * 1000,
 		result.residual_min * 1000,
 		res,
+		result.num_points_collected,
 	};
 
 	// assume blocking async worker won't do any harm
 	int64_t timestamp = systimer->gettime();
-	while (log(&d, TAG_MAG_CALIBRATION_DATA, timestamp) != 0)
+	while (log_ready && log(&d, TAG_MAG_CALIBRATION_DATA, timestamp) != 0)
 		LOGE("writing log failed");// retry
 
 	// ends
