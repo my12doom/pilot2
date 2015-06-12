@@ -55,6 +55,10 @@ int pos_estimator::update_accel(double accel_lat, double accel_lon, int64_t time
 {
 	if (!home_set)
 		return -1;
+
+	if (timestamp - last_gps_update > GPS_TIMEOUT)
+		healthy = false;
+
 	
 	double dt = (timestamp - last_accel_update)/1000000.0f;
 	last_accel_update = timestamp;
@@ -118,12 +122,7 @@ int pos_estimator::update_gps(COORDTYPE lat, COORDTYPE lon, float hdop, int64_t 
 	}
 
 	if (hdop > 3.5f)
-	{
-		if (timestamp - last_gps_update > GPS_TIMEOUT)
-			healthy = false;
-
 		return -1;
-	}
 
 	last_gps_update = timestamp;
 
