@@ -10,10 +10,13 @@ public:
 	attitude_controller();
 	~attitude_controller();
 
-	int provide_states(float *alt, float *attitude, float throttle_realized, int motor_state, bool airborne);
+	// provide current copter state
+	int provide_states(const float *alt, const float *attitude, float throttle_realized, int motor_state, bool airborne);
 
-	int set_attitude_target(float *euler);
-	int set_attitude_target_from_stick();
+	// call one of these three to set attitude target
+	int set_attitude_target_quaternion(const float *quaternion);
+	int set_attitude_target(const float *euler);
+	int set_attitude_target_from_stick(const float *stick);
 
 	// update the controller
 	// dt: time interval
@@ -25,6 +28,7 @@ public:
 	int reset();
 
 	// torque in body frame, axis: [0-2] -> [roll, pitch, yaw]
+	// unit for roll/pitch/yaw: undefined!
 	int get_result(float *out);
 
 protected:
