@@ -148,8 +148,8 @@ int altitude_controller::update(float dt, float user_rate)
 	}
 	
 	// only move altitude target if throttle and target climb rate didn't hit limits
-	if ((!(m_motor_state & MOTOR_LIMIT_MAX) && user_rate > 0 && (target_climb_rate < quadcopter_max_climb_rate)) || 
-		(!(m_motor_state & MOTOR_LIMIT_MIN) && user_rate < 0 && (target_climb_rate > -quadcopter_max_descend_rate))
+	if ((!(m_motor_state & LIMIT_THROTTLE_MAX) && user_rate > 0 && (target_climb_rate < quadcopter_max_climb_rate)) || 
+		(!(m_motor_state & LIMIT_THROTTLE_MIN) && user_rate < 0 && (target_climb_rate > -quadcopter_max_descend_rate))
 		)
 	{
 		alt_target += user_rate * dt;
@@ -208,7 +208,7 @@ int altitude_controller::update(float dt, float user_rate)
 	// core pid
 	// only integrate if throttle didn't hit limits or I term will reduce
 	if (m_airborne)
-	if ((!(m_motor_state & MOTOR_LIMIT_MAX) && accel_error_pid[0] > 0) || (!(m_motor_state & MOTOR_LIMIT_MIN) && accel_error_pid[0] < 0))
+	if ((!(m_motor_state & LIMIT_THROTTLE_MAX) && accel_error_pid[0] > 0) || (!(m_motor_state & LIMIT_THROTTLE_MIN) && accel_error_pid[0] < 0))
 	{
 		accel_error_pid[1] += accel_error_pid[0] * dt;
 		accel_error_pid[1] = limit(accel_error_pid[1], -pid_quad_accel[3], pid_quad_accel[3]);
@@ -231,12 +231,12 @@ int altitude_controller::update(float dt, float user_rate)
 	if (throttle_result > 1 - QUADCOPTER_THROTTLE_RESERVE)
 	{
 		throttle_result = 1 - QUADCOPTER_THROTTLE_RESERVE;
-		m_motor_state = MOTOR_LIMIT_MAX;
+		m_motor_state = LIMIT_THROTTLE_MAX;
 	}
 	else if (throttle_result < (m_airborne ? QUADCOPTER_THROTTLE_RESERVE : 0))
 	{
 		throttle_result = m_airborne ? QUADCOPTER_THROTTLE_RESERVE : 0;
-		m_motor_state = MOTOR_LIMIT_MIN;
+		m_motor_state = LIMIT_THROTTLE_MIN;
 	}
 	else
 	{

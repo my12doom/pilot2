@@ -33,6 +33,21 @@ static const char * critical_error_desc[] =
 	"error_MAX",
 };
 
+
+enum motor_limit
+{
+	LIMIT_NONE 				= 0,
+	LIMIT_ROLL_POSITIVE		= 1 << 0,
+	LIMIT_ROLL_NEGATIVE		= 1 << 1,
+	LIMIT_PITCH_POSITIVE	= 1 << 2,
+	LIMIT_PITCH_NEGATIVE	= 1 << 3,
+	LIMIT_YAW_POSITIVE		= 1 << 4,
+	LIMIT_YAW_NEGATIVE		= 1 << 5,
+	LIMIT_THROTTLE_MAX		= 1 << 6,
+	LIMIT_THROTTLE_MIN		= 1 << 7,
+};
+
+
 enum critical_error
 {
 	error_gyro = 1,

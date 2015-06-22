@@ -354,7 +354,7 @@ int prepare_pid()
 				}
 
 				float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
-				alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, MOTOR_LIMIT_NONE, airborne);
+				alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 				
 				// landing?
 				if(islanding)
@@ -1245,7 +1245,7 @@ int set_submode(copter_mode newmode)
 	if (!has_alt_controller && to_use_alt_controller)
 	{
 		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
-		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, MOTOR_LIMIT_NONE, airborne);
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 		alt_controller.reset();
 	}
 
@@ -1276,7 +1276,7 @@ int set_mode(fly_mode newmode)
 	airborne = false;
 	islanding = false;
 	float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
-	alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, MOTOR_LIMIT_NONE, airborne);
+	alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	alt_controller.reset();
 
 
