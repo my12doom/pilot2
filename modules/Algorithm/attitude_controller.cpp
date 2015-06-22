@@ -4,7 +4,7 @@
 #include <utils/param.h>
 
 // parameters
-
+#define yaw_dead_band 0.04f
 static param quadcopter_range[3] = 
 {
 	param("rngR", PI / 5),			// roll
@@ -24,6 +24,9 @@ static param pid_factor2[3][4] = 			// pid_factor2[roll,pitch,yaw][p,i,d,i_limit
 	{param("sP2", 6), param("sI2", 0), param("sD2", 0),param("sM2", PI/45)},
 	{param("sP3", 8), param("sI3", 0), param("sD3", 0),param("sM3", PI/45)},
 };
+
+static param QUADCOPTER_ACRO_YAW_RATE("raty", PI);
+static param QUADCOPTER_MAX_YAW_OFFSET("offy", PI/4);
 
 attitude_controller::attitude_controller()
 {
@@ -103,6 +106,12 @@ int attitude_controller::update(float dt)
 			}
 			
 			// yaw
+			float delta_yaw = ((fabs(stick[2]) < yaw_dead_band) ? 0 : stick[2]) * dt * QUADCOPTER_ACRO_YAW_RATE;
+			float new_target = radian_add(euler_sp[2], delta_yaw);
+			float old_error = abs(radian_sub(euler_sp[2], euler[2]));
+			float new_error = abs(radian_sub(new_target, euler[2]));
+			if (new_error < (airborne?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) || new_error < old_error)
+				euler_sp[2] = euler_sp[2];
 		}
 		else
 		{
