@@ -16,7 +16,7 @@ namespace devices
 		GPIOLED(HAL::IGPIO *gpio){init(gpio);}
 		GPIOLED(){}
 		~GPIOLED(){}
-		void init(HAL::IGPIO *gpio){gpio->set_mode(MODE_OUT_OpenDrain);this->gpio=gpio;}
+		void init(HAL::IGPIO *gpio){gpio->set_mode(HAL::MODE_OUT_OpenDrain);this->gpio=gpio;}
 		virtual void on(){gpio->write(false);}
 		virtual void off(){gpio->write(true);}
 		virtual void toggle(){gpio->toggle();}

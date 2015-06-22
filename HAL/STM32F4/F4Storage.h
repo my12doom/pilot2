@@ -1,10 +1,10 @@
 #pragma once
 #include <stdint.h>
 #include "IStorage.h"
-using namespace HAL;
+
 namespace STM32F4
 {
-	class F4Storage:public IStorage
+	class F4Storage:public HAL::IStorage
 	{
 	private:
 		int min(int a, int b);

@@ -2,16 +2,6 @@
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
 #include <HAL/STM32F4/F4Interfaces.h>
-#include <HAL/devices/ILED.h>
-#include <HAL/devices/IGyro.h>
-#include <HAL/devices/IAccelerometer.h>
-#include <HAL/devices/IMagnetometer.h>
-#include <HAL/devices/IBarometer.h>
-#include <HAL/devices/IMagnetometer.h>
-#include <HAL/devices/IGPS.h>
-#include <HAL/devices/IBatteryVoltage.h>
-#include <HAL/devices/IRGBLED.h>
-#include <HAL/sensors/PX4Flow.h>
 
 #define MAX_ACCELEROMETER_COUNT 5
 #define MAX_GPS_COUNT 3
@@ -39,12 +29,12 @@ class Manager
 		}RGBLED_table;
 		typedef struct{
 			char name[10];
-			IUART *pUart; 
+			HAL::IUART *pUart; 
 		}UART_table;
 		typedef struct{
 			char name[10];
 			uint8_t num;
-			ITimer *pTimer; 
+			HAL::ITimer *pTimer; 
 		}Timer_table;
 		typedef struct{
 			char name[18];
@@ -54,8 +44,8 @@ class Manager
 	
 	
 	private:
-		IRCIN *rcin;
-		IRCOUT *rcout;
+		HAL::IRCIN *rcin;
+		HAL::IRCOUT *rcout;
 		LED_table led_table[LED_NUM];
 		int led_num;
 		RGBLED_table rgbled_table[LED_NUM];
@@ -76,7 +66,7 @@ class Manager
 		devices::IMagnetometer * magnetometers[MAX_ACCELEROMETER_COUNT];
 		int gps_count;
 		devices::IGPS * GPSs[MAX_GPS_COUNT];
-		IAsyncWorker * async_worker;
+		HAL::IAsyncWorker * async_worker;
 		int flow_count;
 		sensors::IFlow * Flows[MAX_FLOW_COUNT];
 	
@@ -100,28 +90,28 @@ class Manager
 		int register_barometer(devices::IBarometer *baro);
 		int register_magnetometer(devices::IMagnetometer *mag);
 		int register_GPS(devices::IGPS *gps);
-		int register_UART(const char *name,IUART *pUart);
-		int register_Timer(const char *name,ITimer *pTimer);
+		int register_UART(const char *name,HAL::IUART *pUart);
+		int register_Timer(const char *name,HAL::ITimer *pTimer);
 		int register_BatteryVoltage(const char *name,devices::IBatteryVoltage *pIBatteryVoltage);
-		int register_RCIN(IRCIN *rcin);
+		int register_RCIN(HAL::IRCIN *rcin);
 		int register_flow(sensors::IFlow *worker);
-		int register_RCOUT(IRCOUT *rcout);
-		int register_asyncworker(IAsyncWorker *worker);
+		int register_RCOUT(HAL::IRCOUT *rcout);
+		int register_asyncworker(HAL::IAsyncWorker *worker);
 
 		//getDevice function:
 		devices::ILED* getLED(const char *name);
 		devices::IRGBLED* getRGBLED(const char *name);
-		IUART *getUART(const char *name);
-		ITimer *getTimer(const char *name);
+		HAL::IUART *getUART(const char *name);
+		HAL::ITimer *getTimer(const char *name);
 		devices::IBatteryVoltage *getBatteryVoltage(const char *name);
 		devices::IAccelerometer * get_accelerometer(int index);
 		devices::IGyro * get_gyroscope(int index);
 		devices::IMagnetometer * get_magnetometer(int index);
 		devices::IBarometer * get_barometer(int index);
 		devices::IGPS * get_GPS(int index);
-		IRCIN * get_RCIN();
-		IRCOUT * get_RCOUT();
-		IAsyncWorker *get_asyncworker();
+		HAL::IRCIN * get_RCIN();
+		HAL::IRCOUT * get_RCOUT();
+		HAL::IAsyncWorker *get_asyncworker();
 		sensors::IFlow *get_flow(int index);
 };
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <HAL/devices/IRGBLED.h>
+#include <HAL/Interface/IRGBLED.h>
 
 namespace dev_v2
 {

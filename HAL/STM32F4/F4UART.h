@@ -1,10 +1,10 @@
 #pragma once
 #include "IUART.h"
 #include "stm32F4xx_usart.h"
-using namespace HAL;
+
 namespace STM32F4
 {
-	class F4UART:public IUART
+	class F4UART:public HAL::IUART
 	{
 	#define TX_BUFFER_SIZE 1024
 	#define RX_BUFFER_SIZE 512

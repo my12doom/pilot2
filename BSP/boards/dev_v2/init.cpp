@@ -5,10 +5,12 @@
 #include "RCOUT.h"
 #include "AsyncWorker.h"
 #include <HAL\STM32F4\F4Timer.h>
-
 #include <HAL/sensors/UartNMEAGPS.h>
-#include <HAL\devices\ILED.h>
+#include <HAL\Interface\ILED.h>
+#include <HAL/sensors/PX4Flow.h>
 #include "RGBLED.h"
+
+using namespace HAL;
 using namespace devices;
 using namespace STM32F4;
 using namespace dev_v2;

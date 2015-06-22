@@ -2,9 +2,8 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
-#include <HAL/devices/IBarometer.h>
+#include <HAL/Interface/IBarometer.h>
 
-using namespace HAL;
 namespace sensors
 {
 	class MS5611_SPI : public devices::IBarometer
@@ -13,7 +12,7 @@ namespace sensors
 		MS5611_SPI();
 		~MS5611_SPI();
 		
-		int init(ISPI *SPI, IGPIO *CS);
+		int init(HAL::ISPI *SPI, HAL::IGPIO *CS);
 		int read(int *data);
 
 		// IBarometer
@@ -21,8 +20,8 @@ namespace sensors
 		virtual int read(devices::baro_data *out);
 
 	protected:
-		ISPI *spi;
-		IGPIO *CS;
+		HAL::ISPI *spi;
+		HAL::IGPIO *CS;
 
 		int read_regs(uint8_t start_reg, void *out, int count);
 		int write_reg(uint8_t reg);

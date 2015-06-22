@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
-#include <HAL/devices/IMagnetometer.h>
+#include <HAL/Interface/IMagnetometer.h>
 
 namespace sensors
 {
