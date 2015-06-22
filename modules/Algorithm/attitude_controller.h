@@ -45,9 +45,13 @@ protected:
 	float euler_sp[3];		// sp = set point
 	float quaternion[4];
 	float quaternion_sp[4];		// sp = set point
-	float result[3];
 	float stick[3];
 	bool airborne;
 	uint32_t motor_state;
 	bool use_quaternion;
+	
+	static const int lpf_order = 5;
+	float pid[3][3];		// [roll, pitch, yaw] [p, i, d]
+	float errorD_lpf[lpf_order][3];			// variable for high order low pass filter, [order][roll, pitch, yaw]
+	float result[3];
 };

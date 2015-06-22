@@ -3,11 +3,26 @@
 #include <Protocol/common.h>
 #include <utils/param.h>
 
+// parameters
+
 static param quadcopter_range[3] = 
 {
 	param("rngR", PI / 5),			// roll
 	param("rngP", PI / 5),			// pitch
 	param("rngY", PI / 8),			// yaw
+};
+
+static param pid_factor[3][4] = 			// pid_factor[roll,pitch,yaw][p,i,d,i_limit]
+{
+	{param("rP1",0.60), param("rI1",0.80), param("rD1",0.03),param("rM1",PI)},
+	{param("rP2",0.60), param("rI2",0.80), param("rD2",0.03),param("rM2",PI)},
+	{param("rP3",1.75), param("rI3",0.25), param("rD3",0.01),param("rM3",PI)},
+};
+static param pid_factor2[3][4] = 			// pid_factor2[roll,pitch,yaw][p,i,d,i_limit]
+{
+	{param("sP1", 6), param("sI1", 0), param("sD1", 0),param("sM1", PI/45)},
+	{param("sP2", 6), param("sI2", 0), param("sD2", 0),param("sM2", PI/45)},
+	{param("sP3", 8), param("sI3", 0), param("sD3", 0),param("sM3", PI/45)},
 };
 
 attitude_controller::attitude_controller()
@@ -21,10 +36,21 @@ attitude_controller::~attitude_controller()
 
 // provide current copter state
 // parameters:
-// attitude[0-2] : [roll, pitch, yaw, (body frame) roll rate, pitch rate, yaw rate, (optimal if quaternion attitude control not used)q0, q1, q2, q3]
-// motor state: a combination of motor_limit enum, or 0 if all motors are normal
+// attitude[0-2] : [roll, pitch, yaw] in euler mode, [q0~q3] in quaternion mode.
+// body rate[0-2] : [roll, pitch, yaw] rate in body frame.
+// motor state: a combination of motor_limit enum, or 0 if all motors are normal, the controller will stop integrating at any saturated axis
+// airborne: the controller will not integrate on ground.
 int attitude_controller::provide_states(const float *attitude, const float *body_rate, uint32_t motor_state, bool airborne)
 {
+	if (use_quaternion)
+		memcpy(quaternion, attitude, sizeof(float)*4);
+	else
+		memcpy(euler, attitude, sizeof(float)*3);
+
+	memcpy(this->body_rate, body_rate, sizeof(float)*3);
+	this->motor_state = motor_state;
+	this->airborne = airborne;
+
 	return 0;
 }
 
@@ -88,9 +114,46 @@ int attitude_controller::update(float dt)
 	}
 	
 	// outter loop, attitude -> body frame rate
+	if (use_quaternion)
+	{
+		// TODO: implemente it!
+	}
+	else
+	{
+		for(int i=0; i<3; i++)
+			body_rate_sp[i] = radian_sub(euler_sp[i], euler[i]) * pid_factor2[i][0];
+	}
 	
 	
 	// inner loop, body frame rate -> body frame torque.
+	for(int i=0; i<3; i++)
+	{
+		float new_p = body_rate_sp[i] - body_rate[i];
+
+		// I
+		if (airborne)		// only integrate after takeoff
+		pid[i][1] += new_p * dt;
+		pid[i][1] = limit(pid[i][1], -pid_factor[i][3], pid_factor[i][3]);
+
+		// D, with 40hz 4th order low pass filter
+		static const float lpf_RC = 1.0f/(2*PI * 40.0f);
+		float alpha = dt / (dt + lpf_RC);
+		float derivative = (new_p - pid[i][0] )/dt;
+
+		for(int j=0; j<lpf_order; j++)
+			errorD_lpf[j][i] = errorD_lpf[j][i] * (1-alpha) + alpha * (j==0?derivative:errorD_lpf[j-1][i]);
+
+		pid[i][2] = errorD_lpf[lpf_order-1][i];
+
+		// P
+		pid[i][0] = new_p;
+
+		// sum
+		result[i] = 0;
+		for(int j=0; j<3; j++)
+			result[i] += pid[i][j] * pid_factor[i][j];
+	}
+	TRACE(", pid=%.2f, %.2f, %.2f\n", pid_result[0], pid_result[1], pid_result[2]);
 	
 	
 	return 0;
@@ -101,7 +164,7 @@ int attitude_controller::update(float dt)
 int attitude_controller::reset()
 {
 	stick[0] = NAN;
-
+	return 0;
 }
 
 // torque in body frame, axis: [0-2] -> [roll, pitch, yaw]
