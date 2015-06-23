@@ -35,7 +35,7 @@ int pos_estimator::reset()		// mainly for after GPS glitch handling
 	error_lon = 0;
 	error_lat = 0;
 	home_set = false;
-	healthy = false;
+	gps_healthy = false;
 	last_accel_update = 0;
 	last_gps_update = 0;
 	last_history_push = 0;
@@ -57,7 +57,7 @@ int pos_estimator::update_accel(double accel_lat, double accel_lon, int64_t time
 		return -1;
 
 	if (timestamp - last_gps_update > GPS_TIMEOUT)
-		healthy = false;
+		gps_healthy = false;
 
 	
 	double dt = (timestamp - last_accel_update)/1000000.0f;
@@ -107,7 +107,7 @@ int pos_estimator::update_gps(COORDTYPE lat, COORDTYPE lon, float hdop, int64_t 
 	if (hdop <= 0.05f)		// this might be wrong...
 		return -1;
 
-	if (!healthy && hdop < 2.0f)
+	if (!gps_healthy && hdop < 2.0f)
 	{
 		if (!home_set)
 		{
@@ -116,7 +116,7 @@ int pos_estimator::update_gps(COORDTYPE lat, COORDTYPE lon, float hdop, int64_t 
 			home.longtitude = lon;
 			home_set = true;
 		}
-		healthy = true;
+		gps_healthy = true;
 		est.latitude = lat;
 		est.longtitude = lon;
 	}
@@ -150,6 +150,8 @@ int pos_estimator::update_gps(COORDTYPE lat, COORDTYPE lon, float hdop, int64_t 
 	// update ratios
 	longtitude_to_meter = (40007000.0f/COORDTIMES/360*cos(est.latitude* PI / 180/COORDTIMES));
 	latitude_to_meter = (40007000.0f/COORDTIMES/360);
+	error_lon_meter = error_lon * longtitude_to_meter;
+	error_lat_meter = error_lat * latitude_to_meter;
 
 	// update raw meter
 	meter_raw.longtitude = (lon - home.longtitude) * longtitude_to_meter;
@@ -171,4 +173,16 @@ position pos_estimator::get_estimation()
 		est.vlatitude,
 	};
 	return o;
+}
+
+bool pos_estimator::healthy()
+{
+	if (!gps_healthy)
+		return false;
+
+	float error_lat_meter = error_lat * latitude_to_meter;
+	float error_lon_meter = error_lon * longtitude_to_meter;
+	float total = error_lon_meter * error_lon_meter + error_lat_meter * error_lat_meter;
+
+	return total < 25;	// 5 meter
 }

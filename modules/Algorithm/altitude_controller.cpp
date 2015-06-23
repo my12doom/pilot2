@@ -243,7 +243,7 @@ int altitude_controller::update(float dt, float user_rate)
 		m_motor_state = 0;
 	}
 
-	LOGE("\rthrottle=%f, altitude = %.2f/%.2f, pid=%.2f,%.2f,%.2f, limit=%d", throttle_result, m_baro_states[0], baro_target,
+	TRACE("\rthrottle=%f, altitude = %.2f/%.2f, pid=%.2f,%.2f,%.2f, limit=%d", throttle_result, m_baro_states[0], baro_target,
 		accel_error_pid[0], accel_error_pid[1], accel_error_pid[2], m_motor_state);
 
 	// update throttle_real_crusing if we're in near level state and no violent climbing/descending action

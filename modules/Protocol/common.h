@@ -64,6 +64,7 @@ enum copter_mode
 	acro,
 	bluetooth,	// bluetooth RC
 	optical_flow,	// optical demo from legacy AP code
+	RTL,
 };
 
 static void swap(void *p, int size)

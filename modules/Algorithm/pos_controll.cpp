@@ -12,7 +12,7 @@ static float max_speed = 5.0f;
 static float max_speed_ff = 2.0f;
 static bool use_desired_feed_forward = false;
 static float feed_forward_factor = 1;
-static float rate2accel[4] = {1.0f, 0.5f, 0.2f, 2.0f};
+static float rate2accel[4] = {1.5f, 0.5f, 0.2f, 2.0f};
 static float pos2rate_P = 1.0f;
 
 // win32 helper
@@ -233,7 +233,7 @@ int pos_controller::rate_to_accel(float dt)
 {
 	if (!isnan(last_target_velocity[0]))
 	{
-		float alpha = dt / (dt + 1.0f/(2*PI * 0.5f));
+		float alpha = dt / (dt + 1.0f/(2*PI * 5.5f));
 
 		float ff0 = (target_velocity[0] - last_target_velocity[0]) / dt;
 		float ff1 = (target_velocity[1] - last_target_velocity[1]) / dt;

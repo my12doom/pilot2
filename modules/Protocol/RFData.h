@@ -204,6 +204,11 @@ typedef struct
 	bool last;
 } mag_collecting_data;
 
+typedef struct 
+{
+	int16_t channel[4];
+	uint16_t latency;
+} rc_mobile_data;
 
 typedef struct
 {
@@ -260,6 +265,7 @@ typedef struct
 		px4flow_frame px4flow;
 		mag_calibration_data mag_cal;
 		mag_collecting_data mag_collecting;
+		rc_mobile_data mobile;
 	}data;
 } rf_data;
 
@@ -286,6 +292,7 @@ typedef struct
 #define TAG_QUADCOPTER_DATA4	0x46
 #define TAG_MAG_CALIBRATION_DATA 0x47
 #define TAG_MAG_COLLECTING_DATA 0x48
+#define TAG_MOBILE_DATA 0x49
 
 #define TAG_PILOT_DATA	0x65
 #define TAG_PILOT_DATA2	0x66

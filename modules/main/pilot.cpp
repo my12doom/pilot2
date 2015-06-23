@@ -310,6 +310,13 @@ int calculate_baro_altitude()
 	return 0;
 }
 
+static int min(int a, int b)
+{
+	if (a>b)
+		return b;
+	return a;
+}
+
 int prepare_pid()
 {
 	// calculate current core pid position
@@ -653,8 +660,8 @@ int save_logs()
 		{accel_earth_frame.array[0] * 1000, accel_earth_frame.array[1] * 1000, accel_earth_frame.array[2] * 1000},
 		p.latitude * double(10000000.0/COORDTIMES), 
 		p.longtitude * double(10000000.0/COORDTIMES), 
-		error_lat : estimator.abias_lat,
-		error_lon : estimator.abias_lon,
+		error_lat : estimator.error_lat_meter,
+		error_lon : estimator.error_lon_meter,
 	};
 
 	log(&ned, TAG_NED_DATA, time);
@@ -792,6 +799,13 @@ int save_logs()
 
 		log(&data, TAG_GPS_DATA, time);
 	}
+
+	rc_mobile_data mobile = 
+	{
+		{rc_mobile[0] * 1000, rc_mobile[0] * 1000, rc_mobile[0] * 1000, rc_mobile[0] * 1000,},
+		min((systimer->gettime() - mobile_last_update)/1000, 65535),
+	};
+	log(&mobile, TAG_MOBILE_DATA, time);
 	
 	return 0;
 }
@@ -990,14 +1004,14 @@ int calculate_state()
 	if (interval <=0 || interval > 0.2f)
 		return -1;
 
-	float factor = mode == quadcopter ? 1 : 15;
-	float factor_mag = 1;
+	float factor = 1.0f;
+	float factor_mag = 1.0f;
 	
 	NonlinearSO3AHRSupdate(
 		accel.array[0], accel.array[1], accel.array[2], 
 		mag.array[0], mag.array[1], mag.array[2],
 		gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
-		0.15f*factor, 0.0015f*factor, 0.15f*factor_mag, 0.0015f*factor_mag, interval);
+		0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval);
 // 	MadgwickAHRSupdateIMU(gyro.array[0] /*+ (systimer->gettime() > 15000000 ? PI*5.0f/180.0f : 0)*/, gyro.array[1], -gyro.array[2], -acc_norm.V.y, acc_norm.V.x, acc_norm.V.z, 1.5f, interval);
 
 
@@ -1305,7 +1319,7 @@ int check_mode()
 		else if (rc[5] > 0.6f)
 // 			newmode = airborne ? optical_flow : althold;
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-			newmode = (estimator.healthy && airborne) ? poshold : althold;
+			newmode = (estimator.healthy() && airborne) ? poshold : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
 			newmode = althold;
 
@@ -1579,6 +1593,11 @@ int handle_wifi_controll()
 		{
 			mobile_last_update = systimer->gettime();
 			TRACE("stick:%f,%f,%f,%f\n", rc_mobile[0], rc_mobile[1], rc_mobile[2], rc_mobile[3]);
+			
+			rc_mobile[0] *= 1.33f;
+			rc_mobile[1] *= 1.33f;
+			rc_mobile[2] = (rc_mobile[2] - 0.5f) * 1.35f + 0.5f;
+			rc_mobile[3] *= 1.33f;
 		}
 	}
 
@@ -1586,6 +1605,8 @@ int handle_wifi_controll()
 	{
 		LOGE("mobile arm\n");
 		set_mode(quadcopter);
+		check_mode();	// to set submode and reset all controller
+		alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
 
 		const char *armed = "armed\n";
 		uart->write(armed, strlen(armed));
@@ -1752,7 +1773,17 @@ int read_rc()
 	}
 
 	rc[2] = (rc[2]+1)/2;
-
+	
+	// wifi controll override
+	if (systimer->gettime() - mobile_last_update < 400000 && rc[6] < -0.5f)
+	for(int i=0; i<4; i++)
+	{
+		rc[i] = rc_mobile[i];
+		TRACE("%.2f,", rc_mobile[i]);
+	}
+	
+	TRACE("                      ");
+	
 	return 0;
 }
 
@@ -1862,7 +1893,7 @@ void main_loop(void)
 		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
 		{
 			if (rgb && mag_calibration_state == 0)
-				rgb->write(estimator.healthy ? 0 : 0.1,1,0);
+				rgb->write(estimator.healthy() ? 0 : 0.1,1,0);
 			SAFE_ON(flashlight);
 		}
 		else
@@ -1890,7 +1921,9 @@ void main_loop(void)
 	handle_wifi_controll();
 
 	// read sensors
+	int64_t read_sensor_cost = systimer->gettime();
 	read_sensors();
+	read_sensor_cost = systimer->gettime() - read_sensor_cost;
 	
 	// provide mag calibration with data
 	if (mag_calibration_state == 1)
@@ -1949,6 +1982,9 @@ void main_loop(void)
 			SAFE_OFF(SD_led);
 		}
 	}
+
+	int round_running_time = systimer->gettime() - round_start_tick;
+	TRACE("\r%d/%d", int(read_sensor_cost), round_running_time);
 }
 
 

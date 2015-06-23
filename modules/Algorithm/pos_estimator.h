@@ -57,11 +57,14 @@ public:
 	position_meter get_estimation_meter(){return meter;}
 	position_meter get_raw_meter(){return meter_raw;}
 	position get_home(){return home;}
+	bool healthy();
 	
 	double error_lon;
 	double error_lat;
+	float error_lon_meter;
+	float error_lat_meter;
 	bool home_set;
-	bool healthy;
+	bool gps_healthy;
 	double abias_lon;
 	double abias_lat;
 protected:

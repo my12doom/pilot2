@@ -57,7 +57,7 @@ public:
 
 	// controll loop variables
 	float target_velocity[2];				// [north, east]
-	float last_target_velocity[2];				// [north, east]
+	float last_target_velocity[2];			// [north, east]
 	float target_accel[2];					// [north, east]
 	float target_euler[2];					// [roll, pitch]
 	float pid[2][3];						// [north, east][p, i, d]
