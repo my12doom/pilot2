@@ -1,5 +1,7 @@
 #include "MS5611_SPI.h"
 
+using namespace HAL;
+
 // registers of the device
 #define MS561101BA_ADDR_CSB_LOW   0xEC
 #define MS5611Address (0x77<<1)

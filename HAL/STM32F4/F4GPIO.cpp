@@ -1,6 +1,9 @@
 #include "F4GPIO.h"
 #include "stm32f4xx_rcc.h"
 #include <stdint.h>
+
+using namespace HAL;
+
 namespace STM32F4
 {
 	F4GPIO::F4GPIO(GPIO_TypeDef* GPIOx,uint32_t GPIO_Pin)

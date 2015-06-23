@@ -2,10 +2,9 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
-#include <HAL/devices/IGPS.h>
+#include <HAL/Interface/IGPS.h>
 #include <NMEA/nmea.h>
 
-using namespace HAL;
 namespace sensors
 {
 	class UartNMEAGPS : public devices::IGPS

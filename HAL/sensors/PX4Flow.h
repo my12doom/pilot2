@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
-#include <HAL\devices\IFlow.h>
-using namespace HAL;
+#include <HAL\Interface\IFlow.h>
+
 namespace sensors
 {
 	class PX4Flow :public IFlow

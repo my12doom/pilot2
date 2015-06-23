@@ -8,6 +8,8 @@
 #include <Algorithm/pos_estimator.h>
 #include <HAL/resources.h>
 
+using namespace HAL;
+
 extern volatile vector imu_statics[2][4];		//	[accel, gyro][min, current, max, avg]
 extern volatile int avg_count;
 extern float mpu6050_temperature;

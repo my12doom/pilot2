@@ -3,13 +3,6 @@
 #include <stdint.h>
 #include <math.h>
 
-enum motor_limit
-{
-	MOTOR_LIMIT_NONE = 0,
-	MOTOR_LIMIT_MIN = 1,
-	MOTOR_LIMIT_MAX = 2,
-};
-
 class altitude_controller
 {
 public:

@@ -15,11 +15,11 @@ class ADCBatteryVoltage :public IBatteryVoltage
 {
 	private:
 		float scale;
-		IADC * adc;
+		HAL::IADC * adc;
 	public :
 		ADCBatteryVoltage(){}
-		ADCBatteryVoltage(IADC * adc,float scale){init(adc, scale);}
-		void init(IADC * adc,float scale){this->scale = scale; this->adc = adc;}
+		ADCBatteryVoltage(HAL::IADC * adc,float scale){init(adc, scale);}
+		void init(HAL::IADC * adc,float scale){this->scale = scale; this->adc = adc;}
 		~ADCBatteryVoltage(){};
 		virtual float read(){return adc->read()*scale;}
 };

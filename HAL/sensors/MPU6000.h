@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 #include <Interfaces.h>
-#include <HAL/devices/IAccelerometer.h>
-#include <HAL/devices/IGyro.h>
+#include <HAL/Interface/IAccelerometer.h>
+#include <HAL/Interface/IGyro.h>
 
 namespace sensors
 {
