@@ -3,7 +3,8 @@
 #include <Protocol/common.h>
 #include <utils/param.h>
 
-#define default_throttle_hover 0.45f
+#define default_throttle_hover 0.55f
+#define sonar_step_threshold 0.50f
 
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
@@ -78,10 +79,16 @@ int altitude_controller::provide_states(float *alt, float sonar, float *attitude
 	m_throttle_realized = throttle_realized;
 // 	m_motor_state = motor_state;
 	m_airborne = airborne;
-	m_sonar = sonar;
+	m_sonar = sonar;	
 	
 	if (!isnan(sonar))
+	{
+		// step response
+		if (!isnan(m_sonar_target) && fabs(sonar - m_last_valid_sonar) >  sonar_step_threshold)
+			m_sonar_target += sonar - m_last_valid_sonar;
+
 		m_last_valid_sonar = sonar;
+	}
 
 	return 0;
 }

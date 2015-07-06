@@ -228,6 +228,7 @@ vector gyro_reading;
 vector body_rate;
 vector accel = {NAN, NAN, NAN};
 vector mag;
+vector gyro_uncalibrated;
 vector accel_uncalibrated;
 vector mag_uncalibrated;
 float mag_radius = -999;
@@ -636,7 +637,7 @@ int save_logs()
 		{mag_uncalibrated.array[0] * 10, mag_uncalibrated.array[1] * 10, mag_uncalibrated.array[2] * 10},
 		{accel_uncalibrated.array[0] * 100, accel_uncalibrated.array[1] * 100, accel_uncalibrated.array[2] * 100},
 		mpu6050_temperature * 100 - 10000,
-		{gyro_reading.array[0] * 18000/PI, gyro_reading.array[1] * 18000/PI, gyro_reading.array[2] * 18000/PI},
+		{gyro_uncalibrated.array[0] * 18000/PI, gyro_uncalibrated.array[1] * 18000/PI, gyro_uncalibrated.array[2] * 18000/PI},
 		voltage * 1000,
 		current * 1000,
 	};
@@ -810,6 +811,9 @@ int save_logs()
 	return 0;
 }
 
+#define SONAR_MIN 0.3f
+#define SONAR_MAX 4.5f
+
 int read_sensors()
 {
 	int64_t reading_start = systimer->gettime();
@@ -824,7 +828,11 @@ int read_sensors()
 		if (flow->read_flow(&frame) < 0)
 			sonar_distance = NAN;
 		else
-			sonar_distance = frame.ground_distance <= 0.30f ? NAN : frame.ground_distance / 1000.0f;
+		{
+			sonar_distance = frame.ground_distance / 1000.0f;
+			if (sonar_distance <= SONAR_MIN || sonar_distance >= SONAR_MAX)
+				sonar_distance = NAN;
+		}
 	}
 
 	// read usart source
@@ -946,14 +954,24 @@ int read_sensors()
 	}	
 
 	// bias and scale calibrating
+	float temperature_delta = mpu6050_temperature - temperature0;
+	float gyro_bias[3] = 
+	{
+		-(temperature_delta * gyro_temp_k.array[0] + gyro_temp_a.array[0]),
+		-(temperature_delta * gyro_temp_k.array[1] + gyro_temp_a.array[1]),
+		-(temperature_delta * gyro_temp_k.array[2] + gyro_temp_a.array[2]),
+	};
 	accel_uncalibrated = acc;
 	mag_uncalibrated = mag;
+	gyro_uncalibrated = gyro_reading;
+	
 	for(int i=0; i<3; i++)
 	{
 		acc.array[i] += acc_bias[i];
 		acc.array[i] *= acc_scale[i];
 		mag.array[i] += mag_bias[i];
 		mag.array[i] *= mag_scale[i];
+		gyro_reading.array[i] += gyro_bias[i];
 	}
 	
 	::mag = mag;
@@ -1321,7 +1339,8 @@ int check_mode()
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
 			newmode = (estimator.healthy() && airborne) ? poshold : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
-			newmode = althold;
+ 			newmode = airborne ? optical_flow : althold;
+//			newmode = althold;
 
 		set_submode(newmode);
 	}
