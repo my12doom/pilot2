@@ -12,6 +12,8 @@
 FIL *file = NULL;
 FRESULT res;
 FATFS fs;
+uint32_t lost1 = 0;		// buffer full
+uint32_t lost2 = 0;		// log flush pending
 
 class write_buffer
 {
@@ -21,7 +23,10 @@ public:
 	int push(const void *data, int size)
 	{
 		if (size+byte_count > sizeof(buffer))
+		{
+			lost1 ++;
 			return -1;
+		}
 		
 		memcpy(buffer + byte_count, data, size);
 		byte_count += size;
@@ -148,7 +153,10 @@ int log_flush()
 int log(const void *data, int size)
 {
 	if (log_pending)
+	{
+		lost2 ++;
 		return -1;
+	}
 
 	return plog_buffer->push(data, size);
 }

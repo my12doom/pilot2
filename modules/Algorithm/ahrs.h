@@ -59,6 +59,7 @@ extern float halfvx, halfvy, halfvz;	// estimated gravity vector in body frame
 extern float raw_yaw;           // raw mag yaw with tilt compensation
 extern bool mag_ok;
 extern float err_a[3];
+extern float err_m[3];
 
 //---------------------------------------------------------------------------------------------------
 // Function declarations

@@ -19,6 +19,7 @@ float acc_horizontal[2];
 float raw_yaw;
 bool mag_ok = true;
 float err_a[3];
+float err_m[3];
 
 static float q0q0, q0q1, q0q2, q0q3;
 static float q1q1, q1q2, q1q3;
@@ -32,6 +33,7 @@ static float mag_tolerate = 0.25f;
 //---------------------------------------------------------------------------------------------------
 // Function declarations
 float invSqrt(float x);
+void remove_down_component(float &bx, float &by, float &bz);			// remove earth frame down component of a body frame vector
 int inverse_matrix3x3(const float src[3][3], float dst[3][3]);
 static inline float fmax(float a, float b)
 {
@@ -165,11 +167,20 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
     	halfwx = bx * (0.5f - q2q2 - q3q3) + bz * (q1q3 - q0q2);
     	halfwy = bx * (q1q2 - q0q3) + bz * (q0q1 + q2q3);
     	halfwz = bx * (q0q2 + q1q3) + bz * (0.5f - q1q1 - q2q2);
+
+    	// discard Z component in NED frame to avoid large attitude change due to magnet interference, especially during initialization.
+    	remove_down_component(halfwx, halfwy, halfwz);
+    	remove_down_component(mx, my, mz);
     
     	// Error is sum of cross product between estimated direction and measured direction of field vectors
     	halfexM = (my * halfwz - mz * halfwy);
     	halfeyM = (mz * halfwx - mx * halfwz);
     	halfezM = (mx * halfwy - my * halfwx);
+
+		err_m[0] = halfexM;
+		err_m[1] = halfeyM;
+		err_m[2] = halfezM;
+
 	}
 
 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
@@ -192,8 +203,8 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 		halfezA += ax * halfvy - ay * halfvx;
 
 		err_a[0] = halfexA;
-		err_a[1] = halfexA;
-		err_a[2] = halfexA;
+		err_a[1] = halfeyA;
+		err_a[2] = halfezA;
 	}
 
 	// Compute and apply integral feedback if enabled
@@ -341,6 +352,19 @@ int inverse_matrix3x3(const float src[3][3], float dst[3][3])
 
 	return 0;
 }
+
+void remove_down_component(float &bx, float &by, float &bz)			// remove earth frame down factor of a body frame vector
+{
+	// transform vector from body frame to NED frame, discard z component
+	float x = BODY2NED[0][0] * bx + BODY2NED[0][1] * by + BODY2NED[0][2] * bz;
+	float y = BODY2NED[1][0] * bx + BODY2NED[1][1] * by + BODY2NED[1][2] * bz;
+
+	// transform back to body frame
+	bx = NED2BODY[0][0] * x + NED2BODY[0][1] * y; // + NED2BODY[0][2] * 0;
+	by = NED2BODY[1][0] * x + NED2BODY[1][1] * y; // + NED2BODY[0][2] * 0;
+	bz = NED2BODY[2][0] * x + NED2BODY[2][1] * y; // + NED2BODY[0][2] * 0;
+}
+
 
 //====================================================================================================
 // END OF CODE

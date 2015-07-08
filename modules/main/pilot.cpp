@@ -200,6 +200,7 @@ int handle_uart4_controll();
 int handle_wifi_controll();
 
 // states
+int round_running_time = 0;
 devices::gps_data gps;
 bool new_gps_data = false;
 int critical_errors = 0;
@@ -387,8 +388,8 @@ int prepare_pid()
 					// roll & pitch, RC trim is accepted.
 					for(int i=0; i<2; i++)
 					{
-						float limit_l = angle_target_unrotated[i] - PI*2 * interval;
-						float limit_r = angle_target_unrotated[i] + PI*2 * interval;
+						float limit_l = angle_target_unrotated[i] - PI*5 * interval;
+						float limit_r = angle_target_unrotated[i] + PI*5 * interval;
 						angle_target_unrotated[i] = rc[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
 						angle_target_unrotated[i] = limit(angle_target_unrotated[i], limit_l, limit_r);
 						angle_target[i] = angle_target_unrotated[i];
@@ -442,10 +443,10 @@ int prepare_pid()
 			}
 			else if (submode == poshold)
 			{
-				// 100hz pos controller rate
+				// 10hz pos controller rate
 				static int64_t last_pos_controll_time = 0;
 				float dt = (systimer->gettime() - last_pos_controll_time) / 1000000.0f;
-				if (dt > 0.01f)
+				if (dt > 0.1f)
 				{
 					last_pos_controll_time = systimer->gettime();
 					if (dt < 1.0f)
@@ -505,7 +506,7 @@ int prepare_pid()
 				target[i] = angle_error[i] * pid_factor2[i][0] + angle_errorI[i] * pid_factor2[i][1] + angle_errorD[i] * pid_factor2[i][2];
 
 				// max target rate: 180 degree/second
-				target[i] = limit(target[i], -PI, PI);
+				target[i] = limit(target[i], -2*PI, 2*PI);
 			}
 			TRACE(",roll=%f,%f", angle_pos[0] * PI180, angle_target[0] * PI180, airborne ? "true" : "false");
 			TRACE("angle pos,target=%f,%f, air=%s\r\n", angle_pos[2] * PI180, angle_target[2] * PI180, airborne ? "true" : "false");
@@ -725,6 +726,8 @@ int save_logs()
 	log(&quad2, TAG_QUADCOPTER_DATA2, time);
 
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
+	float erra = err_a[0] * err_a[0] + err_a[1] * err_a[1] + err_a[2] * err_a[2];
+	float errm = err_m[0] * err_m[0] + err_m[1] * err_m[1] + err_m[2] * err_m[2];
 	quadcopter_data4 quad4 = 
 	{
 		isnan(alt_controller.m_sonar_target) ? 0 : alt_controller.m_sonar_target*100,
@@ -735,9 +738,20 @@ int save_logs()
 		raw_yaw * 18000 / PI,
 		acc_horizontal[0] * 1000,
 		acc_horizontal[1] * 1000,
-		{err_a[0] * 18000/PI, err_a[1] * 18000/PI, err_a[2] * 18000/PI},
+		{erra * 18000/PI, errm * 18000/PI, err_a[2] * 18000/PI},
 	};
 	log(&quad4, TAG_QUADCOPTER_DATA4, time);
+
+	extern uint32_t lost1;
+	extern uint32_t lost2;
+	quadcopter_data5 quad5 = 
+	{
+		{q0,q1,q2,q3},
+		lost1,
+		lost2,
+		round_running_time,
+	};
+	log(&quad5, TAG_QUADCOPTER_DATA5, time);
 
 	quadcopter_data3 quad3 = 
 	{
@@ -2002,7 +2016,7 @@ void main_loop(void)
 		}
 	}
 
-	int round_running_time = systimer->gettime() - round_start_tick;
+	round_running_time = systimer->gettime() - round_start_tick;
 	TRACE("\r%d/%d", int(read_sensor_cost), round_running_time);
 }
 

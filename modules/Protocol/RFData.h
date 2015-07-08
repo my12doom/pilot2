@@ -187,6 +187,14 @@ typedef struct
 	short ahrs_err[3];
 } quadcopter_data4;
 
+typedef struct
+{
+	float q[4];
+	uint16_t packet_lost1;
+	uint16_t packet_lost2;
+	uint16_t cycle_time;
+} quadcopter_data5;
+
 typedef struct 
 {
 	int16_t bias[3];
@@ -259,6 +267,7 @@ typedef struct
 		quadcopter_data2 quadcopter2;
 		quadcopter_data3 quadcopter3;
 		quadcopter_data4 quadcopter4;
+		quadcopter_data5 quadcopter5;
 		pos_controller_data pos_controller;
 		pos_controller_data2 pos_controller2;
 		double_sensor_data double_sensor;
@@ -293,6 +302,7 @@ typedef struct
 #define TAG_MAG_CALIBRATION_DATA 0x47
 #define TAG_MAG_COLLECTING_DATA 0x48
 #define TAG_MOBILE_DATA 0x49
+#define TAG_QUADCOPTER_DATA5	0x4A
 
 #define TAG_PILOT_DATA	0x65
 #define TAG_PILOT_DATA2	0x66
