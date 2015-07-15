@@ -42,6 +42,7 @@ static float sqrt2(float in)
 
 pos_controller::pos_controller()
 {
+	release_stick_timer = 0;
 #ifdef WIN32
 	f = fopen("Z:\\log.csv", "wb");
 	fprintf(f, "time,v,tv,p,sp\r\n");
@@ -75,6 +76,30 @@ int pos_controller::set_desired_velocity(float *desired_velocity)
 
 int pos_controller::update_controller(float dt)
 {
+	// if user released stick, or stick moving toward set point.
+	// apply a extra braking until velocity decreased to a acceptable value, for at most 1 second.
+	bool stick_released = fabs(desired_velocity_earth[0]) < 0.01f && fabs(desired_velocity_earth[1]) < 0.01f;
+	if (stick_released)
+		release_stick_timer += dt;
+	else
+		release_stick_timer = 0;
+
+	min_braking_speed = 1.0f * 1.0f;
+	float delta[2] = {setpoint[0] - pos[0], setpoint[1] - pos[1]};
+
+	if  (	(velocity[0]*velocity[0] + velocity[1]*velocity[1] > min_braking_speed) &&					// speed fast enough(1m/s)?
+			(
+			  (stick_released && release_stick_timer < 1.0f)											// released stick? less than 1 second?
+			  || (delta[0]*desired_velocity_earth[0] + delta[1]*desired_velocity_earth[1] < 0)				// moving toward set point?
+			)
+		)
+	{
+		// braking is based on a 0.05hz low pass filter that move set point toward current position
+		float alpha = dt / (dt + 1.0f/(2*PI * 0.05f));
+		setpoint[0] = alpha * pos[0] + (1-alpha) * setpoint[0];
+		setpoint[1] = alpha * pos[1] + (1-alpha) * setpoint[1];
+	}
+
 	move_desire_pos(dt);
 
 	pos_to_rate(dt);
@@ -286,8 +311,8 @@ int pos_controller::accel_to_lean_angles()
 	target_euler[0] = atan2(accel_right/**cos(eulers[1])*/, G_in_ms2);		// maybe target_pitch not needed?
 
 	// TODO: handle angle limitation correctly
-	target_euler[0] = limit(target_euler[0], -PI/4, PI/4);
-	target_euler[1] = limit(target_euler[1], -PI/4, PI/4);
+	target_euler[0] = limit(target_euler[0], -PI/5, PI/5);
+	target_euler[1] = limit(target_euler[1], -PI/5, PI/5);
 
 	return 0;
 }

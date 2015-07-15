@@ -216,7 +216,7 @@ uint8_t I2C_SW::I2C_WaitAck(void)
 
 uint8_t I2C_SW::I2C_SCLHigh(void)
 {
-	volatile int retry = 99999;
+	volatile int retry = 999;
 	SCL_HI;
 	while(retry && !SCL_STATE())
 		retry --;

@@ -66,7 +66,7 @@ enum fly_mode
 	fly_by_wire,
 	quadcopter,
 	_shutdown,
-	rc_fail,
+	_rc_fail,
 	acrobaticV,
 };
 

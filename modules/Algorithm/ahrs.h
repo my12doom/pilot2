@@ -65,7 +65,9 @@ extern float err_m[3];
 // Function declarations
 void NonlinearSO3AHRSinit(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz);
 void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz, float twoKp, float twoKi, float twoKpMag, float twoKiMag, float dt);
-
+void NonlinearSO3AHRSreset_acc(float ax, float ay, float az);     // TODO: reset attitude from accelerometer, static messurement recommended.
+void NonlinearSO3AHRSreset_gyro(float ax, float ay, float az);    // TODO: reset gyro bias.
+void NonlinearSO3AHRSreset_mag(float ax, float ay, float az);     // TODO: reset heading from magnetormeter.
 
 //=====================================================================================================
 // End of file

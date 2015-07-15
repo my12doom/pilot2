@@ -65,6 +65,8 @@ public:
 
 	float sin_yaw;
 	float cos_yaw;
+	float min_braking_speed;
+	float release_stick_timer;
 
 #ifdef WIN32
 	FILE * f;

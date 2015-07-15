@@ -200,6 +200,7 @@ int handle_uart4_controll();
 int handle_wifi_controll();
 
 // states
+static bool rc_fail = false;
 int round_running_time = 0;
 devices::gps_data gps;
 bool new_gps_data = false;
@@ -565,7 +566,7 @@ int pid()
 
 int output()
 {
-	if (mode == quadcopter || (mode == rc_fail) )
+	if (mode == quadcopter || (mode == _rc_fail) )
 	{
 		//pid[2] = -pid[2];
 		throttle_real = 0;
@@ -583,7 +584,7 @@ int output()
 				break;
 			}
 
-			if (mode == rc_fail)
+			if (mode == _rc_fail)
 			{
 				int16_t data[16];
 				int count = min(rcout->get_channel_count(), 16);
@@ -1353,8 +1354,8 @@ int check_mode()
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
 			newmode = (estimator.healthy() && airborne) ? poshold : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
- 			newmode = airborne ? optical_flow : althold;
-//			newmode = althold;
+// 			newmode = airborne ? optical_flow : althold;
+			newmode = althold;
 
 		set_submode(newmode);
 	}
@@ -1422,7 +1423,7 @@ int check_mode()
 	else
 	{
 		TRACE("warning: RC out of controll");
-		set_mode(rc_fail);
+		set_mode(_rc_fail);
 	}
 
 	return 0;
@@ -1489,7 +1490,7 @@ int land_detector()
 	{
 		land_detect_us = land_detect_us == 0 ? systimer->gettime() : land_detect_us;
 
-		if (systimer->gettime() - land_detect_us > (airborne ? 1000000 : 3000000))		// 2 seconds for before take off, 1 senconds for landing
+		if (systimer->gettime() - land_detect_us > (airborne ? 1000000 : 30000000))		// 30 seconds for before take off, 1 senconds for landing
 		{
 			set_mode(_shutdown);
 			LOGE("landing detected");
@@ -1531,17 +1532,17 @@ int crash_detector()
 		gforce_variance = gforce_sum2 / gforce_count - gforce_avg * gforce_avg;
 	}
 	
-	if (gforce > 1.75f)
+	if (gforce > 2.75f)
 	{
 		TRACE("high G force (%.2f) detected\n", gforce);
 		collision_detected = systimer->gettime();
 	}
 
-	// forced shutdown if >3g external force
-	if (gforce > 3.0f)
+	// forced shutdown if >7g external force
+	if (gforce > 7.0f)
 	{
 		LOGE("very high G force (%.2f) detected (%.0f,%.0f,%.0f)\n", gforce, accel.array[0], accel.array[1], accel.array[2]);
-		//set_mode(_shutdown);
+		set_mode(_shutdown);
 	}
 
 	int prot = (float)::crash_protect;
@@ -1799,6 +1800,7 @@ int read_rc()
 	rcin->get_channel_data(g_pwm_input, 0, 8);
 	rcin->get_channel_update_time(g_pwm_input_update, 0, 8);
 	TRACE("\rRC");
+	int rc2_update_time = systimer->gettime() - g_pwm_input_update[2];
 	for(int i=0; i<8; i++)
 	{
 		rc[i] = ppm2rc(g_pwm_input[i], rc_setting[i][0], rc_setting[i][1], rc_setting[i][2], rc_setting[i][3] > 0);
@@ -1806,6 +1808,10 @@ int read_rc()
 	}
 
 	rc[2] = (rc[2]+1)/2;
+	
+	// rc no signel for 0.5 seconds, or -10% or more throttle
+	if (rc2_update_time > 500000 || g_pwm_input[2] < (rc_setting[2][0] - (rc_setting[2][2] - rc_setting[2][0])/10))
+		rc_fail = true;
 	
 	// wifi controll override
 	if (systimer->gettime() - mobile_last_update < 400000 && rc[6] < -0.5f)
