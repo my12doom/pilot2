@@ -5,7 +5,7 @@
 #include <Protocol/common.h>
 
 // constants
-static float leash_pos = 10.0f;
+static float leash_pos = 6.0f;
 static float leash = 5.0f;
 static float linear_distance = 5.0f;
 static float max_speed = 5.0f;

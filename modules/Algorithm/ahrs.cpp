@@ -15,7 +15,7 @@ float NED2BODY[3][3];
 float BODY2NED[3][3];
 float acc_ned[3];
 float halfvx, halfvy, halfvz;
-float acc_horizontal[2];
+float acc_horizontal[3];
 float raw_yaw;
 bool mag_ok = true;
 float err_a[3];
@@ -297,6 +297,7 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	float sin_yaw = sin(euler[2]);
 	acc_horizontal[0] = cos_yaw * acc_ned[0] + sin_yaw * acc_ned[1];
 	acc_horizontal[1] = -sin_yaw * acc_ned[0] + cos_yaw * acc_ned[1];
+	acc_horizontal[2] = acc_ned[2];
 
 	// tilt compensated raw mag yaw
 	float cosRoll = cosf(euler[0]);
