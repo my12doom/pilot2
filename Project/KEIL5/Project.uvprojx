@@ -883,6 +883,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\Algorithm\mag_calibration.cpp</FilePath>
             </File>
+            <File>
+              <FileName>attitude_controller.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\modules\Algorithm\attitude_controller.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
