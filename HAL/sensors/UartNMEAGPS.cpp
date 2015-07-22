@@ -34,7 +34,7 @@ int UartNMEAGPS::init(HAL::IUART *uart, int baudrate)
 
 int UartNMEAGPS::read(devices::gps_data *data)
 {
-	int got = uart->read(buffer+buffer_count, sizeof(buffer) - buffer_count);
+	int got = uart->readline(buffer+buffer_count, sizeof(buffer) - buffer_count);
 
 	if (got > 0)
 		m_healthy = true;

@@ -20,7 +20,7 @@ int tmain(void)
 	while(1)
 	{
 		char data[1024];
-		int count = uart3->read(data, 1024);
+		int count = uart3->readline(data, 1024);
 		for(int i=0; i<count; i++)
 			fputc(data[i], NULL);
 	}

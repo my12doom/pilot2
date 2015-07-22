@@ -30,6 +30,10 @@ static param QUADCOPTER_MAX_YAW_OFFSET("offy", PI/4);
 
 attitude_controller::attitude_controller()
 {
+	euler_sp[0] = 0;
+	euler_sp[1] = 0;
+	euler_sp[2] = NAN;
+
 	reset();
 }
 attitude_controller::~attitude_controller()
@@ -54,6 +58,9 @@ int attitude_controller::provide_states(const float *attitude, const float *body
 	this->motor_state = motor_state;
 	this->airborne = airborne;
 
+	if (isnan(euler_sp[2]))
+		euler_sp[2] = euler[2];
+
 	return 0;
 }
 
@@ -63,7 +70,6 @@ int attitude_controller::set_quaternion_target(const float *quaternion)
 	if (!use_quaternion)
 		return -1;		// TODO: set euler target properly
 
-	stick[0] = NAN;		// clear stick command
 	memcpy(quaternion_sp, quaternion, sizeof(float)*4);
 	return 0;
 }
@@ -73,39 +79,36 @@ int attitude_controller::set_euler_target(const float *euler)
 	if (quaternion)
 		return -1;		// TODO: set quaternion target properly
 
-	stick[0] = NAN;		// clear stick command
-	memcpy(euler_sp, euler, sizeof(float)*3);
+	for(int i=0; i<3; i++)
+		if (!isnan(euler[i]))
+			euler_sp[i] = euler[i];
+	
 	return 0;
 }
 
-int attitude_controller::set_stick_target(const float *stick)
+int attitude_controller::update_target_from_stick(const float *stick, float dt)
 {
 	// copy stick command into member variable only, since no dt available
 	// setpoint will be updated in update();
-	memcpy(this->stick, stick, sizeof(float)*3);
-	return 0;
-}
-
-// update the controller
-// dt: time interval
-// user_rate: user desired climb rate, usually from stick.
-int attitude_controller::update(float dt)
-{
 	// update set point if stick command exists
-	if (!isnan(stick[0]))
+	// caller can pass any of three axis NAN to disable updading of that axis. to update yaw stick only in optical flow mode for example
+	if (!use_quaternion)
 	{
-		if (!use_quaternion)
+		// roll & pitch
+		for(int i=0; i<2; i++)
 		{
-			// roll & pitch
-			for(int i=0; i<2; i++)
-			{
-				float limit_l = euler[i] - PI*2 * dt;
-				float limit_r = euler[i] + PI*2 * dt;
-				euler_sp[i] = stick[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
-				euler_sp[i] = limit(euler_sp[i], limit_l, limit_r);
-			}
-			
-			// yaw
+			if (isnan(stick[i]))
+				continue;
+
+			float limit_l = euler[i] - PI*2 * dt;
+			float limit_r = euler[i] + PI*2 * dt;
+			euler_sp[i] = stick[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
+			euler_sp[i] = limit(euler_sp[i], limit_l, limit_r);
+		}
+		
+		// yaw
+		if (!isnan(stick[2]))
+		{
 			float delta_yaw = ((fabs(stick[2]) < yaw_dead_band) ? 0 : stick[2]) * dt * QUADCOPTER_ACRO_YAW_RATE;
 			float new_target = radian_add(euler_sp[2], delta_yaw);
 			float old_error = abs(radian_sub(euler_sp[2], euler[2]));
@@ -113,15 +116,23 @@ int attitude_controller::update(float dt)
 			if (new_error < (airborne?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) || new_error < old_error)
 				euler_sp[2] = euler_sp[2];
 		}
-		else
-		{
-			// TODO: there is no rate limitation here.
-			// TODO: there isn't even a implementation!
-			
-			return -1;
-		}
+	}
+	else
+	{
+		// TODO: there is no rate limitation here.
+		// TODO: there isn't even a implementation!
+		
+		return -1;
 	}
 	
+	return 0;
+}
+
+// update the controller
+// dt: time interval
+int attitude_controller::update(float dt)
+{
+
 	// outter loop, attitude -> body frame rate
 	if (use_quaternion)
 	{
@@ -172,7 +183,11 @@ int attitude_controller::update(float dt)
 // call this if the controller has just been engaged
 int attitude_controller::reset()
 {
-	stick[0] = NAN;
+	memcpy(euler_sp, euler, sizeof(euler));
+	memcpy(body_rate_sp, body_rate_sp, sizeof(body_rate_sp));
+	for(int i=0; i<3; i++)
+		pid[i][1] = 0;
+
 	return 0;
 }
 

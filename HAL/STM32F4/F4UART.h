@@ -7,7 +7,7 @@ namespace STM32F4
 	class F4UART:public HAL::IUART
 	{
 	#define TX_BUFFER_SIZE 1024
-	#define RX_BUFFER_SIZE 512
+	#define RX_BUFFER_SIZE 1500
 	private:
 		USART_TypeDef * USARTx;
 		int baudrate;
@@ -33,6 +33,8 @@ namespace STM32F4
 		virtual int write(const void *data, int count);
 		virtual int read(void *data, int max_count);
 		virtual int peak(void *data, int max_count);
+		virtual int readline(void *data, int max_count);
+		virtual int available();
 			
 		virtual void dma_init();
 		virtual int dma_handle_queue();
@@ -48,5 +50,7 @@ namespace STM32F4
 			
 		virtual void USART2_IRQHandler(void);
 		virtual void DMA1_Steam6_IRQHandler();
+		
+		void destroy();
 	};
 }

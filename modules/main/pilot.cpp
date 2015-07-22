@@ -13,6 +13,7 @@
 
 #include <Algorithm/ahrs.h>
 #include <Algorithm/ahrs2.h>
+#include <Algorithm/attitude_controller.h>
 #include <Algorithm/altitude_estimator.h>
 #include <Algorithm/altitude_estimatorCF.h>
 #include <Algorithm/altitude_controller.h>
@@ -205,14 +206,6 @@ int round_running_time = 0;
 devices::gps_data gps;
 bool new_gps_data = false;
 int critical_errors = 0;
-float angle_pos[3] = {0};
-float angle_target_unrotated[3] = {0};	// for quadcopter only currently, for fixed-wing, pos is also angle_pos
-float angle_target[3] = {0};	// for quadcopter only currently, for fixed-wing, pos is also angle_pos
-float angle_error[3] = {0};
-float angle_errorD[3] = {0};
-float angle_errorI[3] = {0};
-float pos[3] = {0};
-float target[3] = {0};		// target [roll, pitch, yaw] (pid controller target, can be angle or angle rate)
 int cycle_counter = 0;
 float ground_pressure = 0;
 float ground_temperature = 0;
@@ -240,15 +233,13 @@ vector mag_earth_frame;
 bool new_baro_data = false;
 baro_data baro_reading;
 int64_t time;
-float error_pid[3][3] = {0};		// error_pid[roll, pitch, yaw][p,i,d]
-const int lpf_order = 5;
-float errorD_lpf[lpf_order][3] = {0};			// variable for high order low pass filter, [order][roll, pitch, yaw]
 
 int64_t last_tick = 0;
 int64_t last_gps_tick = 0;
 static unsigned short gps_id = 0;
 pos_estimator estimator;
 pos_controller controller;
+attitude_controller attitude_controller;
 altitude_estimator alt_estimator;
 altitude_estimatorCF alt_estimatorCF;
 altitude_controller alt_controller;
@@ -262,7 +253,6 @@ float interval = 0;
 
 int64_t last_rc_work = 0;
 float yaw_launch;
-float pid_result[3] = {0}; // total pid for roll, pitch, yaw
 
 float a_raw_pressure = 0;
 float a_raw_temperature = 0;
@@ -320,27 +310,17 @@ static int min(int a, int b)
 	return a;
 }
 
-int prepare_pid()
+int run_controllers()
 {
-	// calculate current core pid position
-	float new_angle_pos[3] = {euler[0], euler[1], euler[2]};
-
-	// the quadcopter's main pid lock on angle rate
-	for(int i=0; i<3; i++)
-	{
-		pos[i] = body_rate.array[i];
-		angle_pos[i] = new_angle_pos[i];
-	}
-
-	TRACE("\r%.2f,%.2f,%.2f", pos[0]*PI180, pos[1]*PI180, pos[2]*PI180);
-
+	attitude_controller.provide_states(euler, body_rate.array, 0, airborne);
+	
 	switch (mode)
 	{
 	case quadcopter:
 		{
 
 			// airborne or armed and throttle up
-			bool after_unlock_action = airborne || rc[2] > 0.2f;
+			bool after_unlock_action = airborne || rc[2] > 0.1f;
 
 			// throttle
 			if (submode == althold || submode == poshold || submode == bluetooth || submode == optical_flow)
@@ -381,36 +361,18 @@ int prepare_pid()
 				throttle_result = rc[2];
 			}
 
-			// lean angle
+			// attitude
 			if (submode == basic || submode == althold)
 			{
 				if (after_unlock_action)	// airborne or armed and throttle up
 				{
-					// roll & pitch, RC trim is accepted.
-					for(int i=0; i<2; i++)
-					{
-						float limit_l = angle_target_unrotated[i] - PI*5 * interval;
-						float limit_r = angle_target_unrotated[i] + PI*5 * interval;
-						angle_target_unrotated[i] = rc[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
-						angle_target_unrotated[i] = limit(angle_target_unrotated[i], limit_l, limit_r);
-						angle_target[i] = angle_target_unrotated[i];
-					}
-
-					if (simple_mode > 0.1f)
-					{
-						float diff = yaw_launch - euler[2];
-						float cosdiff = cos(diff);
-						float sindiff = sin(diff);
-						angle_target[0] = angle_target_unrotated[0] * cosdiff - angle_target_unrotated[1] * sindiff;
-						angle_target[1] = angle_target_unrotated[0] * sindiff + angle_target_unrotated[1] * cosdiff;
-					}
-					
+					float stick[3] = {rc[0], rc[1], NAN};
+					attitude_controller.update_target_from_stick(stick, interval);
 				}
 				else
 				{
-					angle_target[0] = 0;
-					angle_target[1] = 0;
-					angle_target[2] = angle_pos[2];
+					float euler_target[3] = {0,0, NAN};
+					attitude_controller.set_euler_target(euler_target);
 				}
 			}
 
@@ -424,13 +386,14 @@ int prepare_pid()
 					float flow_roll = frame.flow_comp_m_x/1000.0f;
 					float flow_pitch = frame.flow_comp_m_y/1000.0f;
 					of_controller.update_controller(flow_roll, flow_pitch, stick_roll, stick_pitch, interval);
-					of_controller.get_result(&angle_target[0], &angle_target[1]);
+					float euler_target[3] = {0,0, NAN};
+					of_controller.get_result(&euler_target[0], &euler_target[1]);
+					attitude_controller.set_euler_target(euler_target);
 				}
 				else
 				{
-					angle_target[0] = 0;
-					angle_target[1] = 0;
-					angle_target[2] = angle_pos[2];
+					float euler_target[3] = {0,0, euler[2]};					
+					attitude_controller.set_euler_target(euler_target);
 				}
 
 				// TODO : handle yaw flow
@@ -439,8 +402,10 @@ int prepare_pid()
 
 			else if (submode == bluetooth)
 			{
-				angle_target[0] = bluetooth_roll;
-				angle_target[1] = bluetooth_pitch;
+				float euler_target[3] = {0,0, euler[2]};
+				euler_target[0] = bluetooth_roll;
+				euler_target[1] = bluetooth_pitch;
+				attitude_controller.set_euler_target(euler_target);
 			}
 			else if (submode == poshold)
 			{
@@ -463,54 +428,19 @@ int prepare_pid()
 						if (abs(desired_velocity[1]) < 0.4f)
 							desired_velocity[1] = 0;
 
+						float euler_target[3];						
 						controller.provide_attitue_position(euler, ne_pos, ne_velocity);
 						controller.set_desired_velocity(desired_velocity);
 						controller.update_controller(dt);
-
-						controller.get_target_angles(angle_target);
+						controller.get_target_angles(euler_target);
+						euler_target[2] = NAN;
+						attitude_controller.set_euler_target(euler_target);
 					}
 				}
 			}
 			// yaw:
-			float delta_yaw = ((fabs(rc[3]) < RC_DEAD_ZONE) ? 0 : rc[3]) * interval * QUADCOPTER_ACRO_YAW_RATE;
-
-			float new_target = radian_add(angle_target[2], delta_yaw);
-			float new_error = abs(radian_sub(new_target, angle_pos[2]));
-			if (new_error > (airborne?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) && new_error > abs(angle_error[2]))
-				;
-			else
-				angle_target[2] = new_target;
-
-			if (!after_unlock_action)
-				angle_target[2] = angle_pos[2];
-
-			// now calculate target angle rate
-			// based on a PID stablizer
-			for(int i=0; i<3; i++)
-			{
-				float new_angle_error = radian_sub(angle_target[i], angle_pos[i]);	// use radian_sub mainly for yaw
-
-
-				// 5hz low pass filter for D, you won't be that crazy, right?
-				static const float lpf_RC = 1.0f/(2*PI * 20.0f);
-				float alpha = interval / (interval + lpf_RC);
-
-				if (airborne)
-				{
-					angle_errorI[i] += new_angle_error * interval;
-					angle_errorI[i] = limit(angle_errorI[i], -pid_factor2[i][3], pid_factor2[i][3]);
-				}
-				angle_errorD[i] = (1-alpha) * angle_errorD[i] + alpha * (new_angle_error - angle_error[i]) / interval;
-				angle_error[i] = new_angle_error;
-
-				// apply angle pid
-				target[i] = angle_error[i] * pid_factor2[i][0] + angle_errorI[i] * pid_factor2[i][1] + angle_errorD[i] * pid_factor2[i][2];
-
-				// max target rate: 180 degree/second
-				target[i] = limit(target[i], -2*PI, 2*PI);
-			}
-			TRACE(",roll=%f,%f", angle_pos[0] * PI180, angle_target[0] * PI180, airborne ? "true" : "false");
-			TRACE("angle pos,target=%f,%f, air=%s\r\n", angle_pos[2] * PI180, angle_target[2] * PI180, airborne ? "true" : "false");
+			float yaw_array[3] = {NAN, NAN, rc[3]};
+			attitude_controller.update_target_from_stick(yaw_array, interval);
 
 			// check takeoff
 			if ( (alt_estimator.state[0] > takeoff_ground_altitude + 1.0f) ||
@@ -527,48 +457,12 @@ int prepare_pid()
 	return 0;
 }
 
-int pid()
-{
-	for(int i=0; i<3; i++)
-	{
-		float new_p = (target[i]-pos[i]);
-
-		// I
-		if (airborne)		// only integrate after takeoff
-		error_pid[i][1] += new_p * interval;
-		error_pid[i][1] = limit(error_pid[i][1], -pid_factor[i][3], pid_factor[i][3]);
-
-		// D, with 40hz 4th order low pass filter
-		static const float lpf_RC = 1.0f/(2*PI * 40.0f);
-		float alpha = interval / (interval + lpf_RC);
-		float derivative = (new_p - error_pid[i][0] )/interval;
-
-		for(int j=0; j<lpf_order; j++)
-			errorD_lpf[j][i] = errorD_lpf[j][i] * (1-alpha) + alpha * (j==0?derivative:errorD_lpf[j-1][i]);
-
-		error_pid[i][2] = errorD_lpf[lpf_order-1][i];
-
-		// P
-		error_pid[i][0] = new_p;
-
-		// sum
-		pid_result[i] = 0;
-		float p_rc = limit(rc[5]+1, 0, 2);
-		for(int j=0; j<3; j++)
-		{
-			pid_result[i] += error_pid[i][j] * pid_factor[i][j];
-		}
-	}
-	TRACE(", pid=%.2f, %.2f, %.2f\n", pid_result[0], pid_result[1], pid_result[2]);
-
-	return 0;
-}
-
 int output()
 {
+	float pid_result[3];
+	attitude_controller.get_result(pid_result);
 	if (mode == quadcopter || (mode == _rc_fail) )
 	{
-		//pid[2] = -pid[2];
 		throttle_real = 0;
 		int matrix = (float)motor_matrix;
 
@@ -674,8 +568,8 @@ int save_logs()
 	{
 		alt_estimator.state[0] * 100,
 		airspeed_sensor_data * 1000,
-		{error_pid[0][0]*180*100/PI, error_pid[1][0]*180*100/PI, error_pid[2][0]*180*100/PI},
-		{target[0]*180*100/PI, target[1]*180*100/PI, target[2]*180*100/PI},
+		{attitude_controller.pid[0][0]*180*100/PI, attitude_controller.pid[1][0]*180*100/PI, attitude_controller.pid[2][0]*180*100/PI},
+		{attitude_controller.body_rate_sp[0]*180*100/PI, attitude_controller.body_rate_sp[1]*180*100/PI, attitude_controller.body_rate_sp[2]*180*100/PI},
 		mode,
 		mah_consumed,
 	};
@@ -684,8 +578,8 @@ int save_logs()
 
 	pilot_data2 pilot2 = 
 	{
-		{error_pid[0][1]*180*100/PI, error_pid[1][1]*180*100/PI, error_pid[2][1]*180*100/PI},
-		{error_pid[0][2]*180*100/PI, error_pid[1][2]*180*100/PI, error_pid[2][2]*180*100/PI},
+		{attitude_controller.pid[0][1]*180*100/PI, attitude_controller.pid[1][1]*180*100/PI, attitude_controller.pid[2][1]*180*100/PI},
+		{attitude_controller.pid[0][2]*180*100/PI, attitude_controller.pid[1][2]*180*100/PI, attitude_controller.pid[2][2]*180*100/PI},
 	};
 
 	log(&pilot2, TAG_PILOT_DATA2, time);
@@ -700,10 +594,10 @@ int save_logs()
 
 	quadcopter_data quad = 
 	{
-		angle_pos[0] * 18000/PI, angle_pos[1] * 18000/PI, angle_pos[2] * 18000/PI,
-		angle_target[0] * 18000/PI, angle_target[1] * 18000/PI, angle_target[2] * 18000/PI,
-		pos[0] * 18000/PI, pos[1] * 18000/PI, pos[2] * 18000/PI,
-		target[0] * 18000/PI,  target[1] * 18000/PI, target[2] * 18000/PI, 
+		attitude_controller.euler_sp[0] * 18000/PI, attitude_controller.euler_sp[1] * 18000/PI, attitude_controller.euler_sp[2] * 18000/PI,
+		attitude_controller.euler[0] * 18000/PI, attitude_controller.euler[1] * 18000/PI, attitude_controller.euler[2] * 18000/PI,
+		attitude_controller.body_rate[0] * 18000/PI, attitude_controller.body_rate[1] * 18000/PI, attitude_controller.body_rate[2] * 18000/PI,
+		attitude_controller.body_rate_sp[0] * 18000/PI,  attitude_controller.body_rate_sp[1] * 18000/PI, attitude_controller.body_rate_sp[2] * 18000/PI, 
 	};
 
 	log(&quad, TAG_QUADCOPTER_DATA, time);
@@ -1282,11 +1176,14 @@ int set_submode(copter_mode newmode)
 		float ne_pos[2] = {meter.latitude, meter.longtitude};
 		float ne_velocity[2] = {meter.vlatitude, meter.vlongtitude};
 		float desired_velocity[2] = {0, 0};
+		float euler_target[3];
 
 		controller.provide_attitue_position(euler, ne_pos, ne_velocity);
 		controller.set_desired_velocity(desired_velocity);
-		controller.get_target_angles(angle_target);
+		controller.get_target_angles(euler_target);
 		controller.reset();
+		euler_target[2] = NAN;
+		attitude_controller.set_euler_target(euler_target);
 	}
 
 	if (!has_alt_controller && to_use_alt_controller)
@@ -1311,9 +1208,8 @@ int set_mode(fly_mode newmode)
 	if (newmode == mode)
 		return 0;
 
-	target[0] = pos[0];
-	target[1] = pos[1];
-	target[2] = pos[2];
+	attitude_controller.reset();
+	
 
 	takeoff_ground_altitude = alt_estimator.state[0];
 	yaw_launch = euler[2];
@@ -1325,14 +1221,6 @@ int set_mode(fly_mode newmode)
 	float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
 	alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	alt_controller.reset();
-
-
-	for(int i=0; i<3; i++)
-	{
-		angle_target[i] = angle_pos[i];
-		error_pid[i][1] = 0;	//reset integration
-		angle_errorI[i] = 0;
-	}
 	
 	mode = newmode;
 	return 0;
@@ -1589,7 +1477,7 @@ int handle_uart4_cli()
 	char line[1024];
 	char out[1024];
 	IUART *uart = manager.getUART("UART2");
-	int byte_count = uart->read(line, sizeof(line));
+	int byte_count = uart->readline(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;
 	
@@ -1611,7 +1499,7 @@ int handle_wifi_controll()
 	char line[1024];
 	char out[1024];
 	IUART *uart = manager.getUART("UART1");
-	int byte_count = uart->read(line, sizeof(line));
+	int byte_count = uart->readline(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;
 	
@@ -1993,8 +1881,7 @@ void main_loop(void)
 	// all state estimating, AHRS, position, altitude, etc
 	calculate_state();
 
-	prepare_pid();
-	pid();
+	run_controllers();
 	output();
 	save_logs();
 

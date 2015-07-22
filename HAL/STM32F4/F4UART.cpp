@@ -16,6 +16,7 @@ namespace STM32F4
 		{
 			RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
 			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG,ENABLE);
 			//Set Uart4 bind to GPIOA pin9|pin10
 			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
 			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
@@ -310,7 +311,35 @@ namespace STM32F4
 
 		return count;
 	}
+	int F4UART::available()
+	{
+		int _end = end;
+		int size = _end - start;
+		if (size<0)
+			size += sizeof(buffer);
+		return size;
+	}
 	int F4UART::read(void *data, int max_count)
+	{
+		char *p = (char*)data;
+		int _end = end;
+		int j=0;
+		int i;
+		int size;
+		int lastR = 0;
+		if (_end == start)
+			return -1;
+		size = _end - start;
+		if (size<0)
+			size += sizeof(buffer);
+		if (max_count > size)
+			max_count = size;
+		for(i=0; i<max_count; i++)
+			p[i] = buffer[(i+start)%sizeof(buffer)];
+		start = (i+start)%sizeof(buffer);
+		return max_count;
+	}
+	int F4UART::readline(void *data, int max_count)
 	{
 		char *p = (char*)data;
 		int _end_sentence = end_sentence;
@@ -423,7 +452,7 @@ namespace STM32F4
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
 		UART4->SR = (uint16_t)~0x20;
-		if (c>0)
+		if (c>=0)
 		{
 			buffer[end] = c;
 			end++;
@@ -451,7 +480,7 @@ namespace STM32F4
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
 		USART1->SR = (uint16_t)~0x20;
-		if (c>0)
+		if (c>=0)
 		{
 			buffer[end] = c;
 			end++;
@@ -479,7 +508,7 @@ namespace STM32F4
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
 		USART3->SR = (uint16_t)~0x20;
-		if (c>0)
+		if (c>=0)
 		{
 			buffer[end] = c;
 			end++;
@@ -507,7 +536,7 @@ namespace STM32F4
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
 		USART2->SR = (uint16_t)~0x20;
-		if (c>0)
+		if (c>=0)
 		{
 			buffer[end] = c;
 			end++;
@@ -516,5 +545,12 @@ namespace STM32F4
 				end_sentence = end;
 
 		}
+	}
+	
+	void F4UART::destroy()
+	{
+		USART_Cmd(USARTx, DISABLE);
+		USART_ITConfig(USARTx, USART_IT_RXNE, DISABLE);
+		DMA_Cmd(DMAy_Streamx, DISABLE);
 	}
 }

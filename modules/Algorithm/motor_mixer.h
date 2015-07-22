@@ -13,6 +13,7 @@ class motor_mixer : public actuator
 	//
 	virtual int get_result(float *out, int count);
 	virtual int get_actuated(float *torque, float *throttle);
-	virtual int get_state(void *p, int maxsize);
+	virtual int get_state(float *states) = 0;
+	virtual int get_state2(void *p, int maxsize);
 
 };

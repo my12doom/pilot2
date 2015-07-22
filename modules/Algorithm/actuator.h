@@ -22,8 +22,11 @@ public:
 	//	in actuator limited circumstances it returns actuated torque and thrust
 	virtual int get_actuated(float *torque, float *throttle) = 0;
 
+	// return actuator limitation stats for each axis.
+	virtual int get_state(float *states) = 0;
+
 	// return actuator defined state, limitations and errors.
-	virtual int get_state(void *p, int maxsize) = 0;
+	virtual int get_state2(void *p, int maxsize) = 0;
 protected:
 
 };
