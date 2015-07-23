@@ -22,7 +22,6 @@ extern "C" void DMA2_Stream7_IRQHandler()
 
 // constants
 const uint32_t ApplicationAddress = 0x8004000;
-FLASH_Status states;
 
 class ymodem_rec : public ymodem_receiver
 {
@@ -38,7 +37,7 @@ public:
 		if (event == ymodem_file_data)
 		{
 			for(int i=0; i<datasize/4*4; i+=4)
-				states = FLASH_ProgramWord(ApplicationAddress+pos+i, *(uint32_t*)((uint8_t*)data+i));
+				FLASH_ProgramWord(ApplicationAddress+pos+i, *(uint32_t*)((uint8_t*)data+i));
 			
 			pos += datasize;
 		}
@@ -81,6 +80,11 @@ void erase_rom(HAL::IUART *uart)
 	};
 	
 	FLASH_Unlock();
+	rom_size = 0;
+	rom_crc = 0;
+	rom_size.save();
+	rom_crc.save();
+	
 	for(int i=0; i<sizeof(pages)/sizeof(pages[0]); i++)
 	{
 		char tmp[30];
@@ -135,38 +139,18 @@ int main()
 				else
 					uart1.write("CRC FAILED\n", 11);
 			}
-			
 			else if (strstr(tmp, "romcrc,") == tmp)
 			{
-				uint32_t size = 0;
-				uint32_t crc = 0;
-				
-				if (sscanf(tmp+7, "%d,%x", &size, &crc) == 2)
-				{
-					float sizef = *(float*)&size;
-					float crcf = *(float*)&crc;
-					
-					rom_size = sizef;
-					rom_crc = crcf;
-					
-					FLASH_Unlock();
-					rom_size.save();
-					rom_crc.save();
-				}
-				
-				if (check_rom_crc())
-					uart1.write("CRC OK\n", 7);
-				else
-					uart1.write("CRC FAILED\n", 11);
-
+				uart1.write("romcrc only supportted in main ROM\n", 35);
 			}
 			
 			else if (strstr(tmp, "erase") == tmp)
 				erase_rom(&uart1);
 			else if (strstr(tmp, "rom") == tmp)
 				receive_rom(&uart1);
-		}
-			
+			else if (strstr(tmp, "hello") == tmp)
+				uart1.write("bootloader\n", 11);
+		}			
 	}
 }
 
