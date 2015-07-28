@@ -78,12 +78,14 @@
             <nStopB2X>0</nStopB2X>
           </BeforeMake>
           <AfterMake>
-            <RunUserProg1>0</RunUserProg1>
+            <RunUserProg1>1</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
-            <UserProg1Name></UserProg1Name>
+            <UserProg1Name>C:\Keil_v5\ARM\ARMCC\bin\fromelf.exe --bin -o pilot.bin ./Output/Firmware.axf</UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
+            <nStopA1X>0</nStopA1X>
+            <nStopA2X>0</nStopA2X>
           </AfterMake>
           <SelectedForBatchBuild>0</SelectedForBatchBuild>
           <SVCSIdString></SVCSIdString>
@@ -220,7 +222,7 @@
             <hadIRAM>1</hadIRAM>
             <hadXRAM>0</hadXRAM>
             <uocXRam>0</uocXRam>
-            <RvdsVP>1</RvdsVP>
+            <RvdsVP>2</RvdsVP>
             <hadIRAM2>1</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -359,11 +361,13 @@
             <wLevel>2</wLevel>
             <uThumb>0</uThumb>
             <uSurpInc>0</uSurpInc>
-            <uC99>0</uC99>
+            <uC99>1</uC99>
             <useXO>0</useXO>
+            <v6Lang>0</v6Lang>
+            <v6LangP>0</v6LangP>
             <VariousControls>
               <MiscControls>--diag_suppress 177,550,1,1295 --gnu</MiscControls>
-              <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=8000000,__FPU_USED=0,USE_USB_OTG_FS</Define>
+              <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=8000000,__FPU_USED=1,USE_USB_OTG_FS</Define>
               <Undefine></Undefine>
               <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface;..\..\HAL\STM32F4;..\..\;..\..\modules</IncludePath>
             </VariousControls>
@@ -441,6 +445,8 @@
                 <uSurpInc>2</uSurpInc>
                 <uC99>2</uC99>
                 <useXO>2</useXO>
+                <v6Lang>0</v6Lang>
+                <v6LangP>0</v6LangP>
                 <VariousControls>
                   <MiscControls></MiscControls>
                   <Define>STM32F40_41xxx</Define>
@@ -497,11 +503,6 @@
               <FileName>stm32f4xx_it.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\HAL\STM32F4\STMLib\stm32f4xx_it.c</FilePath>
-            </File>
-            <File>
-              <FileName>system_stm32f4xx.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\HAL\STM32F4\STMLib\system_stm32f4xx.c</FilePath>
             </File>
             <File>
               <FileName>misc.c</FileName>
@@ -667,6 +668,11 @@
               <FileName>stm32f4xx_wwdg.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_wwdg.c</FilePath>
+            </File>
+            <File>
+              <FileName>system_stm32f4xx.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\STMLib\system_stm32f4xx.c</FilePath>
             </File>
           </Files>
         </Group>

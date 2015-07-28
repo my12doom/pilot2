@@ -7,6 +7,7 @@
 #include <math.h>
 #include <Algorithm/pos_estimator.h>
 #include <HAL/resources.h>
+#include <Protocol/crc32.h>
 
 using namespace HAL;
 
@@ -88,6 +89,25 @@ void ftoa(float n, char *res, int afterpoint)
 
         intToStr((int)fpart, res + i + 1, afterpoint);
     }
+}
+
+// constants and parameters
+const uint32_t ApplicationAddress = 0x8004000;
+static param rom_size("size", 0);
+static param rom_crc("CRC", 0);
+
+bool check_rom_crc()
+{
+	// the CRC and size are stored "as" float, but are indeed binary uint32_t.
+	float sizef = rom_size;
+	float crcf = rom_crc;
+	uint32_t size = *(uint32_t*)&sizef;
+	uint32_t crc = *(uint32_t*)&crcf;	
+	
+	if (size <= 1024 || size > 1024*768)
+		return false;
+	
+	return crc32(0, (uint8_t*)ApplicationAddress, size) == crc;
 }
 
 extern "C" int parse_command_line(const char *line, char *out)
@@ -310,9 +330,44 @@ extern "C" int parse_command_line(const char *line, char *out)
 		space_init(true);
 		reset_system();
 	}
-
-
-
-
+	
+	else if (strstr(line, "reset") == line)
+	{
+		reset_system();
+	}
+	else if (strstr(line, "romcrc,") == line)
+	{
+		uint32_t size = 0;
+		uint32_t crc = 0;
+		
+		if (sscanf(line+7, "%d,%x", &size, &crc) == 2)
+		{
+			float sizef = *(float*)&size;
+			float crcf = *(float*)&crc;
+			
+			rom_size = sizef;
+			rom_crc = crcf;
+			
+			FLASH_Unlock();
+			rom_size.save();
+			rom_crc.save();
+		}
+		
+		if (check_rom_crc())
+			strcpy(out, "CRC OK\n");
+		else
+			strcpy(out, "CRC FAILED\n");		
+		
+		return strlen(out);
+	}
+	
+	else if (strstr(line, "clearcrc") == line)
+	{
+		rom_size = 0;
+		rom_crc = 0;
+		rom_crc.save();
+		rom_size.save();
+	}
+	
 	return 0;
 }

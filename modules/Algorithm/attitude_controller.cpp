@@ -100,8 +100,8 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 			if (isnan(stick[i]))
 				continue;
 
-			float limit_l = euler[i] - PI*2 * dt;
-			float limit_r = euler[i] + PI*2 * dt;
+			float limit_l = euler_sp[i] - PI*2 * dt;
+			float limit_r = euler_sp[i] + PI*2 * dt;
 			euler_sp[i] = stick[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
 			euler_sp[i] = limit(euler_sp[i], limit_l, limit_r);
 		}
@@ -114,7 +114,7 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 			float old_error = abs(radian_sub(euler_sp[2], euler[2]));
 			float new_error = abs(radian_sub(new_target, euler[2]));
 			if (new_error < (airborne?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) || new_error < old_error)
-				euler_sp[2] = euler_sp[2];
+				euler_sp[2] = new_target;
 		}
 	}
 	else

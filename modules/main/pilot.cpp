@@ -438,9 +438,18 @@ int run_controllers()
 					}
 				}
 			}
+
 			// yaw:
-			float yaw_array[3] = {NAN, NAN, rc[3]};
-			attitude_controller.update_target_from_stick(yaw_array, interval);
+			if (after_unlock_action)	// airborne or armed and throttle up
+			{
+				float yaw_array[3] = {NAN, NAN, rc[3]};
+				attitude_controller.update_target_from_stick(yaw_array, interval);
+			}
+			else
+			{
+				float yaw_array[3] = {NAN, NAN, euler[2]};
+				attitude_controller.set_euler_target(yaw_array);
+			}
 
 			// check takeoff
 			if ( (alt_estimator.state[0] > takeoff_ground_altitude + 1.0f) ||
@@ -451,6 +460,7 @@ int run_controllers()
 				gyro_bias_estimating_end = true;
 			}
 		}
+		attitude_controller.update(interval);
 		break;
 	}
 
@@ -1208,6 +1218,7 @@ int set_mode(fly_mode newmode)
 	if (newmode == mode)
 		return 0;
 
+	attitude_controller.provide_states(euler, body_rate.array, 0, airborne);
 	attitude_controller.reset();
 	
 
@@ -1476,7 +1487,7 @@ int handle_uart4_cli()
 {
 	char line[1024];
 	char out[1024];
-	IUART *uart = manager.getUART("UART2");
+	IUART *uart = manager.getUART("UART1");
 	int byte_count = uart->readline(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;

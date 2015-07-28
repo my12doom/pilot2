@@ -37,7 +37,10 @@ public:
 		if (event == ymodem_file_data)
 		{
 			for(int i=0; i<datasize/4*4; i+=4)
+			{
 				FLASH_ProgramWord(ApplicationAddress+pos+i, *(uint32_t*)((uint8_t*)data+i));
+				FLASH_WaitForLastOperation();
+			}
 			
 			pos += datasize;
 		}
@@ -141,7 +144,29 @@ int main()
 			}
 			else if (strstr(tmp, "romcrc,") == tmp)
 			{
-				uart1.write("romcrc only supportted in main ROM\n", 35);
+				//uart1.write("romcrc only supportted in main ROM\n", 35);
+				
+								uint32_t size = 0;
+				uint32_t crc = 0;
+				
+				if (sscanf(tmp+7, "%d,%x", &size, &crc) == 2)
+				{
+					float sizef = *(float*)&size;
+					float crcf = *(float*)&crc;
+					
+					rom_size = sizef;
+					rom_crc = crcf;
+					
+					//FLASH_Unlock();
+					//rom_size.save();
+					//rom_crc.save();
+				}
+				
+				if (check_rom_crc())
+					uart1.write("CRC OK\n", 7);
+				else
+					uart1.write("CRC FAILED\n", 11);
+
 			}
 			
 			else if (strstr(tmp, "erase") == tmp)
@@ -174,9 +199,12 @@ void run_rom()
 		__set_MSP(*(vu32*) ApplicationAddress);
         JumpToApplication();
 		
-		// reset system if booting application failed
-		NVIC_SystemReset();
     }
+	
+	// reset system if booting application failed
+	uart1.write("failed, rebooting\n", 18);
+	systimer->delayms(200);
+	NVIC_SystemReset();
 }
 
 
