@@ -392,7 +392,7 @@ int run_controllers()
 				}
 				else
 				{
-					float euler_target[3] = {0,0, euler[2]};					
+					float euler_target[3] = {0,0, euler[2]};
 					attitude_controller.set_euler_target(euler_target);
 				}
 
@@ -402,7 +402,7 @@ int run_controllers()
 
 			else if (submode == bluetooth)
 			{
-				float euler_target[3] = {0,0, euler[2]};
+				float euler_target[3] = {0,0, NAN};
 				euler_target[0] = bluetooth_roll;
 				euler_target[1] = bluetooth_pitch;
 				attitude_controller.set_euler_target(euler_target);
@@ -1460,7 +1460,7 @@ int crash_detector()
 			tilt_us = 0;
 	}
 
-	if (((collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) && (landing_requested || prot & CRASH_COLLISION_IMMEDIATE)) 
+	if (((collision_detected > 0 && systimer->gettime() - collision_detected < 100000) && (landing_requested || prot & CRASH_COLLISION_IMMEDIATE)) 
 		|| (tilt_us> 0 && systimer->gettime()-tilt_us > 1000000))	// more than 1 second
 	{
 		LOGE("landing impact detected(%s)\n", (collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) ? "collision" : "tilt");
