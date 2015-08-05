@@ -45,6 +45,14 @@ namespace sensors
 		//   return 0 if success
 		int trig_ubx_packet(int timeout);
 
+
+		// try receive any ubx packet while triggerring a ubx "ACK" packet
+		//   return -1 if timeout
+		//   return 0 if ACK
+		//   return 1 if NAK
+		int wait_ack(int cls, int id, int timeout = 200000);
+
+
 		// detect ublox baudrate.
 		//   return baudrate if ubx response received.
 		//   negative value if failed all possible baudrate.

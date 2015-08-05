@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <HAL/Interface/ISystimer.h>
 
+#pragma pack(1)
+
 namespace sensors
 {
 
@@ -15,6 +17,24 @@ UartUbloxNMEAGPS::UartUbloxNMEAGPS()
 UartUbloxNMEAGPS::~UartUbloxNMEAGPS()
 {
 
+}
+
+int UartUbloxNMEAGPS::wait_ack(int cls, int id, int timeout)
+{
+	int64_t timeout_tick = timeout>=0 ? (systimer->gettime() + timeout) : 0x7fffffffffffffff;
+	ubx_packet *pkt;
+	do
+	{
+		pkt = read_ubx_packet(timeout);
+
+		if (pkt && pkt->cls == 0x5 && pkt->crc_ok && pkt->payload_size >= 2)
+		{
+			if (pkt->payload[0] == cls && pkt->payload[1] == id)
+				return pkt->id == 1 ? 0 : 1;
+		}
+	}while(systimer->gettime() < timeout_tick);
+
+	return -1;
 }
 
 int UartUbloxNMEAGPS::enable_message(uint8_t cls, uint8_t id, bool enable/* = true*/, int timeout /* = 100000 */)
@@ -244,9 +264,9 @@ ubx_packet* UartUbloxNMEAGPS::read_ubx_packet(int timeout)
 int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 {
 	UartNMEAGPS::init(uart, baudrate);
+	current_baudrate = baudrate;
 
 	//
-
 	int64_t t = systimer->gettime();
 	int real_baudrate;
 	if ((real_baudrate = set_baudrate(baudrate)) < 0)
@@ -254,13 +274,75 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 		printf("ublox GPS not found.\n");
 		return -1;
 	}
+
+	// GPGGA
+	if (enable_message(0xf0, 0x00) < 0)
+		return -2;
+	// GPGSA
+	if (enable_message(0xf0, 0x02) < 0)
+		return -2;
+	// GPGSV
+	if (enable_message(0xf0, 0x03) < 0)
+		return -2;
+	// GPRMC
+	if (enable_message(0xf0, 0x04) < 0)
+		return -2;
+	// GPVTG
+	if (enable_message(0xf0, 0x05) < 0)
+		return -2;
+	// GPZDA
+	if (enable_message(0xf0, 0x08) < 0)
+		return -2;
+	
+	// NMEA config
+	struct
+	{
+		uint8_t filter;
+		uint8_t nmeaVersion;
+		uint8_t numSV;
+		uint8_t flags;
+		uint32_t gnssToFilter;
+		uint8_t svNumbering;
+		uint8_t mainTalkerId;
+		uint8_t gsvTalkerId;
+		uint8_t version;
+		char bdsTalkerId[2];
+		uint8_t reserved[6];
+	} nmea_cfg = 
+	{
+		0,		// no filter
+		0x41,	// NMEA 4.1
+		0,		// no limit
+		2,		// consider mode
+		0,		// no filter
+		1,		// extended SV number
+		1,		// main talker "GP"
+		1,		// use main talker ID
+		1,		// .
+		"",		// default BeiDou talker
+		{0},
+	};
+
+	int size = sizeof(nmea_cfg);
+	send_ubx_packet(0x6, 0x17, &nmea_cfg, 20);
+	if (wait_ack(0x6, 0x17) != 0)
+		return -3;
+	
+	// rate config
+	uint16_t rate_config[3] = {250, 1, 0};
+	send_ubx_packet(0x6, 0x8, rate_config, 6);
+	if (wait_ack(0x6, 0x8) != 0)
+		return -4;
+
+	// save settings for faster boot
+	uint32_t save[3] = {0,0x1f,0};
+	send_ubx_packet(0x6, 0x9, save, 12);
+	if (wait_ack(0x6, 0x9) != 0)
+		return -4;
+
 	t = systimer->gettime() - t;
 	
 	printf("ublox GPS initialized in %d us, baudrate set to %d.\n", int(t), real_baudrate);
-
-	if (enable_message(0x1, 0x2) < 0)
-		return -2;
-
 	return 0;
 }
 
