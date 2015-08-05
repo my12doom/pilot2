@@ -33,7 +33,7 @@ static const char * critical_error_desc[] =
 	"error_MAX",
 };
 
-
+// currently only HARD limit is used, PARTIAL limit is only a place holder.
 enum actuator_limit
 {
 	LIMIT_NONE 				= 0,

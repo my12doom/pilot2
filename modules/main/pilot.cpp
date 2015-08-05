@@ -64,19 +64,6 @@ extern "C"
 
 static param crash_protect("prot", 0);		// crash protection
 
-static param simple_mode("simp", 0.0f) ;
-static param pid_factor[3][4] = 			// pid_factor[roll,pitch,yaw][p,i,d,i_limit]
-{
-	{param("rP1",0.60), param("rI1",0.80), param("rD1",0.03),param("rM1",PI)},
-	{param("rP2",0.60), param("rI2",0.80), param("rD2",0.03),param("rM2",PI)},
-	{param("rP3",1.75), param("rI3",0.25), param("rD3",0.01),param("rM3",PI)},
-};
-static param pid_factor2[3][4] = 			// pid_factor2[roll,pitch,yaw][p,i,d,i_limit]
-{
-	{param("sP1", 6), param("sI1", 0), param("sD1", 0),param("sM1", PI/45)},
-	{param("sP2", 6), param("sI2", 0), param("sD2", 0),param("sM2", PI/45)},
-	{param("sP3", 8), param("sI3", 0), param("sD3", 0),param("sM3", PI/45)},
-};
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
 static param quadcopter_auto_landing_rate_fast("flrt", 1.5f);		// absolute value of fast automated landing speed in meter/s, 

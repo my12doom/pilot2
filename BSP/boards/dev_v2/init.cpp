@@ -5,7 +5,7 @@
 #include "RCOUT.h"
 #include "AsyncWorker.h"
 #include <HAL\STM32F4\F4Timer.h>
-#include <HAL/sensors/UartNMEAGPS.h>
+#include <HAL/sensors/UartUbloxNMEAGPS.h>
 #include <HAL\Interface\ILED.h>
 #include <HAL/sensors/PX4Flow.h>
 #include "RGBLED.h"
@@ -181,7 +181,7 @@ void init_sensors()
 	if (hmc5983device.init(&spi1, &cs_hmc5983) == 0)
 	{
 		hmc5983device.axis_config(0, 2, 1, +1, -1, -1);
-		//manager.register_magnetometer(&hmc5983device);
+		manager.register_magnetometer(&hmc5983device);
 	}
 }
 
@@ -221,10 +221,9 @@ int init_RC()
 
 int init_GPS()
 {
-	static sensors::UartNMEAGPS gps;
-	gps.init(&f4uart4, 115200);
-	
-	manager.register_GPS(&gps);
+	static sensors::UartUbloxNMEAGPS gps;
+	if (gps.init(&f4uart4, 115200) == 0)	
+		manager.register_GPS(&gps);
 	
 	return 0;
 }

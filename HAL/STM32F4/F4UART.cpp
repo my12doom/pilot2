@@ -409,7 +409,7 @@ namespace STM32F4
 		return j;
 	}
 	int F4UART::dma_handle_queue()
-	{
+	{		
 		
 		if (dma_running)
 			return 0;
@@ -431,6 +431,14 @@ namespace STM32F4
 
 		//ERROR("!!%d!!", ongoing_tx_size);
 
+		return 0;
+	}
+	
+	int F4UART::flush()
+	{
+		while(dma_running)
+			;
+		
 		return 0;
 	}
 	

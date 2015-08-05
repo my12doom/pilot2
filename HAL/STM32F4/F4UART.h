@@ -31,10 +31,12 @@ namespace STM32F4
 		~F4UART(){};
 		virtual int set_baudrate(int baudrate);
 		virtual int write(const void *data, int count);
+		virtual int flush();
 		virtual int read(void *data, int max_count);
 		virtual int peak(void *data, int max_count);
 		virtual int readline(void *data, int max_count);
 		virtual int available();
+		
 			
 		virtual void dma_init();
 		virtual int dma_handle_queue();

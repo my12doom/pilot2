@@ -794,6 +794,11 @@
               <FileType>5</FileType>
               <FilePath>..\..\HAL\sensors\UartNMEAGPS.h</FilePath>
             </File>
+            <File>
+              <FileName>UartUbloxNMEAGPS.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\UartUbloxNMEAGPS.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
