@@ -76,7 +76,7 @@ int attitude_controller::set_quaternion_target(const float *quaternion)
 
 int attitude_controller::set_euler_target(const float *euler)
 {
-	if (quaternion)
+	if (use_quaternion)
 		return -1;		// TODO: set quaternion target properly
 
 	for(int i=0; i<3; i++)
