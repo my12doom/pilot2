@@ -167,8 +167,8 @@ void init_sensors()
 	
 	if (mpu6000device.init(&spi1, &cs_mpu) == 0)
 	{
-		mpu6000device.accelerometer_axis_config(1, 0, 2, -1, -1, +1);
-		mpu6000device.gyro_axis_config(1, 0, 2, +1, +1, -1);
+		mpu6000device.accelerometer_axis_config(0, 1, 2, +1, +1, -1);
+		mpu6000device.gyro_axis_config(0, 1, 2, -1, -1, +1);
 		manager.register_accelerometer(&mpu6000device);
 		manager.register_gyroscope(&mpu6000device);
 	}
@@ -180,7 +180,7 @@ void init_sensors()
 
 	if (hmc5983device.init(&spi1, &cs_hmc5983) == 0)
 	{
-		hmc5983device.axis_config(0, 2, 1, +1, -1, -1);
+		hmc5983device.axis_config(0, 2, 1, +1, +1, +1);
 		manager.register_magnetometer(&hmc5983device);
 	}
 }
@@ -222,7 +222,7 @@ int init_RC()
 int init_GPS()
 {
 	static sensors::UartUbloxNMEAGPS gps;
-	if (gps.init(&f4uart4, 115200) == 0)	
+	if (gps.init(&f4uart1, 115200) == 0)	
 		manager.register_GPS(&gps);
 	
 	return 0;
@@ -292,7 +292,7 @@ int bsp_init_all()
 	init_uart1();
 	init_RC();
 	init_sensors();
-	init_external_compass();
+//	init_external_compass();
 	init_asyncworker();
 	init_led();
 	init_flow();
