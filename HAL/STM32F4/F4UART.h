@@ -22,7 +22,7 @@ namespace STM32F4
 		int tx_start;
 		int tx_end;
 		int ongoing_tx_size;
-		int dma_running; 
+		volatile int dma_running; 
 		int end_sentence;
 		char tx_buffer[TX_BUFFER_SIZE];
 		char buffer[RX_BUFFER_SIZE];		// circular buffer

@@ -82,9 +82,9 @@ int UartUbloxNMEAGPS::trig_ubx_packet(int timeout)
 		}
 		else
 		{
-			send_ubx_packet(0x6, 0x1, payload, 8);
-			uart->flush();
-		}
+				send_ubx_packet(0x6, 0x1, payload, 8);
+				uart->flush();
+			}
 	}while(systimer->gettime() < timeout_tick);
 
 	return -1;	
@@ -157,7 +157,7 @@ int UartUbloxNMEAGPS::detect_baudrate()
 		if (open_as(baudtable[i]) < 0)
 			break;
 		
-		if (trig_ubx_packet(2000000000/baudtable[i]) == 0)
+		if (trig_ubx_packet(20000000000/baudtable[i]) == 0)
 			return baudtable[i];
 	}	
 	
@@ -268,6 +268,7 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 
 	//
 	int64_t t = systimer->gettime();
+	systimer->delayms(100);
 	int real_baudrate;
 	if ((real_baudrate = set_baudrate(baudrate)) < 0)
 	{
@@ -344,6 +345,22 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 	
 	printf("ublox GPS initialized in %d us, baudrate set to %d.\n", int(t), real_baudrate);
 	return 0;
+}
+
+UartUbloxBinaryGPS::UartUbloxBinaryGPS()
+:UartUbloxNMEAGPS()
+{
+	state = wait_for_ubx_header;
+}
+
+UartUbloxBinaryGPS::~UartUbloxBinaryGPS()
+{
+
+}
+
+int init(HAL::IUART *uart, int baudrate)
+{
+	return -1;
 }
 
 }

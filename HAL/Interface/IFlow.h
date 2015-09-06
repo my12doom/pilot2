@@ -11,7 +11,7 @@ namespace sensors
 		int16_t flow_comp_m_x;// x velocity*1000 [meters/sec]
 		int16_t flow_comp_m_y;// y velocity*1000 [meters/sec]
 		int16_t qual;// Optical flow quality / confidence [0: bad, 255: maximum quality]
-		int16_t gyro_x_rate; // latest gyro x rate [rad/sec]
+		uint16_t cmos_version;
 		int16_t gyro_y_rate; // latest gyro y rate [rad/sec]
 		int16_t gyro_z_rate; // latest gyro z rate [rad/sec]
 		uint8_t gyro_range; // gyro range [0 .. 7] equals [50 deg/sec .. 2000 deg/sec] 

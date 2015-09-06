@@ -30,9 +30,9 @@ typedef struct
 {
 	int pressure;					// 4 byte
 	unsigned short temperature;		// 2 byte
-	short estAccGyro[3];			// 6 byte
-	short estGyro[3];				// 6 byte
-	short estMagGyro[3];			// 6 byte
+	short gyro[3];					// 6 byte, calibrated gyro, centi-degree/s
+	short accel[3];					// 6 byte, calibrated accel, milli-meter/s^2
+	short mag[3];					// 6 byte, calibrated mag, 0.1 milli-gauss
 } imu_data;
 
 typedef struct
@@ -247,6 +247,12 @@ typedef struct
 
 typedef struct
 {
+	short pid[2][3];
+
+} flow_data;
+
+typedef struct
+{
 	int64_t time;			// 8 byte, the top 1byte is tag
 	union
 	{
@@ -303,6 +309,7 @@ typedef struct
 #define TAG_MAG_COLLECTING_DATA 0x48
 #define TAG_MOBILE_DATA 0x49
 #define TAG_QUADCOPTER_DATA5	0x4A
+#define TAG_FLOW_DATA	0x4B
 
 #define TAG_PILOT_DATA	0x65
 #define TAG_PILOT_DATA2	0x66

@@ -18,6 +18,8 @@ extern pos_estimator estimator;
 
 #define SIGNATURE_ADDRESS 0x0800E800
 
+void reset_mag_cal();
+
 static int min(int a, int b)
 {
 	return a>b?b:a;
@@ -288,8 +290,8 @@ extern "C" int parse_command_line(const char *line, char *out)
 			{
 				for(k=0; k<3; k++)
 				{
-					volatile int t = imu_statics[i][j].array[k] * 1000.0f / (j==3?avg_count:1);
-					count += sprintf(out+count, "%d.%03d,",  t/1000,  t%1000);
+					volatile int t = imu_statics[i][j].array[k] * 10000.0f / (j==3?avg_count:1);
+					count += sprintf(out+count, "%d.%04d,",  t/10000,  abs(t%10000));
 					//if (count > 256)
 					//	return count;
 				}
@@ -367,6 +369,63 @@ extern "C" int parse_command_line(const char *line, char *out)
 		rom_crc = 0;
 		rom_crc.save();
 		rom_size.save();
+	}
+
+	else if (strstr(line, "accel_cal") == line)
+	{
+
+	}
+	else if (strstr(line, "accel_cal_state") == line)
+	{
+		
+	}
+	else if (strstr(line, "mag_cal") == line)
+	{
+		reset_mag_cal();
+	}
+	else if (strstr(line, "mag_cal_state") == line)
+	{
+		extern int mag_calibration_state;
+		sprintf(out, "%d\n", mag_calibration_state);
+		
+		return strlen(out);
+	}
+	else if (strstr(line, "reading") == line)
+	{
+		extern sensors::px4flow_frame frame;
+		extern vector accel;
+		extern vector gyro_reading;
+		extern vector mag;
+		extern float a_raw_pressure;
+		extern float a_raw_temperature;
+
+		
+		sprintf(out, 
+			"%d,%d"			// sonar, flow
+			"%d,%d,%d,"		// accel 
+			"%d,%d,%d,"		// gyro
+			"%d,%d,%d,"		// mag
+			"%d, %d\n",		// baro, baro temperature
+
+			123, -5,		// sonar, flow
+			1,2,1000,		// accel 
+			2,3,5,			// gyro
+			50,60,400,		// mag
+			115200, 30000	// baro
+			);
+
+		return strlen(out);
+	}
+	else if (strstr(line, "selftest") == line)
+	{
+		extern sensors::px4flow_frame frame;
+		extern int critical_errors;
+		extern float voltage;
+		int flow_count = manager.get_flow_count();
+		
+		sprintf(out, "%d,%d,%d\n", critical_errors, int(voltage*1000), (flow_count>0 && frame.cmos_version == 0x1324) ? 1 : 0);
+		
+		return strlen(out);
 	}
 	
 	return 0;

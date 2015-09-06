@@ -23,9 +23,13 @@ void init_led()
 	static F4GPIO f4gpioC5(GPIOC,GPIO_Pin_5);
 	static GPIOLED led_green(&f4gpioC5);
 	static RGBLED rgb;
+	static F4GPIO f4gpioC0(GPIOC,GPIO_Pin_0);	
+	static GPIOLED flashlight(&f4gpioC0, true);
+	
 	
 	manager.register_LED("SD",&led_red);
 	manager.register_LED("state",&led_green);
+	manager.register_LED("flashlight",&flashlight);
 	manager.register_RGBLED("rgb", &rgb);
 }
 
@@ -202,7 +206,7 @@ int init_external_compass()
 		hmc5983.init(&i2c);
 		hmc5983.axis_config(0, 2, 1, +1, +1, +1);
 
-		manager.register_magnetometer(&hmc5983);
+		//manager.register_magnetometer(&hmc5983);
 	}
 
 	return 0;	
@@ -292,7 +296,7 @@ int bsp_init_all()
 	init_uart1();
 	init_RC();
 	init_sensors();
-//	init_external_compass();
+	init_external_compass();
 	init_asyncworker();
 	init_led();
 	init_flow();

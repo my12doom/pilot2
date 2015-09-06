@@ -13,14 +13,15 @@ namespace devices
 	class GPIOLED : public ILED
 	{
 	public:
-		GPIOLED(HAL::IGPIO *gpio){init(gpio);}
+		GPIOLED(HAL::IGPIO *gpio, bool pushpull=false){init(gpio, pushpull);}
 		GPIOLED(){}
 		~GPIOLED(){}
-		void init(HAL::IGPIO *gpio){gpio->set_mode(HAL::MODE_OUT_OpenDrain);this->gpio=gpio;}
-		virtual void on(){gpio->write(false);}
-		virtual void off(){gpio->write(true);}
+		void init(HAL::IGPIO *gpio, bool pushpull=false){gpio->set_mode(pushpull?HAL::MODE_OUT_PushPull:HAL::MODE_OUT_OpenDrain);this->gpio=gpio;this->pushpull=pushpull;}
+		virtual void on(){gpio->write(false^pushpull);}
+		virtual void off(){gpio->write(true^pushpull);}
 		virtual void toggle(){gpio->toggle();}
 	private:
 		HAL::IGPIO *gpio;
+		bool pushpull;
 	};
 }

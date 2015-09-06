@@ -39,7 +39,7 @@ namespace STM32F4
 		GPIO_InitStructure.GPIO_Pin = (1 << (ADC_Channel%8));
 		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AIN;
 		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-		GPIO_Init(ADC_Channel>8?GPIOB:GPIOA, &GPIO_InitStructure);
+		GPIO_Init(ADC_Channel>=8?GPIOB:GPIOA, &GPIO_InitStructure);
 		ADC_RegularChannelConfig(ADCx, ADC_Channel, 1, ADC_SampleTime_480Cycles);	
 		return 1;
 	}

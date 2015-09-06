@@ -30,6 +30,7 @@ static const char * critical_error_desc[] =
 	"error_magnet",
 	"error_baro",
 	"error_RC",
+	"error_GPS",
 	"error_MAX",
 };
 
@@ -53,6 +54,7 @@ enum critical_error
 	error_magnet = 4,
 	error_baro = 8,
 	error_RC = 16,
+	error_GPS = 32,
 	error_MAX,
 } ;
 

@@ -70,4 +70,23 @@ namespace sensors
 		ubx_packet _packet;
 		int current_baudrate;
 	};
+
+	enum receiver_state
+	{
+		wait_for_ubx_header,
+		wait_for_packet_header,
+		wait_for_content,
+	};
+
+	class UartUbloxBinaryGPS : public UartUbloxNMEAGPS
+	{
+	public:
+		UartUbloxBinaryGPS();
+		~UartUbloxBinaryGPS();
+
+		int init(HAL::IUART *uart, int baudrate);
+
+	protected:
+		receiver_state state;
+	};
 }
