@@ -1,5 +1,5 @@
 #Frames of Reference
-This page gives an overview of the different frames used in the PX4 firmware.
+This page gives an overview of the different frames used in the pilot firmware.
 #Coordinate Systems
 
 ##Geographic Coordinate System
