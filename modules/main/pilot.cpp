@@ -184,6 +184,7 @@ void STOP_ALL_MOTORS()
 int handle_uart4_cli();
 int handle_uart4_controll();
 int handle_wifi_controll();
+int finish_accel_cal();
 
 // states
 static bool rc_fail = false;
@@ -933,6 +934,7 @@ int read_sensors()
 			}
 		}
 	}
+	finish_accel_cal();
 
 	// statics
 	for(int i=0; i<3; i++)
@@ -1329,19 +1331,37 @@ void reset_mag_cal()
 	mag_calibration_state = 1;
 }
 
+bool acc_cal_done = false; 
 void reset_accel_cal()
 {
 	memset(acc_avg_count, 0, sizeof(acc_avg_count));
+	acc_cal_done = false;
 }
 
 int finish_accel_cal()
 {
+	if (acc_cal_done)
+		return 0;
 
 	for(int i=0; i<6; i++)
 		if (acc_avg_count[i] < 100)
 			return -(i+1);
 
 	// TODO: calculate
+	gauss_newton_sphere_fitting fitter;
+	float data[6*3];
+	for(int i=0; i<6; i++)
+	{
+		data[i*3+0] = acc_calibrator[i].array[0];
+		data[i*3+1] = acc_calibrator[i].array[1];
+		data[i*3+2] = acc_calibrator[i].array[2];
+	}
+
+	fitter.calculate(data, 6);
+	fitter.get_result(data);	// bias[0~2], scale[0~2]
+
+	LOGE("acc bias: %.3f, %.3f, %.3f, scale: %.3f, %.3f, %.3f\n", data[0], data[1], data[2], data[3], data[4], data[5]);
+	acc_cal_done = true;
 
 	return 0;
 }
