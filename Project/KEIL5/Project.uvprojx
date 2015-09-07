@@ -885,11 +885,6 @@
               <FilePath>..\..\modules\Algorithm\pos_estimator.cpp</FilePath>
             </File>
             <File>
-              <FileName>ahrs2.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\modules\Algorithm\ahrs2.cpp</FilePath>
-            </File>
-            <File>
               <FileName>mag_calibration.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\Algorithm\mag_calibration.cpp</FilePath>
@@ -898,6 +893,11 @@
               <FileName>attitude_controller.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\modules\Algorithm\attitude_controller.h</FilePath>
+            </File>
+            <File>
+              <FileName>motion_detector.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\motion_detector.cpp</FilePath>
             </File>
           </Files>
         </Group>

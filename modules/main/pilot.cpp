@@ -20,6 +20,7 @@
 #include <Algorithm/pos_controll.h>
 #include <Algorithm/of_controller.h>
 #include <Algorithm/mag_calibration.h>
+#include <Algorithm/motion_detector.h>
 
 #include <HAL/Interface/Interfaces.h>
 #include <HAL/Resources.h>
@@ -272,7 +273,9 @@ volatile vector imu_statics[3][4] = {0};		//	[accel, gyro, mag][min, current, ma
 int avg_count = 0;
 sensors::px4flow_frame frame;
 int loop_hz = 0;
-
+vector acc_calibrator[6];						// accelerometer calibration data array.
+int acc_avg_count[6] = {0};						// accelerometer calibration average counter.
+motion_detector motion_acc;
 bool islanding = false ;
 int calculate_baro_altitude()
 {
@@ -901,6 +904,36 @@ int read_sensors()
 		vector_add(&::accel, &acc);
 	}
 
+	// motion detector
+	motion_acc.new_data(accel);
+	if (motion_acc.get_average(NULL) > 100)
+	{
+		vector avg;
+		int avg_counter = motion_acc.get_average(&avg);
+		int i = -1;
+		if (avg.array[0] < -8.5f)			// 3 times of datasheet "typical" zero G output, +-150mg for XY, +-280mg for Z.
+			i = 0;
+		else if (avg.array[0] > 8.5f)
+			i = 1;
+		else if (avg.array[1] < -8.5f)
+			i = 2;
+		else if (avg.array[1] > 8.5f)
+			i = 3;
+		else if (avg.array[2] < -7.2f)
+			i = 4;
+		else if (avg.array[2] > 7.2f)
+			i = 5;
+
+		if (i>=0 && i<6)
+		{
+			if (avg_counter > acc_avg_count[i])
+			{
+				acc_avg_count[i] = avg_counter;
+				acc_calibrator[i] = avg;
+			}
+		}
+	}
+
 	// statics
 	for(int i=0; i<3; i++)
 	{
@@ -954,7 +987,7 @@ int calculate_state()
 
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
 	TRACE("mag_size:%.3f, %.0f, %.0f, %.0f    \n", mag_size, mag.array[0], mag.array[1], mag.array[2]);
-	LOGE("euler:%.2f,%.2f,%.2f, time:%f, bias:%.2f/%.2f/%.2f, pressure=%.2f \n ", euler[0]*PI180, euler[1]*PI180, euler[2]*PI180, systimer->gettime()/1000000.0f, gyro_bias[0]*PI180, gyro_bias[1]*PI180, gyro_bias[2]*PI180, a_raw_pressure);
+	TRACE("euler:%.2f,%.2f,%.2f, time:%f, bias:%.2f/%.2f/%.2f, pressure=%.2f \n ", euler[0]*PI180, euler[1]*PI180, euler[2]*PI180, systimer->gettime()/1000000.0f, gyro_bias[0]*PI180, gyro_bias[1]*PI180, gyro_bias[2]*PI180, a_raw_pressure);
 
 	for(int i=0; i<3; i++)
 		accel_earth_frame.array[i] = acc_ned[i];
@@ -1061,14 +1094,71 @@ int sensor_calibration()
 	}
 
 	// static base value detection
+	motion_detector detect_acc;
+	motion_detector detect_gyro;
 	vector mag_avg = {0};
-	vector accel_avg = {0};
-	vector gyro_avg = {0};
+	//vector accel_avg = {0};
+	//vector gyro_avg = {0};
+	
+	motion_acc.set_threshold(1);
+	detect_acc.set_threshold(1);
+	detect_gyro.set_threshold(5 * PI / 180);
+
 
 	int baro_counter = 0;
 	ground_pressure = 0;
 	int calibrating_count = 900;
 	ground_temperature = 0;
+	
+	while(detect_acc.get_average(NULL) < calibrating_count && detect_gyro.get_average(NULL) < calibrating_count)
+	{
+		read_sensors();
+		if (critical_errors)
+			return -2;
+		if (detect_gyro.new_data(gyro_reading))
+			return -1;
+		if (detect_acc.new_data(accel))
+			return -1;
+		systimer->delayus(3000);
+
+		LOGE("\r%d/%d", detect_acc.get_average(NULL), calibrating_count);
+
+		vector_add(&mag_avg, &mag);
+		if (new_baro_data)
+		{
+			baro_counter ++;
+			ground_pressure += a_raw_pressure;
+			ground_temperature += a_raw_temperature;
+		}
+		
+		if ((systimer->gettime()/1000)%50 > 25)
+			led_all_on();
+		else
+			led_all_off();
+
+		if (rgb)
+		{
+			float color[5][3] = 
+			{
+				{1,0,0},
+				{0,1,0},
+				{0,0,1},
+				{0.2,0,1},
+				{0.2,1,0},
+			};
+
+			int i = (systimer->gettime() / 150000) % 5;
+			rgb->write(color[i][0], color[i][01], color[i][2]);
+		}
+	}
+	
+	vector_divide(&mag_avg, calibrating_count);
+	ground_pressure /= baro_counter;
+	ground_temperature /= baro_counter;
+
+	LOGE("base value measured\n");
+	
+	/*
 	for(int i=0; i<calibrating_count; i++)
 	{
 		long us = systimer->gettime();
@@ -1124,23 +1214,24 @@ int sensor_calibration()
 		while(systimer->gettime() - us < 3000)
 			;
 	}
+	*/
 
-	vector_divide(&accel_avg, calibrating_count);
-	vector_divide(&mag_avg, calibrating_count);
-	vector_divide(&gyro_avg, calibrating_count);
-//	mpu6050_temperature /= calibrating_count;
-	ground_pressure /= baro_counter;
-	ground_temperature /= baro_counter;
 
-	LOGE("base value measured\n");
 
 	// init ahrs
+	/*
 	vector mwc_acc = {accel_avg.V.y, -accel_avg.V.x, -accel_avg.V.z};
 	float mwc_gyro[3] = {gyro_avg.array[0], gyro_avg.array[1], -gyro_avg.array[2]};
 	float mwc_mag[3] = {mag_avg.V.y, -mag_avg.V.x, -mag_avg.V.z};
 	vector_multiply(&mwc_acc, 1.0f/G_in_ms2);
 
-//	ahrs_mwc_init(gyro_avg, accel_avg, mag_avg);
+	ahrs_mwc_init(gyro_avg, accel_avg, mag_avg);
+	*/
+	
+	vector accel_avg;
+	vector gyro_avg;
+	detect_gyro.get_average(&gyro_avg);
+	detect_acc.get_average(&accel_avg);
 
 	NonlinearSO3AHRSinit(accel_avg.V.x, accel_avg.V.y, accel_avg.V.z, 
 		mag_avg.V.x, mag_avg.V.y, mag_avg.V.z, 
@@ -1240,6 +1331,19 @@ void reset_mag_cal()
 
 void reset_accel_cal()
 {
+	memset(acc_avg_count, 0, sizeof(acc_avg_count));
+}
+
+int finish_accel_cal()
+{
+
+	for(int i=0; i<6; i++)
+		if (acc_avg_count[i] < 100)
+			return -(i+1);
+
+	// TODO: calculate
+
+	return 0;
 }
 
 int check_mode()
