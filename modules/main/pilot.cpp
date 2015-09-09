@@ -39,7 +39,8 @@ ILED *flashlight;
 IRCIN *rcin;
 IRCOUT *rcout;
 IRGBLED *rgb;
-int mag_calibration_state = 0;		// 0: not running, 1: collecting data, 2: calibrating
+int mag_calibration_state = 0;			// 0: not running, 1: collecting data, 2: calibrating
+int last_mag_calibration_result = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
 mag_calibration mag_calibrator;
 
 extern "C"
@@ -187,6 +188,7 @@ int handle_wifi_controll();
 int finish_accel_cal();
 
 // states
+bool motor_saturated = false;
 static bool rc_fail = false;
 int round_running_time = 0;
 devices::gps_data gps;
@@ -276,7 +278,7 @@ sensors::px4flow_frame frame;
 int loop_hz = 0;
 vector acc_calibrator[6];						// accelerometer calibration data array.
 int acc_avg_count[6] = {0};						// accelerometer calibration average counter.
-motion_detector motion_acc;
+motion_detector motion_acc;						// motion detector for accelerometer calibration.
 bool islanding = false ;
 int calculate_baro_altitude()
 {
@@ -457,6 +459,7 @@ int run_controllers()
 int output()
 {
 	float pid_result[3];
+	motor_saturated = false;
 	attitude_controller.get_result(pid_result);
 	if (mode == quadcopter || (mode == _rc_fail) )
 	{
@@ -905,8 +908,8 @@ int read_sensors()
 		vector_add(&::accel, &acc);
 	}
 
-	// motion detector
-	motion_acc.new_data(accel);
+	// accelerometer motion detector and calibration.
+	motion_acc.new_data(accel_uncalibrated);
 	if (motion_acc.get_average(NULL) > 100)
 	{
 		vector avg;
@@ -1331,23 +1334,25 @@ void reset_mag_cal()
 	mag_calibration_state = 1;
 }
 
-bool acc_cal_done = false; 
+bool acc_cal_requested = false;
+bool acc_cal_done = false;
 void reset_accel_cal()
 {
 	memset(acc_avg_count, 0, sizeof(acc_avg_count));
+	acc_cal_requested = true;
 	acc_cal_done = false;
 }
 
 int finish_accel_cal()
 {
-	if (acc_cal_done)
+	if (!acc_cal_requested || acc_cal_done)
 		return 0;
 
 	for(int i=0; i<6; i++)
 		if (acc_avg_count[i] < 100)
 			return -(i+1);
 
-	// TODO: calculate
+	// calculate
 	gauss_newton_sphere_fitting fitter;
 	float data[6*3];
 	for(int i=0; i<6; i++)
@@ -1359,6 +1364,25 @@ int finish_accel_cal()
 
 	fitter.calculate(data, 6);
 	fitter.get_result(data);	// bias[0~2], scale[0~2]
+
+	data[3] *= G_in_ms2;
+	data[4] *= G_in_ms2;
+	data[5] *= G_in_ms2;
+	
+	// apply and save
+	acc_bias[0] = data[0];
+	acc_bias[1] = data[1];
+	acc_bias[2] = data[2];
+	acc_scale[0] = data[3];
+	acc_scale[1] = data[4];
+	acc_scale[2] = data[5];
+
+	acc_bias[0].save();
+	acc_bias[1].save();
+	acc_bias[2].save();
+	acc_scale[0].save();
+	acc_scale[1].save();
+	acc_scale[2].save();
 
 	LOGE("acc bias: %.3f, %.3f, %.3f, scale: %.3f, %.3f, %.3f\n", data[0], data[1], data[2], data[3], data[4], data[5]);
 	acc_cal_done = true;
@@ -1425,6 +1449,7 @@ int check_mode()
 
 		// arm action check: RC first four channel active, throttle minimum, elevator stick down, rudder max or min, aileron max or min, for 0.5second
 		static int64_t arm_start_tick = 0;
+		static int64_t arm_command_sent = false;
 		bool rc_fail = false;
 		for(int i=0; i<4; i++)
 			if (g_pwm_input_update[i] < systimer->gettime() - 500000)
@@ -1434,15 +1459,26 @@ int check_mode()
 		if (!arm_action)
 		{
 			arm_start_tick = 0;
+			arm_command_sent = false;
 		}
 		else
 		{
-			if (arm_start_tick > 0)
+			if (arm_start_tick > 0 && !arm_command_sent)
 			{
 				if (systimer->gettime() - arm_start_tick > 500000)
 				{
-					set_mode(quadcopter);
-					LOGE("armed!\n");
+					arm_command_sent = true;
+					
+					if (mode == quadcopter)
+					{
+						set_mode(_shutdown);
+						LOGE("disarmed!\n");
+					}
+					else
+					{
+						set_mode(quadcopter);
+						LOGE("armed!\n");
+					}
 				}
 			}
 			else
@@ -1857,15 +1893,20 @@ int read_rc()
 	return 0;
 }
 
+int light_words()
+{
+	return 0;
+}
+
 void mag_calibrating_worker(int parameter)
 {
 	mag_calibrator.do_calibration();
 	mag_calibration_result result;
-	int res = mag_calibrator.get_result(&result);	
-	LOGE("result:%d, bias:%f,%f,%f, scale:%f,%f,%f\n, residual:%f/%f", res, result.bias[0], result.bias[1], result.bias[2], result.scale[0], result.scale[1], result.scale[2], result.residual_average, result.residual_max);
+	last_mag_calibration_result = mag_calibrator.get_result(&result);
+	LOGE("result:%d, bias:%f,%f,%f, scale:%f,%f,%f\n, residual:%f/%f", last_mag_calibration_result, result.bias[0], result.bias[1], result.bias[2], result.scale[0], result.scale[1], result.scale[2], result.residual_average, result.residual_max);
 	
 	// do checks and flash RGB LED if error occured
-	if (res == 0)
+	if (last_mag_calibration_result == 0)
 	{
 		LOGE("mag calibration success\n");
 		
@@ -1915,7 +1956,7 @@ void mag_calibrating_worker(int parameter)
 		result.residual_average * 1000,
 		result.residual_max * 1000,
 		result.residual_min * 1000,
-		res,
+		last_mag_calibration_result,
 		result.num_points_collected,
 	};
 
@@ -1925,7 +1966,7 @@ void mag_calibrating_worker(int parameter)
 		LOGE("writing log failed");// retry
 
 	// ends
-	mag_calibration_state = 0;	
+	mag_calibration_state = 0;
 }
 
 void main_loop(void)

@@ -6,6 +6,7 @@
 #include "space.h"
 #include <math.h>
 #include <Algorithm/pos_estimator.h>
+#include <Algorithm/mag_calibration.h>
 #include <HAL/resources.h>
 #include <Protocol/crc32.h>
 
@@ -19,6 +20,7 @@ extern pos_estimator estimator;
 #define SIGNATURE_ADDRESS 0x0800E800
 
 void reset_mag_cal();
+void reset_accel_cal();
 
 static int min(int a, int b)
 {
@@ -371,23 +373,58 @@ extern "C" int parse_command_line(const char *line, char *out)
 		rom_size.save();
 	}
 
-	else if (strstr(line, "accel_cal") == line)
-	{
-
-	}
 	else if (strstr(line, "accel_cal_state") == line)
 	{
+		extern int acc_avg_count[6];
+		extern bool acc_cal_requested;
+
+		if (!acc_cal_requested)
+		{
+			sprintf(out, "-1\n");
+		}
+		else
+		{
+			int acc_state = 0;
+			for(int i=0; i<6; i++)
+			{
+				if (acc_avg_count[i] > 100)
+					acc_state |= (1<<i);
+			}
+
+			sprintf(out, "%d\n", acc_state);
+		}
 		
+		return strlen(out);
+	}
+	else if (strstr(line, "accel_cal") == line)
+	{
+		reset_accel_cal();
+
+		strcpy(out, "ok\n");
+
+		return strlen(out);
+	}
+	else if (strstr(line, "mag_cal_state") == line)
+	{
+		extern int mag_calibration_state;				// 0: not running, 1: collecting data, 2: calibrating
+		extern int last_mag_calibration_result;
+		extern mag_calibration mag_calibrator;
+		
+		mag_calibration_stage stage = mag_calibrator.get_stage();		// 	stage_horizontal = 0,	stage_vertical = 1,
+
+		// returns: state, last_result, 
+		//	state: 0 = not running, 1 = horizontal, 2 = vertical.
+		//	result: see mag_calibration.h
+		sprintf(out, "%d,%d\n", mag_calibration_state ? (stage+1) : 0, last_mag_calibration_result);
+		
+		return strlen(out);
 	}
 	else if (strstr(line, "mag_cal") == line)
 	{
 		reset_mag_cal();
-	}
-	else if (strstr(line, "mag_cal_state") == line)
-	{
-		extern int mag_calibration_state;
-		sprintf(out, "%d\n", mag_calibration_state);
-		
+
+		strcpy(out, "ok\n");
+
 		return strlen(out);
 	}
 	else if (strstr(line, "reading") == line)
@@ -401,17 +438,17 @@ extern "C" int parse_command_line(const char *line, char *out)
 
 		
 		sprintf(out, 
-			"%d,%d"			// sonar, flow
+			"%d,%d,%d,%d,"	// sonar, flow, flow quality
 			"%d,%d,%d,"		// accel 
 			"%d,%d,%d,"		// gyro
 			"%d,%d,%d,"		// mag
 			"%d, %d\n",		// baro, baro temperature
 
-			123, -5,		// sonar, flow
-			1,2,1000,		// accel 
-			2,3,5,			// gyro
-			50,60,400,		// mag
-			115200, 30000	// baro
+			frame.ground_distance, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.qual,								// sonar, flow, flow quality
+			int(accel.array[0]*1000), int(accel.array[1]*1000), int(accel.array[2]*1000),									// accel 
+			int(gyro_reading.array[0]*18000/PI), int(gyro_reading.array[1]*18000/PI), int(gyro_reading.array[2]*18000/PI),	// gyro
+			int(mag.array[0]), int(mag.array[1]), int(mag.array[2]),												// mag
+			int(a_raw_pressure), int(a_raw_temperature*100.0f)																		// baro
 			);
 
 		return strlen(out);
@@ -422,8 +459,9 @@ extern "C" int parse_command_line(const char *line, char *out)
 		extern int critical_errors;
 		extern float voltage;
 		int flow_count = manager.get_flow_count();
+		int cmos_version_ok = frame.cmos_version == 0x1324;
 		
-		sprintf(out, "%d,%d,%d\n", critical_errors, int(voltage*1000), (flow_count>0 && frame.cmos_version == 0x1324) ? 1 : 0);
+		sprintf(out, "%d,%d,%d\n", critical_errors, int(voltage*1000), flow_count <= 0 ? -1 : (cmos_version_ok ? 0 : -2));
 		
 		return strlen(out);
 	}
