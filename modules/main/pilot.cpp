@@ -207,7 +207,9 @@ copter_mode submode = basic;
 int64_t collision_detected = 0;	// remember to clear it before arming
 int64_t tilt_us = 0;	// remember to clear it before arming
 bool gyro_bias_estimating_end = false;
-vector gyro_reading;			// gyro reading with temperature compensation, without AHRS bias estimating
+static const int lpf_order = 5;
+vector gyro_lpf[lpf_order];		// variable for high order low pass filter, [order]
+vector gyro_reading;			// gyro reading with temperature compensation and LPF, without AHRS bias estimating
 vector body_rate;				// body rate, with all compensation applied
 vector accel = {NAN, NAN, NAN};
 vector mag;
@@ -500,6 +502,10 @@ int output()
 				TRACE("\rpid[x] = %f, %f, %f", pid[0], pid[1], pid[2]);
 				throttle_real += mix;
 			}
+
+			// placebo motor saturation detector.
+			if (g_ppm_output[i] <= THROTTLE_IDLE+20 || g_ppm_output[i] >= THROTTLE_MAX-20)
+				motor_saturated = true;
 		}
 		throttle_real /= motor_count;
 	}
@@ -802,7 +808,18 @@ int read_sensors()
 	acc.V.z /= healthy_acc_count;
 	
 	// TODO: apply a high order LPF to gyro readings
-	::gyro_reading = gyro;
+	float alpha40 = interval / (interval + 1.0f/(2*PI * 40.0f));
+	for(int j=0; j<lpf_order; j++)
+	{
+		// gyro_lpf[j] = gyro_lpf[j] * (1-alpha40) + alpha40 * (j==0?reading:gyro_lpf[j-1]);
+		vector_multiply(&gyro_lpf[j], 1-alpha40);
+		vector b = j==0 ? gyro : gyro_lpf[j-1];
+		vector_multiply(&b, alpha40);
+		vector_add(&gyro_lpf[j], &b);
+	}
+	::gyro_reading = gyro_lpf[lpf_order-1];
+
+	//::gyro_reading = gyro;
 
 	// read magnetometers
 	int healthy_mag_count = 0;
