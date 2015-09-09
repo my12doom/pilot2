@@ -178,22 +178,12 @@ DRESULT disk_ioctl (
 	return RES_OK;
 }
 
-DWORD make_fattime(int sec, int min, int hour, int day, int mon, int year)
-{
-return ((year+1900-1980) << 25)
-| ((mon+1) << 21)
-| ((day) << 16)
-| ((hour) << 11)
-| ((min) << 5)
-| ((sec) << 1)
-;
-	
-}
 
+
+	/*
 DWORD get_fattime(void)
 {
 	return 0;
-	/*
 	time_t current_time;
 	nmeaINFO *info = GPS_GetInfo();
 	nmeaTIME *time =  info->utc2.year == 0 ? &info->utc : &info->utc2;
@@ -212,8 +202,8 @@ DWORD get_fattime(void)
 	_tm = *localtime(&current_time);
 	
 	return make_fattime(_tm.tm_sec, _tm.tm_min, _tm.tm_hour, _tm.tm_mday, _tm.tm_mon, _tm.tm_year);
-	*/
 }
+	*/
 
 
 void SDIO_IRQHandler(void)

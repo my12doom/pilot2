@@ -1,6 +1,7 @@
 #include "UartNMEAGPS.h"
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 namespace sensors
 {
@@ -67,7 +68,6 @@ int UartNMEAGPS::read(devices::gps_data *data)
 	}
 	
 	// copy from info
-	data->timestamp = 0;						// TODO: unix timestamp
 	data->longitude = NDEG2DEG(info.lon);		// longitude in degree
 	data->latitude = NDEG2DEG(info.lat);		// latitude in degree
 	data->speed = info.speed / 3.6f;			// unit: meter/s
@@ -82,6 +82,17 @@ int UartNMEAGPS::read(devices::gps_data *data)
 	data->fix = info.fix;						// Operating mode, used for navigation (1 = Fix not available; 2 = 2D; 3 = 3D)
 	data->declination = info.declination * 100.0f;// Magnetic variation in 0.01 degrees (Easterly var. subtracts from true course)
 
+	struct tm _tm;	
+	_tm.tm_sec = info.utc2.sec;
+	_tm.tm_min = info.utc2.min;
+	_tm.tm_hour = info.utc2.hour;
+	_tm.tm_mday = info.utc2.day;
+	_tm.tm_mon = info.utc2.mon;
+	_tm.tm_year = info.utc2.year;	
+	
+	data->timestamp = mktime(&_tm);
+	data->timestamp += info.utc2.zone_hour * 3600;
+	
 	return return_value;
 }
 

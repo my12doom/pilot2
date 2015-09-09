@@ -221,7 +221,7 @@ vector accel_earth_frame_mwc;
 vector accel_earth_frame;
 vector mag_earth_frame;
 bool new_baro_data = false;
-int64_t time;
+int64_t systime;
 
 int64_t last_tick = 0;
 int64_t last_gps_tick = 0;
@@ -240,7 +240,6 @@ float voltage = 0;
 float current = 0;
 float interval = 0;
 
-int64_t last_rc_work = 0;
 float yaw_launch;
 
 float a_raw_pressure = 0;
@@ -258,8 +257,6 @@ float wh_consumed = 0;
 float sonar_distance = NAN;
 int64_t last_sonar_time = 0;
 
-short adxrs453_value = 0;
-short mpu9250_value[7] = {0};
 bool has_5th_channel = true;
 bool has_6th_channel = true;
 
@@ -533,7 +530,7 @@ int save_logs()
 		return -1;
 
 	// send/store debug data
-	time = systimer->gettime();
+	systime = systimer->gettime();
 	sensor_data sensor =
 	{
 		{mag_uncalibrated.array[0] * 10, mag_uncalibrated.array[1] * 10, mag_uncalibrated.array[2] * 10},
@@ -543,7 +540,7 @@ int save_logs()
 		voltage * 1000,
 		current * 1000,
 	};
-	log(&sensor, TAG_SENSOR_DATA, time);
+	log(&sensor, TAG_SENSOR_DATA, systime);
 
 	imu_data imu = 
 	{
@@ -554,8 +551,8 @@ int save_logs()
 		{accel.array[0] * 100, accel.array[1] * 100, accel.array[2] * 100},
 		{mag.array[0] * 10, mag.array[1] * 10, mag.array[2] * 10},
 	};
-	log(&imu, TAG_IMU_DATA, time);
-	log(&frame, TAG_PX4FLOW_DATA, time);
+	log(&imu, TAG_IMU_DATA, systime);
+	log(&frame, TAG_PX4FLOW_DATA, systime);
 	
 	position p = estimator.get_estimation();
 	ned_data ned = 
@@ -568,7 +565,7 @@ int save_logs()
 		error_lon : estimator.error_lon_meter,
 	};
 
-	log(&ned, TAG_NED_DATA, time);
+	log(&ned, TAG_NED_DATA, systime);
 
 
 	pilot_data pilot = 
@@ -581,7 +578,7 @@ int save_logs()
 		mah_consumed,
 	};
 
-	log(&pilot, TAG_PILOT_DATA, time);
+	log(&pilot, TAG_PILOT_DATA, systime);
 
 	pilot_data2 pilot2 = 
 	{
@@ -589,7 +586,7 @@ int save_logs()
 		{attitude_controller.pid[0][2]*180*100/PI, attitude_controller.pid[1][2]*180*100/PI, attitude_controller.pid[2][2]*180*100/PI},
 	};
 
-	log(&pilot2, TAG_PILOT_DATA2, time);
+	log(&pilot2, TAG_PILOT_DATA2, systime);
 
 	ppm_data ppm = 
 	{
@@ -597,7 +594,7 @@ int save_logs()
 		{g_ppm_output[0], g_ppm_output[1], g_ppm_output[2], g_ppm_output[3], g_ppm_output[4], g_ppm_output[5]},
 	};
 
-	log(&ppm, TAG_PPM_DATA, time);
+	log(&ppm, TAG_PPM_DATA, systime);
 
 	quadcopter_data quad = 
 	{
@@ -607,7 +604,7 @@ int save_logs()
 		attitude_controller.body_rate_sp[0] * 18000/PI,  attitude_controller.body_rate_sp[1] * 18000/PI, attitude_controller.body_rate_sp[2] * 18000/PI, 
 	};
 
-	log(&quad, TAG_QUADCOPTER_DATA, time);
+	log(&quad, TAG_QUADCOPTER_DATA, systime);
 
 
 	quadcopter_data2 quad2 = 
@@ -625,7 +622,7 @@ int save_logs()
 		{gyro_bias[0] * 1800000/PI, gyro_bias[1] * 1800000/PI, gyro_bias[2] * 1800000/PI,}
 	};
 
-	log(&quad2, TAG_QUADCOPTER_DATA2, time);
+	log(&quad2, TAG_QUADCOPTER_DATA2, systime);
 
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
 	float erra = err_a[0] * err_a[0] + err_a[1] * err_a[1] + err_a[2] * err_a[2];
@@ -642,7 +639,7 @@ int save_logs()
 		acc_horizontal[1] * 1000,
 		{erra * 18000/PI, errm * 18000/PI, err_a[2] * 18000/PI},
 	};
-	log(&quad4, TAG_QUADCOPTER_DATA4, time);
+	log(&quad4, TAG_QUADCOPTER_DATA4, systime);
 
 	extern uint32_t lost1;
 	extern uint32_t lost2;
@@ -653,7 +650,7 @@ int save_logs()
 		lost2,
 		round_running_time,
 	};
-	log(&quad5, TAG_QUADCOPTER_DATA5, time);
+	log(&quad5, TAG_QUADCOPTER_DATA5, systime);
 
 	quadcopter_data3 quad3 = 
 	{
@@ -671,7 +668,7 @@ int save_logs()
 		alt_controller.accel_error_pid[1]*1000,
 	};
 
-	log(&quad3, TAG_QUADCOPTER_DATA3, time);
+	log(&quad3, TAG_QUADCOPTER_DATA3, systime);
 
 	// pos controller data1
 	pos_controller_data pc = 
@@ -685,7 +682,7 @@ int save_logs()
 		controller.velocity[0]*1000,
 		controller.velocity[1]*1000,
 	};
-	log(&pc, TAG_POS_CONTROLLER_DATA1, time);
+	log(&pc, TAG_POS_CONTROLLER_DATA1, systime);
 
 
 	// pos controller data2
@@ -699,7 +696,7 @@ int save_logs()
 		}
 	};
 
-	log(&pc2, TAG_POS_CONTROLLER_DATA2, time);
+	log(&pc2, TAG_POS_CONTROLLER_DATA2, systime);
 
 	if (last_gps_tick > systimer->gettime() - 2000000)
 	{
@@ -714,7 +711,7 @@ int save_logs()
 			gps.direction,
 		};
 
-		log(&data, TAG_GPS_DATA, time);
+		log(&data, TAG_GPS_DATA, systime);
 	}
 
 	rc_mobile_data mobile = 
@@ -722,7 +719,7 @@ int save_logs()
 		{rc_mobile[0] * 1000, rc_mobile[0] * 1000, rc_mobile[0] * 1000, rc_mobile[0] * 1000,},
 		min((systimer->gettime() - mobile_last_update)/1000, 65535),
 	};
-	log(&mobile, TAG_MOBILE_DATA, time);
+	log(&mobile, TAG_MOBILE_DATA, systime);
 	
 	return 0;
 }
@@ -1009,7 +1006,7 @@ int calculate_state()
 
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
 	TRACE("mag_size:%.3f, %.0f, %.0f, %.0f    \n", mag_size, mag.array[0], mag.array[1], mag.array[2]);
-	TRACE("euler:%.2f,%.2f,%.2f, time:%f, bias:%.2f/%.2f/%.2f, pressure=%.2f \n ", euler[0]*PI180, euler[1]*PI180, euler[2]*PI180, systimer->gettime()/1000000.0f, gyro_bias[0]*PI180, gyro_bias[1]*PI180, gyro_bias[2]*PI180, a_raw_pressure);
+	TRACE("euler:%.2f,%.2f,%.2f, systime:%f, bias:%.2f/%.2f/%.2f, pressure=%.2f \n ", euler[0]*PI180, euler[1]*PI180, euler[2]*PI180, systimer->gettime()/1000000.0f, gyro_bias[0]*PI180, gyro_bias[1]*PI180, gyro_bias[2]*PI180, a_raw_pressure);
 
 	for(int i=0; i<3; i++)
 		accel_earth_frame.array[i] = acc_ned[i];
@@ -1053,7 +1050,11 @@ int calculate_state()
 		gps_id++;
 
 		if (gps.fix > 2)
-		estimator.update_gps(COORDTIMES * gps.latitude, COORDTIMES * gps.longitude, gps.DOP[1]/100.0f, systimer->gettime());
+		{
+			estimator.update_gps(COORDTIMES * gps.latitude, COORDTIMES * gps.longitude, gps.DOP[1]/100.0f, systimer->gettime());
+
+			log_set_time(gps.timestamp);
+		}
 
 		float yaw_gps = gps.direction * PI / 180;
 		if (yaw_gps > PI)
@@ -1441,7 +1442,7 @@ int check_mode()
 
 		
 		// emergency switch
-		// magnetometer calibration starts if flip emergency switch 10 times, interval time between each flip should be less than 1 second.
+		// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
 		static float last_ch4 = 0;
 		if (fabs(rc[4]-last_ch4) > 0.20f)
 		{
@@ -1988,7 +1989,7 @@ void mag_calibrating_worker(int parameter)
 
 void main_loop(void)
 {
-	// calculate time interval
+	// calculate systime interval
 	static int64_t tic = 0;
 	int64_t round_start_tick = systimer->gettime();
 	interval = (round_start_tick-last_tick)/1000000.0f;
@@ -2007,7 +2008,7 @@ void main_loop(void)
 	if (systimer->gettime() - tic > 1000000)
 	{
 		tic = systimer->gettime();
-		LOGE("speed: %d, time:%.2f\r\n", cycle_counter, systimer->gettime()/1000000.0f);
+		LOGE("speed: %d, systime:%.2f\r\n", cycle_counter, systimer->gettime()/1000000.0f);
 		loop_hz = cycle_counter;
 		cycle_counter = 0;
 	}
@@ -2016,8 +2017,8 @@ void main_loop(void)
 	if (mag_ok)
 	{
 		// flashlight, tripple flash if SDCARD running, double flash if SDCARD failed
-		time = systimer->gettime();
-		int time_mod_1500 = (time%1500000)/1000;
+		systime = systimer->gettime();
+		int time_mod_1500 = (systime%1500000)/1000;
 		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
 		{
 			if (rgb && mag_calibration_state == 0)
@@ -2034,9 +2035,9 @@ void main_loop(void)
 	else
 	{
 		// fast red flash (10hz) if magnetic interference
-		time = systimer->gettime();
+		systime = systimer->gettime();
 		if (rgb && mag_calibration_state == 0)
-		if (time % 100000 < 50000)
+		if (systime % 100000 < 50000)
 			rgb->write(1,0,0);
 		else
 			rgb->write(0,0,0);
@@ -2129,7 +2130,7 @@ void sdcard_logging_loop(void)
 	starttick = systimer->gettime() - starttick;
 
 	if (starttick > 10000)
-		TRACE("long log time:%d\n", int(starttick));
+		TRACE("long log systime:%d\n", int(starttick));
 
 	if (res == 0)
 		tick = t;

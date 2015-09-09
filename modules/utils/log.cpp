@@ -172,3 +172,44 @@ int log(const void *packet, uint8_t tag, int64_t timestamp)
 
 	return log(&rf, sizeof(rf));
 }
+
+static time_t _unix_time;
+static int64_t sys_time = 0;
+
+// set current UTC.
+int log_set_time(time_t unix_time)				
+{
+	if (sys_time)
+		return 0;
+
+	sys_time = systimer->gettime();
+	_unix_time = unix_time;
+
+	return 0;
+}
+
+DWORD make_fattime(int sec, int min, int hour, int day, int mon, int year)
+{
+return ((year+1900-1980) << 25)
+| ((mon+1) << 21)
+| ((day) << 16)
+| ((hour) << 11)
+| ((min) << 5)
+| ((sec) << 1)
+;
+	
+}
+
+extern "C" DWORD get_fattime(void)
+{
+	if (!sys_time)
+		return 0;
+
+	struct tm _tm;
+	time_t current_time = _unix_time + (systimer->gettime() - sys_time) / 1000000;
+	_tm = *localtime(&current_time);
+	
+	LOGE("\r%d, %d", current_time, _tm.tm_sec);
+	
+	return make_fattime(_tm.tm_sec, _tm.tm_min, _tm.tm_hour, _tm.tm_mday, _tm.tm_mon, _tm.tm_year);
+}
