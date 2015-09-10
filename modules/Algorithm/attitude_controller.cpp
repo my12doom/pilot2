@@ -113,7 +113,7 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 			float new_target = radian_add(euler_sp[2], delta_yaw);
 			float old_error = abs(radian_sub(euler_sp[2], euler[2]));
 			float new_error = abs(radian_sub(new_target, euler[2]));
-			if (new_error < (airborne?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) || new_error < old_error)
+			if (new_error < ((airborne&&!motor_state)?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) || new_error < old_error)	// decrease max allowed yaw offset if any motor saturated
 				euler_sp[2] = new_target;
 		}
 	}
@@ -151,9 +151,13 @@ int attitude_controller::update(float dt)
 		float new_p = body_rate_sp[i] - body_rate[i];
 
 		// I
-		if (airborne)		// only integrate after takeoff
-		pid[i][1] += new_p * dt;
-		pid[i][1] = limit(pid[i][1], -pid_factor[i][3], pid_factor[i][3]);
+		// TODO: handle axies independently.
+		if (airborne)								// only integrate after takeoff
+		if (!motor_state || new_p * pid[i][1] < 0)	// only integrate if no motor is saturated or integration will decrease.
+		{
+			pid[i][1] += new_p * dt;
+			pid[i][1] = limit(pid[i][1], -pid_factor[i][3], pid_factor[i][3]);
+		}
 
 		// D, with 40hz 4th order low pass filter
 		static const float lpf_RC = 1.0f/(2*PI * 40.0f);

@@ -300,7 +300,7 @@ static int min(int a, int b)
 
 int run_controllers()
 {
-	attitude_controller.provide_states(euler, body_rate.array, 0, airborne);
+	attitude_controller.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	
 	switch (mode)
 	{
@@ -1326,7 +1326,7 @@ int set_mode(fly_mode newmode)
 	if (newmode == mode)
 		return 0;
 
-	attitude_controller.provide_states(euler, body_rate.array, 0, airborne);
+	attitude_controller.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controller.reset();
 	
 
