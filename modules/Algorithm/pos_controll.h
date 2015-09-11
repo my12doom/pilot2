@@ -12,6 +12,9 @@ public:
 	// provide desired velocity in body frame (forward, right)
 	virtual int set_desired_velocity(float *desired_velocity) = 0;
 
+	// provide desired action from stick action (roll & pitch only, stick[0,1] = [roll, pitch]).
+	virtual int set_desired_stick(float *stick) = 0;
+
 	// call this periodly to update the controller
 	virtual int update_controller(float dt) = 0;
 
@@ -27,6 +30,13 @@ public:
 	virtual int provide_attitue_position(float *eulers, float *pos, float *velocity) = 0;
 };
 
+enum poshold_state
+{
+	pos,
+	override,
+	braking,
+};
+
 class pos_controller : pos_controller_base
 {
 public:
@@ -35,6 +45,7 @@ public:
 
 	virtual int reset();
 	virtual int set_desired_velocity(float *desired_velocity);
+	virtual int set_desired_stick(float *stick);
 	virtual int update_controller(float dt);
 	virtual int get_target_angles(float *target_angles);
 	virtual int set_setpoint(float *pos);
@@ -72,4 +83,5 @@ public:
 	FILE * f;
 	unsigned int tick;
 #endif
+	poshold_state state;
 };
