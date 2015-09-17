@@ -21,11 +21,13 @@
 #include <Algorithm/of_controller.h>
 #include <Algorithm/mag_calibration.h>
 #include <Algorithm/motion_detector.h>
+#include <math/LowPassFilter2p.h>
 
 #include <HAL/Interface/Interfaces.h>
 #include <HAL/Resources.h>
 using namespace HAL;
 using namespace devices;
+using namespace math;
 #include <FileSystem/ff.h>
 
 #define THROTTLE_STOP (max((int)(rc_setting[2][0]-20),1000))
@@ -207,8 +209,7 @@ copter_mode submode = basic;
 int64_t collision_detected = 0;	// remember to clear it before arming
 int64_t tilt_us = 0;	// remember to clear it before arming
 bool gyro_bias_estimating_end = false;
-static const int lpf_order = 5;
-vector gyro_lpf[lpf_order];		// variable for high order low pass filter, [order]
+LowPassFilter2p gyro_lpf2p[3] = {LowPassFilter2p(333.3, 40), LowPassFilter2p(333.3, 40), LowPassFilter2p(333.3, 40)};	// 2nd order low pass filter for gyro.
 vector gyro_reading;			// gyro reading with temperature compensation and LPF, without AHRS bias estimating
 vector body_rate;				// body rate, with all compensation applied
 vector accel = {NAN, NAN, NAN};
@@ -804,19 +805,9 @@ int read_sensors()
 	acc.V.y /= healthy_acc_count;
 	acc.V.z /= healthy_acc_count;
 	
-	// TODO: apply a high order LPF to gyro readings
-	float alpha40 = interval / (interval + 1.0f/(2*PI * 40.0f));
-	for(int j=0; j<lpf_order; j++)
-	{
-		// gyro_lpf[j] = gyro_lpf[j] * (1-alpha40) + alpha40 * (j==0?reading:gyro_lpf[j-1]);
-		vector_multiply(&gyro_lpf[j], 1-alpha40);
-		vector b = j==0 ? gyro : gyro_lpf[j-1];
-		vector_multiply(&b, alpha40);
-		vector_add(&gyro_lpf[j], &b);
-	}
-	::gyro_reading = gyro_lpf[lpf_order-1];
-
-	//::gyro_reading = gyro;
+	// apply a 2nd order LPF to gyro readings
+	for(int i=0; i<3; i++)
+		::gyro_reading.array[i] = gyro_lpf2p[i].apply(gyro.array[i]);
 
 	// read magnetometers
 	int healthy_mag_count = 0;
@@ -1429,8 +1420,8 @@ int check_mode()
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
 			newmode = airborne ? (estimator.healthy() ? poshold : optical_flow) : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
-// 			newmode = airborne ? optical_flow : althold;
-			newmode = althold;
+ 			newmode = airborne ? optical_flow : althold;
+//			newmode = althold;
 
 		set_submode(newmode);
 	}

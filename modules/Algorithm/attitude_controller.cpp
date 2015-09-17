@@ -163,11 +163,7 @@ int attitude_controller::update(float dt)
 		static const float lpf_RC = 1.0f/(2*PI * 40.0f);
 		float alpha = dt / (dt + lpf_RC);
 		float derivative = (new_p - pid[i][0] )/dt;
-
-		for(int j=0; j<lpf_order; j++)
-			errorD_lpf[j][i] = errorD_lpf[j][i] * (1-alpha) + alpha * (j==0?derivative:errorD_lpf[j-1][i]);
-
-		pid[i][2] = errorD_lpf[lpf_order-1][i];
+		pid[i][2] = pid[i][2] * (1-alpha) + derivative * alpha;
 
 		// P
 		pid[i][0] = new_p;

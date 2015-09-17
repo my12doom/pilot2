@@ -40,7 +40,7 @@
 
 #pragma once
 
-#define M_PI_F 3.1415926
+#define M_PI_F 3.14159265f
 
 namespace math
 {

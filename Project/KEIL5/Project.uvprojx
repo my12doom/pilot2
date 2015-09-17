@@ -802,7 +802,7 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>utils</GroupName>
+          <GroupName>utils&amp;math</GroupName>
           <Files>
             <File>
               <FileName>log.cpp</FileName>
@@ -833,6 +833,11 @@
               <FileName>gauss_newton.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\utils\gauss_newton.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>LowPassFilter2p.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\math\LowPassFilter2p.cpp</FilePath>
             </File>
           </Files>
         </Group>

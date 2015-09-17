@@ -51,8 +51,6 @@ public:
 	uint32_t motor_state;
 	bool use_quaternion;
 	
-	static const int lpf_order = 5;
 	float pid[3][3];		// [roll, pitch, yaw] [p, i, d]
-	float errorD_lpf[lpf_order][3];			// variable for high order low pass filter, [order][roll, pitch, yaw]
 	float result[3];
 };
