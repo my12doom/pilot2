@@ -217,10 +217,7 @@ vector mag;
 vector gyro_uncalibrated;
 vector accel_uncalibrated;
 vector mag_uncalibrated;
-float mag_radius = -999;
-vector accel_earth_frame_mwc;
 vector accel_earth_frame;
-vector mag_earth_frame;
 bool new_baro_data = false;
 int64_t systime;
 

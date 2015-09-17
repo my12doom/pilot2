@@ -35,8 +35,8 @@ static param pid_quad_accel[4] =		// P, I, D, IMAX
 										// In yetanotherpilot implementation, default P=0.075 converts 1 m/s^2 into 0.075 of full throttle
 										// the max accel error in default value is around +- 6.66 m/s^2, but should not use that much
 {
-	param("accP", 0.060f),
-	param("accI", 0.120f),
+	param("accP", 0.100f),
+	param("accI", 0.200f),
 	param("accD", 0.0f),
 	param("accM", 2.5f),
 };
