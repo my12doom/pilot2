@@ -1,10 +1,12 @@
 #include <HAL/STM32F4/F4UART.h>
 #include <HAL/Interface/ISysTimer.h>
+#include <FileSystem/ff.h>
 #include <utils/ymodem.h>
 #include <utils/param.h>
 #include <stdio.h>
 #include <Protocol/crc32.h>
 #include <string.h>
+#include <stdint.h>
 #include "stm32f4xx_flash.h"
 
 // BSP
@@ -21,7 +23,7 @@ extern "C" void DMA2_Stream7_IRQHandler()
 }
 
 // constants
-const uint32_t ApplicationAddress = 0x8004000;
+const uint32_t ApplicationAddress = 0x8008000;
 
 class ymodem_rec : public ymodem_receiver
 {
@@ -71,7 +73,6 @@ void erase_rom(HAL::IUART *uart)
 {
 	uint32_t pages[] =
 	{
-		FLASH_Sector_1,
 		FLASH_Sector_2,
 		FLASH_Sector_3,
 		FLASH_Sector_4,
@@ -116,10 +117,109 @@ bool check_rom_crc()
 	return crc32(0, (uint8_t*)ApplicationAddress, size) == crc;
 }
 
+extern "C" DWORD get_fattime()
+{
+	return 0;
+}
+
+int check_sdcard()
+{
+	FRESULT res;
+	FATFS fs;
+	FIL f;
+	res = disk_initialize(0) == RES_OK ? FR_OK : FR_DISK_ERR;
+	res = f_mount(&fs, "", 0);
+	res = f_open(&f, "firmware.yap", FA_OPEN_EXISTING | FA_READ | FA_WRITE);
+	
+	if (res != FR_OK)
+		return -1;
+	
+	if (f_size(&f) <= 8)
+	{
+		f_close(&f);
+		return -2;
+	}
+	
+	// check "YAP\A" tag and crc
+	UINT got = 0;
+	DWORD crc = 0;
+	char tag[5] = {0};
+	f_lseek(&f, f_size(&f)-8);
+	f_read(&f, tag, 4, &got);
+	f_read(&f, &crc, 4, &got);
+	if (tag[0] != 'Y' || tag[1] != 'A' || tag[2] != 'P' || tag[3] != ' ')
+		return -3;
+
+	// calculate CRC from content
+	int file_rom_size = f_size(&f)-8;
+	uint32_t crc_calculated = 0;
+	char tmp[1024];
+	int left = file_rom_size;
+	f_lseek(&f, 0);
+	while (left>0)
+	{
+		if (f_read(&f, tmp, left>sizeof(tmp)?sizeof(tmp):left, &got) != FR_OK)
+		{
+			f_close(&f);
+			return -4;
+		}
+
+		crc_calculated = crc32(crc_calculated, tmp, got);
+		left -= got;
+	}
+
+	if (crc != crc_calculated)
+		return -5;
+
+
+	// erase
+	erase_rom(&uart1);
+
+	// flash
+	f_lseek(&f, 0);
+	left = file_rom_size;
+	uint32_t pos = ApplicationAddress;
+	FLASH_Unlock();
+	while (left>0)
+	{
+		if (f_read(&f, tmp, left>sizeof(tmp)?sizeof(tmp):left, &got) != FR_OK)
+		{
+			f_close(&f);
+			return -6;
+		}
+
+		left -= got;
+
+		for(int i=0; i<got; i+= 4)
+			FLASH_ProgramWord(pos+i, *(uint32_t*)((uint8_t*)tmp+i));
+
+		pos += got;
+	}
+	FLASH_Lock();
+
+	// save
+	float sizef = *(float*)&file_rom_size;
+	float crcf = *(float*)&crc_calculated;
+	
+	rom_size = sizef;
+	rom_crc = crcf;
+	
+	FLASH_Unlock();
+	rom_size.save();
+	rom_crc.save();
+	
+	f_close(&f);
+	f_unlink("firmware.yap");
+	
+	return 0;
+}
+
 int main()	
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	uart1.set_baudrate(115200);
+
+	check_sdcard();
 		
 	if (check_rom_crc())
 		run_rom();

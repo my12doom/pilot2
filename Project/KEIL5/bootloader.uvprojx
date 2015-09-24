@@ -46,14 +46,14 @@
             <NotGenerated>0</NotGenerated>
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
-          <OutputDirectory>.\Output\</OutputDirectory>
+          <OutputDirectory>.\Output\Bootloader\</OutputDirectory>
           <OutputName>Firmware</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
-          <ListingPath>.\Listings\</ListingPath>
+          <ListingPath>.\Output\Bootloader\</ListingPath>
           <HexFormatSelection>1</HexFormatSelection>
           <Merge32K>0</Merge32K>
           <CreateBatchFile>0</CreateBatchFile>
@@ -349,7 +349,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>4</Optim>
+            <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -467,6 +467,16 @@
               <FileType>1</FileType>
               <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_gpio.c</FilePath>
             </File>
+            <File>
+              <FileName>stm32f4xx_exti.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_exti.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f4xx_sdio.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_sdio.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -511,6 +521,31 @@
               <FileName>ymodem.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\utils\ymodem.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>fat&amp;sdcard</GroupName>
+          <Files>
+            <File>
+              <FileName>ff.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\FileSystem\ff.c</FilePath>
+            </File>
+            <File>
+              <FileName>F4SDCard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4SDCard.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm324xg_eval_sdio_sd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\stm324xg_eval_sdio_sd.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm324xg_eval.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\stm324xg_eval.c</FilePath>
             </File>
           </Files>
         </Group>
