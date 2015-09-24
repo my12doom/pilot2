@@ -193,6 +193,7 @@ typedef struct
 	uint16_t packet_lost1;
 	uint16_t packet_lost2;
 	uint16_t cycle_time;
+	bool motor_saturated;
 } quadcopter_data5;
 
 typedef struct 

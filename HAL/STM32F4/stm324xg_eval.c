@@ -541,54 +541,6 @@ void SD_LowLevel_DMA_RxConfig(uint32_t *BufferDST, uint32_t BufferSize)
   DMA_Cmd(SD_SDIO_DMA_STREAM, ENABLE);
 }
 
-/**
-  * @brief  DeInitializes peripherals used by the I2C EEPROM driver.
-  * @param  None
-  * @retval None
-  */
-void sEE_LowLevel_DeInit(void)
-{
-  GPIO_InitTypeDef  GPIO_InitStructure; 
-   
-  /* sEE_I2C Peripheral Disable */
-  I2C_Cmd(sEE_I2C, DISABLE);
- 
-  /* sEE_I2C DeInit */
-  I2C_DeInit(sEE_I2C);
-
-  /*!< sEE_I2C Periph clock disable */
-  RCC_APB1PeriphClockCmd(sEE_I2C_CLK, DISABLE);
-    
-  /*!< GPIO configuration */  
-  /*!< Configure sEE_I2C pins: SCL */
-  GPIO_InitStructure.GPIO_Pin = sEE_I2C_SCL_PIN;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(sEE_I2C_SCL_GPIO_PORT, &GPIO_InitStructure);
-
-  /*!< Configure sEE_I2C pins: SDA */
-  GPIO_InitStructure.GPIO_Pin = sEE_I2C_SDA_PIN;
-  GPIO_Init(sEE_I2C_SDA_GPIO_PORT, &GPIO_InitStructure);
-
-  /* Configure and enable I2C DMA TX Stream interrupt */
-  NVIC_InitStructure.NVIC_IRQChannel = sEE_I2C_DMA_TX_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = sEE_I2C_DMA_PREPRIO;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = sEE_I2C_DMA_SUBPRIO;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = DISABLE;
-  NVIC_Init(&NVIC_InitStructure);
-
-  /* Configure and enable I2C DMA RX Stream interrupt */
-  NVIC_InitStructure.NVIC_IRQChannel = sEE_I2C_DMA_RX_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = sEE_I2C_DMA_PREPRIO;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = sEE_I2C_DMA_SUBPRIO;
-  NVIC_Init(&NVIC_InitStructure);   
-  
-  /* Disable and Deinitialize the DMA Streams */
-  DMA_Cmd(sEE_I2C_DMA_STREAM_TX, DISABLE);
-  DMA_Cmd(sEE_I2C_DMA_STREAM_RX, DISABLE);
-  DMA_DeInit(sEE_I2C_DMA_STREAM_TX);
-  DMA_DeInit(sEE_I2C_DMA_STREAM_RX);
-}
 
 /**
   * @brief  Initializes peripherals used by the I2C EEPROM driver.

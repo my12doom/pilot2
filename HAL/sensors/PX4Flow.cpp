@@ -11,7 +11,7 @@ namespace sensors
 		//read integral:
 		//px4flow_integral_frame integral_frame= {};
 		//read_integral(&integral_frame);
-		return (res == 0 && frame.frame_count > 0) ? 0 : -1;
+		return (res == 0) ? 0 : -1;
 	}
 	int PX4Flow::read_flow(px4flow_frame *out)
 	{

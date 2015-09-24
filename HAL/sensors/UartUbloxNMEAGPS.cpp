@@ -268,7 +268,7 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 
 	//
 	int64_t t = systimer->gettime();
-	systimer->delayms(100);
+	systimer->delayms(400);
 	int real_baudrate;
 	if ((real_baudrate = set_baudrate(baudrate)) < 0)
 	{

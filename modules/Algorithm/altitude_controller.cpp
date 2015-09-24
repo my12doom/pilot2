@@ -3,7 +3,7 @@
 #include <Protocol/common.h>
 #include <utils/param.h>
 
-#define default_throttle_hover 0.55f
+#define default_throttle_hover 0.45f
 #define sonar_step_threshold 0.35f
 
 static param quadcopter_max_climb_rate("maxC",5);

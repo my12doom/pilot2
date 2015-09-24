@@ -647,6 +647,7 @@ int save_logs()
 		lost1,
 		lost2,
 		round_running_time,
+		motor_saturated,
 	};
 	log(&quad5, TAG_QUADCOPTER_DATA5, systime);
 
@@ -973,8 +974,8 @@ int calculate_state()
 	if (interval <=0 || interval > 0.2f)
 		return -1;
 
-	float factor = 1.0f *10;
-	float factor_mag = 1.0f * 10;
+	float factor = 1.0f;
+	float factor_mag = 1.0f;
 	
 	NonlinearSO3AHRSupdate(
 		accel.array[0], accel.array[1], accel.array[2], 
@@ -1615,7 +1616,7 @@ int crash_detector()
 	if (gforce > 5.5f)
 	{
 		LOGE("very high G force (%.2f) detected (%.0f,%.0f,%.0f)\n", gforce, accel.array[0], accel.array[1], accel.array[2]);
-		set_mode(_shutdown);
+		//set_mode(_shutdown);
 	}
 
 	int prot = (float)::crash_protect;
@@ -1639,7 +1640,7 @@ int crash_detector()
 	{
 		LOGE("landing impact detected(%s)\n", (collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) ? "collision" : "tilt");
 
-		set_mode(_shutdown);
+		//set_mode(_shutdown);
 	}
 
 	return 0;
@@ -2127,6 +2128,32 @@ void sdcard_logging_loop(void)
 int main(void)
 {
 	bsp_init_all();
+	
+	/*
+	rcout = manager.get_RCOUT();
+
+	for(int i=0; i<4; i++)
+		g_ppm_output[i] = THROTTLE_MAX;
+
+	output_rc();
+
+	systimer->delayms(2000);
+
+	for(int i=0; i<4; i++)
+		g_ppm_output[i] = THROTTLE_STOP;
+
+	output_rc();
+	systimer->delayms(5000);
+
+	while(1)
+	{
+		for(int i=0; i<4; i++)
+			g_ppm_output[i] = THROTTLE_IDLE;
+
+		output_rc();		
+	}
+	*/
+
 	
 	/*
 	int64_t t = systimer->gettime();

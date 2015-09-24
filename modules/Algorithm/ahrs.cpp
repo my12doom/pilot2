@@ -136,6 +136,8 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 		mag_length = 0;
 	}
 
+	mag_ok = true;
+
 	// Make filter converge to initial solution faster
 	// This function assumes you are in static position.
 	// WARNING : in case air reboot, this can cause problem. But this is very unlikely happen.
