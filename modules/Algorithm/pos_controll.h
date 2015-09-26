@@ -52,6 +52,7 @@ public:
 	virtual int provide_attitue_position(float *eulers, float *pos, float *velocity);
 
 // private:
+	int check_states();				// check and transfer states.
 	int move_desire_pos(float dt);
 	int pos_to_rate(float dt);
 	int rate_to_accel(float dt);
@@ -84,4 +85,5 @@ public:
 	unsigned int tick;
 #endif
 	poshold_state state;
+	float pilot_angle[2];
 };

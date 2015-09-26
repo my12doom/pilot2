@@ -2051,8 +2051,10 @@ void main_loop(void)
 		{
 			if (mag_calibrator.get_stage() == stage_horizontal)
 				rgb->write(1,0,0);
-			else if (mag_calibrator.get_stage() == stage_vertical)
+			else if (mag_calibrator.get_stage() == stage_vertical_pitch)
 				rgb->write(0,1,0);
+			else if (mag_calibrator.get_stage() == stage_vertical_roll)
+				rgb->write(0,0,1);
 			else
 				rgb->write(0,0,0);
 		}

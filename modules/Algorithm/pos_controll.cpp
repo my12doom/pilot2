@@ -3,6 +3,7 @@
 #include <math.h>
 #include <float.h>
 #include <Protocol/common.h>
+#include <utils/param.h>
 
 // constants
 static float leash_pos = 6.0f;
@@ -14,6 +15,15 @@ static bool use_desired_feed_forward = false;
 static float feed_forward_factor = 1;
 static float rate2accel[4] = {1.5f, 0.5f, 0.2f, 2.0f};
 static float pos2rate_P = 1.0f;
+
+
+// "parameters/constants"
+static param quadcopter_range[3] = 
+{
+	param("rngR", PI / 5),			// roll
+	param("rngP", PI / 5),			// pitch
+	param("rngY", PI / 8),			// yaw
+};
 
 // win32 helper
 #ifdef WIN32
@@ -60,7 +70,11 @@ pos_controller::~pos_controller()
 
 int pos_controller::reset()
 {
-	return set_setpoint(pos);
+	set_setpoint(pos);
+
+	state = braking;
+
+	return 0;
 }
 
 int pos_controller::set_desired_velocity(float *desired_velocity)
@@ -70,6 +84,9 @@ int pos_controller::set_desired_velocity(float *desired_velocity)
 	// rotate from body frame to earth frame
 	desired_velocity_earth[0] = cos_yaw * desired_velocity[0] - sin_yaw * desired_velocity[1];
 	desired_velocity_earth[1] = sin_yaw * desired_velocity[0] + cos_yaw * desired_velocity[1];
+
+	pilot_angle[0] = NAN;
+	pilot_angle[1] = NAN;
 
 	return 0;
 }
@@ -83,6 +100,9 @@ int pos_controller::set_desired_stick(float *stick)
 		desired_velocity[1] = 0;
 
 	set_desired_velocity(desired_velocity);
+
+	pilot_angle[0] = stick[0] * quadcopter_range[0];
+	pilot_angle[1] = -stick[1] * quadcopter_range[0];	// pitch stick and coordinate are reversed
 
 	return 0;
 }
@@ -103,7 +123,7 @@ int pos_controller::update_controller(float dt)
 	if  (	(velocity[0]*velocity[0] + velocity[1]*velocity[1] > min_braking_speed) &&					// speed fast enough(1m/s)?
 			(
 			  (stick_released && release_stick_timer < 1.0f)											// released stick? less than 1 second?
-			  || (delta[0]*desired_velocity_earth[0] + delta[1]*desired_velocity_earth[1] < 0)				// moving toward set point?
+			  || (delta[0]*desired_velocity_earth[0] + delta[1]*desired_velocity_earth[1] < 0)			// moving toward set point?
 			)
 		)
 	{

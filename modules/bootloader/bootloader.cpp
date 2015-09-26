@@ -144,14 +144,23 @@ int check_sdcard()
 	UINT got = 0;
 	DWORD crc = 0;
 	char tag[5] = {0};
+	int file_rom_size = f_size(&f)-8;
 	f_lseek(&f, f_size(&f)-8);
 	f_read(&f, tag, 4, &got);
 	f_read(&f, &crc, 4, &got);
 	if (tag[0] != 'Y' || tag[1] != 'A' || tag[2] != 'P' || tag[3] != ' ')
+	{
+		f_close(&f);
 		return -3;
+	}
+	
+	if (crc == crc32(0, (uint8_t*)ApplicationAddress, file_rom_size))
+	{
+		f_close(&f);
+		return -5;
+	}
 
 	// calculate CRC from content
-	int file_rom_size = f_size(&f)-8;
 	uint32_t crc_calculated = 0;
 	char tmp[1024];
 	int left = file_rom_size;
@@ -209,7 +218,7 @@ int check_sdcard()
 	rom_crc.save();
 	
 	f_close(&f);
-	f_unlink("firmware.yap");
+	//f_unlink("firmware.yap");
 	
 	return 0;
 }
@@ -221,7 +230,7 @@ int main()
 
 	check_sdcard();
 		
-	if (check_rom_crc())
+	//if (check_rom_crc())
 		run_rom();
 	
 	while(1)

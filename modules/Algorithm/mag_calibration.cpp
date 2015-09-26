@@ -78,18 +78,18 @@ int mag_calibration::provide_data(float *mag_data, float *euler, float *gyro, fl
 			add_data(mag_data);
 		}
 
-		// enough rotation, proceed to vertical
-		if (fabs(rotation) > 3.0f * PI)
+		// enough rotation, proceed to vertical, nose/tail down
+		if (fabs(rotation) > 2.0f * PI)
 		{
-			LOGE("GO VERTICAL\n");
+			LOGE("GO VERTICAL PITCH\n");
 			rotation = 0;
-			stage = stage_vertical;
+			stage = stage_vertical_pitch;
 		}
 	}
 
-	if (stage == stage_vertical)
+	if (stage == stage_vertical_pitch)
 	{
-		// nose down?
+		// nose/tail down?
 		if (fabs(-PI/2 - euler[1]) < MAX_TILT*PI/180)
 		{
 			rotation += gyro[0] * dt;
@@ -97,12 +97,32 @@ int mag_calibration::provide_data(float *mag_data, float *euler, float *gyro, fl
 			add_data(mag_data);
 		}
 
+		// enough rotation, proceed to vertical, wing down
+		if (fabs(rotation) > 2.0f * PI)
+		{
+			rotation = 0;
+			LOGE("GO VERTICAL ROLL\n");
+			stage = stage_vertical_roll;
+		}
+	}
+	
+	if (stage == stage_vertical_roll)
+	{
+		// wing down?
+		if (fabs(-PI/2 - euler[0]) < MAX_TILT*PI/180)
+		{
+			rotation += gyro[1] * dt;
+
+			add_data(mag_data);
+		}
+
 		// enough rotation, we are ready
-		if (fabs(rotation) > 3.0f * PI)
+		if (fabs(rotation) > 2.0f * PI)
 		{
 			stage = stage_ready_to_calibrate;
 		}
 	}
+
 
 	return 0;
 }

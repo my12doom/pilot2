@@ -79,9 +79,9 @@
           </BeforeMake>
           <AfterMake>
             <RunUserProg1>1</RunUserProg1>
-            <RunUserProg2>0</RunUserProg2>
-            <UserProg1Name>C:\Keil_v5\ARM\ARMCC\bin\fromelf.exe --bin -o pilot.bin ./Output/Firmware.axf</UserProg1Name>
-            <UserProg2Name></UserProg2Name>
+            <RunUserProg2>1</RunUserProg2>
+            <UserProg1Name>C:\Keil_v5\ARM\ARMCC\bin\fromelf.exe --bin -o ./Output/MainController/pilot.bin ./Output/MainController/Firmware.axf</UserProg1Name>
+            <UserProg2Name>BIn2Yap.exe output/MainController/pilot.bin</UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
             <nStopA1X>0</nStopA1X>
@@ -311,7 +311,7 @@
               </OCR_RVCT3>
               <OCR_RVCT4>
                 <Type>1</Type>
-                <StartAddress>0x8000000</StartAddress>
+                <StartAddress>0x8008000</StartAddress>
                 <Size>0x100000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
@@ -670,9 +670,9 @@
               <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_wwdg.c</FilePath>
             </File>
             <File>
-              <FileName>system_stm32f4xx.c</FileName>
+              <FileName>system_stm32f4xx_APP.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\HAL\STM32F4\STMLib\system_stm32f4xx.c</FilePath>
+              <FilePath>..\..\HAL\STM32F4\STMLib\system_stm32f4xx_APP.c</FilePath>
             </File>
           </Files>
         </Group>
