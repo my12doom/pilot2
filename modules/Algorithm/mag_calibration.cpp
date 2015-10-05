@@ -102,7 +102,7 @@ int mag_calibration::provide_data(float *mag_data, float *euler, float *gyro, fl
 		{
 			rotation = 0;
 			LOGE("GO VERTICAL ROLL\n");
-			stage = stage_vertical_roll;
+			stage = stage_ready_to_calibrate;//stage_vertical_roll;
 		}
 	}
 	

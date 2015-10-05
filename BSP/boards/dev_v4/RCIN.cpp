@@ -54,7 +54,15 @@ int handle_ppm(int now)
 
 		rc_update[ppm_channel_id] = systimer->gettime();
 
-		ppm_channel_id++;
+		// swap 4&5 channel
+		if (ppm_channel_id == 3)
+			ppm_channel_id = 5;
+		else if (ppm_channel_id == 5)
+			ppm_channel_id = 4;
+		else if (ppm_channel_id == 4)
+			ppm_channel_id = 6;
+		else
+			ppm_channel_id++;
 	}
 	return 0;
 }

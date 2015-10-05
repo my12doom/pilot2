@@ -1,5 +1,6 @@
 #include <HAL/STM32F4/F4UART.h>
 #include <HAL/Interface/ISysTimer.h>
+#include <BSP/boards/dev_v4/RGBLED.h>
 #include <FileSystem/ff.h>
 #include <utils/ymodem.h>
 #include <utils/param.h>
@@ -12,6 +13,7 @@
 // BSP
 using namespace STM32F4;
 F4UART uart1(USART1);
+dev_v2::RGBLED led;
 
 extern "C" void USART1_IRQHandler(void)
 {
@@ -24,6 +26,15 @@ extern "C" void DMA2_Stream7_IRQHandler()
 
 // constants
 const uint32_t ApplicationAddress = 0x8008000;
+float color[5][3] = 
+{
+	{1,0,0},
+	{0,1,0},
+	{0,0,1},
+	{0.2,0,1},
+	{0.2,1,0},
+};
+
 
 class ymodem_rec : public ymodem_receiver
 {
@@ -89,8 +100,11 @@ void erase_rom(HAL::IUART *uart)
 	rom_size.save();
 	rom_crc.save();
 	
-	for(int i=0; i<sizeof(pages)/sizeof(pages[0]); i++)
+	int sector_count = sizeof(pages)/sizeof(pages[0]);
+		
+	for(int i=0; i<sector_count; i++)
 	{
+		led.write(color[i%5][0], color[i%5][1], color[i%5][2]);
 		char tmp[30];
 		sprintf(tmp, "erasing sector %d...", i+1);
 		uart->write(tmp, strlen(tmp));
@@ -98,7 +112,9 @@ void erase_rom(HAL::IUART *uart)
 			uart->write("OK\n", 3);
 		else
 			uart->write("ERROR\n", 6);
+		
 	}
+	led.write(0,0,0);
 	uart->write("DONE\n", 5);
 	FLASH_Lock();
 }
@@ -189,6 +205,7 @@ int check_sdcard()
 	left = file_rom_size;
 	uint32_t pos = ApplicationAddress;
 	FLASH_Unlock();
+	led.write(0,0,0);
 	while (left>0)
 	{
 		if (f_read(&f, tmp, left>sizeof(tmp)?sizeof(tmp):left, &got) != FR_OK)
@@ -203,6 +220,8 @@ int check_sdcard()
 			FLASH_ProgramWord(pos+i, *(uint32_t*)((uint8_t*)tmp+i));
 
 		pos += got;
+		int i = left / sizeof(tmp) / 10;
+		led.write(color[i%5][0], color[i%5][1], color[i%5][2]);
 	}
 	FLASH_Lock();
 
@@ -227,8 +246,8 @@ int main()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	uart1.set_baudrate(115200);
-
 	check_sdcard();
+	led.write(0,0,0);
 		
 	//if (check_rom_crc())
 		run_rom();

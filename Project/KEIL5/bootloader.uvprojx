@@ -47,7 +47,7 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>.\Output\Bootloader\</OutputDirectory>
-          <OutputName>Firmware</OutputName>
+          <OutputName>bootloader</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
@@ -477,6 +477,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_sdio.c</FilePath>
             </File>
+            <File>
+              <FileName>stm32f4xx_tim.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_tim.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -546,6 +551,16 @@
               <FileName>stm324xg_eval.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\HAL\STM32F4\stm324xg_eval.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>BSP_V4</GroupName>
+          <Files>
+            <File>
+              <FileName>RGBLED.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\dev_v4\RGBLED.cpp</FilePath>
             </File>
           </Files>
         </Group>
