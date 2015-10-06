@@ -79,6 +79,20 @@ void receive_rom(HAL::IUART *uart)
 	FLASH_Lock();
 }
 
+void RDP()
+{
+	if(FLASH_OB_GetRDP() != SET)
+	{
+		FLASH_Unlock();
+		FLASH_OB_Unlock();
+		FLASH_OB_RDPConfig(OB_RDP_Level_1);
+		FLASH_OB_Launch();
+		FLASH_OB_Lock();
+		FLASH_Lock();
+		NVIC_SystemReset();
+	}
+}
+
 void run_rom();
 void erase_rom(HAL::IUART *uart)
 {
@@ -245,6 +259,7 @@ int check_sdcard()
 int main()	
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
+	RDP();
 	uart1.set_baudrate(115200);
 	check_sdcard();
 	led.write(0,0,0);
