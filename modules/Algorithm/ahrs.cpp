@@ -319,7 +319,7 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 
 
 	//   	LOGE("accz=%f/%f, acc=%f,%f,%f, raw=%f,%f,%f\n", accz_NED, accelz, acc[0], acc[1], acc[2], BODY2NED[0][0], BODY2NED[0][1], BODY2NED[0][2]);
-	LOGE("\raccel fr:%f,%f,  ned:%f,%f,%f,", acc_horizontal[0], acc_horizontal[1], acc_ned[0], acc_ned[1], acc_ned[2]);
+	TRACE("\raccel fr:%f,%f,  ned:%f,%f,%f,", acc_horizontal[0], acc_horizontal[1], acc_ned[0], acc_ned[1], acc_ned[2]);
 }
 
 //---------------------------------------------------------------------------------------------------
