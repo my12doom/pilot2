@@ -191,34 +191,18 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>2057</LineNumber>
+          <LineNumber>72</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134272092</Address>
+          <Address>134336884</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\..\modules\main\pilot.cpp</Filename>
+          <Filename>..\..\HAL\sensors\UartNMEAGPS.cpp</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Firmware\../../modules/main/pilot.cpp\2057</Expression>
-        </Bp>
-        <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>2052</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134272008</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\..\modules\main\pilot.cpp</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\Firmware\../../modules/main/pilot.cpp\2052</Expression>
+          <Expression>\\Firmware\../../HAL/sensors/UartNMEAGPS.cpp\72</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -331,6 +315,11 @@
           <count>21</count>
           <WinNumber>1</WinNumber>
           <ItemText>critical_errors</ItemText>
+        </Ww>
+        <Ww>
+          <count>22</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>info</ItemText>
         </Ww>
       </WatchWindow1>
       <MemoryWindow1>

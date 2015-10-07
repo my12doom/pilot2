@@ -1,22 +1,36 @@
-// a very simple AHRS module exported from MultiWii.
-// there is no gyro bias estimation in this code, you need to do gyro bias compensating/estimating outside this module.
-// recommended frame of reference:
-// 
-
 #pragma once
 
-#include <utils/vector.h>
+#include "motion_detector.h"
 
-extern float roll;
-extern float pitch;
-extern float yaw_mag;
-extern float yaw_gyro;
-extern float accelz_mwc;
+class NonlinearSO3AHRS
+{
+public:
+	NonlinearSO3AHRS();
+	~NonlinearSO3AHRS();
+	void update(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz, float twoKp, float twoKi, float twoKpMag, float twoKiMag, float dt);
+	void update_gps(float vned[3], float dt);
+	void reset();
 
-extern vector accel_ef;
-extern vector estAccGyro;			// for roll & pitch
-extern vector estMagGyro;			// for yaw
-extern vector estGyro;				// for gyro only yaw, yaw lock on this
+//private:
+	float q0, q1, q2, q3;		// quaternion of sensor frame relative to auxiliary frame
+	float gyro_bias[3];			// estimated gyro bias
+	float euler[3];
+	float NED2BODY[3][3];
+	float BODY2NED[3][3];
+	float acc_ned[3];			// acceleration rotated to north-east-down frame
+	float acc_horizontal[3];	// acceleration rotated to horizontal body frame, [0] points forward, [1] points right
+	float est_acc[3];			// estimated gravity vector in body frame	
+	float mag_avg[3];
+	int mag_avg_count;
 
-int ahrs_mwc_init(vector gyro_bias, vector accel, vector mag);
-int ahrs_mwc_update(vector gyro, vector accel, vector mag, float dt);
+	float raw_yaw;				// raw mag yaw with tilt compensation
+	bool mag_ok;
+	float err_a[3];
+	float err_m[3];
+
+	motion_detector detect_acc;			// acc motion detecotr for initialization
+	motion_detector detect_gyro;		// gyro motion detecotr for initialization
+	bool initialized;
+
+private:
+};
