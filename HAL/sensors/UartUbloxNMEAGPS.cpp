@@ -330,7 +330,7 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 		return -3;
 	
 	// rate config
-	uint16_t rate_config[3] = {250, 1, 0};
+	uint16_t rate_config[3] = {100, 1, 0};
 	send_ubx_packet(0x6, 0x8, rate_config, 6);
 	if (wait_ack(0x6, 0x8) != 0)
 		return -4;

@@ -414,7 +414,7 @@ int run_controllers()
 						if (abs(desired_velocity[1]) < 0.4f)
 							desired_velocity[1] = 0;
 
-						float euler_target[3];						
+						float euler_target[3];
 						controller.provide_attitue_position(euler, ne_pos, ne_velocity);
 						controller.set_desired_velocity(desired_velocity);
 						controller.update_controller(dt);
@@ -629,9 +629,9 @@ int save_logs()
 	{
 		isnan(alt_controller.m_sonar_target) ? 0 : alt_controller.m_sonar_target*100,
 		mag_size,
-		mag.array[0],
-		mag.array[1],
-		mag.array[2],
+		halfvx*2000,
+		halfvy*2000,
+		halfvz*2000,
 		raw_yaw * 18000 / PI,
 		acc_horizontal[0] * 1000,
 		acc_horizontal[1] * 1000,
@@ -1169,76 +1169,6 @@ int sensor_calibration()
 	ground_temperature /= baro_counter;
 
 	LOGE("base value measured\n");
-	
-	/*
-	for(int i=0; i<calibrating_count; i++)
-	{
-		long us = systimer->gettime();
-
-		LOGE("\r%d/%d", i, calibrating_count);
-
-		read_sensors();
-		if (new_baro_data)
-		{
-			baro_counter ++;
-			ground_pressure += a_raw_pressure;
-			ground_temperature += a_raw_temperature;
-		}
-
-		//mpu6050_temperature += p->temperature1  / 340.0f + 36.53f;
-
-		vector_add(&accel_avg, &accel);
-		vector_add(&mag_avg, &mag);
-		vector_add(&gyro_avg, &gyro_reading);
-
-		if (i>calibrating_count/10 && 
-			  ((fabs(gyro_reading.array[0]*PI180)>5.0f || fabs(gyro_reading.array[1]*PI180)>5.0f || fabs(gyro_reading.array[2]*PI180)>5.0f))
-			)
-		{
-			LOGE("wtf %f,%f,%f,%f,%f,%f, %d\n", fabs(gyro_reading.array[0]*PI180), fabs(gyro_reading.array[1]*PI180), fabs(gyro_reading.array[2]*PI180), 
-				 fabs(gyro_reading.array[0]*PI180), fabs(gyro_reading.array[1]*PI180), fabs(gyro_reading.array[2]*PI180), i);
-			return -1;
-		}
-
-		if (critical_errors)
-			return -2;
-
-		if ((systimer->gettime()/1000)%50 > 25)
-			led_all_on();
-		else
-			led_all_off();
-
-		if (rgb)
-		{
-			float color[5][3] = 
-			{
-				{1,0,0},
-				{0,1,0},
-				{0,0,1},
-				{0.2,0,1},
-				{0.2,1,0},
-			};
-
-			int i = (systimer->gettime() / 150000) % 5;
-			rgb->write(color[i][0], color[i][01], color[i][2]);
-		}
-
-		while(systimer->gettime() - us < 3000)
-			;
-	}
-	*/
-
-
-
-	// init ahrs
-	/*
-	vector mwc_acc = {accel_avg.V.y, -accel_avg.V.x, -accel_avg.V.z};
-	float mwc_gyro[3] = {gyro_avg.array[0], gyro_avg.array[1], -gyro_avg.array[2]};
-	float mwc_mag[3] = {mag_avg.V.y, -mag_avg.V.x, -mag_avg.V.z};
-	vector_multiply(&mwc_acc, 1.0f/G_in_ms2);
-
-	ahrs_mwc_init(gyro_avg, accel_avg, mag_avg);
-	*/
 	
 	vector accel_avg;
 	vector gyro_avg;

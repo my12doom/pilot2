@@ -60,11 +60,21 @@ int UartNMEAGPS::read(devices::gps_data *data)
 	int return_value = 1;
 	if (return_pos > 0)
 	{
+		
 		int parse_result = nmea_parse(&parser, buffer, return_pos, &info);
 		memmove(buffer, buffer+return_pos, buffer_count - return_pos);
 		buffer_count -= return_pos;
 
-		return_value = parse_result > 0 ? 0 : 1;
+		// do we have GPGGA and GPRMC packets?
+		if (parse_result > 0 && (info.smask & GPGGA) && (info.smask & GPRMC))
+		{
+			return_value = 0;
+			info.smask = 0;
+		}
+		else
+		{
+			return_value = 1;
+		}
 	}
 	
 	// copy from info

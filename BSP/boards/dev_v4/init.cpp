@@ -206,7 +206,7 @@ int init_external_compass()
 		hmc5983.init(&i2c);
 		hmc5983.axis_config(0, 2, 1, +1, +1, +1);
 
-		//manager.register_magnetometer(&hmc5983);
+		manager.register_magnetometer(&hmc5983);
 	}
 
 	return 0;	
@@ -296,7 +296,7 @@ int bsp_init_all()
 	init_uart1();
 	init_RC();
 	init_sensors();
-	init_external_compass();
+	//init_external_compass();
 	init_asyncworker();
 	init_led();
 	init_flow();
