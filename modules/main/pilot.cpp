@@ -754,7 +754,7 @@ int read_sensors()
 	}
 
 	// read usart source
-	handle_uart4_cli();
+	//handle_uart4_cli();
 
 	
 
@@ -1933,7 +1933,18 @@ void main_loop(void)
 	}
 
 	// TODO: light word
-	if (mag_ok)
+	if (voltage<9.5f)
+	{
+		// fast red flash (10hz) if magnetic interference
+		systime = systimer->gettime();
+		if (rgb && mag_calibration_state == 0)
+		if (systime % 100000 < 50000)
+			rgb->write(1,0,0);
+		else
+			rgb->write(0,0,0);
+
+	}
+	else
 	{
 		// flashlight, tripple flash if SDCARD running, double flash if SDCARD failed
 		systime = systimer->gettime();
@@ -1950,17 +1961,6 @@ void main_loop(void)
 				rgb->write(0,0,0);
 			SAFE_OFF(flashlight);
 		}
-	}
-	else
-	{
-		// fast red flash (10hz) if magnetic interference
-		systime = systimer->gettime();
-		if (rgb && mag_calibration_state == 0)
-		if (systime % 100000 < 50000)
-			rgb->write(1,0,0);
-		else
-			rgb->write(0,0,0);
-
 	}
 
 	// RC modes and RC fail detection, or alternative RC source

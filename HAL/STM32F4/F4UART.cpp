@@ -342,37 +342,29 @@ namespace STM32F4
 	int F4UART::readline(void *data, int max_count)
 	{
 		char *p = (char*)data;
-		int _end_sentence = end_sentence;
+		int _end = end;
 		int j=0;
 		int i;
 		int size;
 		int lastR = 0;
-		if (_end_sentence == start)
+		if (_end == start)
 			return -1;
-		size = _end_sentence - start;
+		size = _end - start;
 		if (size<0)
 			size += sizeof(buffer);
-		if (size >= max_count)
-			return -2;
-		for(i=start; i!= _end_sentence; i=(i+1)%sizeof(buffer))
+		if (max_count > size)
+			max_count = size;
+		for(i=0; i<max_count; i++)
 		{
-			if (buffer[i] == '\r')
+			p[i] = buffer[(i+start)%sizeof(buffer)];
+			if (p[i] == '\n')
 			{
-				if (lastR)
-					p[j++] = buffer[i];
-				lastR = !lastR;
-			}
-
-			p[j++] = buffer[i];
-			if (buffer[i] == '\n')
-			{
-				i=(i+1)%sizeof(buffer);
+				i++;
 				break;
 			}
 		}
-		p[j] = 0;
-		start = i;
-		return j;
+		start = (i+start)%sizeof(buffer);
+		return i;
 	}
 	int F4UART::peak(void *data, int max_count)
 	{
@@ -460,7 +452,7 @@ namespace STM32F4
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
 		UART4->SR = (uint16_t)~0x20;
-		if (c>=0)
+		if (c>=0 && ((end+1)%sizeof(buffer) != start))
 		{
 			buffer[end] = c;
 			end++;
@@ -488,7 +480,7 @@ namespace STM32F4
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
 		USART1->SR = (uint16_t)~0x20;
-		if (c>=0)
+		if (c>=0 && ((end+1)%sizeof(buffer) != start))
 		{
 			buffer[end] = c;
 			end++;
@@ -516,7 +508,7 @@ namespace STM32F4
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
 		USART3->SR = (uint16_t)~0x20;
-		if (c>=0)
+		if (c>=0 && ((end+1)%sizeof(buffer) != start))
 		{
 			buffer[end] = c;
 			end++;
@@ -544,7 +536,7 @@ namespace STM32F4
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
 		USART2->SR = (uint16_t)~0x20;
-		if (c>=0)
+		if (c>=0 && ((end+1)%sizeof(buffer) != start))
 		{
 			buffer[end] = c;
 			end++;

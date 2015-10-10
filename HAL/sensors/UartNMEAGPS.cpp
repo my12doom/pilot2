@@ -35,7 +35,7 @@ int UartNMEAGPS::init(HAL::IUART *uart, int baudrate)
 
 int UartNMEAGPS::read(devices::gps_data *data)
 {
-	int got = uart->readline(buffer+buffer_count, sizeof(buffer) - buffer_count);
+	int got = uart->read(buffer+buffer_count, sizeof(buffer) - buffer_count);
 
 	if (got > 0)
 		m_healthy = true;
@@ -64,7 +64,7 @@ int UartNMEAGPS::read(devices::gps_data *data)
 		int parse_result = nmea_parse(&parser, buffer, return_pos, &info);
 		memmove(buffer, buffer+return_pos, buffer_count - return_pos);
 		buffer_count -= return_pos;
-
+		
 		// do we have GPGGA and GPRMC packets?
 		if (parse_result > 0 && (info.smask & GPGGA) && (info.smask & GPRMC))
 		{
