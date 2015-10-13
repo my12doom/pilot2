@@ -1,4 +1,10 @@
 #include "Sonar.h"
+#include <math.h>
+
+#define TIMEOUT	59000		// 59ms, ~10 meter
+#define DEADBAND 2000		// 2ms, ~34cm
+#define MIN_PULSE_COUNT 5
+#define PULSE_TIMEOUT 50	// 30us max pulse interval, 2x 
 
 namespace sensors
 {
@@ -6,6 +12,11 @@ namespace sensors
 	{
 		this->tx = tx;
 		this->level = level;
+		
+		if (tx)
+			tx->set_mode(HAL::MODE_OUT_PushPull);
+		if (level)
+			level->set_mode(HAL::MODE_OUT_OpenDrain);
 		
 		return tx && level ? 0 : -1;
 	}
@@ -19,7 +30,64 @@ namespace sensors
 	// trigger messuring manually, this is needed by some types of range finder(sonars e.g.)
 	int Sonar::trigger()
 	{
+		// sonic wave still flying?
+		if (systimer->gettime() < send_time+TIMEOUT && !echo_confirmed)
+			return 1;
+		
+		// reset variables
+		echo_confirmed = false;
+		pulse_counter = 0;
+		first_pulse_time = last_pulse_time = -PULSE_TIMEOUT;
+		distance = 0;
+		
+		// pull level shifter low
+		level->write(false);
+		
+		// send 8 pulses
+		for(int i=0; i<8; i++)
+		{
+			tx->write(true);
+			systimer->delayus(12);	// this might need some tuning
+			tx->write(false);
+			systimer->delayus(12);
+		}
+		
+		// release level shifter
+		level->write(true);
+		
 		return 0;
+	}
+	
+	void Sonar::echo()
+	{
+		if (echo_confirmed)
+			return;
+		
+		// time since sending
+		int t = systimer->gettime() - send_time;
+		
+		// deadband
+		if (t<DEADBAND)
+			return;
+		
+		// pulse timeout
+		if (t-last_pulse_time > PULSE_TIMEOUT)
+		{
+			pulse_counter = 0;
+			first_pulse_time = t;
+		}
+		else
+		{
+			pulse_counter++;
+		}
+		last_pulse_time = t;
+		
+		// confirmed ?
+		if (pulse_counter >= MIN_PULSE_COUNT)
+		{
+			echo_confirmed = true;
+			distance = first_pulse_time*0.000001f * 340/2;
+		}
 	}
 	
 	// return false if any error/waning
