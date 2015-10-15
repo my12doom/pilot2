@@ -10,6 +10,7 @@
 #define TIMER_NUM 4
 #define BATTERYVOLTAGE_NUM 2
 #define MAX_FLOW_COUNT 2
+#define MAX_DEVICE_COUNT 20
 
 class Manager
 {
@@ -18,6 +19,10 @@ class Manager
 		Manager();
 		~Manager(){};
 			
+		typedef struct{
+			char name[10];
+			void *p;
+		} device_entry;
 			
 		typedef struct{
 			char name[10];//name 
@@ -69,6 +74,10 @@ class Manager
 		HAL::IAsyncWorker * async_worker;
 		int flow_count;
 		sensors::IFlow * Flows[MAX_FLOW_COUNT];
+
+		int device_count;
+		device_entry devices[MAX_DEVICE_COUNT];
+		
 	
 	public :
 		int get_RGBLED_Num();
@@ -78,9 +87,10 @@ class Manager
 		int get_gyroscope_count();
 		int get_accelerometer_count();
 		int get_magnetometer_count();
-		int get_flow_count();	
+		int get_flow_count();
 		int get_barometer_count();
-		int get_GPS_count();	
+		int get_GPS_count();
+		int get_device_count();
 		
 		//register function:
 		int register_LED(const char *name,devices::ILED *pLED);
@@ -97,8 +107,10 @@ class Manager
 		int register_flow(sensors::IFlow *worker);
 		int register_RCOUT(HAL::IRCOUT *rcout);
 		int register_asyncworker(HAL::IAsyncWorker *worker);
+		int register_device(const char *name, void *device);
 
 		//getDevice function:
+		void *get_device(const char *name);
 		devices::ILED* getLED(const char *name);
 		devices::IRGBLED* getRGBLED(const char *name);
 		HAL::IUART *getUART(const char *name);

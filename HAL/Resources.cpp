@@ -295,5 +295,31 @@ IAsyncWorker *Manager::get_asyncworker()
 	return async_worker;
 }
 
+int Manager::register_device(const char *name, void *device)
+{
+	strcpy(devices[device_count].name, name);
+	devices[device_count].p = device;
+	device_count++;
+
+	return 0;
+}
+int Manager::get_device_count()
+{
+	return device_count;
+}
+void *Manager::get_device(const char *name)
+{
+	for(int i=0; i<MAX_DEVICE_COUNT; i++)
+	{
+		if(0==strcmp(name, devices[i].name))
+		{
+			return devices[i].p;
+		}
+	}
+
+	return NULL;
+}
+
+
 // the only manager instance
 Manager manager;

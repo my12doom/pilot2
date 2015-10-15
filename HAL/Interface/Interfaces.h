@@ -21,3 +21,4 @@
 #include "IMagnetometer.h"
 #include "IRawDevice.h"
 #include "IRGBLED.h"
+#include "IRangeFinder.h"
