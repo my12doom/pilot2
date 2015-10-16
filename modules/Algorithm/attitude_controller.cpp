@@ -4,7 +4,7 @@
 #include <utils/param.h>
 
 // parameters
-#define yaw_dead_band 0.04f
+#define yaw_dead_band 0.08f
 static param quadcopter_range[3] = 
 {
 	param("rngR", PI / 5),			// roll

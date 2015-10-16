@@ -30,7 +30,16 @@ namespace sensors
 	// unit: meter.
 	int Sonar::read(float *out, int64_t *timestamp/* = NULL*/)
 	{
-		return 0;
+		*out = distance;
+		
+		if (fresh_data)
+		{
+			if (timestamp) *timestamp = send_time;
+			fresh_data = false;
+			return 0;
+		}
+		
+		return 1;
 	}
 
 	// trigger messuring manually, this is needed by some types of range finder(sonars e.g.)
@@ -39,6 +48,13 @@ namespace sensors
 		// sonic wave still flying?
 		if (systimer->gettime() < send_time+TIMEOUT/* && !echo_confirmed*/)
 			return 1;
+		
+		// process last result
+		if (!echo_confirmed)
+		{
+			distance = 0;
+			fresh_data = true;
+		}
 		
 		// reset variables
 		send_time = systimer->gettime();
@@ -92,6 +108,7 @@ namespace sensors
 		// confirmed ?
 		if (pulse_counter >= MIN_PULSE_COUNT)
 		{
+			fresh_data = true;
 			echo_confirmed = true;
 			distance = first_pulse_time*0.000001f * 340/2;
 		}

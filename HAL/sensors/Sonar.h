@@ -13,6 +13,7 @@ namespace sensors
 		HAL::IGPIO *level;
 		float distance;
 		bool echo_confirmed;
+		bool fresh_data;
 		int pulse_counter;
 		int64_t send_time;
 		int64_t first_pulse_time;

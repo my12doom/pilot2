@@ -63,6 +63,10 @@ int RGBLED::write(float R, float G, float B)
 	G = limit(G, 0, 1);
 	B = limit(B, 0, 1);
 	
+	R=R*R;
+	G=G*G;
+	B=B*B;
+	
 	TIM_SetCompare4(TIM3, R*period);
 	TIM_SetCompare1(TIM3, G*period);
 	TIM_SetCompare2(TIM3, B*period);

@@ -41,6 +41,7 @@ ILED *flashlight;
 IRCIN *rcin;
 IRCOUT *rcout;
 IRGBLED *rgb;
+IRangeFinder * range_finder = NULL;
 int mag_calibration_state = 0;			// 0: not running, 1: collecting data, 2: calibrating
 int last_mag_calibration_result = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
 mag_calibration mag_calibrator;
@@ -371,8 +372,8 @@ int run_controllers()
 					float stick_roll = rc[0] * quadcopter_range[0];
 					float stick_pitch = -rc[1] * quadcopter_range[1];	// pitch stick and coordinate are reversed
 
-					float flow_roll = -frame.flow_comp_m_x/1000.0f;
-					float flow_pitch = -frame.flow_comp_m_y/1000.0f;
+					float flow_roll = frame.flow_comp_m_x/1000.0f;
+					float flow_pitch = frame.flow_comp_m_y/1000.0f;
 					of_controller.update_controller(flow_roll, flow_pitch, stick_roll, stick_pitch, interval);
 					float euler_target[3] = {0,0, NAN};
 					of_controller.get_result(&euler_target[0], &euler_target[1]);
@@ -753,6 +754,24 @@ int read_sensors()
 			//frame.gyro_x_rate = flowx;
 			//frame.gyro_y_rate = floay;
 		}
+	}
+	
+	if (range_finder)
+	{
+		range_finder->trigger();
+		float distance = 0;
+		if (0 == range_finder->read(&distance))
+		{
+			if (distance <= SONAR_MIN || distance >= SONAR_MAX)
+				sonar_distance = NAN;
+			else
+				sonar_distance = distance;
+		}
+		
+		if (isnan(sonar_distance))
+			printf("\rNAN     ");
+		else
+			printf("\r%.3f", sonar_distance);
 	}
 
 	// read usart source
@@ -2090,11 +2109,7 @@ int main(void)
 {
 	bsp_init_all();
 	
-	IRangeFinder * sonar = (IRangeFinder *)manager.get_device("sonar");
-	while(0)
-	{
-		sonar->trigger();
-	}
+	range_finder = (IRangeFinder *)manager.get_device("sonar");
 	
 	while(0)
 	{
@@ -2105,7 +2120,7 @@ int main(void)
 		float g = t2*(sin(t+PI*2/3)/2+0.5f);
 		float b = t2*(sin(t+PI*4/3)/2+0.5f);
 		
-		manager.getRGBLED("rgb")->write(0.1,1,0);
+		manager.getRGBLED("rgb")->write(r,g,b);
 	}
 	
 	state_led = manager.getLED("state");

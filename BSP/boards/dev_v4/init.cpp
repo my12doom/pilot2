@@ -340,7 +340,7 @@ int init_sonar()
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-	init_sonar();
+	//init_sonar();
 	init_led();
 	init_BatteryVoltage();
 	init_BatteryCurrent();
@@ -362,6 +362,13 @@ int bsp_init_all()
 	if (bsp_parameter)
 	{
 		// remote
+		for(int i=0; i<6; i++)
+		{
+			char tmp[5]="rcx1";
+			tmp[2] = i + '0';
+			param center(tmp, 1500);
+			center = 1500;
+		}
 		param("rc51", 2000) = 2000;
 		param("rc52", 3000) = 3000;
 		param("rc53", 1) = 1;
