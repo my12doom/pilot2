@@ -30,8 +30,8 @@ using namespace devices;
 using namespace math;
 #include <FileSystem/ff.h>
 
-#define THROTTLE_STOP (max((int)(rc_setting[2][0]-20),1000))
-#define THROTTLE_MAX (min((int)(rc_setting[2][2]-20),2000))
+#define THROTTLE_STOP (max((int)(isnan(pwm_override_min)? (rc_setting[2][0]-20):pwm_override_min),1000))
+#define THROTTLE_MAX (min((int)(isnan(pwm_override_max)? (rc_setting[2][2]-20) : pwm_override_max),2000))
 #define SAFE_ON(x) if(x) (x)->on()
 #define SAFE_OFF(x) if(x) (x)->off()
 
@@ -66,7 +66,8 @@ extern "C"
 // parameters
 
 static param crash_protect("prot", 0);		// crash protection
-
+static param pwm_override_max("tmax", NAN);
+static param pwm_override_min("tmin", NAN);
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
 static param quadcopter_auto_landing_rate_fast("flrt", 1.5f);		// absolute value of fast automated landing speed in meter/s, 
@@ -188,6 +189,7 @@ int handle_uart4_cli();
 int handle_uart4_controll();
 int handle_wifi_controll();
 int finish_accel_cal();
+int light_words();
 
 // states
 bool motor_saturated = false;
@@ -306,7 +308,7 @@ int run_controllers()
 		{
 
 			// airborne or armed and throttle up
-			bool after_unlock_action = airborne || rc[2] > 0.1f;
+			bool after_unlock_action = airborne || rc[2] > 0.55f;
 
 			// throttle
 			if (submode == althold || submode == poshold || submode == bluetooth || submode == optical_flow)
@@ -853,6 +855,7 @@ int read_sensors()
 
 	// read GPSs
 	int lowest_hdop = 100000;
+	new_gps_data = false;
 	for(int i=0; i<manager.get_GPS_count(); i++)
 	{
 		IGPS *gps = manager.get_GPS(i);
@@ -869,8 +872,8 @@ int read_sensors()
 			::gps = data;
 			new_gps_data = (res == 0);
 			last_gps_tick = systimer->gettime();
-		}		
-	}	
+		}
+	}
 	if (manager.get_GPS_count() == 0)
 		critical_errors |= error_GPS;
 
@@ -982,8 +985,6 @@ int calculate_state()
 		mag.array[0], mag.array[1], mag.array[2],
 		gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
 		0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval);
-// 	MadgwickAHRSupdateIMU(gyro.array[0] /*+ (systimer->gettime() > 15000000 ? PI*5.0f/180.0f : 0)*/, gyro.array[1], -gyro.array[2], -acc_norm.V.y, acc_norm.V.x, acc_norm.V.z, 1.5f, interval);
-
 
 	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
 	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
@@ -999,26 +1000,6 @@ int calculate_state()
 
 	for(int i=0; i<3; i++)
 		accel_earth_frame.array[i] = acc_ned[i];
-
-// 	LOGE("angle target:%.2f,%.2f,%.2f\n", angle_target[0]*PI180, angle_target[1]*PI180, angle_target[2]*PI180);
-
-
-	/*
-	vector mwc_acc = {accel.V.y, -accel.V.x, -accel.V.z};
-	vector mwc_gyro = {gyro_reading.array[0], gyro_reading.array[1], -gyro_reading.array[2]};
-	vector mwc_mag = {mag.V.y, -mag.V.x, -mag.V.z};
-	vector_multiply(&mwc_acc, 1.0f/G_in_ms2);
-
-	ahrs_mwc_update(mwc_gyro, mwc_acc, mwc_mag, interval);
-	
-	roll = radian_add(roll, quadcopter_trim[0]);
-	pitch = radian_add(pitch, quadcopter_trim[1]);
-	yaw_mag = radian_add(yaw_mag, quadcopter_trim[2]);
-	yaw_gyro = radian_add(yaw_gyro, quadcopter_trim[2]);
-	*/
-
-
-
 
 	// calculate altitude
 	if (new_baro_data)
@@ -1592,7 +1573,10 @@ int handle_uart4_cli()
 {
 	char line[1024];
 	char out[1024];
-	IUART *uart = manager.getUART("UART1");
+	IUART *uart = manager.getUART("AUX");
+	if (!uart)
+		return -1;
+	
 	int byte_count = uart->readline(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;
@@ -1614,7 +1598,10 @@ int handle_wifi_controll()
 {
 	char line[1024];
 	char out[1024];
-	IUART *uart = manager.getUART("UART1");
+	IUART *uart = manager.getUART("AUX");
+	if (!uart)
+		return -1;
+	
 	int byte_count = uart->readline(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;
@@ -1832,6 +1819,76 @@ int read_rc()
 
 int light_words()
 {
+	// critical errors
+	if (critical_errors != 0 && !airborne && false)
+	{
+		static int last_critical_errors = 0;
+		if (last_critical_errors != critical_errors)
+		{
+			LOGE("critical_errors : %x (", critical_errors);
+			for(int i=0; (1<<i)<error_MAX; i++)
+			{
+				if ((1<<i) & critical_errors)
+					LOGE("%s %s", i==0?"":" | ", critical_error_desc[i]);
+			}
+			LOGE(" )\n");
+		}
+
+		led_all_off();
+		SAFE_OFF(flashlight);
+
+		while (1)
+		{
+			// blink error code!
+			for(int i=1; i<error_MAX; i<<=1)
+			{
+				led_all_on();
+				SAFE_ON(flashlight);
+
+				handle_uart4_cli();
+
+				if (critical_errors & i)
+					systimer->delayms(500);
+				else
+					systimer->delayms(150);
+
+				led_all_off();
+				SAFE_OFF(flashlight);
+				systimer->delayms(150);
+			}
+
+			systimer->delayms(1500);
+		}
+	}
+
+	else if (voltage > 6 && voltage<9.5f)			// low voltage warning
+	{
+		// fast red flash (10hz) if magnetic interference
+		systime = systimer->gettime();
+		if (rgb && mag_calibration_state == 0)
+		if (systime % 100000 < 50000)
+			rgb->write(1,0,0);
+		else
+			rgb->write(0,0,0);
+	}
+	else		// normal flashlight, tripple flash if SDCARD running, double flash if SDCARD failed
+	{
+		systime = systimer->gettime();
+		int time_mod_1500 = (systime%1500000)/1000;
+		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
+		{
+			if (rgb && mag_calibration_state == 0)
+				rgb->write(estimator.healthy() ? 0 : 0.8,1,0);
+			SAFE_ON(flashlight);
+		}
+		else
+		{
+			if(rgb && mag_calibration_state == 0)
+				rgb->write(0,0,0);
+			SAFE_OFF(flashlight);
+		}
+	}
+	
 	return 0;
 }
 
@@ -1931,38 +1988,7 @@ void main_loop(void)
 		loop_hz = cycle_counter;
 		cycle_counter = 0;
 	}
-
-	// TODO: light word
-	if (voltage<9.5f)
-	{
-		// fast red flash (10hz) if magnetic interference
-		systime = systimer->gettime();
-		if (rgb && mag_calibration_state == 0)
-		if (systime % 100000 < 50000)
-			rgb->write(1,0,0);
-		else
-			rgb->write(0,0,0);
-
-	}
-	else
-	{
-		// flashlight, tripple flash if SDCARD running, double flash if SDCARD failed
-		systime = systimer->gettime();
-		int time_mod_1500 = (systime%1500000)/1000;
-		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
-		{
-			if (rgb && mag_calibration_state == 0)
-				rgb->write(estimator.healthy() ? 0 : 0.8,1,0);
-			SAFE_ON(flashlight);
-		}
-		else
-		{
-			if(rgb && mag_calibration_state == 0)
-				rgb->write(0,0,0);
-			SAFE_OFF(flashlight);
-		}
-	}
-
+	
 	// RC modes and RC fail detection, or alternative RC source
 	check_mode();
 	check_takeoff_OR_landing();
@@ -2000,6 +2026,9 @@ void main_loop(void)
 			manager.get_asyncworker()->add_work(mag_calibrating_worker, 0);
 		}
 	}
+
+	// light words
+	light_words();
 
 	// all state estimating, AHRS, position, altitude, etc
 	calculate_state();
@@ -2061,57 +2090,11 @@ int main(void)
 {
 	bsp_init_all();
 	
-	/*
-	rcout = manager.get_RCOUT();
-
-	for(int i=0; i<4; i++)
-		g_ppm_output[i] = THROTTLE_MAX;
-
-	output_rc();
-
-	systimer->delayms(2000);
-
-	for(int i=0; i<4; i++)
-		g_ppm_output[i] = THROTTLE_STOP;
-
-	output_rc();
-	systimer->delayms(5000);
-
-	while(1)
+	IRangeFinder * sonar = (IRangeFinder *)manager.get_device("sonar");
+	while(0)
 	{
-		for(int i=0; i<4; i++)
-			g_ppm_output[i] = THROTTLE_IDLE;
-
-		output_rc();		
+		sonar->trigger();
 	}
-	*/
-
-	
-	/*
-	int64_t t = systimer->gettime();
-	
-	uint8_t yuyv[188*120*2];
-	for(int i=0, j=0; i<188*120*2;)
-	{
-		yuyv[j] = yuyv[i];
-		i+=2;
-		j++;
-	}
-	
-	t = systimer->gettime() - t;
-	printf("speed:%d\n", int(t));
-	*/
-	
-	/*
-	pid_factor[0][0] = 0.3f;
-	pid_factor[0][1] = 0.4f;8`f
-	pid_factor[0][2] = 0.012f;
-	pid_factor[1][0] = 0.45f;
-	pid_factor[1][1] = 0.5f;
-	pid_factor[1][2] = 0.02f;
-	//pid_factor2[0][0] = 4.5f;
-	//pid_factor2[1][0] = 4.5f;
-	*/
 	
 	while(0)
 	{
@@ -2132,6 +2115,11 @@ int main(void)
 	rcout = manager.get_RCOUT();
 	rgb = manager.getRGBLED("rgb");
 	
+	for(int i=0; i<16; i++)
+		g_ppm_output[i] = THROTTLE_MAX;
+	output_rc();
+	
+	systimer->delayms(10);
 	STOP_ALL_MOTORS();
 		
 	// USB
@@ -2162,46 +2150,6 @@ int main(void)
 	has_5th_channel = g_pwm_input_update[4] > systimer->gettime()-500000;
 	has_6th_channel = g_pwm_input_update[5] > systimer->gettime()-500000;
 
-	// check critical errors
-	/*
-	if (critical_errors != 0)
-	{
-		LOGE("critical_errors : %x (", critical_errors);
-		for(int i=0; (1<<i)<error_MAX; i++)
-		{
-			if ((1<<i) & critical_errors)
-				LOGE("%s %s", i==0?"":" | ", critical_error_desc[i]);
-		}
-		LOGE(" )\n");
-
-		led_all_off();
-		SAFE_OFF(flashlight);
-
-		while (1)
-		{
-			// blink error code!
-			for(int i=1; i<error_MAX; i<<=1)
-			{
-				led_all_on();
-				SAFE_ON(flashlight);
-
-				handle_uart4_cli();
-
-				if (critical_errors & i)
-					systimer->delayms(500);
-				else
-					systimer->delayms(150);
-
-				led_all_off();
-				SAFE_OFF(flashlight);
-				systimer->delayms(150);
-			}
-
-			systimer->delayms(1500);
-		}
-	}
-	*/
-	
 	// get two timers, one for main loop and one for SDCARD logging loop
 	manager.getTimer("mainloop")->set_period(3000);
 	manager.getTimer("mainloop")->set_callback(main_loop);

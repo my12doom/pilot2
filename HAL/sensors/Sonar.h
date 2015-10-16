@@ -18,7 +18,7 @@ namespace sensors
 		int64_t first_pulse_time;
 		int64_t last_pulse_time;
 	public:
-		Sonar(){}
+		Sonar();
 		~Sonar(){}
 		void echo();	// call this in echo pin interrupt
 		virtual int init(HAL::IGPIO *tx, HAL::IGPIO *level);

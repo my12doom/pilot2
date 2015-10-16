@@ -799,6 +799,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\sensors\UartUbloxNMEAGPS.cpp</FilePath>
             </File>
+            <File>
+              <FileName>Sonar.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\Sonar.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

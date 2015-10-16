@@ -6,8 +6,10 @@
 #include "AsyncWorker.h"
 #include <HAL\STM32F4\F4Timer.h>
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
+#include <HAL/sensors/Sonar.h>
 #include <HAL\Interface\ILED.h>
 #include <HAL/sensors/PX4Flow.h>
+#include <utils/param.h>
 #include "RGBLED.h"
 
 using namespace HAL;
@@ -114,6 +116,7 @@ extern "C" void DMA1_Stream6_IRQHandler()
 }
 
 //For usart4:
+/*
 F4UART f4uart4(UART4);
 void init_uart4()
 {
@@ -128,6 +131,7 @@ extern "C" void DMA1_Stream4_IRQHandler()
 {
 	f4uart4.DMA1_Steam4_IRQHandler();
 }
+*/
 
 //For usart1:
 F4UART f4uart1(USART1);
@@ -280,16 +284,67 @@ int init_flow()
 		manager.register_flow(&px4flow);
 	}
 
-	return 0;	
+	return 0;
 }
+
+F4GPIO tx(GPIOC,GPIO_Pin_1);
+F4GPIO level(GPIOA,GPIO_Pin_1);
+
+sensors::Sonar sonar;
+extern "C" void EXTI9_5_IRQHandler()
+{
+	if (EXTI_GetITStatus(EXTI_Line7) == SET)
+	{
+		sonar.echo();
+		EXTI_ClearITPendingBit(EXTI_Line7);
+	}
+}
+
+int init_sonar()
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+	EXTI_InitTypeDef   EXTI_InitStructure;
+	NVIC_InitTypeDef NVIC_InitStructure;
+	
+	// C7 as echo
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_7;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+	// EXTI
+	EXTI_ClearITPendingBit(EXTI_Line7);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource7);
+
+	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+	EXTI_InitStructure.EXTI_Line = EXTI_Line7;
+	EXTI_Init(&EXTI_InitStructure);
+
+	// priority : lowest
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);	
+		
+	sonar.init(&tx, &level);
+	manager.register_device("sonar", &sonar);
+}
+
 
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-//	init_led();
+	init_sonar();
+	init_led();
 	init_BatteryVoltage();
 	init_BatteryCurrent();
-	init_uart4();
+//	init_uart4();
 	init_uart3();
 	init_uart2();
 	init_timers();
@@ -301,6 +356,38 @@ int bsp_init_all()
 	init_led();
 	init_flow();
 	init_GPS();
+
+	// parameter config
+	param bsp_parameter("BSP", 1);
+	if (bsp_parameter)
+	{
+		// remote
+		param("rc51", 2000) = 2000;
+		param("rc52", 3000) = 3000;
+		param("rc53", 1) = 1;
+
+		// ESC
+		param("tmax", 1900) = 1900;
+		param("tmin", 1100) = 1100;
+		param("idle", 1100) = 1240;
+
+		// alt hold
+		param("accP", 0.075) = 0.075;
+		param("accI", 0.150) = 0.150;
+
+		// PID
+		param("rP1", 0.2f)=0.2f;
+		param("rI1", 0.3f)=0.3f;
+		param("rD1", 0.005f)=0.005f;
+		param("rP2", 0.36f)=0.36f;
+		param("rI2", 0.4f)=0.4f;
+		param("rD2", 0.01f)=0.01f;
+		param("rP3", 1.2f)=1.2f;
+		param("rI3", 0.15f)=0.15f;
+
+		// frame
+		param("mat", 1)=1;
+	}
 	
 	return 0;
 }

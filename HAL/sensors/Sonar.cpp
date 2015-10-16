@@ -1,13 +1,19 @@
 #include "Sonar.h"
 #include <math.h>
+#include <stdio.h>
 
 #define TIMEOUT	59000		// 59ms, ~10 meter
-#define DEADBAND 2000		// 2ms, ~34cm
+#define DEADBAND 0		// 2ms, ~34cm
 #define MIN_PULSE_COUNT 5
 #define PULSE_TIMEOUT 50	// 30us max pulse interval, 2x 
 
 namespace sensors
 {
+	Sonar::Sonar()
+	{
+		send_time = 0;
+		echo_confirmed = false;
+	}
 	int Sonar::init(HAL::IGPIO *tx, HAL::IGPIO *level)
 	{
 		this->tx = tx;
@@ -31,10 +37,11 @@ namespace sensors
 	int Sonar::trigger()
 	{
 		// sonic wave still flying?
-		if (systimer->gettime() < send_time+TIMEOUT && !echo_confirmed)
+		if (systimer->gettime() < send_time+TIMEOUT/* && !echo_confirmed*/)
 			return 1;
 		
 		// reset variables
+		send_time = systimer->gettime();
 		echo_confirmed = false;
 		pulse_counter = 0;
 		first_pulse_time = last_pulse_time = -PULSE_TIMEOUT;
