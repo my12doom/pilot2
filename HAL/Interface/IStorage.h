@@ -17,3 +17,4 @@ namespace HAL
 }
 
 HAL::IStorage *get_default_storage();
+HAL::IStorage *get_bootloader_storage();

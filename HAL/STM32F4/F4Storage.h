@@ -6,7 +6,7 @@ namespace STM32F4
 {
 	class F4Storage:public HAL::IStorage
 	{
-	private:
+	protected:
 		int min(int a, int b);
 		uint32_t page__size;
 		uint32_t buffer_size;
@@ -20,5 +20,13 @@ namespace STM32F4
 		virtual int erase(int address);
 		virtual int write(int address, const void *data, int size);
 		virtual int read(int address, void *data, int maxsize);
+	};
+	
+	class BootloaderStorage:public F4Storage
+	{
+	public:
+		BootloaderStorage();
+		~BootloaderStorage(){};
+		virtual int erase(int address);
 	};
 }

@@ -24,7 +24,7 @@ namespace STM32F4
 	}
 	int F4Storage::erase(int address)
 	{
-		FLASH_Status res = FLASH_EraseSector(address >= 0x080C0000 + page__size ? FLASH_Sector_11 : FLASH_Sector_10, VoltageRange_3);
+		FLASH_Status res = FLASH_EraseSector(address >= start_address + page__size ? FLASH_Sector_11 : FLASH_Sector_10, VoltageRange_3);
 		return res;
 	}
 	int F4Storage::total_size()
@@ -58,11 +58,30 @@ namespace STM32F4
 		int count = min(maxsize, buffer_size - address);
 		memcpy(data, (char*)start_address+address, count);
 		return count;
+	}	
+	
+	BootloaderStorage::BootloaderStorage()
+	:F4Storage(0x4000, 0x8000, 0x08000000)
+	{
 	}
+	int BootloaderStorage::erase(int address)
+	{
+		// erase all...
+		FLASH_Status res = FLASH_EraseSector(FLASH_Sector_0, VoltageRange_3);
+		res = FLASH_EraseSector(FLASH_Sector_1, VoltageRange_3);
+		return res;
+	}
+	
 }
 
 HAL::IStorage *get_default_storage()
 {
 	static STM32F4::F4Storage theDefaultStorage;
+	return &theDefaultStorage;
+}
+
+HAL::IStorage *get_bootloader_storage()
+{
+	static STM32F4::BootloaderStorage theDefaultStorage;
 	return &theDefaultStorage;
 }
