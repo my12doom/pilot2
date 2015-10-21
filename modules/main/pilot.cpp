@@ -1895,11 +1895,11 @@ int light_words()
 		else
 			rgb->write(0,0,0);
 	}
-	else		// normal flashlight, tripple flash if SDCARD running, double flash if SDCARD failed
+	else		// normal flashlight, double flash if SDCARD running, single flash if SDCARD failed
 	{
 		systime = systimer->gettime();
 		int time_mod_1500 = (systime%1500000)/1000;
-		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220) || (time_mod_1500 > 400 && time_mod_1500 < 420 && log_ready))
+		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220 && log_ready))
 		{
 			if (rgb && mag_calibration_state == 0)
 				rgb->write(estimator.healthy() ? 0 : 0.8,1,0);
