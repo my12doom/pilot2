@@ -3,7 +3,7 @@
 #include <Protocol/common.h>
 #include <utils/param.h>
 
-#define default_throttle_hover 0.45f
+#define default_throttle_hover 0.35f
 #define sonar_step_threshold 0.35f
 
 static param quadcopter_max_climb_rate("maxC",5);
@@ -258,7 +258,7 @@ int altitude_controller::update(float dt, float user_rate)
 		&& fabs(user_rate) < 0.001f)
 	{
 		// 0.2Hz low pass filter
-		const float RC02 = 1.0f/(2*3.1415926 * 0.2f);
+		const float RC02 = 1.0f/(2*3.1415926 * 0.02f);
 		float alpha02 = dt / (dt + RC02);
 
 		throttle_hover = throttle_hover * (1-alpha02) + alpha02 * m_throttle_realized;

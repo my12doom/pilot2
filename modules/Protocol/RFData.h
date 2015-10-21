@@ -190,8 +190,8 @@ typedef struct
 typedef struct
 {
 	float q[4];
-	uint16_t packet_lost1;
-	uint16_t packet_lost2;
+	int16_t ground_speed_north;
+	int16_t ground_speed_east;
 	uint16_t cycle_time;
 	bool motor_saturated;
 } quadcopter_data5;
