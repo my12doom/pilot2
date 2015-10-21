@@ -556,14 +556,15 @@ int save_logs()
 	log(&frame, TAG_PX4FLOW_DATA, systime);
 	
 	position p = estimator.get_estimation();
+	position_meter pmeter = estimator.get_estimation_meter();
 	ned_data ned = 
 	{
 		0,
 		{accel_earth_frame.array[0] * 1000, accel_earth_frame.array[1] * 1000, accel_earth_frame.array[2] * 1000},
 		p.latitude * double(10000000.0/COORDTIMES), 
 		p.longtitude * double(10000000.0/COORDTIMES), 
-		error_lat : estimator.error_lat_meter,
-		error_lon : estimator.error_lon_meter,
+		error_lat : pmeter.vlatitude*100,
+		error_lon : pmeter.vlongtitude*100,
 	};
 
 	log(&ned, TAG_NED_DATA, systime);
@@ -647,8 +648,8 @@ int save_logs()
 	quadcopter_data5 quad5 = 
 	{
 		{q0,q1,q2,q3},
-		lost1,
-		lost2,
+		ground_speed_north*100,
+		ground_speed_east*100,
 		round_running_time,
 		motor_saturated,
 	};
@@ -1839,7 +1840,7 @@ int read_rc()
 int light_words()
 {
 	// critical errors
-	if (critical_errors != 0 && !airborne && false)
+	if (critical_errors != 0)
 	{
 		static int last_critical_errors = 0;
 		if (last_critical_errors != critical_errors)
@@ -1853,35 +1854,39 @@ int light_words()
 			LOGE(" )\n");
 		}
 
-		led_all_off();
-		SAFE_OFF(flashlight);
+		int error_code_count = 0;
+		for(int i=0; (1<<i)<error_MAX; i++)
+			error_code_count++;
 
-		while (1)
+		static int64_t t0 = 0;
+		if (t0 == 0)
+			t0 = systimer->gettime();
+		int64_t t = (systimer->gettime()-t0) / 1000;
+		int light = (t / 500) % (error_code_count+3);
+		if (rgb)
 		{
-			// blink error code!
-			for(int i=1; i<error_MAX; i<<=1)
+			if (t % 500 < 250 || light >=  error_code_count)
 			{
-				led_all_on();
-				SAFE_ON(flashlight);
-
-				handle_uart4_cli();
-
-				if (critical_errors & i)
-					systimer->delayms(500);
-				else
-					systimer->delayms(150);
-
-				led_all_off();
-				SAFE_OFF(flashlight);
-				systimer->delayms(150);
+				rgb->write(0,0,0);
 			}
-
-			systimer->delayms(1500);
+			else
+			{
+				if ((1<<light) & critical_errors)
+				{
+					rgb->write(1,0,0);
+				}
+				else
+				{
+					rgb->write(0,1,0);
+				}
+			}
 		}
 	}
 
-	else if (voltage > 6 && voltage<9.5f)			// low voltage warning
+	else if (voltage > 6 && voltage<10.2f)			// low voltage warning
 	{
+		islanding = true;
+
 		// fast red flash (10hz) if magnetic interference
 		systime = systimer->gettime();
 		if (rgb && mag_calibration_state == 0)
