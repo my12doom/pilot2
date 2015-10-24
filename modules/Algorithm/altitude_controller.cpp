@@ -167,7 +167,7 @@ int altitude_controller::update(float dt, float user_rate)
 	// new target rate, directly use linear approach since we use very tight limit 
 	// TODO: use sqrt approach on large errors (see get_throttle_althold() in Attitude.pde)
 	altitude_error_pid[0] = alt_target - alt_state;
-	altitude_error_pid[0] = limit(altitude_error_pid[0], -2.5f, 2.5f);
+	altitude_error_pid[0] = limit(altitude_error_pid[0], -leash_down, leash_up);
 	target_climb_rate = pid_quad_altitude[0] * altitude_error_pid[0];
 
 	// feed forward
@@ -175,13 +175,14 @@ int altitude_controller::update(float dt, float user_rate)
 	feed_forward_factor += m_airborne ? -dt : dt;
 	feed_forward_factor = limit(feed_forward_factor, 0.35f, 0.8f);
 	target_climb_rate += user_rate * feed_forward_factor;
+	target_climb_rate = limit(target_climb_rate, -quadcopter_max_descend_rate, quadcopter_max_climb_rate);
 
 	TRACE("\rtarget_climb_rate=%.2f climb from alt =%.2f, user=%.2f, out=%2f.     ", target_climb_rate, target_climb_rate-user_rate * feed_forward_factor, user_rate, throttle_result);
 
 
 	// new climb rate error
 	float climb_rate_error = target_climb_rate - m_baro_states[1];
-	climb_rate_error = limit(climb_rate_error, -quadcopter_max_descend_rate, quadcopter_max_climb_rate);
+	//climb_rate_error = limit(climb_rate_error, -quadcopter_max_descend_rate, quadcopter_max_climb_rate);
 
 	// apply a 2Hz LPF to rate error
 	const float RC = 1.0f/(2*3.1415926 * 5.0f);

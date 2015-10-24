@@ -391,8 +391,8 @@ int bsp_init_all()
 		param("idle", 1100) = 1240;
 
 		// alt hold
-		param("accP", 0.075) = 0.075;
-		param("accI", 0.150) = 0.150;
+		param("accP", 0.12) = 0.12;
+		param("accI", 0.24) = 0.24;
 
 		// PID
 		param("rP1", 0.2f)=0.2f;
