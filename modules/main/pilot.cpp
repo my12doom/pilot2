@@ -45,7 +45,7 @@ IRangeFinder * range_finder = NULL;
 int mag_calibration_state = 0;			// 0: not running, 1: collecting data, 2: calibrating
 int last_mag_calibration_result = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
 mag_calibration mag_calibrator;
-
+int usb_data_publish = 0;
 
 
 // parameters
@@ -711,7 +711,7 @@ int save_logs()
 	return 0;
 }
 
-#define SONAR_MIN 0.0f
+#define SONAR_MIN 0.3f
 #define SONAR_MAX 4.5f
 
 int read_sensors()
@@ -2120,7 +2120,7 @@ int main(void)
 	
 	systimer->delayms(10);
 	STOP_ALL_MOTORS();
-		
+	
 	log_init();
 	estimator.set_gps_latency(0);
 	SAFE_ON(flashlight);

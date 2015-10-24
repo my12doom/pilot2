@@ -5,6 +5,7 @@
 #include "RCOUT.h"
 #include "AsyncWorker.h"
 #include <HAL\STM32F4\F4Timer.h>
+#include <HAL\STM32F4\F4VCP.h>
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 #include <HAL/sensors/Sonar.h>
 #include <HAL\Interface\ILED.h>
@@ -334,8 +335,18 @@ int init_sonar()
 		
 	sonar.init(&tx, &level);
 	manager.register_device("sonar", &sonar);
+	
+	return 0;
 }
 
+
+int init_VCP()
+{
+	static F4VCP vcp;
+	manager.register_UART("VCP", &vcp);
+	
+	return 0;
+}
 
 int bsp_init_all()
 {
@@ -347,6 +358,7 @@ int bsp_init_all()
 //	init_uart4();
 	init_uart3();
 	init_uart2();
+	init_VCP();
 	init_timers();
 	init_uart1();
 	init_RC();

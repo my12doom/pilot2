@@ -72,10 +72,10 @@ int RCOUT::write(const int16_t *data, int start_channel, int count)
 {
 	volatile uint32_t *registers[MAX_CHANNEL] =
 	{
-		&TIM4->CCR3,
-		&TIM4->CCR2,
 		&TIM4->CCR1,
-		&TIM4->CCR4,
+		&TIM4->CCR2,
+		&TIM4->CCR4,		
+		&TIM4->CCR3,
 	};
 	
 	if (start_channel < 0 || start_channel + count > MAX_CHANNEL)
