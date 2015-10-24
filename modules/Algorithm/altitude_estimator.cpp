@@ -25,7 +25,7 @@ static float R[4] =
 
 static float R2[4] = 
 {
-	600, 0,
+	60000, 0,
 	0, 0.00230,
 };
 

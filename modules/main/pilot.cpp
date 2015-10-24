@@ -46,22 +46,6 @@ int mag_calibration_state = 0;			// 0: not running, 1: collecting data, 2: calib
 int last_mag_calibration_result = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
 mag_calibration mag_calibrator;
 
-extern "C"
-{
-
-	#include <HAL/STM32F4/usb_comF4/cdc/usbd_cdc_core.h>
-	#include <HAL/STM32F4/usb_comF4/core/usbd_usr.h>
-	#include <HAL/STM32F4/usb_comF4/usb_conf/usbd_desc.h>
-	#include <HAL/STM32F4/usb_comF4/usb_conf/usb_conf.h>
-
-	#ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
-	#if defined ( __ICCARM__ ) //!< IAR Compiler 
-	#pragma data_alignment=4
-	#endif
-	#endif // USB_OTG_HS_INTERNAL_DMA_ENABLED
-
-	__ALIGN_BEGIN USB_OTG_CORE_HANDLE     USB_OTG_dev  __ALIGN_END ;
-}
 
 
 // parameters
@@ -186,7 +170,7 @@ void STOP_ALL_MOTORS()
 		g_ppm_output[i] = THROTTLE_STOP;
 	output_rc();
 }
-int handle_uart4_cli();
+int handle_cli(IUART *uart);
 int handle_uart4_controll();
 int handle_wifi_controll();
 int finish_accel_cal();
@@ -727,7 +711,7 @@ int save_logs()
 	return 0;
 }
 
-#define SONAR_MIN 0.3f
+#define SONAR_MIN 0.0f
 #define SONAR_MAX 4.5f
 
 int read_sensors()
@@ -776,7 +760,7 @@ int read_sensors()
 	}
 
 	// read usart source
-	//handle_uart4_cli();
+	handle_cli(manager.getUART("VCP"));
 
 	
 
@@ -1183,15 +1167,9 @@ int sensor_calibration()
 	return 0;
 }
 
-extern "C" int Mal_Accessed(void);
 
 int usb_lock()
 {
-	if (Mal_Accessed())
-	{
-		STOP_ALL_MOTORS();
-	}
-
 	return -1;
 }
 
@@ -1589,14 +1567,13 @@ float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert
 	return v;
 }
 
-int handle_uart4_cli()
+int handle_cli(IUART *uart)
 {
-	char line[1024];
-	char out[1024];
-	IUART *uart = manager.getUART("AUX");
 	if (!uart)
 		return -1;
 	
+	char line[1024];
+	char out[1024];
 	int byte_count = uart->readline(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;
@@ -1845,6 +1822,7 @@ int light_words()
 		static int last_critical_errors = 0;
 		if (last_critical_errors != critical_errors)
 		{
+			last_critical_errors = critical_errors;
 			LOGE("critical_errors : %x (", critical_errors);
 			for(int i=0; (1<<i)<error_MAX; i++)
 			{
@@ -1988,7 +1966,7 @@ void mag_calibrating_worker(int parameter)
 }
 
 void main_loop(void)
-{
+{	
 	// calculate systime interval
 	static int64_t tic = 0;
 	int64_t round_start_tick = systimer->gettime();
@@ -2116,6 +2094,7 @@ int main(void)
 	
 	range_finder = (IRangeFinder *)manager.get_device("sonar");
 	
+	
 	while(0)
 	{
 		float t = systimer->gettime()/5000000.0f * 2 * PI;
@@ -2142,17 +2121,6 @@ int main(void)
 	systimer->delayms(10);
 	STOP_ALL_MOTORS();
 		
-	// USB
-	USBD_Init(&USB_OTG_dev,
-#ifdef USE_USB_OTG_HS
-		USB_OTG_HS_CORE_ID,
-#else
-		USB_OTG_FS_CORE_ID,
-#endif
-		&USR_desc,
-		&USBD_CDC_cb,
-		&USR_cb);
-
 	log_init();
 	estimator.set_gps_latency(0);
 	SAFE_ON(flashlight);
