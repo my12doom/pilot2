@@ -1,4 +1,5 @@
 #include <HAL/STM32F4/F4UART.h>
+#include <HAL/STM32F4/F4VCP.h>
 #include <HAL/Interface/ISysTimer.h>
 #include <BSP/boards/dev_v4/RGBLED.h>
 #include <FileSystem/ff.h>
@@ -256,69 +257,78 @@ int check_sdcard()
 	return 0;
 }
 
+int handle_uart(HAL::IUART &uart1)
+{
+	char tmp[100] = {0};
+	if (uart1.readline(tmp, sizeof(tmp)) > 0)
+	{
+		if (strstr(tmp, "run") == tmp)
+		{
+			uart1.write("running\n", 8);
+			systimer->delayms(200);
+			run_rom();
+		}
+		else if (strstr(tmp, "check") == tmp)
+		{
+			if (check_rom_crc())
+				uart1.write("CRC OK\n", 7);
+			else
+				uart1.write("CRC FAILED\n", 11);
+		}
+		else if (strstr(tmp, "romcrc,") == tmp)
+		{
+			//uart1.write("romcrc only supportted in main ROM\n", 35);
+			
+			uint32_t size = 0;
+			uint32_t crc = 0;
+			
+			if (sscanf(tmp+7, "%d,%x", &size, &crc) == 2)
+			{
+				float sizef = *(float*)&size;
+				float crcf = *(float*)&crc;
+				
+				rom_size = sizef;
+				rom_crc = crcf;
+				
+				//FLASH_Unlock();
+				//rom_size.save();
+				//rom_crc.save();
+			}
+			
+			if (check_rom_crc())
+				uart1.write("CRC OK\n", 7);
+			else
+				uart1.write("CRC FAILED\n", 11);
+
+		}
+		
+		else if (strstr(tmp, "erase") == tmp)
+			erase_rom(&uart1);
+		else if (strstr(tmp, "rom") == tmp)
+			receive_rom(&uart1);
+		else if (strstr(tmp, "hello") == tmp)
+			uart1.write("bootloader\n", 11);
+	}
+	
+	return 0;
+}
+
 int main()	
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-	RDP();
+	//RDP();
 	uart1.set_baudrate(115200);
 	check_sdcard();
 	led.write(0,0,0);
-		
+	
 	//if (check_rom_crc())
 		run_rom();
 	
+	F4UART vcp(USART1);
 	while(1)
 	{
-		char tmp[100] = {0};
-		if (uart1.readline(tmp, sizeof(tmp)) > 0)
-		{
-			if (strstr(tmp, "run") == tmp)
-			{
-				uart1.write("running\n", 8);
-				systimer->delayms(200);
-				run_rom();
-			}
-			else if (strstr(tmp, "check") == tmp)
-			{
-				if (check_rom_crc())
-					uart1.write("CRC OK\n", 7);
-				else
-					uart1.write("CRC FAILED\n", 11);
-			}
-			else if (strstr(tmp, "romcrc,") == tmp)
-			{
-				//uart1.write("romcrc only supportted in main ROM\n", 35);
-				
-								uint32_t size = 0;
-				uint32_t crc = 0;
-				
-				if (sscanf(tmp+7, "%d,%x", &size, &crc) == 2)
-				{
-					float sizef = *(float*)&size;
-					float crcf = *(float*)&crc;
-					
-					rom_size = sizef;
-					rom_crc = crcf;
-					
-					//FLASH_Unlock();
-					//rom_size.save();
-					//rom_crc.save();
-				}
-				
-				if (check_rom_crc())
-					uart1.write("CRC OK\n", 7);
-				else
-					uart1.write("CRC FAILED\n", 11);
-
-			}
-			
-			else if (strstr(tmp, "erase") == tmp)
-				erase_rom(&uart1);
-			else if (strstr(tmp, "rom") == tmp)
-				receive_rom(&uart1);
-			else if (strstr(tmp, "hello") == tmp)
-				uart1.write("bootloader\n", 11);
-		}			
+		handle_uart(uart1);
+		handle_uart(vcp);
 	}
 }
 
