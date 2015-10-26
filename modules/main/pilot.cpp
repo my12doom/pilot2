@@ -786,7 +786,7 @@ int read_sensors()
 
 	// read gyros
 	int healthy_gyro_count = 0;
-	for(int i=0; i<manager.get_gyroscope_count(); i++)
+	for(int i=0; i<min(manager.get_gyroscope_count(),1); i++)
 	{
 		IGyro* gyroscope = manager.get_gyroscope(i);
 		
@@ -809,7 +809,7 @@ int read_sensors()
 
 	// read accelerometers
 	int healthy_acc_count = 0;
-	for(int i=0; i<manager.get_accelerometer_count(); i++)
+	for(int i=0; i<min(manager.get_accelerometer_count(),1); i++)
 	{
 		IAccelerometer* accelerometer = manager.get_accelerometer(i);
 		
@@ -857,9 +857,22 @@ int read_sensors()
 
 	if (vcp && (usb_data_publish & data_publish_imu))
 	{
+		gyro_data gyro2 = {0};
+		accelerometer_data acc2 = {0};
+
+		if (manager.get_accelerometer_count()>=2)
+			manager.get_accelerometer(1)->read(&acc2);
+		if (manager.get_gyroscope_count()>=2)
+			manager.get_gyroscope(1)->read(&gyro2);
+
 		char tmp[200];
-		sprintf(tmp, "imu:%.4f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f\n", systimer->gettime()/1000000.0f,
-		acc.V.x, acc.V.y, acc.V.z, gyro.V.x, gyro.V.y, gyro.V.z, mag.V.x, mag.V.y, mag.V.z, mpu6050_temperature);
+		sprintf(tmp, 
+			"imu:%.4f"
+			",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f"
+			",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", systimer->gettime()/1000000.0f,
+		acc.V.x, acc.V.y, acc.V.z, gyro.V.x, gyro.V.y, gyro.V.z, mag.V.x, mag.V.y, mag.V.z, mpu6050_temperature,
+		acc2.x, acc2.y, acc2.z, gyro2.x, gyro2.y, gyro2.z);
+		
 		vcp->write(tmp, strlen(tmp));
 	}
 
