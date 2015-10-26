@@ -184,12 +184,12 @@ int MS5611_SPI::read(int *data)
 int MS5611_SPI::read(devices::baro_data *out)
 {
 	int data[2];
-	read(data);
+	int res = read(data);
 	
 	out->pressure = data[0];
 	out->temperature = data[1] / 100.0f;
 
-	return 0;
+	return res;
 }
 
 bool MS5611_SPI::healthy()

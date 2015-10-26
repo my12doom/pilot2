@@ -73,7 +73,7 @@ int UartNMEAGPS::read(devices::gps_data *data)
 		}
 		else
 		{
-			return_value = 0;
+			return_value = 1;
 		}
 	}
 	

@@ -245,6 +245,18 @@ extern "C" int parse_command_line(const char *line, char *out)
 		strcpy(out, "ok\n");
 		return 3;
 	}
+	else if (strstr(line, "usb") == line)
+	{
+		extern int usb_data_publish;
+		if (strstr(line, "usb,") == line)
+		{
+			usb_data_publish = atoi(line+4);
+		}
+		else
+		{
+			usb_data_publish = 0xff;
+		}
+	}
 	else if (strstr(line, "gps") == line)
 	{
 		devices::IGPS *gps = manager.get_GPS(0);

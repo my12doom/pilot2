@@ -45,6 +45,16 @@ IRangeFinder * range_finder = NULL;
 int mag_calibration_state = 0;			// 0: not running, 1: collecting data, 2: calibrating
 int last_mag_calibration_result = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
 mag_calibration mag_calibrator;
+IUART *vcp = NULL;
+
+enum data_publish_types
+{
+	data_publish_imu = 1,
+	data_publish_flow = 2,	
+	data_publish_baro = 4,
+	data_publish_mag = 8,
+	data_publish_gps = 16,
+};
 int usb_data_publish = 0;
 
 
@@ -729,6 +739,16 @@ int read_sensors()
 			sonar_distance = NAN;
 		else
 		{
+			static int last_frame_count = 0;
+			if (last_frame_count != frame.frame_count && vcp && (usb_data_publish & data_publish_flow))
+			{
+				last_frame_count = frame.frame_count;
+
+				char tmp[100];
+				sprintf(tmp, "flow:%.3f,%d,%d,%f\n", systimer->gettime()/1000000.0f, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.ground_distance/1000.0f);
+				vcp->write(tmp, strlen(tmp));
+			}
+
 			sonar_distance = frame.ground_distance / 1000.0f;
 			if (sonar_distance <= SONAR_MIN || sonar_distance >= SONAR_MAX)
 				sonar_distance = NAN;
@@ -760,7 +780,7 @@ int read_sensors()
 	}
 
 	// read usart source
-	handle_cli(manager.getUART("VCP"));
+	handle_cli(vcp);
 
 	
 
@@ -835,6 +855,15 @@ int read_sensors()
 	mag.V.y /= healthy_mag_count;
 	mag.V.z /= healthy_mag_count;
 
+	if (vcp && (usb_data_publish & data_publish_imu))
+	{
+		char tmp[200];
+		sprintf(tmp, "imu:%.4f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f\n", systimer->gettime()/1000000.0f,
+		acc.V.x, acc.V.y, acc.V.z, gyro.V.x, gyro.V.y, gyro.V.z, mag.V.x, mag.V.y, mag.V.z, mpu6050_temperature);
+		vcp->write(tmp, strlen(tmp));
+	}
+
+
 	// read barometers
 	int healthy_baro_count = 0;
 	for(int i=0; i<manager.get_barometer_count(); i++)
@@ -856,6 +885,13 @@ int read_sensors()
 	}
 	if (healthy_baro_count == 0)
 		critical_errors |= error_baro;
+
+	if (vcp && (usb_data_publish & data_publish_baro) && new_baro_data)
+	{
+		char tmp[200];
+		sprintf(tmp, "baro:%.3f,%.0f,%.3f\n", systimer->gettime()/1000000.0f, a_raw_pressure, a_raw_temperature);
+		vcp->write(tmp, strlen(tmp));
+	}
 
 	// read GPSs
 	int lowest_hdop = 100000;
@@ -880,6 +916,15 @@ int read_sensors()
 	}
 	if (manager.get_GPS_count() == 0)
 		critical_errors |= error_GPS;
+
+	if (vcp && (usb_data_publish & data_publish_gps) && new_gps_data)
+	{
+		char tmp[200];
+		sprintf(tmp, "gps:%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,%.0f\n", systimer->gettime()/1000000.0f,
+		gps.latitude, gps.longitude, gps.altitude, gps.DOP[1]/100.0f, gps.speed, gps.direction);
+		vcp->write(tmp, strlen(tmp));
+	}
+
 
 	// bias and scale calibrating
 	float temperature_delta = mpu6050_temperature - temperature0;
@@ -2113,7 +2158,8 @@ int main(void)
 	rcin = manager.get_RCIN();
 	rcout = manager.get_RCOUT();
 	rgb = manager.getRGBLED("rgb");
-	
+	vcp = manager.getUART("VCP");
+
 	for(int i=0; i<16; i++)
 		g_ppm_output[i] = THROTTLE_MAX;
 	output_rc();
