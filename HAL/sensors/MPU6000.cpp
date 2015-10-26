@@ -46,37 +46,68 @@ static void swap(void *buf, int size)
 	}
 }
 
+MPU6000::MPU6000()
+{
+	i2c = NULL;
+	spi = NULL;
+}
 int MPU6000::read_reg(uint8_t reg, void *out, int count)
 {
 	int i;
 	uint8_t *p = (uint8_t*)out;
-	systimer->delayus(1);
-	CS->write(false);
-	systimer->delayus(1);
 
-	spi->txrx((reg&0x7f) | 0x80);
-	for(i=0; i<count; i++)
-		p[i] = spi->txrx(0);
+	if (spi)
+	{
+		systimer->delayus(1);
+		CS->write(false);
+		systimer->delayus(1);
 
-	systimer->delayus(1);
-	CS->write(true);
-	systimer->delayus(1);
+		spi->txrx((reg&0x7f) | 0x80);
+		for(i=0; i<count; i++)
+			p[i] = spi->txrx(0);
+
+		systimer->delayus(1);
+		CS->write(true);
+		systimer->delayus(1);
+	}
+
+	else if (i2c)
+	{
+		return i2c->read_regs(address, reg, (uint8_t*)out, count);
+	}
+	else
+	{
+		return -1;
+	}
 
 	return 0;
 }
 
 int MPU6000::write_reg_core(uint8_t reg, uint8_t data)
 {
-	systimer->delayus(1);
-	CS->write(false);
-	systimer->delayus(1);
+	if (spi)
+	{
+		systimer->delayus(1);
+		CS->write(false);
+		systimer->delayus(1);
 
-	spi->txrx(reg);
-	spi->txrx(data);
+		spi->txrx(reg);
+		spi->txrx(data);
 
-	systimer->delayus(1);
-	CS->write(true);
-	systimer->delayus(1);
+		systimer->delayus(1);
+		CS->write(true);
+		systimer->delayus(1);
+	}
+
+	else if (i2c)
+	{
+		return i2c->write_reg(address, reg, data);
+	}
+
+	else
+	{
+		return -1;
+	}
 
 	return 0;
 }
@@ -102,19 +133,37 @@ int MPU6000::write_reg(uint8_t reg, uint8_t data)
 }
 
 int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
-{
-	uint8_t who_am_i = 0;
-	int i;
-
+{	
 	this->spi = SPI;
 	this->CS = CS;
+	this->i2c = NULL;
+	this->address = 0;
 
 	// MPU6000 can handle 1mhz max for configuration register accessing
 	// 20mhz for data output and interrupt accesss
-	SPI->set_speed(1000000);
-	SPI->set_mode(1, 1);
+	spi->set_speed(1000000);
+	spi->set_mode(1, 1);
 	CS->set_mode(HAL::MODE_OUT_PushPull);
 	CS->write(true);
+	
+	return init();
+}
+
+int MPU6000::init(HAL::II2C *i2c, uint8_t address)
+{	
+	this->spi = NULL;
+	this->CS = NULL;
+	this->i2c = i2c;
+	this->address = address;
+	i2c->set_speed(30);
+
+	return init();
+}
+
+int MPU6000::init()
+{
+	uint8_t who_am_i = 0;
+	int i;
 
 	// MPU6000 register initialization
 	TRACE("start MPU6000\r\n");
@@ -158,9 +207,12 @@ int MPU6000::read(short*data)
 {
 	int i;
 	int result;
-	spi->set_speed(20000000);
-	spi->set_mode(1, 1);
-
+	
+	if (spi)
+	{
+		spi->set_speed(20000000);
+		spi->set_mode(1, 1);
+	}
 	
 	result = read_reg(ACCEL_XOUT_H, (uint8_t*)data, 14);
 	for(i=0; i<7; i++)

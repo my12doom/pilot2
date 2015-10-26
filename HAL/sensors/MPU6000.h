@@ -10,10 +10,11 @@ namespace sensors
 	class MPU6000 : public devices::IAccelerometer, public devices::IGyro
 	{
 	public:
-		MPU6000(){}
+		MPU6000();
 		~MPU6000(){}
 		
 		int init(HAL::ISPI *SPI, HAL::IGPIO *CS);
+		int init(HAL::II2C *i2c, uint8_t address);
 
 		// data[0 ~ 7] :
 		// accel_x, accel_y, accel_z, raw_temperature, gyro_x, gyro_y, gyro_z
@@ -34,8 +35,13 @@ namespace sensors
 		virtual bool healthy(){return m_healthy;}
 
 	protected:
+
+		int init();
+
 		HAL::ISPI *spi;
 		HAL::IGPIO *CS;
+		HAL::II2C *i2c;
+		uint8_t address;
 		bool m_healthy;
 
 		int axis[6];
