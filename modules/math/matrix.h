@@ -2,12 +2,18 @@
 
 #define MAX_MATRIX_ELEMENTS 256
 
+
+
 class matrix
 {
 public:
 	int m;		// m rows
 	int n;		// n columns
 	float data[MAX_MATRIX_ELEMENTS];		// m * n matrix, row first
+	//  [0 ...      m-1 ]
+	//  [m ...       .. ]
+	//  [..          .. ]
+	//  [(n-1)*m   m*n-1]
 
 	matrix(int m, int n, float data[]);
 	matrix();
