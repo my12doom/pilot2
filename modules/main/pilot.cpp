@@ -5,6 +5,7 @@
 
 #include <Protocol/RFData.h>
 #include <Protocol/common.h>
+#include <Protocol/usb_data_publish.h>
 #include <utils/vector.h>
 #include <utils/param.h>
 #include <utils/log.h>
@@ -47,14 +48,6 @@ int last_mag_calibration_result = 0xff;	// 0xff: not calibrated at all, other va
 mag_calibration mag_calibrator;
 IUART *vcp = NULL;
 
-enum data_publish_types
-{
-	data_publish_imu = 1,
-	data_publish_flow = 2,	
-	data_publish_baro = 4,
-	data_publish_mag = 8,
-	data_publish_gps = 16,
-};
 int usb_data_publish = 0;
 
 
@@ -163,6 +156,17 @@ void led_all_off()
 {
 	SAFE_OFF(state_led);
 	SAFE_OFF(SD_led);
+}
+
+int send_package(const void *data, uint16_t size, uint8_t type, IUART*uart)
+{
+	uint8_t start_code[2] = {0x85, 0xa3};
+	uart->write(start_code, 2);
+	uart->write(&size, 2);
+	uart->write(&type, 1);
+	uart->write(data, size);
+
+	return size;
 }
 
 int64_t g_pwm_input_update[16] = {0};
@@ -744,9 +748,24 @@ int read_sensors()
 			{
 				last_frame_count = frame.frame_count;
 
-				char tmp[100];
-				sprintf(tmp, "flow:%.3f,%d,%d,%f\n", systimer->gettime()/1000000.0f, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.ground_distance/1000.0f);
-				vcp->write(tmp, strlen(tmp));
+				if (usb_data_publish & data_publish_binary)
+				{
+					usb_flow_data data = 
+					{
+						systimer->gettime(),
+						frame.pixel_flow_x_sum,
+						frame.pixel_flow_y_sum,
+						frame.ground_distance,
+					};
+
+					send_package(&data, sizeof(data), data_publish_flow, vcp);
+				}
+				else
+				{
+					char tmp[100];
+					sprintf(tmp, "flow:%.3f,%d,%d,%f\n", systimer->gettime()/1000000.0f, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.ground_distance/1000.0f);
+					vcp->write(tmp, strlen(tmp));
+				}
 			}
 
 			sonar_distance = frame.ground_distance / 1000.0f;
@@ -865,15 +884,32 @@ int read_sensors()
 		if (manager.get_gyroscope_count()>=2)
 			manager.get_gyroscope(1)->read(&gyro2);
 
-		char tmp[200];
-		sprintf(tmp, 
-			"imu:%.4f"
-			",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f"
-			",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", systimer->gettime()/1000000.0f,
-		acc.V.x, acc.V.y, acc.V.z, gyro.V.x, gyro.V.y, gyro.V.z, mag.V.x, mag.V.y, mag.V.z, mpu6050_temperature,
-		acc2.x, acc2.y, acc2.z, gyro2.x, gyro2.y, gyro2.z);
-		
-		vcp->write(tmp, strlen(tmp));
+		if (usb_data_publish & data_publish_binary)
+		{
+			usb_imu_data data = 
+			{
+				systimer->gettime(),
+				{acc.V.x * 1000, acc.V.y * 1000, acc.V.z * 1000,},
+				{gyro.V.x * 18000 / PI, gyro.V.y * 18000 / PI, gyro.V.z * 18000 / PI,},
+				{acc2.x * 1000, acc2.y * 1000, acc2.z * 1000,},
+				{gyro2.x * 18000 / PI, gyro2.y * 18000 / PI, gyro2.z * 18000 / PI,},
+				{mag.V.x, mag.V.y, mag.V.z,},
+			};
+
+			send_package(&data, sizeof(data), data_publish_imu, vcp);
+		}
+		else
+		{
+			char tmp[200];
+			sprintf(tmp, 
+				"imu:%.4f"
+				",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f"
+				",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", systimer->gettime()/1000000.0f,
+			acc.V.x, acc.V.y, acc.V.z, gyro.V.x, gyro.V.y, gyro.V.z, mag.V.x, mag.V.y, mag.V.z, mpu6050_temperature,
+			acc2.x, acc2.y, acc2.z, gyro2.x, gyro2.y, gyro2.z);
+			
+			vcp->write(tmp, strlen(tmp));
+		}
 	}
 
 
@@ -901,9 +937,23 @@ int read_sensors()
 
 	if (vcp && (usb_data_publish & data_publish_baro) && new_baro_data)
 	{
-		char tmp[200];
-		sprintf(tmp, "baro:%.3f,%.0f,%.3f\n", systimer->gettime()/1000000.0f, a_raw_pressure, a_raw_temperature);
-		vcp->write(tmp, strlen(tmp));
+		if (usb_data_publish & data_publish_binary)
+		{
+			usb_baro_data data =
+			{
+				systimer->gettime(),
+				a_raw_pressure,
+				a_raw_temperature*100
+			};
+
+			send_package(&data, sizeof(data), data_publish_baro, vcp);
+		}
+		else
+		{
+			char tmp[200];
+			sprintf(tmp, "baro:%.3f,%.0f,%.3f\n", systimer->gettime()/1000000.0f, a_raw_pressure, a_raw_temperature);
+			vcp->write(tmp, strlen(tmp));
+		}
 	}
 
 	// read GPSs
@@ -932,10 +982,28 @@ int read_sensors()
 
 	if (vcp && (usb_data_publish & data_publish_gps) && new_gps_data)
 	{
-		char tmp[200];
-		sprintf(tmp, "gps:%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,%.0f\n", systimer->gettime()/1000000.0f,
-		gps.latitude, gps.longitude, gps.altitude, gps.DOP[1]/100.0f, gps.speed, gps.direction);
-		vcp->write(tmp, strlen(tmp));
+		if (usb_data_publish & data_publish_binary)
+		{
+			usb_gps_data data = 
+			{
+				systimer->gettime(),
+				gps.latitude,
+				gps.longitude,
+				gps.altitude*100,
+				gps.DOP[1]/100.0f,
+				gps.speed,
+				gps.direction,
+			};
+
+			send_package(&data, sizeof(data), data_publish_gps, vcp);
+		}
+		else
+		{
+			char tmp[200];
+			sprintf(tmp, "gps:%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,%.0f\n", systimer->gettime()/1000000.0f,
+			gps.latitude, gps.longitude, gps.altitude, gps.DOP[1]/100.0f, gps.speed, gps.direction);
+			vcp->write(tmp, strlen(tmp));
+		}
 	}
 
 
