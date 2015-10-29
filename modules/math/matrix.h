@@ -15,6 +15,7 @@ public:
 	//  [..          .. ]
 	//  [(n-1)*m   m*n-1]
 
+	matrix(int m, int n, ...);		// be aware of variable types
 	matrix(int m, int n, float data[]);
 	matrix();
 	matrix(int d);				// d*d identity matrix

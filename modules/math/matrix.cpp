@@ -34,6 +34,16 @@ matrix::matrix(int m, int n, float data[])
 	memcpy(this->data, data, sizeof(float)*n*m);
 }
 
+matrix::matrix(int m, int n, ...)
+{
+	this->m = m;
+	this->n = n;
+	int count = m*n;
+	const double * data = (double*) (&n+1);
+
+	for(int i=0; i<count; i++)
+		this->data[i] = (float)data[i];
+}
 matrix::~matrix()
 {
 
