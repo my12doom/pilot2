@@ -10,10 +10,10 @@ public:
 	int m;		// m rows
 	int n;		// n columns
 	float data[MAX_MATRIX_ELEMENTS];		// m * n matrix, row first
-	//  [0 ...      m-1 ]
+	//  [0 ...      n-1 ]
 	//  [m ...       .. ]
 	//  [..          .. ]
-	//  [(n-1)*m   m*n-1]
+	//  [(m-1)*n   n*m-1]
 
 	matrix(int m, int n, ...);		// be aware of variable types
 	matrix(int m, int n, float data[]);
@@ -39,6 +39,7 @@ public:
 	float det();
 	matrix cofactor(int a, int b);
 	void identity();
+	matrix transpos();
 
 private:
 	float det2x2();

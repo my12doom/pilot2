@@ -189,6 +189,23 @@ matrix matrix::cofactor(int x, int y)
 	return out;
 }
 
+matrix matrix::transpos()
+{
+	matrix out;
+
+	out.m = n;
+	out.n = m;
+	for(int i=0; i<n; i++)
+	{
+		for(int j=0; j<m; j++)
+		{
+			out.data[i*m+j] = data[j*n+i];
+		}
+	}
+
+	return out;
+}
+
 void matrix::identity()
 {
 	if (m!=n)
