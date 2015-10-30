@@ -990,7 +990,7 @@ int read_sensors()
 				gps.latitude,
 				gps.longitude,
 				gps.altitude*100,
-				gps.DOP[1]/100.0f,
+				gps.DOP[1],
 				gps.speed,
 				gps.direction,
 			};
