@@ -361,7 +361,7 @@
             <wLevel>2</wLevel>
             <uThumb>0</uThumb>
             <uSurpInc>0</uSurpInc>
-            <uC99>0</uC99>
+            <uC99>1</uC99>
             <useXO>0</useXO>
             <v6Lang>0</v6Lang>
             <v6LangP>0</v6LangP>
@@ -512,6 +512,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\utils\space.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F4VCP.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4VCP.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -561,6 +566,66 @@
               <FileName>RGBLED.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\dev_v4\RGBLED.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>VCP</GroupName>
+          <Files>
+            <File>
+              <FileName>usbd_cdc_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\cdc\usbd_cdc_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_cdc_vcp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\cdc\usbd_cdc_vcp.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\core\usbd_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_ioreq.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\core\usbd_ioreq.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_req.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\core\usbd_req.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\otg\usb_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dcd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\otg\usb_dcd.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dcd_int.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\otg\usb_dcd_int.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_bsp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\usb_conf\usb_bsp.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_desc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\usb_conf\usbd_desc.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_usr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usb_comF4\usb_conf\usbd_usr.c</FilePath>
             </File>
           </Files>
         </Group>

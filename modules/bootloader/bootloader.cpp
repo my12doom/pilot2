@@ -316,7 +316,7 @@ int handle_uart(HAL::IUART &uart1)
 int main()	
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-	//RDP();
+	RDP();
 	uart1.set_baudrate(115200);
 	check_sdcard();
 	led.write(0,0,0);
