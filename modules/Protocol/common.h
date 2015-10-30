@@ -59,18 +59,6 @@ enum critical_error
 	error_MAX,
 } ;
 
-enum fly_mode
-{
-	initializing,
-	manual,
-	acrobatic,
-	fly_by_wire,
-	quadcopter,
-	_shutdown,
-	_rc_fail,
-	acrobaticV,
-};
-
 enum copter_mode
 {
 	invalid,	// not even in copter mode
