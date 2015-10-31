@@ -448,6 +448,15 @@ int run_controllers()
 	return 0;
 }
 
+static inline float fmin(float a, float b)
+{
+	return a>b?b:a;
+}
+static inline float fmax(float a, float b)
+{
+	return a>b?a:b;
+}
+
 int output()
 {
 	float pid_result[3];
@@ -455,11 +464,13 @@ int output()
 	attitude_controller.get_result(pid_result);
 	if (armed)
 	{
-		throttle_real = 0;
 		int matrix = (float)motor_matrix;
+		float motor_output[MAX_MOTOR_COUNT] = {0};
 
-		int motor_count = MAX_MOTOR_COUNT;
-
+		
+		// how many motor exists in this motor matrix?
+		static int motor_count = 0;
+		if(0==motor_count)
 		for(int i=0; i<MAX_MOTOR_COUNT; i++)
 		{
 			if (quadcopter_mixing_matrix[matrix][i][0] == quadcopter_mixing_matrix[matrix][i][1] && 
@@ -469,24 +480,78 @@ int output()
 				motor_count = i;
 				break;
 			}
+		}
 
-			float mix = throttle_result;
-
-			TRACE("\r%.2f, mode=%d", mix, submode);
-
-			for(int j=0; j<3; j++)
-				mix += quadcopter_mixing_matrix[matrix][i][j] * pid_result[j] * QUADCOPTER_THROTTLE_RESERVE;
-
-			g_ppm_output[i] = limit(THROTTLE_IDLE + mix*(THROTTLE_MAX-THROTTLE_IDLE), THROTTLE_IDLE, THROTTLE_MAX);
-
-			TRACE("\rpid[x] = %f, %f, %f", pid[0], pid[1], pid[2]);
-			throttle_real += mix;
-
-			// placebo motor saturation detector.
+		// find how much motor power roll and pitch command requires
+		float min_roll_pitch = 1.0f;
+		float max_roll_pitch = 0.0f;
+		for(int i=0; i<motor_count; i++)
+		{
+			motor_output[i] = 0;
+			for(int j=0; j<2; j++)
+				motor_output[i] += quadcopter_mixing_matrix[matrix][i][j] * pid_result[j] * QUADCOPTER_THROTTLE_RESERVE;
+			
+			min_roll_pitch = fmin(min_roll_pitch, motor_output[i]);
+			max_roll_pitch = fmax(max_roll_pitch, motor_output[i]);
+		}
+		
+		// handle saturation caused by roll and pitch alone
+		float roll_pitch_factor = 1.0f;
+		min_roll_pitch = 1.0f;
+		max_roll_pitch = 0.0f;
+		if (max_roll_pitch - min_roll_pitch > 1.0f)
+			roll_pitch_factor = limit(roll_pitch_factor, 0.5f, 1.0f/(max_roll_pitch - min_roll_pitch));
+		for(int i=0; i<motor_count; i++)
+		{
+			motor_output[i] = 0;
+			for(int j=0; j<2; j++)
+				motor_output[i] += quadcopter_mixing_matrix[matrix][i][j] * (roll_pitch_factor * pid_result[j]) * QUADCOPTER_THROTTLE_RESERVE;
+			
+			min_roll_pitch = fmin(min_roll_pitch, motor_output[i]);
+			max_roll_pitch = fmax(max_roll_pitch, motor_output[i]);
+		}
+		
+		// add throttle 
+		float min_throttle = limit(-min_roll_pitch, 0, 1);
+		float max_throttle = limit(1-max_roll_pitch, 0, 1);
+		float throttle = limit(throttle_result, min_throttle, max_throttle);
+		for(int i=0; i<motor_count; i++)
+			motor_output[i] += throttle;
+		
+		// try ouput max possible yaw command
+		float yaw_factor = 1.0f;
+		for(int i=0; i<motor_count; i++)
+		{
+			float yaw_power = quadcopter_mixing_matrix[matrix][i][2] * pid_result[2] * QUADCOPTER_THROTTLE_RESERVE;
+			
+			if (yaw_power < 0)
+			{
+				yaw_factor = fmin(yaw_factor, fmax(0, motor_output[i]) / -yaw_power);
+			}
+			else
+			{
+				yaw_factor = fmin(yaw_factor, (1-motor_output[i]) / yaw_power);
+			}
+		}
+		for(int i=0; i<motor_count; i++)
+		{
+			motor_output[i] += quadcopter_mixing_matrix[matrix][i][2] * yaw_factor * pid_result[2] * QUADCOPTER_THROTTLE_RESERVE;
+			g_ppm_output[i] = limit(THROTTLE_IDLE + motor_output[i]*(THROTTLE_MAX-THROTTLE_IDLE), THROTTLE_IDLE, THROTTLE_MAX);
+		}
+		
+		// statics
+		throttle_real = 0;
+		for(int i=0; i<motor_count; i++)
+			throttle_real += motor_output[i];
+		throttle_real /= motor_count;
+		
+		// placebo motor saturation detector.
+		for(int i=0; i<motor_count; i++)
+		{
 			if (g_ppm_output[i] <= THROTTLE_IDLE+20 || g_ppm_output[i] >= THROTTLE_MAX-20)
 				motor_saturated = true;
 		}
-		throttle_real /= motor_count;
+
 	}
 
 	else
@@ -1353,7 +1418,7 @@ int arm(bool arm = true)
 
 int disarm()
 {
-	return disarm();
+	return arm(false);
 }
 
 void reset_mag_cal()

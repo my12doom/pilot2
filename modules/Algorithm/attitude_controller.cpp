@@ -100,8 +100,8 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 			if (isnan(stick[i]))
 				continue;
 
-			float limit_l = euler_sp[i] - PI*2 * dt;
-			float limit_r = euler_sp[i] + PI*2 * dt;
+			float limit_l = euler_sp[i] - 2*PI * dt;
+			float limit_r = euler_sp[i] + 2*PI * dt;
 			euler_sp[i] = stick[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
 			euler_sp[i] = limit(euler_sp[i], limit_l, limit_r);
 		}
@@ -141,7 +141,10 @@ int attitude_controller::update(float dt)
 	else
 	{
 		for(int i=0; i<3; i++)
+		{
 			body_rate_sp[i] = radian_sub(euler_sp[i], euler[i]) * pid_factor2[i][0];
+			body_rate_sp[i] = limit(body_rate_sp[i], -PI, PI);
+		}
 	}
 	
 	

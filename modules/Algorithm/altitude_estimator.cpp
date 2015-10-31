@@ -25,7 +25,7 @@ static float R[4] =
 
 static float R2[4] = 
 {
-	60000, 0,
+	6000, 0,
 	0, 0.00230,
 };
 
@@ -107,9 +107,7 @@ int altitude_estimator::update(float accelz, float baro, float dt)
 	if (dt > 0.2f || dt < 0)
 		return -1;
 
-	// near ground, reject ground effected baro data
-// 	bool invalid_baro_data = mode == quadcopter && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(state[0] - ground_altitude) < 1.0f);
-	bool invalid_baro_data = isnan(baro);
+	bool invalid_baro_data = false;
 
 
 	float dtsq = dt*dt;
