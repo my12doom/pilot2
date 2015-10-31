@@ -107,8 +107,7 @@ int altitude_estimator::update(float accelz, float baro, float dt)
 	if (dt > 0.2f || dt < 0)
 		return -1;
 
-	bool invalid_baro_data = false;
-
+	bool invalid_baro_data = isnan(baro);
 
 	float dtsq = dt*dt;
 	float dtsq2 = dtsq/2;

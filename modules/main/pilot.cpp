@@ -772,7 +772,7 @@ int save_logs()
 	return 0;
 }
 
-#define SONAR_MIN 0.3f
+#define SONAR_MIN 0.0f
 #define SONAR_MAX 4.5f
 
 int read_sensors()
@@ -1185,7 +1185,7 @@ int calculate_state()
 	accelz = acc_ned[2];
 
 	alt_estimator.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
-	alt_estimator.update(accelz, new_baro_data ? a_raw_altitude : NAN, interval);
+	alt_estimator.update(accelz, a_raw_altitude, interval);
 	alt_estimator.set_static_mode(!armed);
 	alt_estimatorCF.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
 	alt_estimatorCF.update(accelz, new_baro_data ? a_raw_altitude : NAN, interval);
@@ -1694,7 +1694,7 @@ int crash_detector()
 	if (gforce > 5.5f)
 	{
 		LOGE("very high G force (%.2f) detected (%.0f,%.0f,%.0f)\n", gforce, accel.array[0], accel.array[1], accel.array[2]);
-		//set_mode(_shutdown);
+		disarm();
 	}
 
 	int prot = (float)::crash_protect;
@@ -1702,23 +1702,26 @@ int crash_detector()
 	bool landing_requested = rc[2] < 0.1f || (islanding && throttle_result < 0.2f);
 		
 	// tilt detection
-	if (landing_requested || prot & CRASH_TILT_IMMEDIATE)
-	{
-		float cos0 = cos(euler[0]);
-		float cos1 = cos(euler[1]);
-		float tilt = sqrt(cos0*cos0 + cos1*cos1);
-		if (tilt < 0.33f || cos0 < 0 || cos1 < 0)		// around 70 degree
-			tilt_us = tilt_us > 0 ? tilt_us : systimer->gettime();
-		else
-			tilt_us = 0;
-	}
+	float cos0 = cos(euler[0]);
+	float cos1 = cos(euler[1]);
+	float tilt = sqrt(cos0*cos0 + cos1*cos1);
+	if (tilt < 0.33f || cos0 < 0 || cos1 < 0)		// around 70 degree
+		tilt_us = tilt_us > 0 ? tilt_us : systimer->gettime();
+	else
+		tilt_us = 0;
 
-	if (((collision_detected > 0 && systimer->gettime() - collision_detected < 100000) && (landing_requested || prot & CRASH_COLLISION_IMMEDIATE)) 
-		|| (tilt_us> 0 && systimer->gettime()-tilt_us > 1000000))	// more than 1 second
+	if ((collision_detected > 0 && systimer->gettime() - collision_detected < 100000) && (landing_requested || prot & CRASH_COLLISION_IMMEDIATE)) 
 	{
 		LOGE("landing impact detected(%s)\n", (collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) ? "collision" : "tilt");
 
-		//set_mode(_shutdown);
+		disarm();
+	}
+
+	if (tilt_us> 0 && systimer->gettime()-tilt_us > 2000000)	// flip over more than 2 second
+	{
+		LOGE("flip over for more than 1 senconds");
+
+		disarm();
 	}
 
 	return 0;
