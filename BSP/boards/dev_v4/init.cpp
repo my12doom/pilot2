@@ -13,6 +13,8 @@
 #include <utils/param.h>
 #include "RGBLED.h"
 
+extern "C" const char bsp_name[] = "v4";
+
 using namespace HAL;
 using namespace devices;
 using namespace STM32F4;

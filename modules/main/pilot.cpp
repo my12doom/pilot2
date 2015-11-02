@@ -366,8 +366,8 @@ int run_controllers()
 			float stick_roll = rc[0] * quadcopter_range[0];
 			float stick_pitch = -rc[1] * quadcopter_range[1];	// pitch stick and coordinate are reversed
 
-			float flow_roll = frame.flow_comp_m_x/1000.0f;
-			float flow_pitch = frame.flow_comp_m_y/1000.0f;
+			float flow_roll = -frame.flow_comp_m_x/1000.0f;
+			float flow_pitch = -frame.flow_comp_m_y/1000.0f;
 			of_controller.update_controller(flow_roll, flow_pitch, stick_roll, stick_pitch, interval);
 			float euler_target[3] = {0,0, NAN};
 			of_controller.get_result(&euler_target[0], &euler_target[1]);

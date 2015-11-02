@@ -16,6 +16,8 @@ extern volatile vector imu_statics[2][4];		//	[accel, gyro][min, current, max, a
 extern volatile int avg_count;
 extern float mpu6050_temperature;
 extern pos_estimator estimator;
+const char version_name[] = __DATE__;
+const char bsp_name[] = " unknown";
 
 #define SIGNATURE_ADDRESS 0x0800E800
 
@@ -227,7 +229,7 @@ extern "C" int parse_command_line(const char *line, char *out)
 	}
 	else if (strstr(line, "hello") == line)
 	{
-		strcpy(out, "yap1.0.0\n");
+		sprintf(out, "yap(%s)(bsp %s)\n", version_name, bsp_name);
 		return strlen(out);
 	}
 	else if (strstr(line, "imureset") == line)

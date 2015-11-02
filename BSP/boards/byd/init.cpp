@@ -13,6 +13,8 @@
 #include <utils/param.h>
 #include "RGBLED.h"
 
+extern "C" const char bsp_name[] = "BYD";
+
 using namespace HAL;
 using namespace devices;
 using namespace STM32F4;
@@ -395,12 +397,15 @@ int bsp_init_all()
 		param("accI", 0.24) = 0.24;
 
 		// PID
-		param("rP1", 0.2f)=0.2f;
-		param("rI1", 0.3f)=0.3f;
-		param("rD1", 0.005f)=0.005f;
-		param("rP2", 0.36f)=0.36f;
-		param("rI2", 0.4f)=0.4f;
+		param("rP1", 0.2f)=0.45f;
+		param("rI1", 0.3f)=0.45f;
+		param("rD1", 0.005f)=0.01f;
+		param("rP2", 0.36f)=0.55f;
+		param("rI2", 0.4f)=0.55f;
 		param("rD2", 0.01f)=0.01f;
+		param("sP1", 4.5f)=4.5f;
+		param("sP2", 4.5f)=4.5f;
+
 		param("rP3", 1.2f)=1.2f;
 		param("rI3", 0.15f)=0.15f;
 
