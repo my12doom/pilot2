@@ -308,7 +308,7 @@ int run_controllers()
 	// throttle
 	if (submode == althold || submode == poshold || submode == bluetooth || submode == optical_flow)
 	{
-		float landing_rate = (alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
+		float landing_rate = ((alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) && !alt_controller.sonar_acitved()) ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
 		float max_climb_rate = islanding ? (landing_rate + quadcopter_auto_landing_rate_final) : quadcopter_max_climb_rate;	// very low climbe rate even if max throttle in landing state
 		
 		float v = rc[2] - 0.5f;

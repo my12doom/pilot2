@@ -294,6 +294,11 @@ float altitude_controller::get_result()
 	return throttle_result;
 }
 
+bool altitude_controller::sonar_actived()
+{
+	return !isnan(m_sonar_target);
+}
+
 /// calc_leash_length - calculates the horizontal leash length given a maximum speed, acceleration and position kP gain
 float altitude_controller::calc_leash_length(float speed, float accel, float kP)
 {

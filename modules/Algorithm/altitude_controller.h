@@ -44,6 +44,9 @@ public:
 	
 	float get_result();
 
+	// return true if sonar surface tracking enabled
+	bool sonar_actived();
+
 	// estimated hover throttle
 	float throttle_hover;
 
