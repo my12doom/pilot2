@@ -47,8 +47,8 @@ int mag_calibration_state = 0;			// 0: not running, 1: collecting data, 2: calib
 int last_mag_calibration_result = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
 mag_calibration mag_calibrator;
 IUART *vcp = NULL;
-
 int usb_data_publish = 0;
+int lowpower = 0;		// lowpower == 0:power good, 1:low power, no action taken, 2:low power, action taken.
 
 
 // parameters
@@ -308,7 +308,7 @@ int run_controllers()
 	// throttle
 	if (submode == althold || submode == poshold || submode == bluetooth || submode == optical_flow)
 	{
-		float landing_rate = ((alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) && !alt_controller.sonar_acitved()) ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
+		float landing_rate = ((alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) && !alt_controller.sonar_actived()) ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
 		float max_climb_rate = islanding ? (landing_rate + quadcopter_auto_landing_rate_final) : quadcopter_max_climb_rate;	// very low climbe rate even if max throttle in landing state
 		
 		float v = rc[2] - 0.5f;
@@ -1161,7 +1161,7 @@ int calculate_state()
 		accel.array[0], accel.array[1], accel.array[2], 
 		mag.array[0], mag.array[1], mag.array[2],
 		gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
-		0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval);
+		0.03f*factor, 0.0003f, 0.15f*factor_mag, 0.0015f, interval);
 
 	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
 	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
@@ -1986,6 +1986,43 @@ int read_rc()
 	return 0;
 }
 
+int lowpower_handling()
+{
+	if (interval > 0.1f)
+		return;
+	
+	static float lowpower1 = 0;
+	static float lowpower2 = 0;
+
+	if (voltage > 6 && voltage < 10.2f)
+	{
+		lowpower2 += interval;
+	}
+	
+	else if (voltage > 6 && voltage<10.5f)
+	{
+		lowpower1 += interval;
+		lowpower2 = 0;
+	}
+
+	else
+	{
+		lowpower1 = 0;
+		lowpower2 = 0;
+	}
+
+	if (lowpower1 > 3)
+		lowpower = max(lowpower, 1);
+
+	if (lowpower2 > 3)
+		lowpower = max(lowpower, 2);
+
+	if (lowpower >= 2)
+		islanding = true;
+
+	return 0;
+}
+
 int light_words()
 {
 	// critical errors
@@ -2033,14 +2070,13 @@ int light_words()
 		}
 	}
 
-	else if (voltage > 6 && voltage<10.2f)			// low voltage warning
+	else if (lowpower)			// low voltage warning
 	{
-		islanding = true;
-
-		// fast red flash (10hz) if magnetic interference
+		// fast red flash (10hz)
+		int dt = lowpower == 2 ? 50000 : 500000;
 		systime = systimer->gettime();
 		if (rgb && mag_calibration_state == 0)
-		if (systime % 100000 < 50000)
+		if (systime % (dt*2) < dt)
 			rgb->write(1,0,0);
 		else
 			rgb->write(0,0,0);
@@ -2200,6 +2236,8 @@ void main_loop(void)
 			manager.get_asyncworker()->add_work(mag_calibrating_worker, 0);
 		}
 	}
+
+	lowpower_handling();
 
 	// light words
 	light_words();
