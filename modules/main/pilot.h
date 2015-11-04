@@ -164,13 +164,10 @@ public:
 		
 	// helper functions
 	float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert);	
-	
 	static int min(int a, int b){return a>b?b:a;}
 	static int max(int a, int b){return a<b?b:a;}
 	static float fmin(float a, float b){return a > b ? b : a;}
 	static float fmax(float a, float b){return a > b ? a : b;}
-	void led_all_on();
-	void led_all_off();
 	int send_package(const void *data, uint16_t size, uint8_t type, HAL::IUART*uart);
 	void output_rc();
 	void STOP_ALL_MOTORS();

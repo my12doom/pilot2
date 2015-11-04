@@ -166,18 +166,6 @@ yet_another_pilot::yet_another_pilot()
 }
 
 // helper functions
-void yet_another_pilot::led_all_on()
-{
-	SAFE_ON(state_led);
-	SAFE_ON(SD_led);
-}
-
-void yet_another_pilot::led_all_off()
-{
-	SAFE_OFF(state_led);
-	SAFE_OFF(SD_led);
-}
-
 int yet_another_pilot::send_package(const void *data, uint16_t size, uint8_t type, IUART*uart)
 {
 	uint8_t start_code[2] = {0x85, 0xa3};
@@ -1066,7 +1054,7 @@ int yet_another_pilot::calculate_state()
 		accel.array[0], accel.array[1], accel.array[2], 
 		mag.array[0], mag.array[1], mag.array[2],
 		gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
-		0.03f*factor, 0.0003f, 0.15f*factor_mag, 0.0015f, interval);
+		0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval);
 
 	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
 	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
@@ -1205,9 +1193,15 @@ int yet_another_pilot::sensor_calibration()
 		}
 		
 		if ((systimer->gettime()/1000)%50 > 25)
-			led_all_on();
+		{
+			SAFE_ON(state_led);
+			SAFE_ON(SD_led);
+		}
 		else
-			led_all_off();
+		{
+			SAFE_OFF(state_led);
+			SAFE_OFF(SD_led);
+		}
 
 		if (rgb)
 		{
@@ -1892,7 +1886,7 @@ int yet_another_pilot::lowpower_handling()
 		lowpower2 += interval;
 	}
 	
-	else if (voltage > 6 && voltage<10.5f)
+	else if (voltage > 6 && voltage<10.8f)
 	{
 		lowpower1 += interval;
 		lowpower2 = 0;
@@ -2077,7 +2071,7 @@ void yet_another_pilot::main_loop(void)
 	// rc inputs
 	read_rc();
 
-	led_all_off();
+	SAFE_OFF(state_led);
 	
 	// performance counter
 	cycle_counter++;
@@ -2147,7 +2141,7 @@ void yet_another_pilot::main_loop(void)
 	else
 		land_detect_us = 0;
 
-	led_all_on();
+	SAFE_ON(state_led);
 
 	if (log_ready)
 	{		
