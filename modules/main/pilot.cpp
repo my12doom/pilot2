@@ -112,9 +112,9 @@ yet_another_pilot::yet_another_pilot()
 ,rcout(NULL)
 ,rgb(NULL)
 ,range_finder(NULL)
+,vcp(NULL)
 ,mag_calibration_state(0)			// 0: not running, 1: collecting data, 2: calibrating
 ,last_mag_calibration_result(0xff)	// 0xff: not calibrated at all, other values from mag calibration.
-,vcp(NULL)
 ,usb_data_publish(0)
 ,lowpower(0)		// lowpower == 0:power good, 1:low power, no action taken, 2:low power, action taken.
 ,acc_cal_requested(false)

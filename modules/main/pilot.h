@@ -30,12 +30,8 @@ public:
 	HAL::IRCOUT *rcout;
 	devices::IRGBLED *rgb;
 	devices::IRangeFinder * range_finder;// = NULL;
-	int mag_calibration_state;// = 0;			// 0: not running, 1: collecting data, 2: calibrating
-	int last_mag_calibration_result;// = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
 	mag_calibration mag_calibrator;
 	HAL::IUART *vcp;// = NULL;
-	int usb_data_publish;// = 0;
-	int lowpower;// = 0;		// lowpower == 0:power good, 1:low power, no action taken, 2:low power, action taken.
 
 
 	int64_t g_pwm_input_update[16];//
@@ -44,6 +40,10 @@ public:
 	
 	
 	// states
+	int mag_calibration_state;// = 0;			// 0: not running, 1: collecting data, 2: calibrating
+	int last_mag_calibration_result;// = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
+	int usb_data_publish;// = 0;
+	int lowpower;// = 0;		// lowpower == 0:power good, 1:low power, no action taken, 2:low power, action taken.
 	bool acc_cal_requested;// = false;
 	bool acc_cal_done;// = false;
 	bool motor_saturated;// = false;
@@ -89,35 +89,24 @@ public:
 	float voltage;// = 0;
 	float current;// = 0;
 	float interval;// = 0;
-
 	float yaw_launch;
-
 	float a_raw_pressure;// = 0;
 	float a_raw_temperature;// = 0;
 	float a_raw_altitude;// = 0;
 	bool new_baro_data;// = false;
-
-
-
 	float throttle_real;// = 0;
 	float throttle_result;// = 0;
-
 	float mah_consumed;// = 0;
 	float wh_consumed;// = 0;
-
 	float sonar_distance;// = NAN;
-
 	float bluetooth_roll;// = 0;
 	float bluetooth_pitch;// = 0;
 	int64_t bluetooth_last_update;// = 0;
 	int64_t mobile_last_update;// = 0;
-
-
 	vector gyro_temp_k;// = {0};		// gyro temperature compensating curve (linear)
 	vector gyro_temp_a;// = {0};
 	float temperature0;// = 0;
 	float mpu6050_temperature;
-
 	vector imu_statics[3][4];// = {0};		//	[accel, gyro, mag][min, current, max, avg]
 	int avg_count;// = 0;
 	sensors::px4flow_frame frame;
@@ -127,10 +116,11 @@ public:
 	motion_detector motion_acc;						// motion detector for accelerometer calibration.
 	bool islanding;// = false ;
 
-	// functions
+	// constructor
 	yet_another_pilot();
 	~yet_another_pilot(){}
 	
+	// setup and loop functions
 	int setup();
 	void main_loop();
 	void sdcard_logging_loop();
@@ -139,28 +129,33 @@ public:
 	static void sdcard_logging_loop_entry(){yap.sdcard_logging_loop();}
 	void mag_calibrating_worker();
 	
-	int handle_cli(HAL::IUART *uart);
+	// mag and accelerometer calibration
+	int sensor_calibration();
 	int finish_accel_cal();
+	void reset_accel_cal();
+	void reset_mag_cal();
+	
+	// main loop sub routines.
+	int read_rc();
 	int light_words();
 	int lowpower_handling();
-	int read_rc();
-	int handle_uart4_controll();
-	int handle_wifi_controll();
 	int crash_detector();
 	int land_detector();
 	void check_takeoff_OR_landing();
 	int check_stick();
-	void reset_accel_cal();
-	void reset_mag_cal();
 	int disarm();
 	int arm(bool arm = true);
 	int set_submode(copter_mode newmode);
-	int sensor_calibration();
 	int calculate_state();
 	int read_sensors();
 	int run_controllers();
 	int output();
 	int save_logs();
+	
+	// UART functions
+	int handle_cli(HAL::IUART *uart);
+	int handle_uart4_controll();
+	int handle_wifi_controll();
 		
 	// helper functions
 	float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert);	
