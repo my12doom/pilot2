@@ -1,3 +1,4 @@
+#include "pilot.h"
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -12,47 +13,23 @@
 #include <utils/console.h>
 #include <utils/gauss_newton.h>
 
-#include <Algorithm/ahrs.h>
-#include <Algorithm/attitude_controller.h>
-#include <Algorithm/altitude_estimator.h>
-#include <Algorithm/altitude_estimatorCF.h>
-#include <Algorithm/altitude_controller.h>
-#include <Algorithm/pos_estimator.h>
-#include <Algorithm/pos_controll.h>
-#include <Algorithm/of_controller.h>
-#include <Algorithm/mag_calibration.h>
-#include <Algorithm/motion_detector.h>
-#include <math/LowPassFilter2p.h>
+#include <FileSystem/ff.h>
 
-#include <HAL/Interface/Interfaces.h>
-#include <HAL/Resources.h>
 using namespace HAL;
 using namespace devices;
 using namespace math;
-#include <FileSystem/ff.h>
 
+// constants
 #define THROTTLE_STOP (max((int)(isnan(pwm_override_min)? (rc_setting[2][0]-20):pwm_override_min),1000))
 #define THROTTLE_MAX (min((int)(isnan(pwm_override_max)? (rc_setting[2][2]-20) : pwm_override_max),2000))
 #define SAFE_ON(x) if(x) (x)->on()
 #define SAFE_OFF(x) if(x) (x)->off()
-
-ILED *state_led;
-ILED *SD_led;
-ILED *flashlight;
-IRCIN *rcin;
-IRCOUT *rcout;
-IRGBLED *rgb;
-IRangeFinder * range_finder = NULL;
-int mag_calibration_state = 0;			// 0: not running, 1: collecting data, 2: calibrating
-int last_mag_calibration_result = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
-mag_calibration mag_calibrator;
-IUART *vcp = NULL;
-int usb_data_publish = 0;
-int lowpower = 0;		// lowpower == 0:power good, 1:low power, no action taken, 2:low power, action taken.
-
+#define MAX_MOTOR_COUNT 8
+#define SONAR_MIN 0.0f
+#define SONAR_MAX 4.5f
+const float PI180 = 180/PI;
 
 // parameters
-
 static param crash_protect("prot", 0);		// crash protection
 static param pwm_override_max("tmax", NAN);
 static param pwm_override_min("tmin", NAN);
@@ -110,7 +87,6 @@ static param mag_scale[3] =
 {
 	param("mgx", 1), param("mgy", 1), param("mgz", 1),
 };
-#define MAX_MOTOR_COUNT 8
 static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
 {
 	{							// + mode
@@ -127,38 +103,82 @@ static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixi
 	}
 };
 
-float PI180 = 180/PI;
+// constructor and destructor, initializer
+yet_another_pilot::yet_another_pilot()
+:state_led(NULL)
+,SD_led(NULL)
+,flashlight(NULL)
+,rcin(NULL)
+,rcout(NULL)
+,rgb(NULL)
+,range_finder(NULL)
+,mag_calibration_state(0)			// 0: not running, 1: collecting data, 2: calibrating
+,last_mag_calibration_result(0xff)	// 0xff: not calibrated at all, other values from mag calibration.
+,vcp(NULL)
+,usb_data_publish(0)
+,lowpower(0)		// lowpower == 0:power good, 1:low power, no action taken, 2:low power, action taken.
+,acc_cal_requested(false)
+,acc_cal_done(false)
+,motor_saturated(false)
+,rc_fail(false)
+,round_running_time(0)
+,new_gps_data(false)
+,critical_errors(0)
+,cycle_counter(0)
+,ground_pressure(0)
+,ground_temperature(0)
+,accelz(0)
+,airborne(false)
+,takeoff_ground_altitude(0)
+,armed(false)
+,submode(basic)
+,collision_detected(0)	// remember to clear it before arming
+,tilt_us(0)	// remember to clear it before arming
+//,gyro_lpf2p({LowPassFilter2p(333.3, 40),LowPassFilter2p(333.3, 40),LowPassFilter2p(333.3, 40)})	// 2nd order low pass filter for gyro.
 
-static int16_t min(int16_t a, int16_t b)
+,last_tick(0)
+,last_gps_tick(0)
+,voltage(0)
+,current(0)
+,interval(0)
+,new_baro_data(false)
+,mah_consumed(0)
+,wh_consumed(0)
+,sonar_distance(NAN)
+,bluetooth_last_update(0)
+,mobile_last_update(0)
+,avg_count(0)
+,loop_hz(0)
+,islanding(false)
 {
-	return a>b?b:a;
-}
-static int16_t max(int16_t a, int16_t b)
-{
-	return a<b?b:a;
-}
-static float f_min(float a, float b)
-{
-	return a > b ? b : a;
-}
-static float f_max(float a, float b)
-{
-	return a > b ? a : b;
+	memset(g_pwm_input_update, 0, sizeof(g_pwm_input_update));
+	memset(g_ppm_output, 0, sizeof(g_ppm_output));
+	memset(g_pwm_input, 0, sizeof(g_pwm_input));
+	memset(acc_avg_count, 0, sizeof(acc_avg_count));
+	memset(&imu_statics[0][0], 0, sizeof(imu_statics));
+	memset(rc_mobile, 0, sizeof(rc_mobile));
+	memset(&gyro_reading, 0, sizeof(gyro_reading));
+	memset(&body_rate, 0, sizeof(body_rate));
+	memset(&accel, 0, sizeof(accel));
+	
+	for(int i=0; i<3; i++)
+		gyro_lpf2p[i].set_cutoff_frequency(333.33, 40);
 }
 
-void led_all_on()
+// helper functions
+void yet_another_pilot::led_all_on()
 {
 	SAFE_ON(state_led);
 	SAFE_ON(SD_led);
 }
 
-void led_all_off()
+void yet_another_pilot::led_all_off()
 {
 	SAFE_OFF(state_led);
 	SAFE_OFF(SD_led);
 }
 
-int send_package(const void *data, uint16_t size, uint8_t type, IUART*uart)
+int yet_another_pilot::send_package(const void *data, uint16_t size, uint8_t type, IUART*uart)
 {
 	uint8_t start_code[2] = {0x85, 0xa3};
 	uart->write(start_code, 2);
@@ -169,117 +189,19 @@ int send_package(const void *data, uint16_t size, uint8_t type, IUART*uart)
 	return size;
 }
 
-int64_t g_pwm_input_update[16] = {0};
-int16_t g_ppm_output[16] = {0};
-int16_t g_pwm_input[16] = {0};
-
-void output_rc()
+void yet_another_pilot::output_rc()
 {
 	rcout->write(g_ppm_output, 0,  min(rcout->get_channel_count(), countof(g_ppm_output)));
 }
 
-void STOP_ALL_MOTORS()
+void yet_another_pilot::STOP_ALL_MOTORS()
 {
 	for(int i=0; i<16; i++)
 		g_ppm_output[i] = THROTTLE_STOP;
 	output_rc();
 }
-int handle_cli(IUART *uart);
-int handle_uart4_controll();
-int handle_wifi_controll();
-int finish_accel_cal();
-int light_words();
 
-// states
-bool motor_saturated = false;
-static bool rc_fail = false;
-int round_running_time = 0;
-devices::gps_data gps;
-bool new_gps_data = false;
-int critical_errors = 0;
-int cycle_counter = 0;
-float ground_pressure = 0;
-float ground_temperature = 0;
-float rc[8] = {0};			// ailerron : full left -1, elevator : full down -1, throttle: full down 0, rudder, full left -1
-float rc_mobile[4] = {0};	// rc from mobile devices
-float accelz = 0;
-bool airborne = false;
-float takeoff_ground_altitude = 0;
-//fly_mode mode = initializing;
-bool armed = false;
-copter_mode submode = basic;
-int64_t collision_detected = 0;	// remember to clear it before arming
-int64_t tilt_us = 0;	// remember to clear it before arming
-bool gyro_bias_estimating_end = false;
-LowPassFilter2p gyro_lpf2p[3] = {LowPassFilter2p(333.3, 40), LowPassFilter2p(333.3, 40), LowPassFilter2p(333.3, 40)};	// 2nd order low pass filter for gyro.
-vector gyro_reading;			// gyro reading with temperature compensation and LPF, without AHRS bias estimating
-vector body_rate;				// body rate, with all compensation applied
-vector accel = {NAN, NAN, NAN};
-vector mag;
-vector gyro_uncalibrated;
-vector accel_uncalibrated;
-vector mag_uncalibrated;
-vector accel_earth_frame;
-bool new_baro_data = false;
-int64_t systime;
-
-int64_t last_tick = 0;
-int64_t last_gps_tick = 0;
-static unsigned short gps_id = 0;
-pos_estimator estimator;
-pos_controller controller;
-attitude_controller attitude_controller;
-altitude_estimator alt_estimator;
-altitude_estimatorCF alt_estimatorCF;
-altitude_controller alt_controller;
-OpticalFlowController of_controller;
-float ground_speed_north;		// unit: m/s
-float ground_speed_east;		// unit: m/s
-float airspeed_sensor_data;
-float voltage = 0;
-float current = 0;
-float interval = 0;
-
-float yaw_launch;
-
-float a_raw_pressure = 0;
-float a_raw_temperature = 0;
-float a_raw_altitude = 0;
-
-
-
-float throttle_real = 0;
-float throttle_result = 0;
-
-float mah_consumed = 0;
-float wh_consumed = 0;
-
-float sonar_distance = NAN;
-int64_t last_sonar_time = 0;
-
-bool has_5th_channel = true;
-bool has_6th_channel = true;
-
-float bluetooth_roll = 0;
-float bluetooth_pitch = 0;
-int64_t bluetooth_last_update = 0;
-int64_t mobile_last_update = 0;
-
-
-vector gyro_temp_k = {0};		// gyro temperature compensating curve (linear)
-vector gyro_temp_a = {0};
-float temperature0 = 0;
-float mpu6050_temperature;
-
-volatile vector imu_statics[3][4] = {0};		//	[accel, gyro, mag][min, current, max, avg]
-int avg_count = 0;
-sensors::px4flow_frame frame;
-int loop_hz = 0;
-vector acc_calibrator[6];						// accelerometer calibration data array.
-int acc_avg_count[6] = {0};						// accelerometer calibration average counter.
-motion_detector motion_acc;						// motion detector for accelerometer calibration.
-bool islanding = false ;
-int calculate_baro_altitude()
+int yet_another_pilot::calculate_baro_altitude()
 {
 	// raw altitude
 	double scaling = (double)a_raw_pressure / ground_pressure;
@@ -291,14 +213,9 @@ int calculate_baro_altitude()
 	return 0;
 }
 
-static int min(int a, int b)
-{
-	if (a>b)
-		return b;
-	return a;
-}
 
-int run_controllers()
+
+int yet_another_pilot::run_controllers()
 {
 	attitude_controller.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	
@@ -440,7 +357,6 @@ int run_controllers()
 		(throttle_result > alt_controller.throttle_hover + QUADCOPTER_THROTTLE_RESERVE))
 	{
 		airborne = true;
-		gyro_bias_estimating_end = true;
 	}
 	
 	attitude_controller.update(interval);
@@ -448,16 +364,7 @@ int run_controllers()
 	return 0;
 }
 
-static inline float fmin(float a, float b)
-{
-	return a>b?b:a;
-}
-static inline float fmax(float a, float b)
-{
-	return a>b?a:b;
-}
-
-int output()
+int yet_another_pilot::output()
 {
 	float pid_result[3];
 	motor_saturated = false;
@@ -566,7 +473,7 @@ int output()
 
 
 // called by main loop, only copy logs to a memory buffer, should be very fast
-int save_logs()
+int yet_another_pilot::save_logs()
 {
 	if (LOG_LEVEL == LOG_SDCARD	&& !log_ready)
 		return 0;
@@ -618,7 +525,7 @@ int save_logs()
 	pilot_data pilot = 
 	{
 		alt_estimator.state[0] * 100,
-		airspeed_sensor_data * 1000,
+		0,//airspeed_sensor_data * 1000,
 		{attitude_controller.pid[0][0]*180*100/PI, attitude_controller.pid[1][0]*180*100/PI, attitude_controller.pid[2][0]*180*100/PI},
 		{attitude_controller.body_rate_sp[0]*180*100/PI, attitude_controller.body_rate_sp[1]*180*100/PI, attitude_controller.body_rate_sp[2]*180*100/PI},
 		armed ? 1 : 0,
@@ -748,6 +655,7 @@ int save_logs()
 
 	if (last_gps_tick > systimer->gettime() - 2000000)
 	{
+		static unsigned short gps_id = 0;
 		::gps_data data = 
 		{
 			{gps.DOP[0], gps.DOP[1], gps.DOP[2]},
@@ -755,7 +663,7 @@ int save_logs()
 			gps.longitude * 10000000, gps.latitude * 10000000, gps.altitude,
 			gps.satelite_in_view, gps.satelite_in_use,
 			gps.sig, gps.fix,
-			gps_id & 0xf,
+			gps_id++ & 0xf,
 			gps.direction,
 		};
 
@@ -772,10 +680,7 @@ int save_logs()
 	return 0;
 }
 
-#define SONAR_MIN 0.0f
-#define SONAR_MAX 4.5f
-
-int read_sensors()
+int yet_another_pilot::read_sensors()
 {
 	int64_t reading_start = systimer->gettime();
 	vector acc = {0};
@@ -897,7 +802,7 @@ int read_sensors()
 	
 	// apply a 2nd order LPF to gyro readings
 	for(int i=0; i<3; i++)
-		::gyro_reading.array[i] = gyro_lpf2p[i].apply(gyro.array[i]);
+		this->gyro_reading.array[i] = gyro_lpf2p[i].apply(gyro.array[i]);
 
 	// read magnetometers
 	int healthy_mag_count = 0;
@@ -1019,7 +924,7 @@ int read_sensors()
 		if (res == 0 && data.DOP[1] > 0 && data.DOP[1] < lowest_hdop)
 		{
 			lowest_hdop = data.DOP[1];
-			::gps = data;
+			this->gps = data;
 			new_gps_data = (res == 0);
 			last_gps_tick = systimer->gettime();
 		}
@@ -1075,7 +980,7 @@ int read_sensors()
 		gyro_reading.array[i] += gyro_bias[i];
 	}
 	
-	::mag = mag;
+	this->mag = mag;
 	
 
 	// apply a 5hz LPF to accelerometer readings
@@ -1083,12 +988,12 @@ int read_sensors()
 	float alpha20 = interval / (interval + RC20);
 
 	if (isnan(accel.array[0]) || interval == 0)
-		::accel = acc;
+		this->accel = acc;
 	else
 	{
-		vector_multiply(&::accel, 1-alpha20);
+		vector_multiply(&this->accel, 1-alpha20);
 		vector_multiply(&acc, alpha20);
-		vector_add(&::accel, &acc);
+		vector_add(&this->accel, &acc);
 	}
 
 	// accelerometer motion detector and calibration.
@@ -1125,14 +1030,14 @@ int read_sensors()
 	// statics
 	for(int i=0; i<3; i++)
 	{
-		imu_statics[0][0].array[i] = f_min(accel.array[i], imu_statics[0][0].array[i]);
+		imu_statics[0][0].array[i] = fmin(accel.array[i], imu_statics[0][0].array[i]);
 		imu_statics[0][1].array[i] = accel.array[i];
-		imu_statics[0][2].array[i] = f_max(accel.array[i], imu_statics[0][2].array[i]);
+		imu_statics[0][2].array[i] = fmax(accel.array[i], imu_statics[0][2].array[i]);
 		imu_statics[0][3].array[i] = accel.array[i] + imu_statics[0][3].array[i];
 
-		imu_statics[1][0].array[i] = f_min(gyro.array[i], imu_statics[1][0].array[i]);
+		imu_statics[1][0].array[i] = fmin(gyro.array[i], imu_statics[1][0].array[i]);
 		imu_statics[1][1].array[i] = gyro.array[i];
-		imu_statics[1][2].array[i] = f_max(gyro.array[i], imu_statics[1][2].array[i]);
+		imu_statics[1][2].array[i] = fmax(gyro.array[i], imu_statics[1][2].array[i]);
 		imu_statics[1][3].array[i] = gyro.array[i] + imu_statics[1][3].array[i];
 	}
 	avg_count ++;
@@ -1149,7 +1054,7 @@ int read_sensors()
 	return 0;
 }
 
-int calculate_state()
+int yet_another_pilot::calculate_state()
 {
 	if (interval <=0 || interval > 0.2f)
 		return -1;
@@ -1194,8 +1099,6 @@ int calculate_state()
 	if (new_gps_data)
 	{
 		// fuse gps data
-		gps_id++;
-
 		if (gps.fix > 2)
 		{
 			estimator.update_gps(COORDTIMES * gps.latitude, COORDTIMES * gps.longitude, gps.DOP[1]/100.0f, systimer->gettime());
@@ -1216,7 +1119,7 @@ int calculate_state()
 	return 0;
 }
 
-int sensor_calibration()
+int yet_another_pilot::sensor_calibration()
 {
 	for(int i=0; i<3; i++)
 	{
@@ -1340,13 +1243,7 @@ int sensor_calibration()
 	return 0;
 }
 
-
-int usb_lock()
-{
-	return -1;
-}
-
-int set_submode(copter_mode newmode)
+int yet_another_pilot::set_submode(copter_mode newmode)
 {
 	if (!armed)
 		newmode = invalid;
@@ -1392,7 +1289,7 @@ int set_submode(copter_mode newmode)
 	return 0;
 }
 
-int arm(bool arm = true)
+int yet_another_pilot::arm(bool arm /*= true*/)
 {
 	if (arm == armed)
 		return 0;
@@ -1416,28 +1313,26 @@ int arm(bool arm = true)
 	return 0;
 }
 
-int disarm()
+int yet_another_pilot::disarm()
 {
 	return arm(false);
 }
 
-void reset_mag_cal()
+void yet_another_pilot::reset_mag_cal()
 {
 	LOGE("start magnetometer calibrating");
 	mag_calibrator.reset();
 	mag_calibration_state = 1;
 }
 
-bool acc_cal_requested = false;
-bool acc_cal_done = false;
-void reset_accel_cal()
+void yet_another_pilot::reset_accel_cal()
 {
 	memset(acc_avg_count, 0, sizeof(acc_avg_count));
 	acc_cal_requested = true;
 	acc_cal_done = false;
 }
 
-int finish_accel_cal()
+int yet_another_pilot::finish_accel_cal()
 {
 	if (!acc_cal_requested || acc_cal_done)
 		return 0;
@@ -1484,7 +1379,7 @@ int finish_accel_cal()
 	return 0;
 }
 
-int check_mode()
+int yet_another_pilot::check_stick()
 {
 	if (critical_errors)
 	{
@@ -1496,9 +1391,7 @@ int check_mode()
 	if (g_pwm_input_update[5] > systimer->gettime() - 500000)
 	{
 		copter_mode newmode = submode;
-		if(!has_6th_channel)
-			newmode = althold;
-		else if (rc[5] < -0.6f)
+		if (rc[5] < -0.6f)
 			newmode = basic;
 		else if (rc[5] > 0.6f)
 // 			newmode = airborne ? optical_flow : althold;
@@ -1511,7 +1404,7 @@ int check_mode()
 		set_submode(newmode);
 	}
 
-	if (g_pwm_input_update[4] > systimer->gettime() - 500000 || !has_5th_channel)
+	if (g_pwm_input_update[4] > systimer->gettime() - 500000)
 	{		
 		// emergency switch
 		// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
@@ -1583,7 +1476,7 @@ int check_mode()
 
 static float takeoff_arming_time = 0;
 static bool is_taking_off=false;
-void check_takeoff_OR_landing()
+void yet_another_pilot::check_takeoff_OR_landing()
 {
 	static float last_ch7 = NAN;
 	float time_now;
@@ -1612,7 +1505,7 @@ void check_takeoff_OR_landing()
 			flip_count=0;
 			LOGE("\nauto take off \n");
 			arm();
-			check_mode();	// to set submode and reset all controller
+			check_stick();	// to set submode and reset all controller
 			alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
 			LOGE("\narmed!\n");
 			//1s=1000000us		
@@ -1633,7 +1526,7 @@ void check_takeoff_OR_landing()
 }
 
 int64_t land_detect_us = 0;
-int land_detector()
+int yet_another_pilot::land_detector()
 {
 	if ((rc[2] < 0.1f || (islanding && throttle_result < 0.2f))					// landing and low throttle output, or just throttle stick down
 		&& fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f)	// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
@@ -1656,7 +1549,7 @@ int land_detector()
 	return 0;
 }
 
-int crash_detector()
+int yet_another_pilot::crash_detector()
 {
 	// always detect high G force
 	vector accel_delta;
@@ -1727,7 +1620,7 @@ int crash_detector()
 	return 0;
 }
 
-float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert)
+float yet_another_pilot::ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert)
 {
 	float v = (ppm-center_rc) / (ppm>center_rc ? (max_rc-center_rc) : (center_rc-min_rc));
 
@@ -1739,7 +1632,7 @@ float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert
 	return v;
 }
 
-int handle_cli(IUART *uart)
+int yet_another_pilot::handle_cli(IUART *uart)
 {
 	if (!uart)
 		return -1;
@@ -1763,7 +1656,7 @@ int handle_cli(IUART *uart)
 	return 0;
 }
 
-int handle_wifi_controll()
+int yet_another_pilot::handle_wifi_controll()
 {
 	char line[1024];
 	char out[1024];
@@ -1799,7 +1692,7 @@ int handle_wifi_controll()
 	{
 		LOGE("mobile arm\n");
 		arm();
-		check_mode();	// to set submode and reset all controller
+		check_stick();	// to set submode and reset all controller
 		alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
 
 		const char *armed = "armed\n";
@@ -1822,7 +1715,7 @@ int handle_wifi_controll()
 
 		LOGE("\nauto take off \n");
 		arm();
-		check_mode();	// to set submode and reset all controller
+		check_stick();	// to set submode and reset all controller
 		alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
 		LOGE("\narmed!\n");
 		//1s=1000000us		
@@ -1854,7 +1747,7 @@ int handle_wifi_controll()
 	return 0;
 }
 
-int handle_uart4_controll()
+int yet_another_pilot::handle_uart4_controll()
 {
 #if 0
 	char line[1024];
@@ -1955,7 +1848,7 @@ int handle_uart4_controll()
 	return 0;
 }
 
-int read_rc()
+int yet_another_pilot::read_rc()
 {
 	rcin->get_channel_data(g_pwm_input, 0, 8);
 	rcin->get_channel_update_time(g_pwm_input_update, 0, 8);
@@ -1986,10 +1879,10 @@ int read_rc()
 	return 0;
 }
 
-int lowpower_handling()
+int yet_another_pilot::lowpower_handling()
 {
 	if (interval > 0.1f)
-		return;
+		return -1;
 	
 	static float lowpower1 = 0;
 	static float lowpower2 = 0;
@@ -2023,7 +1916,7 @@ int lowpower_handling()
 	return 0;
 }
 
-int light_words()
+int yet_another_pilot::light_words()
 {
 	// critical errors
 	if (critical_errors != 0)
@@ -2102,7 +1995,7 @@ int light_words()
 	return 0;
 }
 
-void mag_calibrating_worker(int parameter)
+void yet_another_pilot::mag_calibrating_worker()
 {
 	mag_calibrator.do_calibration();
 	mag_calibration_result result;
@@ -2173,7 +2066,7 @@ void mag_calibrating_worker(int parameter)
 	mag_calibration_state = 0;
 }
 
-void main_loop(void)
+void yet_another_pilot::main_loop(void)
 {	
 	// calculate systime interval
 	static int64_t tic = 0;
@@ -2183,9 +2076,6 @@ void main_loop(void)
 	
 	// rc inputs
 	read_rc();
-
-	// usb
-	usb_lock();	// lock the system if usb transfer occurred
 
 	led_all_off();
 	
@@ -2200,7 +2090,7 @@ void main_loop(void)
 	}
 	
 	// RC modes and RC fail detection, or alternative RC source
-	check_mode();
+	check_stick();
 	check_takeoff_OR_landing();
 	handle_wifi_controll();
 
@@ -2233,7 +2123,7 @@ void main_loop(void)
 		if (mag_calibrator.get_stage() == stage_ready_to_calibrate)
 		{
 			mag_calibration_state = 2;
-			manager.get_asyncworker()->add_work(mag_calibrating_worker, 0);
+			manager.get_asyncworker()->add_work(mag_calibrating_worker_entry, (int)this);
 		}
 	}
 
@@ -2278,7 +2168,7 @@ void main_loop(void)
 }
 
 
-void sdcard_logging_loop(void)
+void yet_another_pilot::sdcard_logging_loop(void)
 {
 	static int64_t tick = systimer->gettime();
 	int64_t t = systimer->gettime();
@@ -2298,25 +2188,9 @@ void sdcard_logging_loop(void)
 		tick = t;
 }
 
-int main(void)
-{
-	bsp_init_all();
-	
+int yet_another_pilot::setup(void)
+{	
 	range_finder = (IRangeFinder *)manager.get_device("sonar");
-	
-	
-	while(0)
-	{
-		float t = systimer->gettime()/5000000.0f * 2 * PI;
-		float t2 = systimer->gettime()/15000000.0f * 2 * PI;
-		t2 = sin(t2)/2+0.6f;
-		float r = t2*(sin(t)/2+0.5f);
-		float g = t2*(sin(t+PI*2/3)/2+0.5f);
-		float b = t2*(sin(t+PI*4/3)/2+0.5f);
-		
-		manager.getRGBLED("rgb")->write(r,g,b);
-	}
-	
 	state_led = manager.getLED("state");
 	SD_led = manager.getLED("SD");
 	flashlight = manager.getLED("flashlight");
@@ -2346,18 +2220,36 @@ int main(void)
 	}while (res < 0);
 
 	read_rc();
-	has_5th_channel = g_pwm_input_update[4] > systimer->gettime()-500000;
-	has_6th_channel = g_pwm_input_update[5] > systimer->gettime()-500000;
 
 	// get two timers, one for main loop and one for SDCARD logging loop
 	manager.getTimer("mainloop")->set_period(3000);
-	manager.getTimer("mainloop")->set_callback(main_loop);
+	manager.getTimer("mainloop")->set_callback(main_loop_entry);
 	manager.getTimer("log")->set_period(10000);
-	manager.getTimer("log")->set_callback(sdcard_logging_loop);
+	manager.getTimer("log")->set_callback(sdcard_logging_loop_entry);
+	
+	return 0;
+}
 
+int main()
+{
+	bsp_init_all();
+	
+	while(0)
+	{
+		float t = systimer->gettime()/5000000.0f * 2 * PI;
+		float t2 = systimer->gettime()/15000000.0f * 2 * PI;
+		t2 = sin(t2)/2+0.6f;
+		float r = t2*(sin(t)/2+0.5f);
+		float g = t2*(sin(t+PI*2/3)/2+0.5f);
+		float b = t2*(sin(t+PI*4/3)/2+0.5f);
+		
+		manager.getRGBLED("rgb")->write(r,g,b);
+	}
+	
+	yap.setup();
 	while(1)
 	{
-
 	}
-
 }
+
+yet_another_pilot yap;
