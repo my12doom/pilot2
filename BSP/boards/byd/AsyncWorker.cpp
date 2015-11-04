@@ -4,7 +4,6 @@
 #include <stm32f4xx_exti.h>
 #include <HAL\STM32F4\F4Timer.h>
 
-static STM32F4::F4Timer f4TIM5(TIM5);
 extern "C" void TIM5_IRQHandler(void)
 {
 	//f4TIM5.call_callback();
@@ -23,6 +22,7 @@ dev_v2::async_work dev_v2::AsyncWorker::works[MAX_ASYNC_WORKER] = {0};
 
 dev_v2::AsyncWorker::AsyncWorker()
 {
+	STM32F4::F4Timer f4TIM5(TIM5);
 	f4TIM5.set_period(1000);
 	//f4TIM5.set_callback(workcb);
 }

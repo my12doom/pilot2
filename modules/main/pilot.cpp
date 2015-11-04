@@ -1649,7 +1649,7 @@ int yet_another_pilot::handle_cli(IUART *uart)
 	if (out_count>0)
 	{
 		out[out_count] = 0;
-		printf("%s,%s\n", line, out);
+		TRACE("%s,%s\n", line, out);
 		uart->write(out, out_count);
 	}
 
