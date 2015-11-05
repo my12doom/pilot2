@@ -105,6 +105,11 @@ public:
 		return _count;
 	}
 
+	int left()
+	{
+		return max_elements - _count;
+	}
+
 protected:
 	T elements[max_elements];
 	int start;

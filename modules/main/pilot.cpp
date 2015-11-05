@@ -463,12 +463,8 @@ int yet_another_pilot::output()
 // called by main loop, only copy logs to a memory buffer, should be very fast
 int yet_another_pilot::save_logs()
 {
-	if (LOG_LEVEL == LOG_SDCARD	&& !log_ready)
+	if (!log_ready)
 		return 0;
-
-	// if the saving task is transferring logs into 2nd buffer
-	if (log_pending !=0)
-		return -1;
 
 	// send/store debug data
 	int64_t systime = systimer->gettime();

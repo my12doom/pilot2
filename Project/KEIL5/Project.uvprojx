@@ -849,6 +849,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\math\LowPassFilter2p.cpp</FilePath>
             </File>
+            <File>
+              <FileName>fifio2.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\utils\fifio2.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
