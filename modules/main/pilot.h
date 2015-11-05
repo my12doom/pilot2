@@ -134,13 +134,15 @@ public:
 	void reset_accel_cal();
 	void reset_mag_cal();
 	
+	// automated functions
+	int start_taking_off();
+	
 	// main loop sub routines.
 	int read_rc();
 	int light_words();
 	int lowpower_handling();
 	int crash_detector();
 	int land_detector();
-	void check_takeoff_OR_landing();
 	int check_stick();
 	int disarm();
 	int arm(bool arm = true);
@@ -149,7 +151,9 @@ public:
 	int read_sensors();
 	int run_controllers();
 	int output();
+	void handle_takeoff();
 	int save_logs();
+	copter_mode submode_from_stick();
 	
 	// UART functions
 	int handle_cli(HAL::IUART *uart);

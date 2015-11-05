@@ -339,7 +339,7 @@ int yet_another_pilot::run_controllers()
 		attitude_controller.set_euler_target(yaw_array);
 	}
 
-	// check takeoff
+	// check airborne
 	if ( (alt_estimator.state[0] > takeoff_ground_altitude + 1.0f) ||
 		(alt_estimator.state[0] > takeoff_ground_altitude && throttle_result > alt_controller.throttle_hover) ||
 		(throttle_result > alt_controller.throttle_hover + QUADCOPTER_THROTTLE_RESERVE))
@@ -1290,6 +1290,9 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 
 	attitude_controller.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controller.reset();
+	float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
+	alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	alt_controller.reset();
 	
 
 	takeoff_ground_altitude = alt_estimator.state[0];
@@ -1299,9 +1302,6 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	throttle_result = 0;
 	airborne = false;
 	islanding = false;
-	float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
-	alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
-	alt_controller.reset();
 	
 	armed = arm;
 	return 0;
@@ -1373,6 +1373,45 @@ int yet_another_pilot::finish_accel_cal()
 	return 0;
 }
 
+copter_mode yet_another_pilot::submode_from_stick()
+{
+	static copter_mode last_submode = althold;
+	if (g_pwm_input_update[5] > systimer->gettime() - 500000)
+	{
+		if (rc[5] < -0.6f)
+			last_submode = basic;
+		else if (rc[5] > 0.6f)
+// 			newmode = airborne ? optical_flow : althold;
+// 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
+			last_submode = airborne ? (estimator.healthy() ? poshold : optical_flow) : althold;
+		else if (rc[5] > -0.5f && rc[5] < 0.5f)
+ 			last_submode = airborne ? optical_flow : althold;
+//			newmode = althold;
+	}
+
+	return last_submode;
+}
+
+
+static float takeoff_arming_time = 0;
+static bool is_taking_off=false;
+int yet_another_pilot::start_taking_off()
+{
+	if (armed)
+		return -1;
+
+	LOGE("\nauto take off \n");
+	arm();
+	check_stick();	// to set submode and reset all controller
+	alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
+	LOGE("\narmed!\n");
+	//1s=1000000us		
+	takeoff_arming_time=systimer->gettime();
+	is_taking_off=true;
+
+	return 0;
+}
+
 int yet_another_pilot::check_stick()
 {
 	if (critical_errors)
@@ -1381,27 +1420,13 @@ int yet_another_pilot::check_stick()
 		return -1;
 	}
 
-	// sub mode swtich
-	if (g_pwm_input_update[5] > systimer->gettime() - 500000)
-	{
-		copter_mode newmode = submode;
-		if (rc[5] < -0.6f)
-			newmode = basic;
-		else if (rc[5] > 0.6f)
-// 			newmode = airborne ? optical_flow : althold;
-// 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-			newmode = airborne ? (estimator.healthy() ? poshold : optical_flow) : althold;
-		else if (rc[5] > -0.5f && rc[5] < 0.5f)
- 			newmode = airborne ? optical_flow : althold;
-//			newmode = althold;
+	// submode switch
+	set_submode(submode_from_stick());
 
-		set_submode(newmode);
-	}
-
+	// emergency switch
+	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
 	if (g_pwm_input_update[4] > systimer->gettime() - 500000)
 	{		
-		// emergency switch
-		// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
 		static float last_ch4 = 0;
 		if (fabs(rc[4]-last_ch4) > 0.20f)
 		{
@@ -1423,59 +1448,50 @@ int yet_another_pilot::check_stick()
 				reset_mag_cal();
 			}
 		}
+	}
 
-		// arm action check: RC first four channel active, throttle minimum, elevator stick down, rudder max or min, aileron max or min, for 0.5second
-		static int64_t arm_start_tick = 0;
-		static int64_t arm_command_sent = false;
-		bool rc_fail = false;
-		for(int i=0; i<4; i++)
-			if (g_pwm_input_update[i] < systimer->gettime() - 500000)
-				rc_fail = true;
-		bool arm_action = !rc_fail && rc[2] < 0.1f  && fabs(rc[0]) > 0.85f
-						&& fabs(rc[1]) > 0.85f && fabs(rc[3]) > 0.85f;
-		if (!arm_action)
+	// arm action check: RC first four channel active, throttle minimum, elevator stick down, rudder max or min, aileron max or min, for 0.5second
+	static int64_t arm_start_tick = 0;
+	static int64_t arm_command_sent = false;
+	bool rc_fail = false;
+	for(int i=0; i<4; i++)
+		if (g_pwm_input_update[i] < systimer->gettime() - 500000)
+			rc_fail = true;
+	bool arm_action = !rc_fail && rc[2] < 0.1f  && fabs(rc[0]) > 0.85f
+					&& fabs(rc[1]) > 0.85f && fabs(rc[3]) > 0.85f;
+	if (!arm_action)
+	{
+		arm_start_tick = 0;
+		arm_command_sent = false;
+	}
+	else
+	{
+		if (arm_start_tick > 0 && !arm_command_sent)
 		{
-			arm_start_tick = 0;
-			arm_command_sent = false;
+			if (systimer->gettime() - arm_start_tick > 500000)
+			{
+				arm_command_sent = true;
+				
+				if (armed)
+				{
+					disarm();
+					LOGE("disarmed!\n");
+				}
+				else
+				{
+					arm();
+					LOGE("armed!\n");
+				}
+			}
 		}
 		else
 		{
-			if (arm_start_tick > 0 && !arm_command_sent)
-			{
-				if (systimer->gettime() - arm_start_tick > 500000)
-				{
-					arm_command_sent = true;
-					
-					if (armed)
-					{
-						disarm();
-						LOGE("disarmed!\n");
-					}
-					else
-					{
-						arm();
-						LOGE("armed!\n");
-					}
-				}
-			}
-			else
-			{
-				arm_start_tick = systimer->gettime();
-			}
+			arm_start_tick = systimer->gettime();
 		}
 	}
 
-	return 0;
-}
-
-static float takeoff_arming_time = 0;
-static bool is_taking_off=false;
-void yet_another_pilot::check_takeoff_OR_landing()
-{
-	static float last_ch7 = NAN;
-	float time_now;
-	//first start
-	if(isnan(last_ch7))last_ch7=rc[7];
+	// takeoff/landing switch
+	static float last_ch7 = rc[7];
 	if (fabs(rc[7]-last_ch7) > 0.20f)
 	{
 		last_ch7 = rc[7];
@@ -1487,35 +1503,29 @@ void yet_another_pilot::check_takeoff_OR_landing()
 		else
 			flip_count = 0;
 		last_flip_time = systimer->gettime();
-			
-		if(airborne==true && flip_count >=1)
+
+		if(airborne && flip_count >=1)
 		{
 			flip_count=0;
 			LOGE("\nauto landing!\n");
 			islanding=true;
 		}
-		else if(is_taking_off==false&&!armed && flip_count >=1)
+		else if(!is_taking_off && !armed && flip_count >=1)
 		{
 			flip_count=0;
-			LOGE("\nauto take off \n");
-			arm();
-			check_stick();	// to set submode and reset all controller
-			alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
-			LOGE("\narmed!\n");
-			//1s=1000000us		
-			takeoff_arming_time=systimer->gettime();
-			is_taking_off=true;
+			start_taking_off();
 		}
 	}
-	if(is_taking_off==true)
+	return 0;
+}
+
+void yet_another_pilot::handle_takeoff()
+{
+	if(is_taking_off && systimer->gettime()>=takeoff_arming_time+2000000)
 	{
-		time_now=systimer->gettime();
-		if(time_now>=takeoff_arming_time+2000000)
-		{
-			is_taking_off=false;
-			alt_controller.set_altitude_target(alt_controller.get_altitude_target()+2.0f);
-			LOGE("\nalread take off\n");
-		}
+		is_taking_off=false;
+		alt_controller.set_altitude_target(alt_controller.get_altitude_target()+2.0f);
+		LOGE("\nalread take off\n");
 	}
 }
 
@@ -1606,7 +1616,7 @@ int yet_another_pilot::crash_detector()
 
 	if (tilt_us> 0 && systimer->gettime()-tilt_us > 2000000)	// flip over more than 2 second
 	{
-		LOGE("flip over for more than 1 senconds");
+		LOGE("flip over for more than 2 senconds");
 
 		disarm();
 	}
@@ -1706,15 +1716,7 @@ int yet_another_pilot::handle_wifi_controll()
 	{
 		const char *tak = "taking off\n";
 		uart->write(tak, strlen(tak));
-
-		LOGE("\nauto take off \n");
-		arm();
-		check_stick();	// to set submode and reset all controller
-		alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
-		LOGE("\narmed!\n");
-		//1s=1000000us		
-		takeoff_arming_time=systimer->gettime();
-		is_taking_off=true;
+		start_taking_off();
 	}
 
 	else if (strcmp(line, "land\n") == 0)
@@ -2085,7 +2087,7 @@ void yet_another_pilot::main_loop(void)
 	
 	// RC modes and RC fail detection, or alternative RC source
 	check_stick();
-	check_takeoff_OR_landing();
+	handle_takeoff();
 	handle_wifi_controll();
 
 	// read sensors
