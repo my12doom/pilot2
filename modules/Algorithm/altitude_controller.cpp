@@ -106,13 +106,6 @@ float altitude_controller::get_altitude_state()
 	float &alt_state = isnan(m_sonar_target) ? m_baro_states[0]: m_last_valid_sonar;
 	return alt_state;
 }
-//set the desired delt altitude target 
-int altitude_controller::set_delt_altitude(float delt_altitude)
-{
-	float &alt_target = isnan(m_sonar_target) ?(baro_target) : m_sonar_target;
-	alt_target+=delt_altitude;
-	return -1;
-}
 
 // update the controller
 // dt: time dt

@@ -425,7 +425,7 @@ int yet_another_pilot::output()
 			}
 			else
 			{
-				yaw_factor = fmin(yaw_factor, (1-motor_output[i]) / yaw_power);
+				yaw_factor = fmin(yaw_factor, fmax(0, 1-motor_output[i]) / yaw_power);
 			}
 		}
 		for(int i=0; i<motor_count; i++)
