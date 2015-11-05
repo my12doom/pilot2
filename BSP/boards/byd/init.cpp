@@ -313,12 +313,40 @@ int init_VCP()
 	return 0;
 }
 
+int init_9150()
+{
+	F4GPIO SCL(GPIOC, GPIO_Pin_13);
+	F4GPIO SDA(GPIOC, GPIO_Pin_14);
+	I2C_SW i2c(&SCL, &SDA);
+	
+	sensors::MPU6000 mpu6000;
+	if (mpu6000.init(&i2c, 0xD0) == 0)
+	{
+		LOGE("found mpu6000 on I2C(PC13,PC14)\n");
+		
+		static F4GPIO SCL(GPIOC, GPIO_Pin_13);
+		static F4GPIO SDA(GPIOC, GPIO_Pin_14);
+		static I2C_SW i2c(&SCL, &SDA);
+		static sensors::MPU6000 mpu6000;
+
+		mpu6000.init(&i2c, 0xD0);
+		mpu6000.accelerometer_axis_config(0, 1, 2, +1, +1, +1);
+		mpu6000.gyro_axis_config(0, 1, 2, +1, +1, +1);
+
+		manager.register_accelerometer(&mpu6000);
+		manager.register_gyroscope(&mpu6000);
+	}
+
+	return 0;
+}
+
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	//init_sonar();
 	init_led();
 	init_BatteryMonitor();
+//	init_9150();
 //	init_uart4();
 	init_uart3();
 	init_uart2();
