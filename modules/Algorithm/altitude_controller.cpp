@@ -101,7 +101,7 @@ int altitude_controller::set_altitude_target(float new_target)
 	alt_target=new_target;
 	return -1;
 }
-float altitude_controller::get_altitude_target()
+float altitude_controller::get_altitude_state()
 {
 	float &alt_state = isnan(m_sonar_target) ? m_baro_states[0]: m_last_valid_sonar;
 	return alt_state;

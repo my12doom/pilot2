@@ -1304,6 +1304,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	islanding = false;
 	
 	armed = arm;
+	set_submode(submode_from_stick());
 	return 0;
 }
 
@@ -1403,7 +1404,7 @@ int yet_another_pilot::start_taking_off()
 	LOGE("\nauto take off \n");
 	arm();
 	check_stick();	// to set submode and reset all controller
-	alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
+	alt_controller.set_altitude_target(alt_controller.get_altitude_state()-2.0f);
 	LOGE("\narmed!\n");
 	//1s=1000000us		
 	takeoff_arming_time=systimer->gettime();
@@ -1524,7 +1525,7 @@ void yet_another_pilot::handle_takeoff()
 	if(is_taking_off && systimer->gettime()>=takeoff_arming_time+2000000)
 	{
 		is_taking_off=false;
-		alt_controller.set_altitude_target(alt_controller.get_altitude_target()+2.0f);
+		alt_controller.set_altitude_target(alt_controller.get_altitude_state()+2.0f);
 		LOGE("\nalread take off\n");
 	}
 }
@@ -1697,7 +1698,7 @@ int yet_another_pilot::handle_wifi_controll()
 		LOGE("mobile arm\n");
 		arm();
 		check_stick();	// to set submode and reset all controller
-		alt_controller.set_altitude_target(alt_controller.get_altitude_target()-2.0f);
+		alt_controller.set_altitude_target(alt_controller.get_altitude_state()-2.0f);
 
 		const char *armed = "armed\n";
 		uart->write(armed, strlen(armed));
