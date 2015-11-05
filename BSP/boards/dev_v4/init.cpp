@@ -247,23 +247,21 @@ int init_asyncworker()
 	return 0;
 }
 
-//Define BattertVoltage Function:
-F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
-ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4096*4.0f);
-IBatteryVoltage * pBattery_Voltage= &battery_voltage;
-void init_BatteryVoltage()
+void init_BatteryMonitor()
 {
-	manager.register_BatteryVoltage("BatteryVoltage",pBattery_Voltage);
-	manager.getBatteryVoltage("BatteryVoltage")->read();
-}
-//Define BattertVoltage Function:
-F4ADC f4adc1_Ch8(ADC1,ADC_Channel_8);
-ADCBatteryVoltage battery_current(&f4adc1_Ch8, 3.3f/4096);
-IBatteryVoltage * pBattery_Current= &battery_current;
-void init_BatteryCurrent()
-{
-	manager.register_BatteryVoltage("BatteryCurrent", pBattery_Current);
-	//manager.getBatteryVoltage("BatteryVoltage")->read();
+	static F4ADC f4adc1_Ch8(ADC1,ADC_Channel_8);	
+	static F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
+	static F4ADC vcc5v_half_adc(ADC1,ADC_Channel_3);
+	
+	static ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4095*(150.0f+51.0f)/51.0f);
+	static ADCBatteryVoltage vcc5v(&vcc5v_half_adc, 3.3f*2/4095);
+	static ADCBatteryVoltage vcc5v_half(&vcc5v_half_adc, 3.3f/4095);
+	static ADCBatteryVoltage current_ad(&f4adc1_Ch8, 3.3f/4095);
+	static differential_monitor battery_current(&vcc5v_half, &current_ad, 1/0.066f);
+
+	manager.register_BatteryVoltage("BatteryVoltage",&battery_voltage);
+	manager.register_BatteryVoltage("BatteryCurrent", &battery_current);
+	manager.register_BatteryVoltage("5V", &vcc5v);
 }
 
 int init_flow()
@@ -382,8 +380,7 @@ int bsp_init_all()
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	//init_sonar();
 	init_led();
-	init_BatteryVoltage();
-	init_BatteryCurrent();
+	init_BatteryMonitor();
 //	init_uart4();
 	init_uart3();
 	init_uart2();

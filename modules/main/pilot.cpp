@@ -471,7 +471,7 @@ int yet_another_pilot::save_logs()
 		return -1;
 
 	// send/store debug data
-	systime = systimer->gettime();
+	int64_t systime = systimer->gettime();
 	sensor_data sensor =
 	{
 		{mag_uncalibrated.array[0] * 10, mag_uncalibrated.array[1] * 10, mag_uncalibrated.array[2] * 10},
@@ -1961,7 +1961,7 @@ int yet_another_pilot::light_words()
 	{
 		// fast red flash (10hz)
 		int dt = lowpower == 2 ? 50000 : 500000;
-		systime = systimer->gettime();
+		int64_t systime = systimer->gettime();
 		if (rgb && mag_calibration_state == 0)
 		if (systime % (dt*2) < dt)
 			rgb->write(1,0,0);
@@ -1970,7 +1970,7 @@ int yet_another_pilot::light_words()
 	}
 	else		// normal flashlight, double flash if SDCARD running, single flash if SDCARD failed
 	{
-		systime = systimer->gettime();
+		int64_t systime = systimer->gettime();
 		int time_mod_1500 = (systime%1500000)/1000;
 		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220 && log_ready))
 		{

@@ -64,26 +64,6 @@ extern "C" void TIM2_IRQHandler(void)
 #include <HAL\STM32F4\F4UART.h>
 #include <HAL\Interface\IUART.h>
 
-//For uart4:
-/*
-F4UART f4uart4(UART4);
-IUART * pUART4 = &f4uart4;
-void init_uart4()
-{
-	pUART4->set_baudrate(115200);
-	pUART4->write("This is UART4\n", 6);
-	manager.register_UART("UART4",pUART4);
-}
-extern "C" void UART4_IRQHandler(void)
-{
-	f4uart4.UART4_IRQHandler();
-}
-extern "C" void DMA1_Stream4_IRQHandler()
-{
-	f4uart4.DMA1_Steam4_IRQHandler();
-}
-*/
-
 //For usart3:
 F4UART f4uart3(USART3);
 IUART * pUART3 = &f4uart3;
@@ -117,24 +97,6 @@ extern "C" void DMA1_Stream6_IRQHandler()
 {
 	f4uart2.DMA1_Steam6_IRQHandler();
 }
-
-//For usart4:
-/*
-F4UART f4uart4(UART4);
-void init_uart4()
-{
-	f4uart4.set_baudrate(115200);
-	//manager.register_UART("UART4", &f4uart4);
-}
-extern "C" void UART4_IRQHandler(void)
-{
-	f4uart4.UART4_IRQHandler();
-}
-extern "C" void DMA1_Stream4_IRQHandler()
-{
-	f4uart4.DMA1_Steam4_IRQHandler();
-}
-*/
 
 //For usart1:
 F4UART f4uart1(USART1);
@@ -247,23 +209,24 @@ int init_asyncworker()
 	return 0;
 }
 
-//Define BattertVoltage Function:
-F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
-ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4096*4.0f);
-IBatteryVoltage * pBattery_Voltage= &battery_voltage;
-void init_BatteryVoltage()
+void init_BatteryMonitor()
 {
-	manager.register_BatteryVoltage("BatteryVoltage",pBattery_Voltage);
-	manager.getBatteryVoltage("BatteryVoltage")->read();
-}
-//Define BattertVoltage Function:
-F4ADC f4adc1_Ch8(ADC1,ADC_Channel_8);
-ADCBatteryVoltage battery_current(&f4adc1_Ch8, 3.3f/4096);
-IBatteryVoltage * pBattery_Current= &battery_current;
-void init_BatteryCurrent()
-{
-	manager.register_BatteryVoltage("BatteryCurrent", pBattery_Current);
-	//manager.getBatteryVoltage("BatteryVoltage")->read();
+	static F4ADC ref25(ADC1,ADC_Channel_4);
+	static F4ADC f4adc1_Ch8(ADC1,ADC_Channel_8);	
+	static F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
+	static F4ADC vcc5v_half_adc(ADC1,ADC_Channel_3);
+	
+	static ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4095*(150.0f+51.0f)/51.0f, &ref25, 2.495f/3.3f*4095);
+	static ADCBatteryVoltage vcc5v(&vcc5v_half_adc, 3.3f*2/4095, &ref25, 2.495f/3.3f*4095);
+	static ADCBatteryVoltage vcc5v_half(&vcc5v_half_adc, 3.3f/4095, &ref25, 2.495f/3.3f*4095);
+	static ADCBatteryVoltage current_ad(&f4adc1_Ch8, 3.3f/4095);
+	static differential_monitor battery_current(&vcc5v_half, &current_ad, 1/0.066f);
+	static ADCReference vcc(&ref25, 2.495f, 4095);
+
+	manager.register_BatteryVoltage("BatteryVoltage",&battery_voltage);
+	manager.register_BatteryVoltage("BatteryCurrent", &battery_current);
+	manager.register_BatteryVoltage("5V", &vcc5v);
+	manager.register_BatteryVoltage("vcc", &vcc);
 }
 
 int init_flow()
@@ -355,8 +318,7 @@ int bsp_init_all()
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	//init_sonar();
 	init_led();
-	init_BatteryVoltage();
-	init_BatteryCurrent();
+	init_BatteryMonitor();
 //	init_uart4();
 	init_uart3();
 	init_uart2();

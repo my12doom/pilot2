@@ -73,7 +73,6 @@ public:
 	vector accel_uncalibrated;
 	vector mag_uncalibrated;
 	vector accel_earth_frame;
-	int64_t systime;
 
 	int64_t last_tick;// = 0;
 	int64_t last_gps_tick;// = 0;

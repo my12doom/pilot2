@@ -39,6 +39,7 @@ int pos_estimator::reset()		// mainly for after GPS glitch handling
 	last_accel_update = 0;
 	last_gps_update = 0;
 	last_history_push = 0;
+	pos_healthy_time = 0;
 
 	memset(&home, 0, sizeof(home));
 	history_pos.clear();
@@ -58,12 +59,24 @@ int pos_estimator::update_accel(double accel_lat, double accel_lon, int64_t time
 
 	if (timestamp - last_gps_update > GPS_TIMEOUT)
 		gps_healthy = false;
-
 	
 	double dt = (timestamp - last_accel_update)/1000000.0f;
 	last_accel_update = timestamp;
 	if (dt <=0 || dt > 1)
 		return 0;
+	
+	// update healthy time counter
+	float error_lat_meter = error_lat * latitude_to_meter;
+	float error_lon_meter = error_lon * longtitude_to_meter;
+	float error_total = error_lon_meter * error_lon_meter + error_lat_meter * error_lat_meter;
+	if (gps_healthy && error_total < 5)
+	{
+		pos_healthy_time += dt;
+	}
+	else
+	{
+		pos_healthy_time = 0;
+	}
 
 	accel_lat /= latitude_to_meter;
 	accel_lon /= longtitude_to_meter;
@@ -177,12 +190,5 @@ position pos_estimator::get_estimation()
 
 bool pos_estimator::healthy()
 {
-	if (!gps_healthy)
-		return false;
-
-	float error_lat_meter = error_lat * latitude_to_meter;
-	float error_lon_meter = error_lon * longtitude_to_meter;
-	float total = error_lon_meter * error_lon_meter + error_lat_meter * error_lat_meter;
-
-	return total < 25;	// 5 meter
+	return pos_healthy_time > 3;
 }
