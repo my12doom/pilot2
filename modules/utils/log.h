@@ -14,3 +14,6 @@ int log(const void *packet, uint8_t tag, int64_t timestamp);	// legacy support, 
 int log2(const void *packet, uint16_t tag, uint16_t size);
 int log_flush();
 int log_set_time(time_t unix_time);				// set current time.
+
+
+extern "C" int log_printf(const char*format, ...);

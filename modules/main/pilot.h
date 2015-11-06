@@ -85,6 +85,8 @@ public:
 	OpticalFlowController of_controller;
 	float ground_speed_north;		// unit: m/s
 	float ground_speed_east;		// unit: m/s
+	float ground_accel_north;		// unit: m/s/s
+	float ground_accel_east;		// unit: m/s/s
 	float voltage;// = 0;
 	float current;// = 0;
 	float interval;// = 0;

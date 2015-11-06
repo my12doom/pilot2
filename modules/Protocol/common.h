@@ -11,7 +11,7 @@ typedef unsigned char uint8_t;
 
 #define QUADCOPTER_THROTTLE_RESERVE 0.15f
 #define PI 3.14159265f
-#define LOGE printf
+#define LOGE log_printf
 #define TRACE(...) 
 #define LOG_NRF 1
 #define LOG_SDCARD 2
@@ -119,5 +119,8 @@ static float radian_sub(float a, float b)
 	v1 = fabs(v1)>fabs(v2) ? v2 : v1;
 	return fabs(v1)>fabs(v3) ? v3 : v1;
 }
-
+#ifdef __cplusplus
+extern "C"
+#endif
+int log_printf(const char*format, ...);
 #endif

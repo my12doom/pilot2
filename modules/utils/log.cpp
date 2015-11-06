@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdarg.h>
 #include <string.h>
 #include "log.h"
 
@@ -15,7 +16,7 @@ FATFS fs;
 uint32_t lost1 = 0;		// buffer full
 
 FIFO<16384> buffer;
-int last_log_flush_time = 0;
+int last_log_flush_time = -999999;
 bool log_ready = false;
 
 extern "C"
@@ -107,7 +108,7 @@ int log_flush()
 
 	int count = buffer.count();
 	uint8_t piece[2048];
-	int piece_count = (count + sizeof(piece) -1) / sizeof(piece);
+	int piece_count = (count) / sizeof(piece);
 	for(int i=0; i<piece_count; i++)
 	{
 		int piece_size = buffer.pop(piece, sizeof(piece));
@@ -198,4 +199,21 @@ extern "C" DWORD get_fattime(void)
 	LOGE("\r%d, %d", current_time, _tm.tm_sec);
 	
 	return make_fattime(_tm.tm_sec, _tm.tm_min, _tm.tm_hour, _tm.tm_mday, _tm.tm_mon, _tm.tm_year);
+}
+
+int log_printf(const char*format, ...)
+{
+	char buffer[512];
+		
+	va_list args;
+	va_start (args, format);
+	int count = vsnprintf (buffer,sizeof(buffer),format, args);
+	va_end (args);
+	
+	if (count < 0)
+		return count;
+	
+	printf(buffer);
+	
+	return log2(buffer, TAG_TEXT_LOG, count);
 }

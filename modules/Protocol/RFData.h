@@ -327,4 +327,9 @@ typedef struct
 
 #define CTRL_REG_MAGNET 0x1000
 
+enum EXTENDED_DATA_TYPES
+{
+	TAG_TEXT_LOG = 2,
+};
+
 #endif

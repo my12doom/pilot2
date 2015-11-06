@@ -1094,8 +1094,29 @@ int yet_another_pilot::calculate_state()
 		if (yaw_gps > PI)
 			yaw_gps -= 2 * PI;
 
-		ground_speed_east = sin(yaw_gps) * gps.speed;
-		ground_speed_north = cos(yaw_gps) * gps.speed;
+		static float last_gps_data_time = 0;
+		float t = systimer->gettime()/1000000.0f;
+		float dt = t - last_gps_data_time;
+		last_gps_data_time = t;
+		
+		float new_ground_speed_east = sin(yaw_gps) * gps.speed;
+		float new_ground_speed_north = cos(yaw_gps) * gps.speed;
+		
+		if (dt > 0 && dt < 1)
+		{
+			ground_accel_north = (new_ground_speed_north - ground_speed_north) / dt;
+			ground_accel_east = (new_ground_speed_east - ground_speed_east) / dt;
+		}
+		else
+		{
+			ground_accel_north = 0;
+			ground_speed_north = 0;
+			ground_accel_east = 0;
+			ground_accel_east = 0;
+		}
+		
+		ground_speed_north = new_ground_speed_north;
+		ground_speed_east = new_ground_speed_east;
 
 		// TODO: compute acceleration and use it to compensate roll and pitch
 	}
@@ -2199,7 +2220,6 @@ int yet_another_pilot::setup(void)
 	systimer->delayms(10);
 	STOP_ALL_MOTORS();
 	
-	log_init();
 	estimator.set_gps_latency(0);
 	SAFE_ON(flashlight);
 
@@ -2227,6 +2247,7 @@ int main()
 {
 	bsp_init_all();
 	
+	log_init();
 	while(0)
 	{
 		float t = systimer->gettime()/5000000.0f * 2 * PI;
