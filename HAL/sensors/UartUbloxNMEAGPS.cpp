@@ -328,6 +328,55 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 	send_ubx_packet(0x6, 0x17, &nmea_cfg, 20);
 	if (wait_ack(0x6, 0x17) != 0)
 		return -3;
+
+	// NAV5 config
+	struct
+	{
+		uint16_t mask;
+		uint8_t dyn_model;
+		uint8_t fix_mode;
+		int32_t fix_alt;
+		uint32_t fix_alt_var;
+		uint8_t min_elev;
+		uint8_t dr_limit;
+		uint16_t pdop;
+		uint16_t tdop;
+		uint16_t pacc;
+		uint16_t tacc;
+		uint8_t static_hold_thresh;
+		uint8_t dgps_timeout;
+		uint8_t cno_thresh_num_SVs;
+		uint8_t cno_thresh;
+		uint8_t reserved1[2];
+		uint16_t static_hold_max_dist;
+		uint8_t utc_standard;
+		uint8_t reserved2[5];
+	} nav_cfg = 
+	{
+		0xffff,
+		8,
+		3,
+		0,
+		10000,
+		5,
+		0,
+		250,
+		250,
+		100,
+		300,
+		0,
+		60,
+		0,
+		0,
+		{0,0},
+		200,
+		0,
+		{0,0,0,0,0}
+	};
+	size = sizeof(nav_cfg);
+	send_ubx_packet(0x6, 0x24, &nav_cfg, size);
+	if (wait_ack(0x6, 0x24) != 0)
+		return -3;
 	
 	// rate config
 	uint16_t rate_config[3] = {100, 1, 0};

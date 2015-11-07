@@ -352,6 +352,9 @@ int yet_another_pilot::run_controllers()
 	return 0;
 }
 
+float min_throttle;
+float max_throttle;
+
 int yet_another_pilot::output()
 {
 	float pid_result[3];
@@ -407,8 +410,8 @@ int yet_another_pilot::output()
 		}
 		
 		// add throttle 
-		float min_throttle = limit(-min_roll_pitch, 0, 1);
-		float max_throttle = limit(1-max_roll_pitch, 0, 1);
+		min_throttle = limit(-min_roll_pitch, 0, 1);
+		max_throttle = limit(1-max_roll_pitch, 0, 1);
 		float throttle = limit(throttle_result, min_throttle, max_throttle);
 		for(int i=0; i<motor_count; i++)
 			motor_output[i] += throttle;
@@ -426,8 +429,11 @@ int yet_another_pilot::output()
 			else
 			{
 				yaw_factor = fmin(yaw_factor, fmax(0, 1-motor_output[i]) / yaw_power);
-			}
+			}	
+			
 		}
+		yaw_factor = 1.0f;
+		//printf("\rf=%.3f(%.2f,%.2f,%.2f,%.2f, r=%.2f, t=%.2f)       ", yaw_factor, motor_output[0], motor_output[1], motor_output[2], motor_output[3], pid_result[2], throttle);
 		for(int i=0; i<motor_count; i++)
 		{
 			motor_output[i] += quadcopter_mixing_matrix[matrix][i][2] * yaw_factor * pid_result[2] * QUADCOPTER_THROTTLE_RESERVE;
@@ -569,8 +575,8 @@ int yet_another_pilot::save_logs()
 	{
 		isnan(alt_controller.m_sonar_target) ? 0 : alt_controller.m_sonar_target*100,
 		mag_size,
-		halfvx*2000,
-		halfvy*2000,
+		ground_accel_north*2000,
+		ground_accel_east*2000,
 		halfvz*2000,
 		raw_yaw * 18000 / PI,
 		acc_horizontal[0] * 1000,
