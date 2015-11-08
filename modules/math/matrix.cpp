@@ -143,6 +143,12 @@ matrix matrix::inverse()
 {
 	assert(m==n);
 	matrix out(*this);
+
+	if (m == 1)
+	{
+		out.data[0] = 1/data[0];
+		return out;
+	}
 	float *o = (float*) out.data;
 	for(int y=0; y<n; y++)
 		for(int x=0; x<n; x++)
