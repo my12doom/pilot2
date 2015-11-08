@@ -101,17 +101,10 @@ int altitude_controller::set_altitude_target(float new_target)
 	alt_target=new_target;
 	return -1;
 }
-float altitude_controller::get_altitude_target()
+float altitude_controller::get_altitude_state()
 {
 	float &alt_state = isnan(m_sonar_target) ? m_baro_states[0]: m_last_valid_sonar;
 	return alt_state;
-}
-//set the desired delt altitude target 
-int altitude_controller::set_delt_altitude(float delt_altitude)
-{
-	float &alt_target = isnan(m_sonar_target) ?(baro_target) : m_sonar_target;
-	alt_target+=delt_altitude;
-	return -1;
 }
 
 // update the controller
@@ -292,6 +285,11 @@ int altitude_controller::reset()
 float altitude_controller::get_result()
 {
 	return throttle_result;
+}
+
+bool altitude_controller::sonar_actived()
+{
+	return !isnan(m_sonar_target);
 }
 
 /// calc_leash_length - calculates the horizontal leash length given a maximum speed, acceleration and position kP gain

@@ -8,7 +8,7 @@
 #define LED_NUM 5
 #define UART_NUM 4
 #define TIMER_NUM 4
-#define BATTERYVOLTAGE_NUM 2
+#define BATTERYVOLTAGE_NUM 4
 #define MAX_FLOW_COUNT 2
 #define MAX_DEVICE_COUNT 20
 

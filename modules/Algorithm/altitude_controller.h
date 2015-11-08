@@ -25,9 +25,6 @@ public:
 	// set the desired altitude target directly.
 	// (not yet implemented)
 	int set_altitude_target(float new_target);
-
-	//set the desired delt altitude target 
-	int set_delt_altitude(float delt_altitude);
 	
 	// update the controller
 	// dt: time interval
@@ -40,9 +37,12 @@ public:
 	// or maintain current altitude.
 	int reset();
 	//get altitude target 
-	float get_altitude_target();
+	float get_altitude_state();
 	
 	float get_result();
+
+	// return true if sonar surface tracking enabled
+	bool sonar_actived();
 
 	// estimated hover throttle
 	float throttle_hover;

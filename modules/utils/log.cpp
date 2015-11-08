@@ -1,9 +1,10 @@
 #include <stddef.h>
+#include <stdarg.h>
 #include <string.h>
 #include "log.h"
 
 #include <FileSystem/ff.h>
-#include <utils/fifo.h>
+#include <utils/fifo2.h>
 #include <Protocol/RFData.h>
 #include <protocol/common.h>
 #include <HAL/Interface/Interfaces.h>
@@ -13,41 +14,10 @@ FIL *file = NULL;
 FRESULT res;
 FATFS fs;
 uint32_t lost1 = 0;		// buffer full
-uint32_t lost2 = 0;		// log flush pending
 
-class write_buffer
-{
-public:
-	write_buffer(){byte_count=0;}
-	~write_buffer(){}
-	int push(const void *data, int size)
-	{
-		if (size+byte_count > sizeof(buffer))
-		{
-			lost1 ++;
-			return -1;
-		}
-		
-		memcpy(buffer + byte_count, data, size);
-		byte_count += size;
-		
-		return 0;
-	}
-	void clear()
-	{
-		byte_count = 0;
-	}
-	int byte_count;
-	char buffer[8192];
-};
-
-write_buffer log_buffer;
-write_buffer log_buffer2;
-write_buffer *plog_buffer = &log_buffer;
-int log_pending = 0;
-int last_log_flush_time = 0;
-bool log_ready;
-int LOG_LEVEL = LOG_SDCARD;
+FIFO<16384> buffer;
+int last_log_flush_time = -999999;
+bool log_ready = false;
 
 extern "C"
 {
@@ -82,7 +52,6 @@ int write_to_disk(void *data, int size)
 	int64_t us = systimer->gettime();
 
 	// fatfs
-	if (LOG_LEVEL & LOG_SDCARD)
 	{
 		if (file == NULL && log_ready)
 		{
@@ -133,32 +102,50 @@ int write_to_disk(void *data, int size)
 
 int log_flush()
 {
-	log_pending = 1;
-
-	write_buffer *writer_buffer = plog_buffer;
-	plog_buffer = (plog_buffer == &log_buffer) ? &log_buffer2 : &log_buffer;
-
-	log_pending = 0;
-
-	// real saving / sending
-	if (writer_buffer->byte_count == 0)
+	// real saving / sending	
+	if (buffer.count() == 0)
 		return 1;
 
-	write_to_disk(writer_buffer->buffer, writer_buffer->byte_count);
-	writer_buffer->clear();
+	int count = buffer.count();
+	uint8_t piece[2048];
+	int piece_count = (count) / sizeof(piece);
+	for(int i=0; i<piece_count; i++)
+	{
+		int piece_size = buffer.pop(piece, sizeof(piece));
+		write_to_disk(piece, piece_size);
+	}
 
 	return 0;
 }
 
 int log(const void *data, int size)
 {
-	if (log_pending)
+	int res = buffer.put(data, size);
+	
+	if (res < 0)
+		lost1++;
+	
+	return res;
+}
+
+int log2(const void *packet, uint16_t tag, uint16_t size)
+{
+	if (buffer.available() < size+8+4) 
 	{
-		lost2 ++;
+		lost1++;
 		return -1;
 	}
+	
+	int64_t timestamp = systimer->gettime();
+	timestamp &= ~((uint64_t)0xff << 56);
+	timestamp |= (uint64_t)TAG_EXTENDED_DATA << 56;
 
-	return plog_buffer->push(data, size);
+	buffer.put(&timestamp, 8);
+	buffer.put(&tag, 2);
+	buffer.put(&size, 2);
+	buffer.put(packet, size);
+
+	return 0;
 }
 
 int log(const void *packet, uint8_t tag, int64_t timestamp)
@@ -212,4 +199,21 @@ extern "C" DWORD get_fattime(void)
 	LOGE("\r%d, %d", current_time, _tm.tm_sec);
 	
 	return make_fattime(_tm.tm_sec, _tm.tm_min, _tm.tm_hour, _tm.tm_mday, _tm.tm_mon, _tm.tm_year);
+}
+
+int log_printf(const char*format, ...)
+{
+	char buffer[512];
+		
+	va_list args;
+	va_start (args, format);
+	int count = vsnprintf (buffer,sizeof(buffer),format, args);
+	va_end (args);
+	
+	if (count < 0)
+		return count;
+	
+	printf(buffer);
+	
+	return log2(buffer, TAG_TEXT_LOG, count);
 }

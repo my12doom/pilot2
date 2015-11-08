@@ -61,7 +61,18 @@ public:
         // set initial parameters
         set_cutoff_frequency(sample_freq, cutoff_freq);
     }
-
+	
+	// default constructor, must call set_cutoff_frequency() before any applying, or undefined behavior will occur.
+	LowPassFilter2p():
+        _a1(0.0f),
+        _a2(0.0f),
+        _b0(0.0f),
+        _b1(0.0f),
+        _b2(0.0f),
+        _delay_element_1(0.0f),
+        _delay_element_2(0.0f)
+	{
+	}
     /**
      * Change filter parameters
      */

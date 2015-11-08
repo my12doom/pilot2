@@ -315,6 +315,9 @@ typedef struct
 #define TAG_PILOT_DATA	0x65
 #define TAG_PILOT_DATA2	0x66
 #define TAG_IMU_DATA_V1	0x87
+
+#define TAG_EXTENDED_DATA	0xFE		// EXTENDED SIZE DATA!
+
 #define TAG_MASK		0xff
 
 #define CTRL_CMD_SET_VALUE 0
@@ -323,5 +326,10 @@ typedef struct
 #define CTRL_CMD_FEEDBACK 3
 
 #define CTRL_REG_MAGNET 0x1000
+
+enum EXTENDED_DATA_TYPES
+{
+	TAG_TEXT_LOG = 2,
+};
 
 #endif

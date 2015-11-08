@@ -9,18 +9,14 @@
 #include <Algorithm/mag_calibration.h>
 #include <HAL/resources.h>
 #include <Protocol/crc32.h>
+#include <modules/main/pilot.h>
 
 using namespace HAL;
 
-extern volatile vector imu_statics[2][4];		//	[accel, gyro][min, current, max, avg]
-extern volatile int avg_count;
-extern float mpu6050_temperature;
-extern pos_estimator estimator;
+const char version_name[] = __DATE__;
+const char bsp_name[] = " unknown";
 
 #define SIGNATURE_ADDRESS 0x0800E800
-
-void reset_mag_cal();
-void reset_accel_cal();
 
 static int min(int a, int b)
 {
@@ -227,19 +223,19 @@ extern "C" int parse_command_line(const char *line, char *out)
 	}
 	else if (strstr(line, "hello") == line)
 	{
-		strcpy(out, "yap1.0.0\n");
+		sprintf(out, "yap(%s)(bsp %s)\n", version_name, bsp_name);
 		return strlen(out);
 	}
 	else if (strstr(line, "imureset") == line)
 	{
-		avg_count = 0;
+		yap.avg_count = 0;
 		for(i=0; i<2; i++)
 		{
 			for(j=0; j<3; j++)
 			{
-				imu_statics[i][0].array[j] = 99999;
-				imu_statics[i][2].array[j] = -99999;
-				imu_statics[i][3].array[j] = 0;
+				yap.imu_statics[i][0].array[j] = 99999;
+				yap.imu_statics[i][2].array[j] = -99999;
+				yap.imu_statics[i][3].array[j] = 0;
 			}
 		}
 		strcpy(out, "ok\n");
@@ -247,14 +243,13 @@ extern "C" int parse_command_line(const char *line, char *out)
 	}
 	else if (strstr(line, "usb") == line)
 	{
-		extern int usb_data_publish;
 		if (strstr(line, "usb,") == line)
 		{
-			usb_data_publish = atoi(line+4);
+			yap.usb_data_publish = atoi(line+4);
 		}
 		else
 		{
-			usb_data_publish = 0xff;
+			yap.usb_data_publish = 0xff;
 		}
 	}
 	else if (strstr(line, "gps") == line)
@@ -271,8 +266,8 @@ extern "C" int parse_command_line(const char *line, char *out)
 		int hdop = data.DOP[1] / 100;
 		int hdop_frac = data.DOP[1] % 100;
 		int db_max = -999, db_min=999;
-		position_meter pos = estimator.get_estimation_meter();
-		position_meter pos_raw = estimator.get_raw_meter();
+		position_meter pos = yap.estimator.get_estimation_meter();
+		position_meter pos_raw = yap.estimator.get_raw_meter();
 		sprintf(out, "%.2f/%.2fm, raw%.2f/%.2fm, %.2f/%.2fm/s, %d/%d sat, hdop%d.%02d, %d-%ddb(", pos.latitude, pos.longtitude, pos_raw.latitude, pos_raw.longtitude,
 				pos.vlatitude, pos.vlongtitude, data.satelite_in_use, data.satelite_in_view, hdop, hdop_frac, db_min, db_max);
 		/*
@@ -304,7 +299,7 @@ extern "C" int parse_command_line(const char *line, char *out)
 			{
 				for(k=0; k<3; k++)
 				{
-					volatile int t = imu_statics[i][j].array[k] * 10000.0f / (j==3?avg_count:1);
+					volatile int t = yap.imu_statics[i][j].array[k] * 10000.0f / (j==3?yap.avg_count:1);
 					count += sprintf(out+count, "%d.%04d,",  t/10000,  abs(t%10000));
 					//if (count > 256)
 					//	return count;
@@ -312,7 +307,7 @@ extern "C" int parse_command_line(const char *line, char *out)
 			}
 		}
 
-		count += sprintf(out+count, "%d.%d,%d,", (int)mpu6050_temperature, ((int)(mpu6050_temperature*1000))%1000, avg_count);
+		count += sprintf(out+count, "%d.%d,%d,", (int)yap.mpu6050_temperature, ((int)(yap.mpu6050_temperature*1000))%1000, yap.avg_count);
 		out[count++] = '\n';
 
 		return count;
@@ -387,10 +382,7 @@ extern "C" int parse_command_line(const char *line, char *out)
 
 	else if (strstr(line, "accel_cal_state") == line)
 	{
-		extern int acc_avg_count[6];
-		extern bool acc_cal_requested;
-
-		if (!acc_cal_requested)
+		if (!yap.acc_cal_requested)
 		{
 			sprintf(out, "-1\n");
 		}
@@ -399,7 +391,7 @@ extern "C" int parse_command_line(const char *line, char *out)
 			int acc_state = 0;
 			for(int i=0; i<6; i++)
 			{
-				if (acc_avg_count[i] > 100)
+				if (yap.acc_avg_count[i] > 400)
 					acc_state |= (1<<i);
 			}
 
@@ -410,45 +402,33 @@ extern "C" int parse_command_line(const char *line, char *out)
 	}
 	else if (strstr(line, "accel_cal") == line)
 	{
-		reset_accel_cal();
+		yap.reset_accel_cal();
 
 		strcpy(out, "ok\n");
 
 		return strlen(out);
 	}
 	else if (strstr(line, "mag_cal_state") == line)
-	{
-		extern int mag_calibration_state;				// 0: not running, 1: collecting data, 2: calibrating
-		extern int last_mag_calibration_result;
-		extern mag_calibration mag_calibrator;
-		
-		mag_calibration_stage stage = mag_calibrator.get_stage();		// 	stage_horizontal = 0,	stage_vertical = 1,
+	{		
+		mag_calibration_stage stage = yap.mag_calibrator.get_stage();		// 	stage_horizontal = 0,	stage_vertical = 1,
 
 		// returns: state, last_result, 
 		//	state: 0 = not running, 1 = horizontal, 2 = vertical.
 		//	result: see mag_calibration.h
-		sprintf(out, "%d,%d\n", mag_calibration_state ? (stage+1) : 0, last_mag_calibration_result);
+		sprintf(out, "%d,%d\n", yap.mag_calibration_state ? (stage+1) : 0, yap.last_mag_calibration_result);
 		
 		return strlen(out);
 	}
 	else if (strstr(line, "mag_cal") == line)
 	{
-		reset_mag_cal();
+		yap.reset_mag_cal();
 
 		strcpy(out, "ok\n");
 
 		return strlen(out);
 	}
 	else if (strstr(line, "reading") == line)
-	{
-		extern sensors::px4flow_frame frame;
-		extern vector accel;
-		extern vector gyro_reading;
-		extern vector mag;
-		extern float a_raw_pressure;
-		extern float a_raw_temperature;
-
-		
+	{		
 		sprintf(out, 
 			"%d,%d,%d,%d,"	// sonar, flow, flow quality
 			"%d,%d,%d,"		// accel 
@@ -456,24 +436,21 @@ extern "C" int parse_command_line(const char *line, char *out)
 			"%d,%d,%d,"		// mag
 			"%d, %d\n",		// baro, baro temperature
 
-			frame.ground_distance, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.qual,								// sonar, flow, flow quality
-			int(accel.array[0]*1000), int(accel.array[1]*1000), int(accel.array[2]*1000),									// accel 
-			int(gyro_reading.array[0]*18000/PI), int(gyro_reading.array[1]*18000/PI), int(gyro_reading.array[2]*18000/PI),	// gyro
-			int(mag.array[0]), int(mag.array[1]), int(mag.array[2]),												// mag
-			int(a_raw_pressure), int(a_raw_temperature*100.0f)																		// baro
+			yap.frame.ground_distance, yap.frame.pixel_flow_x_sum, yap.frame.pixel_flow_y_sum, yap.frame.qual,								// sonar, flow, flow quality
+			int(yap.accel.array[0]*1000), int(yap.accel.array[1]*1000), int(yap.accel.array[2]*1000),									// accel 
+			int(yap.gyro_reading.array[0]*18000/PI), int(yap.gyro_reading.array[1]*18000/PI), int(yap.gyro_reading.array[2]*18000/PI),	// gyro
+			int(yap.mag.array[0]), int(yap.mag.array[1]), int(yap.mag.array[2]),												// mag
+			int(yap.a_raw_pressure), int(yap.a_raw_temperature*100.0f)																		// baro
 			);
 
 		return strlen(out);
 	}
 	else if (strstr(line, "selftest") == line)
 	{
-		extern sensors::px4flow_frame frame;
-		extern int critical_errors;
-		extern float voltage;
 		int flow_count = manager.get_flow_count();
-		int cmos_version_ok = frame.cmos_version == 0x1324;
+		int cmos_version_ok = yap.frame.cmos_version == 0x1324;
 		
-		sprintf(out, "%d,%d,%d\n", critical_errors, int(voltage*1000), flow_count <= 0 ? -1 : (cmos_version_ok ? 0 : -2));
+		sprintf(out, "%d,%d,%d\n", yap.critical_errors, int(yap.voltage*1000), flow_count <= 0 ? -1 : (cmos_version_ok ? 0 : -2));
 		
 		return strlen(out);
 	}

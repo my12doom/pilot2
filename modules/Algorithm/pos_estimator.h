@@ -65,6 +65,7 @@ public:
 	float error_lat_meter;
 	bool home_set;
 	bool gps_healthy;
+	float pos_healthy_time;
 	double abias_lon;
 	double abias_lat;
 protected:
