@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <string.h>
 
+#define assert(...)
+
 static void matrix_error(const char*msg)
 {
 

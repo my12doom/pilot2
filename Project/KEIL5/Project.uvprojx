@@ -849,6 +849,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\math\LowPassFilter2p.cpp</FilePath>
             </File>
+            <File>
+              <FileName>matrix.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\math\matrix.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -913,6 +918,11 @@
               <FileName>motion_detector.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\Algorithm\motion_detector.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>battery_estimator.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\battery_estimator.cpp</FilePath>
             </File>
           </Files>
         </Group>
