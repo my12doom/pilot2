@@ -1150,6 +1150,8 @@ int yet_another_pilot::calculate_state()
 		}
 	}
 
+	batt.update(voltage, current, interval);
+
 	return 0;
 }
 

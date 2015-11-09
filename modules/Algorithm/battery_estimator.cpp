@@ -1,4 +1,6 @@
 #include "battery_estimator.h"
+#include <HAL/Interface/Interfaces.h>
+#include <protocol/common.h>
 
 static const matrix Q
 (
@@ -17,7 +19,8 @@ float total_mah = 1800;
 float initial_registance_change_rate = 0.010f / 700;
 
 battery_estimator::battery_estimator()
-:init(false)
+:last_log(0)
+,init(false)
 ,mah(0)
 ,P(2,2,200.0,0,0,200.0)
 {
@@ -78,6 +81,12 @@ int battery_estimator::update(const float voltage, const float current, const fl
 
 	x = x1 + K*(zk - H*x1);
 	P = (matrix(P1.m) - K*H) * P1;
+	
+	if (systimer->gettime() > last_log + 2000000)
+	{
+		LOGE("Batt:%.3f/%.3fV, %d mOhm", voltage, x.data[0], int(x.data[1]*1000));
+		last_log = systimer->gettime();
+	}
 
 	return 0;
 }

@@ -13,6 +13,7 @@
 #include <Algorithm/of_controller.h>
 #include <Algorithm/mag_calibration.h>
 #include <Algorithm/motion_detector.h>
+#include <Algorithm/battery_estimator.h>
 
 #include <math/LowPassFilter2p.h>
 
@@ -83,6 +84,8 @@ public:
 	altitude_estimatorCF alt_estimatorCF;
 	altitude_controller alt_controller;
 	OpticalFlowController of_controller;
+	battery_estimator batt;
+	
 	float ground_speed_north;		// unit: m/s
 	float ground_speed_east;		// unit: m/s
 	float ground_accel_north;		// unit: m/s/s

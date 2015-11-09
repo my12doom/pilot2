@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdint.h>
 #include <modules/math/matrix.h>
 
 class battery_estimator
@@ -14,6 +15,7 @@ public:
 	float get_mah_consumed(){return mah;}
 
 protected:
+	int64_t last_log;
 	bool init;
 	float mah;
 	matrix x;
