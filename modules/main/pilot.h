@@ -87,6 +87,7 @@ public:
 	float ground_speed_east;		// unit: m/s
 	float ground_accel_north;		// unit: m/s/s
 	float ground_accel_east;		// unit: m/s/s
+	float gps_attitude_timeout;
 	float voltage;// = 0;
 	float current;// = 0;
 	float interval;// = 0;

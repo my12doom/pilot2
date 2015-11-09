@@ -161,6 +161,8 @@ yet_another_pilot::yet_another_pilot()
 	memset(&body_rate, 0, sizeof(body_rate));
 	memset(&accel, 0, sizeof(accel));
 	
+	gps_attitude_timeout = 0;
+
 	for(int i=0; i<3; i++)
 		gyro_lpf2p[i].set_cutoff_frequency(333.33, 40);
 }
@@ -1051,12 +1053,26 @@ int yet_another_pilot::calculate_state()
 
 	float factor = 1.0f;
 	float factor_mag = 1.0f;
-	
+
+	float acc_gps_bf[3] = {0};
+
+	if (gps_attitude_timeout > 5)
+	{
+		float gps_acc_ef[3] = {ground_accel_north, ground_accel_east, 0};
+		for (int i = 0; i < 3; i++)
+		{
+			acc_gps_bf[i] = 0.0f;
+
+			for (int j = 0; j < 3; j++)
+				acc_gps_bf[i] += NED2BODY[i][j] * gps_acc_ef[j];
+		}
+	}
+
 	NonlinearSO3AHRSupdate(
-		accel.array[0], accel.array[1], accel.array[2], 
-		mag.array[0], mag.array[1], mag.array[2],
-		gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
-		0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval);
+	accel.array[0] - acc_gps_bf[0], accel.array[1] - acc_gps_bf[1], accel.array[2] - acc_gps_bf[2], 
+	mag.array[0], mag.array[1], mag.array[2],
+	gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
+	0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval);
 
 	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
 	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
@@ -1096,35 +1112,42 @@ int yet_another_pilot::calculate_state()
 			log_set_time(gps.timestamp);
 		}
 
-		float yaw_gps = gps.direction * PI / 180;
-		if (yaw_gps > PI)
-			yaw_gps -= 2 * PI;
-
-		static float last_gps_data_time = 0;
-		float t = systimer->gettime()/1000000.0f;
-		float dt = t - last_gps_data_time;
-		last_gps_data_time = t;
-		
-		float new_ground_speed_east = sin(yaw_gps) * gps.speed;
-		float new_ground_speed_north = cos(yaw_gps) * gps.speed;
-		
-		if (dt > 0 && dt < 1)
+		if (gps.fix > 2 && gps.DOP[1] < 300)
 		{
-			ground_accel_north = (new_ground_speed_north - ground_speed_north) / dt;
-			ground_accel_east = (new_ground_speed_east - ground_speed_east) / dt;
+			float yaw_gps = gps.direction * PI / 180;
+			if (yaw_gps > PI)
+				yaw_gps -= 2 * PI;
+
+			static float last_gps_data_time = 0;
+			float t = systimer->gettime()/1000000.0f;
+			float dt = t - last_gps_data_time;
+			last_gps_data_time = t;
+			
+			float new_ground_speed_east = sin(yaw_gps) * gps.speed;
+			float new_ground_speed_north = cos(yaw_gps) * gps.speed;
+			
+			if (dt > 0 && dt < 1)
+			{
+				ground_accel_north = (new_ground_speed_north - ground_speed_north) / dt;
+				ground_accel_east = (new_ground_speed_east - ground_speed_east) / dt;
+				gps_attitude_timeout += dt;
+			}
+			else
+			{
+				ground_accel_north = 0;
+				ground_speed_north = 0;
+				ground_accel_east = 0;
+				ground_accel_east = 0;
+				gps_attitude_timeout = 0;
+			}
+			
+			ground_speed_north = new_ground_speed_north;
+			ground_speed_east = new_ground_speed_east;
 		}
 		else
 		{
-			ground_accel_north = 0;
-			ground_speed_north = 0;
-			ground_accel_east = 0;
-			ground_accel_east = 0;
+			gps_attitude_timeout = 0;
 		}
-		
-		ground_speed_north = new_ground_speed_north;
-		ground_speed_east = new_ground_speed_east;
-
-		// TODO: compute acceleration and use it to compensate roll and pitch
 	}
 
 	return 0;
@@ -1252,6 +1275,8 @@ int yet_another_pilot::sensor_calibration()
 	vector gyro_avg;
 	detect_gyro.get_average(&gyro_avg);
 	detect_acc.get_average(&accel_avg);
+
+
 
 	NonlinearSO3AHRSinit(accel_avg.V.x, accel_avg.V.y, accel_avg.V.z, 
 		mag_avg.V.x, mag_avg.V.y, mag_avg.V.z, 
