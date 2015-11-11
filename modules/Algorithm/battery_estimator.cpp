@@ -66,7 +66,7 @@ int battery_estimator::update(const float voltage, const float current, const fl
 	if (!init)
 	{
 		x.m = 2;
-		x.n = 2;
+		x.n = 1;
 		x.data[1] = 0.040f;//	40mOhm
 		x.data[0] = voltage + current * 0.040f;
 

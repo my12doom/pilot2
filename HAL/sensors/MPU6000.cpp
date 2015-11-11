@@ -155,7 +155,7 @@ int MPU6000::init(HAL::II2C *i2c, uint8_t address)
 	this->CS = NULL;
 	this->i2c = i2c;
 	this->address = address;
-	i2c->set_speed(30);
+	i2c->set_speed(10);
 
 	return init();
 }

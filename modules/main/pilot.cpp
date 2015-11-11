@@ -579,7 +579,7 @@ int yet_another_pilot::save_logs()
 		mag_size,
 		ground_accel_north*2000,
 		ground_accel_east*2000,
-		halfvz*2000,
+		climb_rate_gps*1000,
 		raw_yaw * 18000 / PI,
 		acc_horizontal[0] * 1000,
 		acc_horizontal[1] * 1000,
@@ -1069,10 +1069,11 @@ int yet_another_pilot::calculate_state()
 	}
 
 	NonlinearSO3AHRSupdate(
-	accel.array[0] - acc_gps_bf[0], accel.array[1] - acc_gps_bf[1], accel.array[2] - acc_gps_bf[2], 
+	accel.array[0], accel.array[1], accel.array[2], 
 	mag.array[0], mag.array[1], mag.array[2],
 	gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
-	0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval);
+	0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval,
+	acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
 
 	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
 	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
@@ -1119,6 +1120,7 @@ int yet_another_pilot::calculate_state()
 				yaw_gps -= 2 * PI;
 
 			static float last_gps_data_time = 0;
+			static float last_gps_altitude = 0;
 			float t = systimer->gettime()/1000000.0f;
 			float dt = t - last_gps_data_time;
 			last_gps_data_time = t;
@@ -1130,6 +1132,7 @@ int yet_another_pilot::calculate_state()
 			{
 				ground_accel_north = (new_ground_speed_north - ground_speed_north) / dt;
 				ground_accel_east = (new_ground_speed_east - ground_speed_east) / dt;
+				climb_rate_gps = (gps.altitude - last_gps_altitude) / dt;
 				gps_attitude_timeout += dt;
 			}
 			else
@@ -1143,6 +1146,7 @@ int yet_another_pilot::calculate_state()
 			
 			ground_speed_north = new_ground_speed_north;
 			ground_speed_east = new_ground_speed_east;
+			last_gps_altitude = gps.altitude;
 		}
 		else
 		{

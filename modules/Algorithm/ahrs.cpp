@@ -108,14 +108,21 @@ void NonlinearSO3AHRSinit(float ax, float ay, float az, float mx, float my, floa
 	bFilterInit = true;
 }
 
-void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz, float twoKp, float twoKi, float twoKpMag, float twoKiMag, float dt) 
+void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz, float twoKp, float twoKi, float twoKpMag, float twoKiMag, float dt, float gps_ax, float gps_ay, float gps_az)
 {
 	float recipNorm;
 	float halfexA = 0.0f, halfeyA = 0.0f, halfezA = 0.0f;
 	float halfexM = 0.0f, halfeyM = 0.0f, halfezM = 0.0f;
 	float acc_bodyframe[3] = {ax, ay, az};
+
+	ax -= gps_ax;
+	ay -= gps_ay;
+	az -= gps_az;
+
 	float g_force = sqrt(ax*ax + ay*ay + az*az) / G_in_ms2;
 	bool g_force_ok = g_force > 0.85f && g_force < 1.15f;
+
+
 	mag_ok = true;
 	float mag_length = sqrt(mx*mx + my*my + mz*mz);
 	if (ground_mag_length != 0)
@@ -191,6 +198,7 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	}
 
 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
+	g_force_ok = true;
 	if(g_force_ok && !((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
 	
 		// Normalise accelerometer measurement
