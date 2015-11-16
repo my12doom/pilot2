@@ -273,8 +273,8 @@ int yet_another_pilot::run_controllers()
 			float stick_roll = rc[0] * quadcopter_range[0];
 			float stick_pitch = -rc[1] * quadcopter_range[1];	// pitch stick and coordinate are reversed
 
-			float flow_roll = -frame.flow_comp_m_x/1000.0f;
-			float flow_pitch = -frame.flow_comp_m_y/1000.0f;
+			float flow_roll = -frame.flow_comp_m_x/1000.0f * 3;
+			float flow_pitch = -frame.flow_comp_m_y/1000.0f * 3;
 			of_controller.update_controller(flow_roll, flow_pitch, stick_roll, stick_pitch, interval);
 			float euler_target[3] = {0,0, NAN};
 			of_controller.get_result(&euler_target[0], &euler_target[1]);
@@ -1096,10 +1096,10 @@ int yet_another_pilot::calculate_state()
 
 	accelz = acc_ned[2];
 
-	alt_estimator.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
+	alt_estimator.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
 	alt_estimator.update(accelz, a_raw_altitude, interval);
 	alt_estimator.set_static_mode(!armed);
-	alt_estimatorCF.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 1.0f) || fabs(alt_estimator.state[0] - takeoff_ground_altitude) < 1.0f));
+	alt_estimatorCF.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
 	alt_estimatorCF.update(accelz, new_baro_data ? a_raw_altitude : NAN, interval);
 	estimator.update_accel(accel_earth_frame.array[0], accel_earth_frame.array[1], systimer->gettime());
 

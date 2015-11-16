@@ -10,6 +10,7 @@
 #include "IRCIN.h"
 #include "IRCOUT.h"
 #include "IAsyncWorker.h"
+#include "IInterrupt.h"
 
 #include "IAccelerometer.h"
 #include "IBarometer.h"

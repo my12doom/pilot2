@@ -1,16 +1,59 @@
 #include "F4Interrupt.h"
 
 #include <protocol/common.h>
+#include <HAL/Interface/ISysTimer.h>
 
 using namespace HAL;
 static STM32F4::F4Interrupt *int_table[16] = {0};
+
+extern "C" void EXTI15_10_IRQHandler(void)
+{
+	int64_t t = systimer->gettime();
+	if (EXTI_GetITStatus(EXTI_Line10) != RESET)
+	{
+		if (int_table[10])
+			int_table[10]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line10);
+	}
+	if (EXTI_GetITStatus(EXTI_Line11) != RESET)
+	{
+		if (int_table[11])
+			int_table[11]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line11);
+	}
+	if (EXTI_GetITStatus(EXTI_Line12) != RESET)
+	{
+		if (int_table[12])
+			int_table[12]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line12);
+	}
+	if (EXTI_GetITStatus(EXTI_Line13) != RESET)
+	{
+		if (int_table[13])
+			int_table[13]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line13);
+	}
+	if (EXTI_GetITStatus(EXTI_Line14) != RESET)
+	{
+		if (int_table[14])
+			int_table[14]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line14);
+	}
+	if (EXTI_GetITStatus(EXTI_Line15) != RESET)
+	{
+		if (int_table[15])
+			int_table[15]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line15);
+	}
+	//LOGE("t=%d\n", int(systimer->gettime()-t));
+}
 
 namespace STM32F4
 {	
 	int Pin2PinSource(uint32_t GPIO_Pin)
 	{
 		for(int i=0; i<16; i++)
-			if (GPIO_Pin == 1 << i)
+			if (GPIO_Pin == (1 << i))
 				return i;
 		return -1;
 	}
@@ -31,9 +74,9 @@ namespace STM32F4
 	{
 		// only A - K supported yet.
 		if (GPIOx < GPIOA || GPIOx > GPIOK)
-			return -1;
+			return -1;		
 		
-		return (GPIOx - GPIOA);
+		return ((uint32_t)GPIOx - (uint32_t)GPIOA) / 0x0400;
 	}
 	
 	int pin2irqn(uint32_t GPIO_Pin)
@@ -48,9 +91,9 @@ namespace STM32F4
 			return EXTI3_IRQn;
 		if (GPIO_Pin == GPIO_Pin_4)
 			return EXTI4_IRQn;
-		if (GPIO_Pin >= GPIO_Pin_5 && GPIO_Pin <=9)
+		if (GPIO_Pin >= GPIO_Pin_5 && GPIO_Pin <= GPIO_Pin_9)
 			return EXTI9_5_IRQn;
-		if (GPIO_Pin >= GPIO_Pin_10 && GPIO_Pin <=15)
+		if (GPIO_Pin >= GPIO_Pin_10 && GPIO_Pin <= GPIO_Pin_15)
 			return EXTI15_10_IRQn;
 		
 		return -1;
@@ -60,8 +103,19 @@ namespace STM32F4
 	{
 	}
 	
+	F4Interrupt::~F4Interrupt()
+	{
+		for(int i=0; i<16; i++)
+			if (int_table[i] == this)
+				int_table[i] = NULL;
+	}
+
 	bool F4Interrupt::init(GPIO_TypeDef* GPIOx, uint32_t GPIO_Pin, int flag)
 	{
+		this->GPIOx = GPIOx;
+		this->GPIO_Pin = GPIO_Pin;
+		this->flag = flag;
+
 		int port_source = port2port_source(GPIOx);
 		int pin_source =  Pin2PinSource(GPIO_Pin);
 		if (pin_source < 0 || port_source < 0)
@@ -70,10 +124,9 @@ namespace STM32F4
 			return false;
 		}
 		
-		if (!int_table[pin_source])
-		{
+		if (int_table[pin_source])
 			LOGE("warning: duplicate exti %d\n", pin_source);
-		}
+		int_table[pin_source] = this;		
 		
 		// open everything....
 		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA|RCC_AHB1Periph_GPIOB|RCC_AHB1Periph_GPIOC|RCC_AHB1Periph_GPIOD | RCC_AHB1Periph_GPIOE,ENABLE);
@@ -101,15 +154,13 @@ namespace STM32F4
 		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
 		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-		NVIC_Init(&NVIC_InitStructure);
-		
-		int_table[pin_source] = this;
+		NVIC_Init(&NVIC_InitStructure);		
 		
 		return true;
 	}
 	
 	void F4Interrupt::set_callback(HAL::interrupt_callback cb, void *parameter)
-	{		
+	{
 		this->cb=cb;
 		this->parameter = parameter;
 	}

@@ -12,9 +12,11 @@ namespace STM32F4
 		HAL::interrupt_callback cb;
 		int flag;
 		void *parameter;
+		GPIO_TypeDef* GPIOx;
+		uint32_t GPIO_Pin;
 	public:
 		F4Interrupt();
-		~F4Interrupt(){};
+		~F4Interrupt();
 		bool init(GPIO_TypeDef* GPIOx, uint32_t GPIO_Pin, int flag);
 		virtual void set_callback(HAL::interrupt_callback cb, void *parameter);
 		virtual void call_callback();

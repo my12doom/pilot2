@@ -4,7 +4,7 @@
 
 namespace HAL 
 {
-	enum interrupt_flags
+	enum interrupt_trigger
 	{
 		interrupt_rising = 1,
 		interrupt_falling = 2,
