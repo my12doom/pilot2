@@ -2284,6 +2284,18 @@ int main()
 	bsp_init_all();
 	
 	log_init();
+	LOGE("yap(%s)(bsp %s)\n", version_name, bsp_name);
+	int i = 0;
+	while(param::enum_params(i))
+	{
+		char name[5] = {0};
+		strncpy(name, param::enum_params(i), 4);
+		char tmp[200];
+		sprintf(tmp, "%s=%f\n", name, (float)param(name, 0));
+		log2(tmp, TAG_TEXT_LOG, strlen(tmp));
+		log_flush();
+		i++;
+	}
 	while(0)
 	{
 		float t = systimer->gettime()/5000000.0f * 2 * PI;
