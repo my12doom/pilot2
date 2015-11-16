@@ -22,7 +22,7 @@ battery_estimator::battery_estimator()
 :last_log(0)
 ,init(false)
 ,mah(0)
-,P(2,2,200.0,0,0,200.0)
+,P(2,2,200.0, 0.0, 0.0, 0.0, 200.0)
 {
 
 }

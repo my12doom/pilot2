@@ -1234,7 +1234,7 @@ int yet_another_pilot::sensor_calibration()
 			return -1;
 		systimer->delayus(3000);
 
-		LOGE("\r%d/%d", detect_acc.get_average(NULL), calibrating_count);
+		printf("\r%d/%d", detect_acc.get_average(NULL), calibrating_count);
 
 		vector_add(&mag_avg, &mag);
 		if (new_baro_data)
