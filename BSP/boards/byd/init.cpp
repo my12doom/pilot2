@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <protocol/common.h>
 #include <HAL\Resources.h>
-#include "RCIN.h"
 #include "RCOUT.h"
 #include "AsyncWorker.h"
 #include <HAL\STM32F4\F4Timer.h>
 #include <HAL\STM32F4\F4VCP.h>
+#include <HAL\STM32F4\F4Interrupt.h>
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 #include <HAL/sensors/Sonar.h>
+#include <HAL/sensors/PPMIN.h>
 #include <HAL\Interface\ILED.h>
 #include <HAL/sensors/PX4Flow.h>
 #include <utils/param.h>
@@ -183,10 +184,13 @@ int init_external_compass()
 
 int init_RC()
 {
-	static dev_v2::RCIN rcin;
-	static dev_v2::RCOUT rcout;
-	
+	static F4Interrupt interrupt;
+	interrupt.init(GPIOB, GPIO_Pin_10, interrupt_rising);
+	static PPMIN rcin;
+	rcin.init(&interrupt);
 	manager.register_RCIN(&rcin);
+	
+	static dev_v2::RCOUT rcout;	
 	manager.register_RCOUT(&rcout);
 	
 	return 0;
@@ -346,7 +350,7 @@ int bsp_init_all()
 	//init_sonar();
 	init_led();
 	init_BatteryMonitor();
-//	init_9150();
+	init_9150();
 //	init_uart4();
 	init_uart3();
 	init_uart2();
