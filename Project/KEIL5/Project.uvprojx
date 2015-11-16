@@ -739,6 +739,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4VCP.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F4Interrupt.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4Interrupt.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -808,6 +813,11 @@
               <FileName>Sonar.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\sensors\Sonar.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>PPMIN.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\PPMIN.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1239,7 +1249,7 @@
               <RVCTZI>0</RVCTZI>
               <RVCTOtherData>0</RVCTOtherData>
               <ModuleSelection>0</ModuleSelection>
-              <IncludeInBuild>0</IncludeInBuild>
+              <IncludeInBuild>1</IncludeInBuild>
               <AlwaysBuild>2</AlwaysBuild>
               <GenerateAssemblyFile>2</GenerateAssemblyFile>
               <AssembleAssemblyFile>2</AssembleAssemblyFile>
@@ -1306,11 +1316,6 @@
               <FilePath>..\..\BSP\boards\dev_v4\init.cpp</FilePath>
             </File>
             <File>
-              <FileName>RCIN.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\dev_v4\RCIN.cpp</FilePath>
-            </File>
-            <File>
               <FileName>RCOUT.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\dev_v4\RCOUT.cpp</FilePath>
@@ -1331,7 +1336,7 @@
               <RVCTZI>0</RVCTZI>
               <RVCTOtherData>0</RVCTOtherData>
               <ModuleSelection>0</ModuleSelection>
-              <IncludeInBuild>1</IncludeInBuild>
+              <IncludeInBuild>0</IncludeInBuild>
               <AlwaysBuild>2</AlwaysBuild>
               <GenerateAssemblyFile>2</GenerateAssemblyFile>
               <AssembleAssemblyFile>2</AssembleAssemblyFile>
@@ -1396,11 +1401,6 @@
               <FileName>init.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\byd\init.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>RCIN.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\byd\RCIN.cpp</FilePath>
             </File>
             <File>
               <FileName>RCOUT.cpp</FileName>
