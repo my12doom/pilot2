@@ -123,8 +123,8 @@ int MPU6000::write_reg(uint8_t reg, uint8_t data)
 
 		if (read == data)
 			return 0;
-		else
-			printf("reg(%02x) error %02x/%02x\n", reg, read, data);
+		//else
+		//	printf("reg(%02x) error %02x/%02x\n", reg, read, data);
 		
 		systimer->delayms(10);
 	}
@@ -173,9 +173,11 @@ int MPU6000::init()
 	FAIL_RETURN(write_reg(PWR_MGMT_1, 0x00));
 	FAIL_RETURN(write_reg(PWR_MGMT_2, 0x00));
 	FAIL_RETURN(write_reg(SMPLRT_DIV, 0x00));
-	FAIL_RETURN(write_reg(MPU9250_CONFIG, 0x3));
-	FAIL_RETURN(write_reg(GYRO_CONFIG, 1 << 3));			// full scale : 500 degree/s, ~65.5 LSB/degree/s
+	FAIL_RETURN(write_reg(MPU9250_CONFIG, 1));
+	FAIL_RETURN(write_reg(GYRO_CONFIG, 3 << 3));		// full scale : 2000 degree/s, ~65.5 LSB/degree/s
 	FAIL_RETURN(write_reg(ACCEL_CONFIG, 0x18));			// full scale : 16g, 2048 = 1g
+	FAIL_RETURN(write_reg(0x37, 0x10));
+	FAIL_RETURN(write_reg(0x38, 0x01));
 	
 	int res = read_reg(WHO_AM_I, &who_am_i, 1);
 	TRACE("MPU9250 initialized, WHO_AM_I=%x\n", who_am_i);
@@ -183,7 +185,7 @@ int MPU6000::init()
 	TRACE("MPU9250 initialized, WHO_AM_I=%x\n", who_am_i);
 	res = read_reg(WHO_AM_I, &who_am_i, 1);
 	TRACE("MPU9250 initialized, WHO_AM_I=%x\n", who_am_i);
-
+		
 	for(i=0; i<128; i++)
 	{
 		uint8_t data;
@@ -266,9 +268,9 @@ int MPU6000::read(devices::gyro_data *out)
 	if (read(data)<0)
 		return -1;
 	
-	out->x = data[axis[3]] * negtive[3] * 0.000266316f;		// to radians
-	out->y = data[axis[4]] * negtive[4] * 0.000266316f;
-	out->z = data[axis[5]] * negtive[5] * 0.000266316f;
+	out->x = data[axis[3]] * negtive[3] * 0.00106530f;		// to radians
+	out->y = data[axis[4]] * negtive[4] * 0.00106530f;
+	out->z = data[axis[5]] * negtive[5] * 0.00106530f;
 	out->temperature = data[3] / 340.0f + 36.53f;
 	
 	return 0;
