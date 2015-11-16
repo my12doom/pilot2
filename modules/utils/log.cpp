@@ -125,7 +125,7 @@ int log(const void *data, int size)
 	if (res < 0)
 		lost1++;
 	
-	return res;
+	return 0;
 }
 
 int log2(const void *packet, uint16_t tag, uint16_t size)
