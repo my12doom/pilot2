@@ -2039,7 +2039,6 @@ int yet_another_pilot::light_words()
 		{
 			if(rgb && mag_calibration_state == 0)
 				rgb->write(0,0,0);
-			SAFE_OFF(flashlight);
 		}
 	}
 	
