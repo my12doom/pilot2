@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <stdarg.h>
 
 #define assert(...)
 
@@ -41,10 +42,13 @@ matrix::matrix(int m, int n, ...)
 	this->m = m;
 	this->n = n;
 	int count = m*n;
-	const double * data = (double*) (&n+1);
+	
+	va_list vl;
+	va_start(vl,n);
 
 	for(int i=0; i<count; i++)
-		this->data[i] = (float)data[i];
+		this->data[i] = va_arg(vl,double);
+	va_end(vl);
 }
 matrix::~matrix()
 {
