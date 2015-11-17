@@ -1269,6 +1269,8 @@ int yet_another_pilot::sensor_calibration()
 			int i = (systimer->gettime() / 150000) % 5;
 			rgb->write(color[i][0], color[i][01], color[i][2]);
 		}
+		
+		STOP_ALL_MOTORS();
 	}
 	
 	vector_divide(&mag_avg, calibrating_count);
@@ -2253,7 +2255,9 @@ int yet_another_pilot::setup(void)
 		g_ppm_output[i] = THROTTLE_MAX;
 	output_rc();
 	
-	systimer->delayms(10);
+	int64_t t = systimer->gettime();
+	while(systimer->gettime() < t + 20000)
+		output_rc();
 	STOP_ALL_MOTORS();
 	
 	estimator.set_gps_latency(0);

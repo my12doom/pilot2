@@ -32,13 +32,14 @@ RCOUT::RCOUT()
 	
 	// Time base configuration
 	TIM_OCInitTypeDef  TIM_OCInitStructure;
-	TIM_TimeBaseStructure.TIM_Period = 3000*OC-1;
+	TIM_TimeBaseStructure.TIM_Period = 2000*OC-1;
 	TIM_TimeBaseStructure.TIM_Prescaler = 84/OC-1;
 	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
 
 	TIM_TimeBaseInit(TIM4, &TIM_TimeBaseStructure);
 
+	TIM_SelectOnePulseMode(TIM4, TIM_OPMode_Single);
 	TIM_Cmd(TIM4, ENABLE);
 
 	TIM_ARRPreloadConfig(TIM4, ENABLE);
@@ -51,7 +52,7 @@ RCOUT::RCOUT()
 
 	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
 	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
 	TIM_OCInitStructure.TIM_Pulse = 0;
 	TIM_OC1Init(TIM4, &TIM_OCInitStructure);
 	TIM_OC2Init(TIM4, &TIM_OCInitStructure);
@@ -82,7 +83,12 @@ int RCOUT::write(const int16_t *data, int start_channel, int count)
 		return -1;
 	
 	for(int i=0; i<count; i++)
-		registers[i+start_channel][0] = data[i] * OC;
+	{
+		channel_datas[i+start_channel] = data[i];
+		registers[i+start_channel][0] = 2000*OC - data[i] * OC;
+	}
+
+	TIM_Cmd(TIM4, ENABLE);
 	
 	return 0;
 }
