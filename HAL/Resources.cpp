@@ -15,6 +15,7 @@ Manager::Manager()
 	rcout = NULL;
 	async_worker = NULL;
 	flow_count = 0;
+	device_count = 0;
 }
 
 int  Manager::register_RGBLED(const char *name,devices::IRGBLED *pLED)

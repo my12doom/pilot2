@@ -65,7 +65,8 @@ public:
 	copter_mode submode;// = basic;
 	int64_t collision_detected;// = 0;	// remember to clear it before arming
 	int64_t tilt_us;// = 0;	// remember to clear it before arming
-	math::LowPassFilter2p gyro_lpf2p[3];// = {LowPassFilter2p(333.3, 40), LowPassFilter2p(333.3, 40), LowPassFilter2p(333.3, 40)};	// 2nd order low pass filter for gyro.
+	math::LowPassFilter2p gyro_lpf2p[3];// = {LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40)};	// 2nd order low pass filter for gyro.
+	math::LowPassFilter2p accel_lpf2p[3];// = {LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40)};	// 2nd order low pass filter for gyro.
 	vector gyro_reading;			// gyro reading with temperature compensation and LPF, without AHRS bias estimating
 	vector body_rate;				// body rate, with all compensation applied
 	vector accel;// = {NAN, NAN, NAN};
@@ -156,6 +157,7 @@ public:
 	int set_submode(copter_mode newmode);
 	int calculate_state();
 	int read_sensors();
+	int read_flow();
 	int run_controllers();
 	int output();
 	void handle_takeoff();

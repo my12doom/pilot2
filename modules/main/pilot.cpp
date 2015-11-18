@@ -164,7 +164,10 @@ yet_another_pilot::yet_another_pilot()
 	gps_attitude_timeout = 0;
 
 	for(int i=0; i<3; i++)
-		gyro_lpf2p[i].set_cutoff_frequency(333.33, 40);
+	{
+		gyro_lpf2p[i].set_cutoff_frequency(1000, 40);
+		accel_lpf2p[i].set_cutoff_frequency(1000, 40);
+	}
 }
 
 // helper functions
@@ -672,13 +675,8 @@ int yet_another_pilot::save_logs()
 	return 0;
 }
 
-int yet_another_pilot::read_sensors()
+int yet_another_pilot::read_flow()
 {
-	int64_t reading_start = systimer->gettime();
-	vector acc = {0};
-	vector gyro = {0};
-	vector mag = {0};
-	
 	if (manager.get_flow_count())
 	{
 		sensors::IFlow *flow = manager.get_flow(0);
@@ -723,6 +721,16 @@ int yet_another_pilot::read_sensors()
 			//frame.gyro_y_rate = floay;
 		}
 	}
+
+	return 0;
+}
+
+int yet_another_pilot::read_sensors()
+{
+	int64_t reading_start = systimer->gettime();
+	vector acc = {0};
+	vector gyro = {0};
+	vector mag = {0};
 	
 	if (range_finder)
 	{
@@ -975,18 +983,9 @@ int yet_another_pilot::read_sensors()
 	this->mag = mag;
 	
 
-	// apply a 5hz LPF to accelerometer readings
-	const float RC20 = 1.0f/(2*3.1415926 * 20.0f);
-	float alpha20 = interval / (interval + RC20);
-
-	if (isnan(accel.array[0]) || interval == 0)
-		this->accel = acc;
-	else
-	{
-		vector_multiply(&this->accel, 1-alpha20);
-		vector_multiply(&acc, alpha20);
-		vector_add(&this->accel, &acc);
-	}
+	// apply a 40hz 2nd order LPF to accelerometer readings
+	for(int i=0; i<3; i++)
+		this->accel.array[i] = accel_lpf2p[i].apply(acc.array[i]);
 
 	// accelerometer motion detector and calibration.
 	motion_acc.new_data(accel_uncalibrated);
@@ -1042,6 +1041,12 @@ int yet_another_pilot::read_sensors()
 		current = current * (1-alpha) + alpha * manager.getBatteryVoltage("BatteryCurrent")->read();	
 	
 	mah_consumed += fabs(current) * interval / 3.6f;	// 3.6 mah = 1As
+
+	int16_t data[6] = {acc.V.x * 1000, acc.V.y * 1000, acc.V.z * 1000,
+						gyro.V.x * 18000 / PI, gyro.V.y * 18000 / PI, gyro.V.z * 18000 / PI,};
+
+	log2(data, 5, sizeof(data));
+
 
 	return 0;
 }
@@ -2119,7 +2124,12 @@ void yet_another_pilot::mag_calibrating_worker()
 }
 
 void yet_another_pilot::main_loop(void)
-{	
+{
+	read_sensors();
+	static int n = 0;
+	if (n++ % 3)
+		return;
+	
 	// calculate systime interval
 	static int64_t tic = 0;
 	int64_t round_start_tick = systimer->gettime();
@@ -2148,7 +2158,8 @@ void yet_another_pilot::main_loop(void)
 
 	// read sensors
 	int64_t read_sensor_cost = systimer->gettime();
-	read_sensors();
+	//read_sensors();
+	read_flow();
 	read_sensor_cost = systimer->gettime() - read_sensor_cost;
 	
 	// provide mag calibration with data
@@ -2275,7 +2286,7 @@ int yet_another_pilot::setup(void)
 	read_rc();
 
 	// get two timers, one for main loop and one for SDCARD logging loop
-	manager.getTimer("mainloop")->set_period(3000);
+	manager.getTimer("mainloop")->set_period(1000);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
 	manager.getTimer("log")->set_period(10000);
 	manager.getTimer("log")->set_callback(sdcard_logging_loop_entry);
