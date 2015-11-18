@@ -6,7 +6,6 @@
 #include <Algorithm/ahrs.h>
 #include <Algorithm/attitude_controller.h>
 #include <Algorithm/altitude_estimator.h>
-#include <Algorithm/altitude_estimatorCF.h>
 #include <Algorithm/altitude_controller.h>
 #include <Algorithm/pos_estimator.h>
 #include <Algorithm/pos_controll.h>
@@ -82,7 +81,6 @@ public:
 	pos_controller controller;
 	attitude_controller attitude_controller;
 	altitude_estimator alt_estimator;
-	altitude_estimatorCF alt_estimatorCF;
 	altitude_controller alt_controller;
 	OpticalFlowController of_controller;
 	battery_estimator batt;

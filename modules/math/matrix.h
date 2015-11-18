@@ -22,6 +22,7 @@ public:
 	matrix(const matrix&v);		// copy constructor
 	~matrix();
 
+	float & operator [](int index){return data[index];}
 	void operator =(const matrix &v);
 	void operator +=(const matrix &v);
 	matrix operator +(const matrix &v);

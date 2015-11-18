@@ -605,11 +605,11 @@ int yet_another_pilot::save_logs()
 	quadcopter_data3 quad3 = 
 	{
 		alt_controller.baro_target * 100,
-		alt_estimatorCF.state[0] * 100,
+		0,//alt_estimatorCF.state[0] * 100,
 		alt_controller.target_climb_rate * 100,
-		alt_estimatorCF.state[1] * 100,
+		0,//alt_estimatorCF.state[1] * 100,
 		alt_controller.target_accel * 100,
-		(accelz + alt_estimatorCF.state[3]) * 100,
+		0,//(accelz + alt_estimatorCF.state[3]) * 100,
 		throttle_result*1000,
 		yaw_launch * 18000 / PI,
 		euler[2] * 18000 / PI,
@@ -1102,8 +1102,6 @@ int yet_another_pilot::calculate_state()
 	alt_estimator.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
 	alt_estimator.update(accelz, a_raw_altitude, interval);
 	alt_estimator.set_static_mode(!armed);
-	alt_estimatorCF.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
-	alt_estimatorCF.update(accelz, new_baro_data ? a_raw_altitude : NAN, interval);
 	estimator.update_accel(accel_earth_frame.array[0], accel_earth_frame.array[1], systimer->gettime());
 
 	if (new_gps_data)
