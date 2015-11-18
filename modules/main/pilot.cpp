@@ -886,7 +886,7 @@ int yet_another_pilot::read_sensors()
 	}
 	if (healthy_baro_count == 0)
 		critical_errors |= error_baro;
-
+	
 	if (vcp && (usb_data_publish & data_publish_baro) && new_baro_data)
 	{
 		if (usb_data_publish & data_publish_binary)
@@ -1095,9 +1095,7 @@ int yet_another_pilot::calculate_state()
 	for(int i=0; i<3; i++)
 		accel_earth_frame.array[i] = acc_ned[i];
 
-	// calculate altitude
-	if (new_baro_data)
-		calculate_baro_altitude();
+	calculate_baro_altitude();
 
 	accelz = acc_ned[2];
 

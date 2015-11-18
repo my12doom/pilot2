@@ -271,7 +271,7 @@ int altitude_controller::update(float dt, float user_rate)
 int altitude_controller::reset()
 {
 	baro_target = m_airborne ? m_baro_states[0] : (m_baro_states[0]-1.2f);
-	feed_forward_factor = m_airborne ? 0.35f : 0.8f;
+	feed_forward_factor = m_airborne ? 0.35f : 0.35f;
 	accel_error_pid[0] = NAN;
 	accel_error_pid[1] = 0;
 	accel_error_pid[2] = NAN;
