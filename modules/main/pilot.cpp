@@ -238,6 +238,8 @@ int yet_another_pilot::run_controllers()
 
 		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+//		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
+//		alt_controller.provide_states(alt_state, NAN, euler, throttle_real, LIMIT_NONE, airborne);
 		
 		// landing?
 		if(islanding)
@@ -1353,6 +1355,8 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	attitude_controller.reset();
 	float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
 	alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+//	float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
+//	alt_controller.provide_states(alt_state, NAN, euler, throttle_real, LIMIT_NONE, airborne);
 	alt_controller.reset();
 	
 

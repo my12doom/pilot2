@@ -18,10 +18,10 @@ public:
 	// set static_mode to true to tell the estimator that the machine is not flying, and estimator should trust more baro data.
 	void set_static_mode(bool static_mode){this->static_mode = static_mode;}
 
+	matrix x;
 protected:
 	bool static_mode;
 	bool compensate_land_effect;
-	matrix x;
 	matrix P;
 	bool sonar_used;
 	float last_valid_sonar;

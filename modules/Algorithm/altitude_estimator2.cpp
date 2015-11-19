@@ -6,25 +6,14 @@
 
 #define sonar_step_threshold 0.35f
 
-static matrix Q
-(
-	4,4,
-	4e-6, 0.0, 0.0, 0.0,
-	0.0, 1e-6, 0.0, 0.0,
-	0.0, 0.0, 1e-3, 0.0,
-	0.0, 0.0, 0.0, 1e-7
-);
+static matrix Q = matrix::diag(5, 4e-6, 1e-6, 1e-3, 1e-7, 1e-7);
 
 
 altitude_estimator2::altitude_estimator2()
-:static_mode(true)
+:x(5, 1, 0.0, 0.0, 0.0, 0.0, 0.9)				// [alt, climb, abias, surface_alt, sonar_scale]
+,static_mode(true)
 ,compensate_land_effect(false)
-,x(4,1,0.0,0.0,0.0,0.0)				// [alt, climb, abias, surface_alt]
-,P(4,4,
-	200.0, 0.0, 0.0, 0.0,
-	0.0, 200.0, 0.0, 0.0,
-	0.0, 0.0, 200.0, 0.0,
-	0.0, 0.0, 0.0, 200.0)
+,P(matrix::diag(5, 200.0, 200.0, 200.0, 200.0, 200.0))
 {
 }
 
@@ -39,8 +28,8 @@ int altitude_estimator2::update(float accelz, float baro, float sonar, float dt)
 		return -1;
 
 	//sonar = NAN;
-	if (!isnan(sonar))
-		sonar *= 1.15;
+	//if (!isnan(sonar))
+	//	sonar *= 1.10f;
 	
 	// sonar step response handling
 	if (!isnan(sonar))
@@ -48,8 +37,8 @@ int altitude_estimator2::update(float accelz, float baro, float sonar, float dt)
 		if (sonar_used && fabs(sonar - last_valid_sonar) >  sonar_step_threshold)
 		{
 			LOGE("estimator2: step response: %f -->> %f\n", last_valid_sonar, sonar);
-			x[3] += sonar - last_valid_sonar;
-			P[15] = 200;
+			x[3] += (sonar - last_valid_sonar)/x[4];
+			P[18] = 200;
 		}
 
 		last_valid_sonar = sonar;
@@ -74,8 +63,8 @@ int altitude_estimator2::update(float accelz, float baro, float sonar, float dt)
 			else
 			{
 				sonar_used = true;
-				x[3] = x[0] - last_valid_sonar;
-				P[15] = 200;
+				x[3] = x[0] - last_valid_sonar/x[4];
+				P[18] = 200;
 				LOGE("estimator2: changed to sonar\n");
 			}
 		}
@@ -84,44 +73,46 @@ int altitude_estimator2::update(float accelz, float baro, float sonar, float dt)
 	float dtsq2 = 0.5f * dt * dt;
 	matrix F
 	(
-		4,4,
-		1.0, dt, dtsq2, 0.0,
-		0.0, 1.0, dt, 0.0,
-		0.0, 0.0, 1.0, 0.0,
-		0.0, 0.0, 0.0, 1.0
+		5,5,
+		1.0, dt, dtsq2, 0.0, 0.0,
+		0.0, 1.0, dt, 0.0, 0.0,
+		0.0, 0.0, 1.0, 0.0, 0.0,
+		0.0, 0.0, 0.0, 1.0, 0.0,
+		0.0, 0.0, 0.0, 0.0, 1.0
 	);
 	matrix B
-		(4,1,
+		(5,1,
 		dtsq2,
 		dt,
-		0,
-		0
+		0.0,
+		0.0,
+		0.0
 		);
 	matrix u(1,1,accelz);
 
 	matrix H;
-	matrix zk;
 	matrix R;
+	matrix y;
 	
 	if (sonar_used)
 	{
-		zk = matrix(2,1,baro, last_valid_sonar);
-		H = matrix(2,4,
-		1.0, 0.0, 0.0, 0.0,
-		1.0, 0.0, 0.0, -1.0);
-		R = matrix(2,2,
-		compensate_land_effect ? 6000.0: 80.0, 0.0,
-		0.0, 5.0);
+		matrix zk = matrix(2,1,baro, last_valid_sonar);
+		H = matrix(2,5,
+		1.0, 0.0, 0.0, 0.0, 0.0,
+		x[4], 0.0, 0.0, -x[4], x[0]-x[3]);
+		R = matrix::diag(2, compensate_land_effect ? 6000.0: 80.0, 5.0);
+		y = matrix(2,1,baro-x[0], last_valid_sonar - x[4] * (x[0]-x[3]));		
+		//y = zk - H * x;
 	}
 	else
 	{
-		zk = matrix(1,1,baro);
-		H = matrix(1,4,
-		1.0, 0.0, 0.0, 0.0);
-		R = matrix(1,1,compensate_land_effect ? 6000.0: 80.0);
+		y = matrix(1,1,baro-x[0]);
+		H = matrix(1,5,
+		1.0, 0.0, 0.0, 0.0, 0.0);
+		R = matrix::diag(1, compensate_land_effect ? 6000.0: 80.0);
 	}
 	
-	Q[10] = static_mode ? 1e-3 : 1e-7;
+	Q[12] = static_mode ? 1e-3 : 1e-7;
 
 	matrix x1 = F * x + B * u;
 	matrix P1 = F * P * F.transpos() + Q;
@@ -129,11 +120,11 @@ int altitude_estimator2::update(float accelz, float baro, float sonar, float dt)
 	matrix K = P1 * H.transpos() * Sk.inverse();
 	matrix sk_i = Sk.inverse();
 
-	x = x1 + K*(zk - H*x1);
+	x = x1 + K*y;
 	P = (matrix(P1.m) - K*H) * P1;
 
-	//LOGE("\rx[0-4]=%.3f,%.3f,%.3f,%.3f, accelz = %.3f, baro=%.3f, sonar=%.3f     ", x[0], x[1], x[2], x[3], accelz, baro, sonar);
-	log2(x.data, 6, 16);
+	TRACE("x[0-4]=%.3f,%.3f,%.3f,%.3f, accelz = %.3f, baro=%.3f, sonar=%.3f     \n", x[0], x[1], x[2], x[3], accelz, baro, sonar);
+	log2(x.data, 6, 20);
 
 	return 0;
 }
