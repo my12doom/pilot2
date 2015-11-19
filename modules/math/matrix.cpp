@@ -254,3 +254,20 @@ matrix matrix::operator /(const float &v)
 	o /= v;
 	return o;
 }
+
+matrix matrix::diag(int n, ...)
+{
+	matrix o;
+	o.n = n;
+	o.m = n;
+
+	memset(o.data, 0, n*n*sizeof(float));
+
+	va_list vl;
+	va_start(vl,n);
+	for(int i=0; i<n; i++)
+		o.data[i*(n+1)] = va_arg(vl,double);
+	va_end(vl);
+	
+	return o;
+}

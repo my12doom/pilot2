@@ -1100,8 +1100,12 @@ int yet_another_pilot::calculate_state()
 	accelz = acc_ned[2];
 
 	alt_estimator.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
-	alt_estimator.update(accelz, a_raw_altitude, interval);
 	alt_estimator.set_static_mode(!armed);
+	alt_estimator.update(accelz, a_raw_altitude, interval);
+	bool tilt_ok = (euler[0] > -PI/6) && (euler[0] < PI/6) && (euler[1] > -PI/6) && (euler[1] < PI/6);
+	alt_estimator2.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
+	alt_estimator2.set_static_mode(!armed);
+	alt_estimator2.update(accelz, a_raw_altitude, tilt_ok ? sonar_distance : NAN, interval);
 	estimator.update_accel(accel_earth_frame.array[0], accel_earth_frame.array[1], systimer->gettime());
 
 	if (new_gps_data)

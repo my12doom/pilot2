@@ -929,6 +929,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\Algorithm\battery_estimator.cpp</FilePath>
             </File>
+            <File>
+              <FileName>altitude_estimator2.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\altitude_estimator2.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

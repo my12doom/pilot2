@@ -41,6 +41,7 @@ public:
 	matrix cofactor(int a, int b);
 	void identity();
 	matrix transpos();
+	static matrix diag(int n, ...);
 
 private:
 	float det2x2();

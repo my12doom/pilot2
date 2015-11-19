@@ -350,7 +350,7 @@ int bsp_init_all()
 	//init_sonar();
 	init_led();
 	init_BatteryMonitor();
-	init_9150();
+//	init_9150();
 //	init_uart4();
 	init_uart3();
 	init_uart2();
