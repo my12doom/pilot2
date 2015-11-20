@@ -4,7 +4,7 @@
 #include <HAL/Interface/Interfaces.h>
 #include <utils/log.h>
 
-#define sonar_step_threshold 0.35f
+#define sonar_step_threshold 0.15f
 
 static matrix Q = matrix::diag(5, 4e-6, 1e-6, 1e-3, 1e-7, 1e-7);
 
@@ -27,10 +27,6 @@ int altitude_estimator2::update(float accelz, float baro, float sonar, float dt)
 	if (dt > 0.2f || dt < 0)
 		return -1;
 
-	//sonar = NAN;
-	//if (!isnan(sonar))
-	//	sonar *= 1.10f;
-	
 	// sonar step response handling
 	if (!isnan(sonar))
 	{

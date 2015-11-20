@@ -6,8 +6,8 @@ namespace STM32F4
 {
 	class F4UART:public HAL::IUART
 	{
-	#define TX_BUFFER_SIZE 1024
-	#define RX_BUFFER_SIZE 1500
+	#define TX_BUFFER_SIZE 200
+	#define RX_BUFFER_SIZE 200
 	private:
 		USART_TypeDef * USARTx;
 		int baudrate;

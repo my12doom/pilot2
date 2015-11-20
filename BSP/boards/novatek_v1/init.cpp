@@ -14,7 +14,7 @@
 #include <utils/param.h>
 #include "RGBLED.h"
 
-extern "C" const char bsp_name[] = "v4";
+extern "C" const char bsp_name[] = "novatek_v1";
 
 using namespace HAL;
 using namespace devices;
@@ -66,7 +66,6 @@ extern "C" void TIM2_IRQHandler(void)
 #include <HAL\Interface\IUART.h>
 
 //For uart4:
-/*
 F4UART f4uart4(UART4);
 IUART * pUART4 = &f4uart4;
 void init_uart4()
@@ -83,7 +82,6 @@ extern "C" void DMA1_Stream4_IRQHandler()
 {
 	f4uart4.DMA1_Steam4_IRQHandler();
 }
-*/
 
 //For usart3:
 F4UART f4uart3(USART3);
@@ -118,24 +116,6 @@ extern "C" void DMA1_Stream6_IRQHandler()
 {
 	f4uart2.DMA1_Steam6_IRQHandler();
 }
-
-//For usart4:
-/*
-F4UART f4uart4(UART4);
-void init_uart4()
-{
-	f4uart4.set_baudrate(115200);
-	//manager.register_UART("UART4", &f4uart4);
-}
-extern "C" void UART4_IRQHandler(void)
-{
-	f4uart4.UART4_IRQHandler();
-}
-extern "C" void DMA1_Stream4_IRQHandler()
-{
-	f4uart4.DMA1_Steam4_IRQHandler();
-}
-*/
 
 //For usart1:
 F4UART f4uart1(USART1);
@@ -179,8 +159,8 @@ void init_sensors()
 	
 	if (mpu6000device.init(&spi1, &cs_mpu) == 0)
 	{
-		mpu6000device.accelerometer_axis_config(0, 1, 2, +1, +1, -1);
-		mpu6000device.gyro_axis_config(0, 1, 2, -1, -1, +1);
+		mpu6000device.accelerometer_axis_config(0, 1, 2, +1, -1, +1);
+		mpu6000device.gyro_axis_config(0, 1, 2, -1, +1, -1);
 		manager.register_accelerometer(&mpu6000device);
 		manager.register_gyroscope(&mpu6000device);
 	}
@@ -192,7 +172,7 @@ void init_sensors()
 
 	if (hmc5983device.init(&spi1, &cs_hmc5983) == 0)
 	{
-		hmc5983device.axis_config(0, 2, 1, +1, +1, +1);
+		hmc5983device.axis_config(0, 2, 1, +1, -1, -1);
 		manager.register_magnetometer(&hmc5983device);
 	}
 }
@@ -223,7 +203,7 @@ int init_external_compass()
 int init_RC()
 {
 	static F4Interrupt interrupt;
-	interrupt.init(GPIOB, GPIO_Pin_10, interrupt_rising);
+	interrupt.init(GPIOB, GPIO_Pin_12, interrupt_rising);
 	static PPMIN rcin;
 	rcin.init(&interrupt);
 	manager.register_RCIN(&rcin);
@@ -351,34 +331,6 @@ int init_VCP()
 	return 0;
 }
 
-int init_9150()
-{
-	F4GPIO SCL(GPIOC, GPIO_Pin_13);
-	F4GPIO SDA(GPIOC, GPIO_Pin_14);
-	I2C_SW i2c(&SCL, &SDA);
-	
-	sensors::MPU6000 mpu6000;
-	if (mpu6000.init(&i2c, 0xD0) == 0)
-	{
-		LOGE("found mpu6000 on I2C(PC13,PC14)\n");
-		
-		static F4GPIO SCL(GPIOC, GPIO_Pin_13);
-		static F4GPIO SDA(GPIOC, GPIO_Pin_14);
-		static I2C_SW i2c(&SCL, &SDA);
-		static sensors::MPU6000 mpu6000;
-
-		mpu6000.init(&i2c, 0xD0);
-		mpu6000.accelerometer_axis_config(0, 1, 2, +1, +1, +1);
-		mpu6000.gyro_axis_config(0, 1, 2, +1, +1, +1);
-
-		manager.register_accelerometer(&mpu6000);
-		manager.register_gyroscope(&mpu6000);
-	}
-
-	return 0;
-}
-
-
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
@@ -393,7 +345,6 @@ int bsp_init_all()
 	init_uart1();
 	init_RC();
 	init_sensors();
-	init_9150();
 	//init_external_compass();
 	init_asyncworker();
 	init_led();

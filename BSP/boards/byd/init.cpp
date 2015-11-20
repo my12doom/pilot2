@@ -389,6 +389,7 @@ int bsp_init_all()
 		// alt hold
 		param("accP", 0.12) = 0.12;
 		param("accI", 0.24) = 0.24;
+		param("altP", 1) = 1.5;
 
 		// PID
 		param("rP1", 0.2f)=0.45f;
