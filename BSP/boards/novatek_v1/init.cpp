@@ -29,8 +29,11 @@ void init_led()
 	static F4GPIO f4gpioC5(GPIOC,GPIO_Pin_5);
 	static GPIOLED led_green(&f4gpioC5);
 	static RGBLED rgb;
-	static F4GPIO f4gpioC0(GPIOC,GPIO_Pin_0);	
-	static GPIOLED flashlight(&f4gpioC0, true);
+	static F4GPIO f4gpioB14(GPIOB,GPIO_Pin_14);	
+	static F4GPIO f4gpioB15(GPIOB,GPIO_Pin_15);
+	f4gpioB15.set_mode(HAL::MODE_OUT_PushPull);
+	f4gpioB15.write(true);
+	static GPIOLED flashlight(&f4gpioB14, true);
 	
 	
 	manager.register_LED("SD",&led_red);
