@@ -6,7 +6,7 @@
 #define MAX_ACCELEROMETER_COUNT 5
 #define MAX_GPS_COUNT 3
 #define LED_NUM 5
-#define UART_NUM 4
+#define UART_NUM 6
 #define TIMER_NUM 4
 #define BATTERYVOLTAGE_NUM 4
 #define MAX_FLOW_COUNT 2
