@@ -220,12 +220,10 @@ void yet_another_pilot::main_loop(void)
 	
 	// rc inputs
 	read_rc();
-	
+		
 	// read sensors
-	int64_t read_sensor_cost = systimer->gettime();
 	read_sensors();
 	read_flow();
-	read_sensor_cost = systimer->gettime() - read_sensor_cost;
 	
 	// all state estimating, AHRS, position, altitude, etc
 	estimate_states();
@@ -233,7 +231,7 @@ void yet_another_pilot::main_loop(void)
 	// all controlling
 	run_controllers();
 	
-	// final output
+	// final output to motors
 	output();
 }
 
@@ -250,8 +248,11 @@ int yet_another_pilot::setup(void)
 	rcout = manager.get_RCOUT();
 	rgb = manager.getRGBLED("rgb");
 	vcp = manager.getUART("VCP");
+	
+	// make sure all sensors are ready
+	
 
-	// get two timers, one for main loop and one for SDCARD logging loop
+	// get two timers, one for main loop and one for SDCARD logging loop(with different priority).
 	manager.getTimer("mainloop")->set_period(1000);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
 	manager.getTimer("log")->set_period(10000);
