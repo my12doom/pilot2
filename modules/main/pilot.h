@@ -122,6 +122,7 @@ public:
 	int acc_avg_count[6];// = {0};						// accelerometer calibration average counter.
 	motion_detector motion_acc;						// motion detector for accelerometer calibration.
 	bool islanding;// = false ;
+	bool land_possible;//
 
 	// constructor
 	yet_another_pilot();
@@ -167,7 +168,7 @@ public:
 	// UART functions
 	int handle_cli(HAL::IUART *uart);
 	int handle_uart4_controll();
-	int handle_wifi_controll();
+	int handle_wifi_controll(HAL::IUART *uart);
 		
 	// helper functions
 	float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert);	

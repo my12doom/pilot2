@@ -119,6 +119,8 @@ int altitude_estimator2::update(float accelz, float baro, float sonar, float dt)
 	x = x1 + K*y;
 	P = (matrix(P1.m) - K*H) * P1;
 
+	x.data[4] = limit(x.data[4], 0.9/1.5, 0.9*1.5);
+
 	TRACE("x[0-4]=%.3f,%.3f,%.3f,%.3f, accelz = %.3f, baro=%.3f, sonar=%.3f     \n", x[0], x[1], x[2], x[3], accelz, baro, sonar);
 	log2(x.data, 6, 20);
 

@@ -1,3 +1,4 @@
+#pragma once
 #include "IADC.h"
 #include "stm32F4xx_gpio.h"
 #include "stm32F4xx_adc.h"

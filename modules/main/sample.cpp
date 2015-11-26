@@ -53,6 +53,7 @@ public:
 	accelerometer_data adata;
 	mag_data mdata;
 	baro_data bdata;
+	gps_data gpsdata;
 	bool new_baro_data;
 	bool new_gps_data;
 	float voltage;
@@ -102,9 +103,16 @@ float yet_another_pilot::constrain(float v, float low, float high)
 int yet_another_pilot::output()
 {
 	int16_t ppm_output[4];
-	for(int i=0; i<4; i++)
+	
+	if (rc[4] < 0 )
+	{		
+		for(int i=0; i<4; i++)
+			ppm_output[i] = THROTTLE_STOP;
+	}
+	else
 	{
-		ppm_output[i] = THROTTLE_STOP;
+		for(int i=0; i<4; i++)
+			ppm_output[i] = THROTTLE_IDLE + rc[2] * (THROTTLE_MAX - THROTTLE_IDLE);
 	}
 	return rcout->write(ppm_output, 0,  4);
 }
@@ -159,13 +167,13 @@ int yet_another_pilot::read_sensors()
 		new_baro_data = 0 == baro->read(&bdata);
 	}
 
-
 	// read GPSs
 	if (manager.get_GPS_count() >= 1 && manager.get_GPS(0))
 	{
 		IGPS *gps = manager.get_GPS(0);
 		if (!gps->healthy())
 			return -5;
+		new_gps_data = 0 == gps->read(&gpsdata);
 	}
 
 
@@ -205,15 +213,14 @@ int yet_another_pilot::read_rc()
 		rc[i] = ppm2rc(pwm_input[i], rc_setting[i][0], rc_setting[i][1], rc_setting[i][2], rc_setting[i][3] > 0);
 	}
 
-	rc[2] = (rc[2]+1)/2;	
-		
+	rc[2] = (rc[2]+1)/2;
+	
 	return 0;
 }
 
 void yet_another_pilot::main_loop(void)
 {	
 	// calculate systime dt
-	static int64_t tic = 0;
 	int64_t round_start_tick = systimer->gettime();
 	dt = (round_start_tick-last_tick)/1000000.0f;
 	last_tick = round_start_tick;
@@ -239,6 +246,7 @@ void yet_another_pilot::sdcard_logging_loop(void)
 {
 	log_flush();
 }
+
 int yet_another_pilot::setup(void)
 {
 	state_led = manager.getLED("state");
@@ -250,10 +258,11 @@ int yet_another_pilot::setup(void)
 	vcp = manager.getUART("VCP");
 	
 	// make sure all sensors are ready
-	
+	if (manager.get_gyroscope_count() < 1 || manager.get_accelerometer_count() < 1 || manager.get_magnetometer_count() < 1 || manager.get_barometer_count() < 1)
+		return -1;	
 
-	// get two timers, one for main loop and one for SDCARD logging loop(with different priority).
-	manager.getTimer("mainloop")->set_period(1000);
+	// get two timers for scheduling, one for main loop and one for SDCARD logging loop(with different priority).
+	manager.getTimer("mainloop")->set_period(3000);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
 	manager.getTimer("log")->set_period(10000);
 	manager.getTimer("log")->set_callback(sdcard_logging_loop_entry);
@@ -261,8 +270,27 @@ int yet_another_pilot::setup(void)
 	return 0;
 }
 
+struct __FILE { int handle; /* Add whatever you need here */ };
+#define ITM_Port8(n)    (*((volatile unsigned char *)(0xE0000000+4*n)))
+#define ITM_Port16(n)   (*((volatile unsigned short*)(0xE0000000+4*n)))
+#define ITM_Port32(n)   (*((volatile unsigned long *)(0xE0000000+4*n)))
+#define DEMCR           (*((volatile unsigned long *)(0xE000EDFC)))
+#define TRCENA          0x01000000
+
+extern "C" int fputc(int ch, FILE *f)
+{
+	if (DEMCR & TRCENA) 
+	{
+		while (ITM_Port32(0) == 0);
+		ITM_Port8(0) = ch;
+	}
+	return (ch);
+}
+ 
+
 int main()
 {
+	log_init();
 	bsp_init_all();
 		
 	yap.setup();

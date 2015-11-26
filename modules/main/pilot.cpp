@@ -162,6 +162,7 @@ yet_another_pilot::yet_another_pilot()
 	memset(&accel, 0, sizeof(accel));
 	
 	gps_attitude_timeout = 0;
+	land_possible = false;
 
 	for(int i=0; i<3; i++)
 	{
@@ -278,9 +279,19 @@ int yet_another_pilot::run_controllers()
 			float stick_roll = rc[0] * quadcopter_range[0];
 			float stick_pitch = -rc[1] * quadcopter_range[1];	// pitch stick and coordinate are reversed
 
-			float flow_roll = -frame.flow_comp_m_x/1000.0f * 3;
-			float flow_pitch = -frame.flow_comp_m_y/1000.0f * 3;
-			of_controller.update_controller(flow_roll, flow_pitch, stick_roll, stick_pitch, interval);
+			float flow_roll = -frame.flow_comp_m_x/1000.0f * 10;
+			float flow_pitch = -frame.flow_comp_m_y/1000.0f * 10;
+			
+			float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0025f;
+			float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0020f;
+
+			float wx = frame.pixel_flow_x_sum / 25.0f * 100 * PI / 180;
+			float wy = frame.pixel_flow_y_sum / 20.0f * 100 * PI / 180;
+
+			float vx = wx * frame.ground_distance/1000.0f * 1.15f;
+			float vy = wy * frame.ground_distance/1000.0f * 1.15f;
+			
+			of_controller.update_controller(vx, vy, stick_roll, stick_pitch, interval);
 			float euler_target[3] = {0,0, NAN};
 			of_controller.get_result(&euler_target[0], &euler_target[1]);
 			attitude_controller.set_euler_target(euler_target);
@@ -1598,6 +1609,8 @@ void yet_another_pilot::handle_takeoff()
 int64_t land_detect_us = 0;
 int yet_another_pilot::land_detector()
 {
+	land_possible = throttle_result < 0.2f && fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f);
+
 	if ((rc[2] < 0.1f || (islanding && throttle_result < 0.2f))					// landing and low throttle output, or just throttle stick down
 		&& fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f)	// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
 // 		&& fabs(alt_estimator.state[2] + alt_estimator.state[3]) < 0.5f			// low acceleration
@@ -1605,7 +1618,7 @@ int yet_another_pilot::land_detector()
 	{
 		land_detect_us = land_detect_us == 0 ? systimer->gettime() : land_detect_us;
 
-		if (systimer->gettime() - land_detect_us > (airborne ? 1000000 : 30000000))		// 30 seconds for before take off, 1 senconds for landing
+		if (systimer->gettime() - land_detect_us > (airborne ? 1000000 : 15000000))		// 15 seconds for before take off, 1 senconds for landing
 		{
 			disarm();
 			LOGE("landing detected");
@@ -1726,27 +1739,25 @@ int yet_another_pilot::handle_cli(IUART *uart)
 	return 0;
 }
 
-int yet_another_pilot::handle_wifi_controll()
+int yet_another_pilot::handle_wifi_controll(IUART *uart)
 {
-	char line[1024];
-	char out[1024];
-	IUART *uart = manager.getUART("AUX");
 	if (!uart)
 		return -1;
 	
+	char line[1024];
+	char out[1024];
 	int byte_count = uart->readline(line, sizeof(line));
 	if (byte_count <= 0)
 		return 0;
 	
 	line[byte_count] = 0;
 	int len = strlen(line);
-	const char * keyword2 = ",stick\n";
+	const char * keyword2 = "stick,";
+	const char * keyword3 = "flashlight";
 	
-	TRACE("%s\n", line);
-
-	if (strstr(line, keyword2) == (line+len-strlen(keyword2)))
+	if (strstr(line, keyword2) == line)
 	{
-		if (sscanf(line, "%f,%f,%f,%f", &rc_mobile[0], &rc_mobile[1], &rc_mobile[2], &rc_mobile[3] ) == 4)
+		if (sscanf(line+strlen(keyword2), "%f,%f,%f,%f", &rc_mobile[0], &rc_mobile[1], &rc_mobile[2], &rc_mobile[3] ) == 4)
 		{
 			mobile_last_update = systimer->gettime();
 			TRACE("stick:%f,%f,%f,%f\n", rc_mobile[0], rc_mobile[1], rc_mobile[2], rc_mobile[3]);
@@ -1756,9 +1767,9 @@ int yet_another_pilot::handle_wifi_controll()
 			rc_mobile[2] = (rc_mobile[2] - 0.5f) * 1.35f + 0.5f;
 			rc_mobile[3] *= 1.33f;
 		}
-	}
+	}	
 
-	else if (strcmp(line, "arm\n") == 0)
+	else if (strstr(line, "arm") == line)
 	{
 		LOGE("mobile arm\n");
 		arm();
@@ -1769,7 +1780,7 @@ int yet_another_pilot::handle_wifi_controll()
 		uart->write(armed, strlen(armed));
 	}
 
-	else if (strcmp(line, "disarm\n") == 0)
+	else if (strstr(line, "disarm") == line)
 	{
 		LOGE("mobile disarm\n");
 
@@ -1778,14 +1789,14 @@ int yet_another_pilot::handle_wifi_controll()
 		uart->write(disarmed, strlen(disarmed));
 	}
 	
-	else if (strcmp(line, "takeoff\n") == 0)
+	else if (strstr(line, "takeoff") == line)
 	{
 		const char *tak = "taking off\n";
 		uart->write(tak, strlen(tak));
 		start_taking_off();
 	}
 
-	else if (strcmp(line, "land\n") == 0)
+	else if (strstr(line, "land") == line)
 	{
 		LOGE("mobile land\n");
 		const char *land = "landing\n";
@@ -1794,118 +1805,134 @@ int yet_another_pilot::handle_wifi_controll()
 		islanding = true;
 	}
 	
-	else if (strcmp(line, "RTL\n") == 0)
+	else if (strstr(line, "RTL") == line)
 	{
 		LOGE("mobile RTL\n");
 		const char *rtl = "RTLing\n";
 		uart->write(rtl, strlen(rtl));
 	}
 
-	else
+	else if (strstr(line, "state") == line)
 	{
-		// invalid packet
+		sprintf(out, "%f,%f,%f\n", gps.longitude, gps.latitude, (batt.get_internal_voltage() - 10.8f)/(12.6f-10.8f));
+		uart->write(out, strlen(out));
 	}
-
-	return 0;
-}
-
-int yet_another_pilot::handle_uart4_controll()
-{
-#if 0
-	char line[1024];
-	int byte_count = UART4_ReadPacket(line, sizeof(line));
-	if (byte_count <= 0)
-		return 0;
 	
-	LOGE(line);
-
-	int len = strlen(line);
-	const char * keyword = ",blue\n";
-	const char * keyword2 = ",stick\n";
-
-	if (strstr(line, keyword) == (line+len-strlen(keyword)))
+	else if (strstr(line, "mag_cal_state") == line)
 	{
-		char * p = (char*)strstr(line, ",");
-		if (!p)
-			return -1;
-
-		*p = NULL;
-		p++;
-		
-		bluetooth_roll = atof(line) * PI / 180;
-		bluetooth_pitch = atof(p) * PI / 180;
-
-		bluetooth_roll = limit(bluetooth_roll, -25*PI/180, 25*PI/180);
-		bluetooth_pitch = limit(bluetooth_pitch, -25*PI/180, 25*PI/180);
-
-		TRACE("%f,%f\n", bluetooth_roll * PI180, bluetooth_pitch * PI180);
-		
-		bluetooth_last_update = systimer->gettime();
+		mag_calibration_stage stage = mag_calibrator.get_stage();
+		sprintf(out, "%d,%d\n", mag_calibration_state ? (stage+1) : 0, last_mag_calibration_result);
+		uart->write(out, strlen(out));
 	}
-	else if (strstr(line, keyword2) == (line+len-strlen(keyword2)))
+
+	else if (strstr(line, "mag_cal") == line)
 	{
-		if (sscanf(line, "%f,%f,%f,%f", &rc_mobile[0], &rc_mobile[1], &rc_mobile[2], &rc_mobile[3] ) == 4)
+		reset_mag_cal();
+		uart->write("ok\n", 3);
+	}	
+	
+	else if (strstr(line, "acc_cal_state\n") == line)
+	{
+		if (!acc_cal_requested)
+			uart->write("-1\n", 3);
+		else
 		{
-			mobile_last_update = systimer->gettime();
-			TRACE("stick:%f,%f,%f,%f\n", rc_mobile[0], rc_mobile[1], rc_mobile[2], rc_mobile[3]);
+			int acc_state = 0;
+			for(int i=0; i<6; i++)
+			{
+				if (yap.acc_avg_count[i] > 400)
+					acc_state |= (1<<i);
+			}
+
+			sprintf(out, "%d\n", acc_state);
+			uart->write(out, strlen(out));
+		}
+	}
+	
+	else if (strstr(line, "acc_cal\n") == line)
+	{
+		reset_accel_cal();
+		uart->write("ok\n", 3);
+	}
+
+	else if (strstr(line, "flashlight") == line)
+	{
+		const char * comma = strstr(line, ",");
+		if (!comma)
+			SAFE_OFF(flashlight);
+		
+		if (comma && atoi(comma+1))
+		{
+			SAFE_ON(flashlight);
+		}
+		else
+		{
+			SAFE_OFF(flashlight);
+		}
+		
+		uart->write("flashlight\n", 11);
+	}
+
+	else if (strstr(line, "set,") == line)
+	{
+		const char * comma = strstr(line+4, ",");
+		if (!comma)
+		{
+			uart->write("fail\n", 5);
+			return -1;
+		}
+
+		char para_name[5] = {0};
+		strncpy(para_name, line+4, 4);
+
+		float *pv = param::find_param(para_name);
+
+		if (pv)
+		{
+			float v = atof(comma+1);
+			if (strstr(comma+1, "NAN"))
+				v = NAN;
+			*pv = v;
+			param(para_name, 0).save();
+			uart->write("ok\n", 3);
+			return 3;
+		}
+		else
+		{
+			uart->write("fail\n", 5);
+			return -1;
 		}
 	}
 
-	else if (strcmp(line, "arm\n") == 0)
+	else if (strstr(line, "get,") == line)
 	{
-		LOGE("mobile arm\n");
-		set_mode(quadcopter);
+		char para_name[5] = {0};
+		strncpy(para_name, line+4, 4);
 
-		const char *armed = "armed\n";
-		UART4_SendPacket(armed, strlen(armed));
-	}
-	else if (strcmp(line, "arm\r\n") == 0)
-	{
-		LOGE("mobile arm\n");
-		set_mode(quadcopter);
+		float *pv = param::find_param(para_name);
+		if (pv)
+		{
+			char out[50];
+			if (isnan(*pv))
+				strcpy(out, "NAN\n");
+			else
+				sprintf(out, "%f\n", *pv);
 
-		const char *armed = "armed\n";
-		UART4_SendPacket(armed, strlen(armed));
-	}
-
-	else if (strcmp(line, "disarm\n") == 0)
-	{
-		LOGE("mobile disarm\n");
-
-		set_mode(_shutdown);
-		const char *disarmed = "disarmed\n";
-		UART4_SendPacket(disarmed, strlen(disarmed));
-	}
-	
-	else if (strcmp(line, "takeoff\n") == 0)
-	{
-		LOGE("mobile takeoff\n");
-
-		const char *tak = "taking off\n";
-		UART4_SendPacket(tak, strlen(tak));
-
-	}
-
-	else if (strcmp(line, "land\n") == 0)
-	{
-		LOGE("mobile land\n");
-		const char *land = "landing\n";
-		UART4_SendPacket(land, strlen(land));
+			uart->write(out, strlen(out));
+		}
+		else
+		{
+			uart->write("null\n", 5);
+			return -1;
+		}
 
 	}
 	
-	else if (strcmp(line, "RTL\n") == 0)
-	{
-		LOGE("mobile RTL\n");
-		const char *rtl = "RTLing\n";
-		UART4_SendPacket(rtl, strlen(rtl));
-	}
-
 	else
 	{
 		// invalid packet
+		LOGE("invalid packet %s", line);
 	}
-#endif
 
 	return 0;
 }
@@ -2044,7 +2071,6 @@ int yet_another_pilot::light_words()
 		{
 			if (rgb && mag_calibration_state == 0)
 				rgb->write(estimator.healthy() ? 0 : 0.8,1,0);
-			SAFE_ON(flashlight);
 		}
 		else
 		{
@@ -2158,7 +2184,7 @@ void yet_another_pilot::main_loop(void)
 	// RC modes and RC fail detection, or alternative RC source
 	check_stick();
 	handle_takeoff();
-	handle_wifi_controll();
+	handle_wifi_controll(manager.getUART("Wifi"));
 
 	// read sensors
 	int64_t read_sensor_cost = systimer->gettime();
@@ -2287,8 +2313,9 @@ int yet_another_pilot::setup(void)
 			break;
 	}while (res < 0);
 
+	SAFE_OFF(flashlight);
 	read_rc();
-
+	
 	// get two timers, one for main loop and one for SDCARD logging loop
 	manager.getTimer("mainloop")->set_period(1000);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
