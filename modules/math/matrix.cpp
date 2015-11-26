@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdarg.h>
+#include <math.h>
 
 #define assert(...)
 
@@ -144,7 +145,127 @@ float matrix::det()
 
 	return det;
 }
+matrix matrix::inversef()
+{
+	assert(m==n);
+	matrix y(*this);
 
+	matrix A;
+	A.m = m;
+	A.n = n;
+
+	int i0;
+	signed char ipiv[MAX_DIMENSION];
+	int j;
+	int c;
+	int jBcol;
+	int ix;
+	float smax;
+	int k;
+	float s;
+	int i;
+	int kAcol;
+	signed char p[MAX_DIMENSION];
+	int count = n*n;
+	for (i0 = 0; i0 < count; i0++) {
+		y[i0] = 0.0F;
+		A[i0] = data[i0];
+	}
+
+	for (i0 = 0; i0 < m; i0++) {
+		ipiv[i0] = (signed char)(1 + i0);
+	}
+
+	for (j = 0; j < m-1; j++) {
+		c = j * (m+1);
+		jBcol = 0;
+		ix = c;
+		smax = (float)fabs(A[c]);
+		for (k = 2; k <= m - j; k++) {
+			ix++;
+			s = (float)fabs(A[ix]);
+			if (s > smax) {
+				jBcol = k - 1;
+				smax = s;
+			}
+		}
+
+		if (A[c + jBcol] != 0.0F) {
+			if (jBcol != 0) {
+				ipiv[j] = (signed char)((j + jBcol) + 1);
+				ix = j;
+				jBcol += j;
+				for (k = 0; k < m; k++) {
+					smax = A[ix];
+					A[ix] = A[jBcol];
+					A[jBcol] = smax;
+					ix += m;
+					jBcol += m;
+				}
+			}
+
+			i0 = (c - j) + m;
+			for (i = c + 1; i + 1 <= i0; i++) {
+				A[i] /= A[c];
+			}
+		}
+
+		jBcol = c;
+		kAcol = c + m;
+		for (i = 1; i <= m-1 - j; i++) {
+			smax = A[kAcol];
+			if (A[kAcol] != 0.0F) {
+				ix = c + 1;
+				i0 = (jBcol - j) + m*2;
+				for (k = m+1 + jBcol; k + 1 <= i0; k++) {
+					A[k] += A[ix] * -smax;
+					ix++;
+				}
+			}
+
+			kAcol += m;
+			jBcol += m;
+		}
+	}
+
+	for (i0 = 0; i0 < m; i0++) {
+		p[i0] = (signed char)(1 + i0);
+	}
+
+	for (k = 0; k < m-1; k++) {
+		if (ipiv[k] > 1 + k) {
+			jBcol = p[ipiv[k] - 1];
+			p[ipiv[k] - 1] = p[k];
+			p[k] = (signed char)jBcol;
+		}
+	}
+
+	for (k = 0; k < m; k++) {
+		y[k + ((p[k] - 1) *m)] = 1.0F;
+		for (j = k; j + 1 < m+1; j++) {
+			if (y[j + ((p[k] - 1) * m)] != 0.0F) {
+				for (i = j + 1; i + 1 < m+1; i++) {
+					y[i + ((p[k] - 1) * m)] -= y[j + ((p[k] - 1) * m)] * A[i + (j * m)];
+				}
+			}
+		}
+	}
+
+	for (j = 0; j < m; j++) {
+		jBcol = j * m;
+		for (k = m-1; k > -1; k += -1) {
+			kAcol = k * m;
+			if (y[k + jBcol] != 0.0F) {
+				y[k + jBcol] /= A[k + kAcol];
+				for (i = 0; i + 1 <= k; i++) {
+					y[i + jBcol] -= y[k + jBcol] * A[i + kAcol];
+				}
+			}
+		}
+	}
+
+	return y;	
+}
 matrix matrix::inverse()
 {
 	assert(m==n);
