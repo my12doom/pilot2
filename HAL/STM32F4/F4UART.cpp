@@ -360,11 +360,11 @@ namespace STM32F4
 			if (p[i] == '\n')
 			{
 				i++;
-				break;
+				start = (i+start)%sizeof(buffer);
+				return i;
 			}
 		}
-		start = (i+start)%sizeof(buffer);
-		return i;
+		return -2;
 	}
 	int F4UART::peak(void *data, int max_count)
 	{

@@ -1,5 +1,6 @@
 #include "of_controller.h"
 #include <Protocol/common.h>
+#include <utils/log.h>
 
 // APM default factor: 2.5, 0.5, 0.12, 100
 // P=2.5: 100cm distance -> 2.5 degree angle
@@ -84,6 +85,8 @@ int OpticalFlowController::update_controller(float flow_roll, float flow_pitch, 
 	{
 		reset();
 	}
+	
+	log2(&m_error[0][0], 7, 24);
 
 	return 0;
 }

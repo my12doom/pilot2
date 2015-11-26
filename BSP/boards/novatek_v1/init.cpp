@@ -33,8 +33,9 @@ void init_led()
 	static F4GPIO f4gpioB15(GPIOB,GPIO_Pin_15);
 	f4gpioB15.set_mode(HAL::MODE_OUT_PushPull);
 	f4gpioB15.write(true);
-	static GPIOLED flashlight(&f4gpioB14, true);
+	static GPIOLED flashlight(&f4gpioB15, true);
 	
+	flashlight.off();
 	
 	manager.register_LED("SD",&led_red);
 	manager.register_LED("state",&led_green);
@@ -74,8 +75,8 @@ IUART * pUART4 = &f4uart4;
 void init_uart4()
 {
 	pUART4->set_baudrate(57600);
-	pUART4->write("This is UART4\n", 6);
-	manager.register_UART("UART4",pUART4);
+	//pUART4->write("This is UART4\n", 6);
+	manager.register_UART("Wifi",pUART4);
 }
 extern "C" void UART4_IRQHandler(void)
 {
