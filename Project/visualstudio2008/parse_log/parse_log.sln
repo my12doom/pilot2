@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "parse_log", "parse_log.vcproj", "{7270A950-D9CB-4D76-AA59-ADE8A9105CA0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7270A950-D9CB-4D76-AA59-ADE8A9105CA0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7270A950-D9CB-4D76-AA59-ADE8A9105CA0}.Debug|Win32.Build.0 = Debug|Win32
+		{7270A950-D9CB-4D76-AA59-ADE8A9105CA0}.Release|Win32.ActiveCfg = Release|Win32
+		{7270A950-D9CB-4D76-AA59-ADE8A9105CA0}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
