@@ -934,6 +934,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\Algorithm\altitude_estimator2.cpp</FilePath>
             </File>
+            <File>
+              <FileName>of_controller2.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\of_controller2.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
