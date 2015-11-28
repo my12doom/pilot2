@@ -42,14 +42,16 @@ int OpticalFlowController2::update_controller(float flow_roll, float flow_pitch,
 		// velocity error
 		float new_P[2] = 
 		{
-			pid_factor_outter[0] * m_position_error[0] - flow_roll,
-			pid_factor_outter[1] * m_position_error[1] - flow_pitch,
+			pid_factor_outter[0] * m_position_error[0] + flow_roll,
+			pid_factor_outter[1] * m_position_error[1] + flow_pitch,
 		};
 		float devertive[2] = 
 		{
 			(new_P[0] - m_pid[0][0]) / dt,
 			(new_P[1] - m_pid[1][0]) / dt,
 		};
+		m_pid[0][0] = new_P[0];
+		m_pid[1][0] = new_P[1];
 
 		// I
 		m_pid[0][1] += m_pid[0][0] *dt;
