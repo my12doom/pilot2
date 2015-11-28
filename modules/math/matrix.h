@@ -1,5 +1,6 @@
 #pragma once
 
+#define MAX_DIMENSION 16
 #define MAX_MATRIX_ELEMENTS 256
 
 
@@ -23,6 +24,7 @@ public:
 	~matrix();
 
 	float & operator [](int index){return data[index];}
+	float & operator ()(int _m, int _n){return data[_m*n+_n];}
 	void operator =(const matrix &v);
 	void operator +=(const matrix &v);
 	matrix operator +(const matrix &v);
@@ -37,6 +39,7 @@ public:
 	matrix operator /(const matrix &v);
 	matrix operator /(const float &v);
 	matrix inverse();
+	matrix inversef();
 	float det();
 	matrix cofactor(int a, int b);
 	void identity();
