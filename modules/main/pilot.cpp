@@ -557,7 +557,13 @@ int yet_another_pilot::save_logs()
 	};
 
 	log(&ppm, TAG_PPM_DATA, systime);
-
+	
+	ekf_data ekf =
+	{
+		ekf_estimator.ekf_result.roll* 18000/PI,ekf_estimator.ekf_result.pitch* 18000/PI,ekf_estimator.ekf_result.yaw* 18000/PI 
+	};
+	log(&ekf, TAG_EKF_DATA, systime);
+	
 	quadcopter_data quad = 
 	{
 		euler[0] * 18000/PI, euler[1] * 18000/PI, euler[2] * 18000/PI,
@@ -1092,6 +1098,41 @@ int yet_another_pilot::calculate_state()
 	gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
 	0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval,
 	acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
+	
+	//EKF estimator update
+	EKF_Result ekf_result;
+	EKF_U ekf_u;
+	EKF_Mesurement ekf_mesurement;
+	
+	ekf_u.accel_x=accel.array[0];
+	ekf_u.accel_y=accel.array[1];
+	ekf_u.accel_z=accel.array[2];
+	ekf_u.gyro_x=gyro_reading.array[0];
+	ekf_u.gyro_y=gyro_reading.array[1];
+	ekf_u.gyro_z=gyro_reading.array[2];
+	ekf_mesurement.Mag_x=mag.array[0];
+	ekf_mesurement.Mag_y=mag.array[1];
+	ekf_mesurement.Mag_z=mag.array[2];
+	ekf_mesurement.Pos_GPS_x=0;
+	ekf_mesurement.Pos_GPS_y=0;
+	ekf_mesurement.Pos_Baro_z=a_raw_altitude;
+	ekf_mesurement.Vel_GPS_x=0;
+	ekf_mesurement.Vel_GPS_y=0;
+	
+	ekf_estimator.update(ekf_u,ekf_mesurement,interval);
+	
+
+	//For debug
+	float ekf_buffer[6];
+	ekf_buffer[0]=ekf_estimator.ekf_result.roll*180/3.1415f;
+	ekf_buffer[1]=ekf_estimator.ekf_result.pitch*180/3.1415f;
+	ekf_buffer[2]=ekf_estimator.ekf_result.yaw*180/3.1415f;
+	ekf_buffer[3]=euler[0]*180/3.1415f;
+	ekf_buffer[4]=euler[1]*180/3.1415f;
+	ekf_buffer[5]=euler[2]*180/3.1415f;
+	printf("\r (ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5]);
+	
+
 
 	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
 	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
@@ -1307,7 +1348,8 @@ int yet_another_pilot::sensor_calibration()
 	NonlinearSO3AHRSinit(accel_avg.V.x, accel_avg.V.y, accel_avg.V.z, 
 		mag_avg.V.x, mag_avg.V.y, mag_avg.V.z, 
 		gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
-
+	
+	ekf_estimator.init(-accel_avg.V.x, -accel_avg.V.y, -accel_avg.V.z,-mag_avg.V.x, -mag_avg.V.y, mag_avg.V.z,gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
 	return 0;
 }
 
