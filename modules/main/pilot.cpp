@@ -1119,8 +1119,9 @@ int yet_another_pilot::calculate_state()
 	ekf_mesurement.Vel_GPS_x=0;
 	ekf_mesurement.Vel_GPS_y=0;
 	
+
 	ekf_estimator.update(ekf_u,ekf_mesurement,interval);
-	
+
 
 	//For debug
 	float ekf_buffer[6];
@@ -1130,8 +1131,9 @@ int yet_another_pilot::calculate_state()
 	ekf_buffer[3]=euler[0]*180/3.1415f;
 	ekf_buffer[4]=euler[1]*180/3.1415f;
 	ekf_buffer[5]=euler[2]*180/3.1415f;
-	printf("\r (ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5]);
-	
+
+	printf("\r(ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5]);
+//	
 
 
 	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
@@ -1348,8 +1350,9 @@ int yet_another_pilot::sensor_calibration()
 	NonlinearSO3AHRSinit(accel_avg.V.x, accel_avg.V.y, accel_avg.V.z, 
 		mag_avg.V.x, mag_avg.V.y, mag_avg.V.z, 
 		gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
+
+	ekf_estimator.init(-1*accel_avg.V.x, -1*accel_avg.V.y, -1*accel_avg.V.z,-1*mag_avg.V.x, -1*mag_avg.V.y, mag_avg.V.z,gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
 	
-	ekf_estimator.init(-accel_avg.V.x, -accel_avg.V.y, -accel_avg.V.z,-mag_avg.V.x, -mag_avg.V.y, mag_avg.V.z,gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
 	return 0;
 }
 

@@ -34,11 +34,11 @@ ekf_estimator::~ekf_estimator()
 }
 void ekf_estimator::init(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz)
 {
-	float initialRoll, initialPitch;
-    float cosRoll, sinRoll, cosPitch, sinPitch;
-    float magX, magY;
-    float initialHdg, cosHeading, sinHeading;
-	float q0,q1,q2,q3;//quaternion
+	float initialRoll=0, initialPitch=0;
+    float cosRoll=0, sinRoll=0, cosPitch=0, sinPitch=0;
+    float magX=0, magY=0;
+    float initialHdg=0,cosHeading=0, sinHeading=0;
+	float q0=0,q1=0,q2=0,q3=0;//quaternion
 	ground_mag_length = sqrt(mx*mx + my*my + mz*mz);
 
 
@@ -78,22 +78,22 @@ void ekf_estimator::init(float ax, float ay, float az, float mx, float my, float
 	init_ekf_matrix(Be,P,X,Q,R);
 	
 	//Set X init value
-	INS_SetState(0,0,0,0,0,0/*alt speed*/,q0,q1,q2,q3,0/*gyro bias x*/,0/*gyro bias y*/,0/*gyro bias z*/,X);
+	INS_SetState(0,0,0,0,0,0,q0,q1,q2,q3,0,0,0,X);
 	
 	ekf_is_init = true;
 }
-void ekf_estimator::init(float roll,float pitch,float yaw)
-{
-	//Init quaternion
-	float q0,q1,q2,q3;
-	init_quaternion_by_euler(roll,pitch,yaw,&q0,&q1,&q2,&q3);
-	init_ekf_matrix(Be,P,X,Q,R);
-	INS_SetState(0,0,0,0,0,0/*alt speed*/,q0,q1,q2,q3,0/*gyro bias x*/,0/*gyro bias y*/,0/*gyro bias z*/,X);
-	gyro_bias[0]=0;
-	gyro_bias[1]=0;
-	gyro_bias[2]=0;
-	ekf_is_init = true;
-}
+//void ekf_estimator::init(float roll,float pitch,float yaw)
+//{
+//	//Init quaternion
+//	float q0,q1,q2,q3;
+//	init_quaternion_by_euler(roll,pitch,yaw,&q0,&q1,&q2,&q3);
+//	init_ekf_matrix(Be,P,X,Q,R);
+//	INS_SetState(0,0,0,0,0,0/*alt speed*/,q0,q1,q2,q3,0/*gyro bias x*/,0/*gyro bias y*/,0/*gyro bias z*/,X);
+//	gyro_bias[0]=0;
+//	gyro_bias[1]=0;
+//	gyro_bias[2]=0;
+//	ekf_is_init = true;
+//}
 int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,float dT)
 {	
 	//Declear F G U
