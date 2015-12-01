@@ -41,7 +41,7 @@ void init_ekf_matrix(float Be[3], float P[169], float X[13], float Q[81],
   static const float v[13] = { 100, 100, 100, 100, 100, 100, 100,
     100, 100, 100, 100, 100, 100 };  //P
 
-  static const float b_v[9] = { 1.0E-19, 1.0E-19, 1.0E-19, 5.0E-2, 5.0E-2, 0.5,
+  static const float b_v[9] = { 1.0E-15, 1.0E-15, 1.0E-15, 7.0E-2, 7.0E-2, 0.5,
     8.0E-7, 8.0E-7, 8.0E-7 };
 
   static const float c_v[8] = { 0.001, 0.001, 0.02, 0.8, 0.8, 0.005,

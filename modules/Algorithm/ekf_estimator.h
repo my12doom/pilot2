@@ -63,7 +63,7 @@ public:
 	void init(float ax, float ay, float az, float mx, float my, float mz, float gx, float gy, float gz);
 	void init(float roll,float pitch,float yaw);
 
-	int update(EKF_U u,EKF_Mesurement mesurement,float dT);
+	int update(EKF_U u,EKF_Mesurement mesurement,const float dT);
 	
 	//Mag ground length
 	float ground_mag_length;

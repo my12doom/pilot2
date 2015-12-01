@@ -94,7 +94,7 @@ void ekf_estimator::init(float ax, float ay, float az, float mx, float my, float
 //	gyro_bias[2]=0;
 //	ekf_is_init = true;
 //}
-int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,float dT)
+int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,const float dT)
 {	
 	//Declear F G U
 	float U[6],F[169],G[117];
@@ -122,6 +122,8 @@ int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,float dT)
 	Mag_data[2]= mesurement.Mag_z;
 	Pos[0]=mesurement.Pos_GPS_x;
 	Pos[1]=mesurement.Pos_GPS_y;
+	if(isnan(mesurement.Pos_Baro_z))
+		mesurement.Pos_Baro_z=0;
 	Pos[2]=mesurement.Pos_Baro_z;//use baro replace gps_d
 	Vel[0]=mesurement.Vel_GPS_x;
 	Vel[1]=mesurement.Vel_GPS_y;
