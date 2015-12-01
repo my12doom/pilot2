@@ -127,7 +127,7 @@ int altitude_controller::update(float dt, float user_rate)
 			{
 				baro_target = m_baro_states[0] + m_sonar_target - m_last_valid_sonar;
 				m_sonar_target = NAN;
-				LOGE("changed to baro: %f/%f,%f,%f\n", m_sonar_target, m_sonar, baro_target, m_baro_states[0]);
+				printf("changed to baro: %f/%f,%f,%f\n", m_sonar_target, m_sonar, baro_target, m_baro_states[0]);
 			}
 			else
 			{

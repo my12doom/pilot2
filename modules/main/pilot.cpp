@@ -166,8 +166,8 @@ yet_another_pilot::yet_another_pilot()
 
 	for(int i=0; i<3; i++)
 	{
-		gyro_lpf2p[i].set_cutoff_frequency(1000, 40);
-		accel_lpf2p[i].set_cutoff_frequency(1000, 40);
+		gyro_lpf2p[i].set_cutoff_frequency(200.0f, 0);
+		accel_lpf2p[i].set_cutoff_frequency(200.0f, 0);
 	}
 }
 
@@ -1098,7 +1098,7 @@ int yet_another_pilot::calculate_state()
 	gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
 	0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval,
 	acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
-	
+//	
 	//EKF estimator update
 	EKF_Result ekf_result;
 	EKF_U ekf_u;
@@ -1110,7 +1110,7 @@ int yet_another_pilot::calculate_state()
 	ekf_u.gyro_x=gyro_reading.array[0];
 	ekf_u.gyro_y=gyro_reading.array[1];
 	ekf_u.gyro_z=gyro_reading.array[2];
-	ekf_mesurement.Mag_x=mag.array[0];
+	ekf_mesurement.Mag_x=mag.array[0]; 
 	ekf_mesurement.Mag_y=mag.array[1];
 	ekf_mesurement.Mag_z=mag.array[2];
 	ekf_mesurement.Pos_GPS_x=0;
@@ -1119,26 +1119,26 @@ int yet_another_pilot::calculate_state()
 	ekf_mesurement.Vel_GPS_x=0;
 	ekf_mesurement.Vel_GPS_y=0;
 	
-
+	int64_t t = systimer->gettime();
 	ekf_estimator.update(ekf_u,ekf_mesurement,interval);
-
+	t = systimer->gettime() - t;
+	//printf("%f,%d\r\n",interval, int(t));
 
 	//For debug
-	float ekf_buffer[6];
-	ekf_buffer[0]=ekf_estimator.ekf_result.roll*180/3.1415f;
-	ekf_buffer[1]=ekf_estimator.ekf_result.pitch*180/3.1415f;
-	ekf_buffer[2]=ekf_estimator.ekf_result.yaw*180/3.1415f;
-	ekf_buffer[3]=euler[0]*180/3.1415f;
-	ekf_buffer[4]=euler[1]*180/3.1415f;
-	ekf_buffer[5]=euler[2]*180/3.1415f;
+//	float ekf_buffer[6];
+//	ekf_buffer[0]=ekf_estimator.ekf_result.roll*180/3.1415f;
+//	ekf_buffer[1]=ekf_estimator.ekf_result.pitch*180/3.1415f;
+//	ekf_buffer[2]=ekf_estimator.ekf_result.yaw*180/3.1415f;
+//	ekf_buffer[3]=euler[0]*180/3.1415f;
+//	ekf_buffer[4]=euler[1]*180/3.1415f;
+//	ekf_buffer[5]=euler[2]*180/3.1415f;
 
-	printf("\r(ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5]);
-//	
+	//printf("\r(ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5]);
 
 
-	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
-	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
-	euler[2] = radian_add(euler[2], quadcopter_trim[2]);
+	euler[0] = radian_add(ekf_estimator.ekf_result.roll, quadcopter_trim[0]);
+	euler[1] = radian_add(ekf_estimator.ekf_result.pitch, quadcopter_trim[1]);
+	euler[2] = radian_add(ekf_estimator.ekf_result.yaw, quadcopter_trim[2]);
 	
 	body_rate.array[0] = gyro_reading.array[0] + gyro_bias[0];
 	body_rate.array[1] = gyro_reading.array[1] + gyro_bias[1];
@@ -1567,7 +1567,7 @@ int yet_another_pilot::check_stick()
 			
 			if (flip_count >10 && mag_calibration_state == 0)
 			{
-				reset_mag_cal();
+				reset_accel_cal();
 			}
 		}
 	}
@@ -1986,12 +1986,12 @@ int yet_another_pilot::read_rc()
 {
 	rcin->get_channel_data(g_pwm_input, 0, 8);
 	rcin->get_channel_update_time(g_pwm_input_update, 0, 8);
-	TRACE("\rRC");
+	//LOGE("\rRC");
 	int rc2_update_time = systimer->gettime() - g_pwm_input_update[2];
 	for(int i=0; i<8; i++)
 	{
 		rc[i] = ppm2rc(g_pwm_input[i], rc_setting[i][0], rc_setting[i][1], rc_setting[i][2], rc_setting[i][3] > 0);
-		TRACE("%.2f,", rc[i]);
+		//LOGE("%.2f,", rc[i]);
 	}
 
 	rc[2] = (rc[2]+1)/2;
@@ -2005,10 +2005,10 @@ int yet_another_pilot::read_rc()
 	for(int i=0; i<4; i++)
 	{
 		rc[i] = rc_mobile[i];
-		TRACE("%.2f,", rc_mobile[i]);
+		LOGE("%.2f,", rc_mobile[i]);
 	}
 	
-	TRACE("                      ");
+	//LOGE("                      ");
 	
 	return 0;
 }
@@ -2202,8 +2202,8 @@ void yet_another_pilot::main_loop(void)
 {
 	read_sensors();
 	static int n = 0;
-	if (n++ % 3)
-		return;
+	//if (n++ % 3)
+	//	return;
 	
 	// calculate systime interval
 	static int64_t tic = 0;
@@ -2362,7 +2362,7 @@ int yet_another_pilot::setup(void)
 	read_rc();
 	
 	// get two timers, one for main loop and one for SDCARD logging loop
-	manager.getTimer("mainloop")->set_period(1000);
+	manager.getTimer("mainloop")->set_period(5000);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
 	manager.getTimer("log")->set_period(10000);
 	manager.getTimer("log")->set_callback(sdcard_logging_loop_entry);

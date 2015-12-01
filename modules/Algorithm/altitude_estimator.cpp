@@ -221,7 +221,7 @@ int altitude_estimator::update(float accelz, float baro, float dt)
 	matrix_sub(I, tmp, 4, 4);
 	matrix_mul(P, I, 4, 4, P1, 4, 4);
 
-	TRACE("time=%.3f,state:%.2f,%.2f,%.2f,%.2f, raw:%.3f, accelz:%.3f      \n", systimer->gettime()/1000000.0f, state[0], state[1], state[2], state[3], baro, accelz);
+	//LOGE("time=%.3f,state:%.2f,%.2f,%.2f,%.2f, raw:%.3f, accelz:%.3f      \n", systimer->gettime()/1000000.0f, state[0], state[1], state[2], state[3], baro, accelz);
 
 	return 0;
 }
