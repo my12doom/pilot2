@@ -254,6 +254,10 @@ typedef struct
 
 typedef struct
 {
+  short angle_pos[3];
+} ekf_data;
+typedef struct
+{
 	int64_t time;			// 8 byte, the top 1byte is tag
 	union
 	{
@@ -315,6 +319,8 @@ typedef struct
 #define TAG_PILOT_DATA	0x65
 #define TAG_PILOT_DATA2	0x66
 #define TAG_IMU_DATA_V1	0x87
+
+#define TAG_EKF_DATA 0x90
 
 #define TAG_EXTENDED_DATA	0xFE		// EXTENDED SIZE DATA!
 
