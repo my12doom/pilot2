@@ -13,6 +13,7 @@
 #include <HAL/sensors/PX4Flow.h>
 #include <utils/param.h>
 #include "RGBLED.h"
+#include <HAL\STM32F4\F4UART.h>
 
 extern "C" const char bsp_name[] = "v4";
 
@@ -21,6 +22,11 @@ using namespace devices;
 using namespace STM32F4;
 using namespace dev_v2;
 using namespace sensors;
+
+__attribute__((section("dma"))) F4UART f4uart1(USART1);
+__attribute__((section("dma"))) F4UART f4uart2(USART2);
+__attribute__((section("dma"))) F4UART f4uart3(USART3);
+__attribute__((section("dma"))) F4UART f4uart4(UART4);
 
 void init_led()
 {
@@ -67,7 +73,6 @@ extern "C" void TIM2_IRQHandler(void)
 
 //For uart4:
 /*
-F4UART f4uart4(UART4);
 IUART * pUART4 = &f4uart4;
 void init_uart4()
 {
@@ -86,7 +91,6 @@ extern "C" void DMA1_Stream4_IRQHandler()
 */
 
 //For usart3:
-F4UART f4uart3(USART3);
 IUART * pUART3 = &f4uart3;
 void init_uart3()
 {
@@ -103,7 +107,6 @@ extern "C" void DMA1_Stream3_IRQHandler()
 }
 
 //For usart2:
-F4UART f4uart2(USART2);
 IUART * pUART2 = &f4uart2;
 void init_uart2()
 {
@@ -119,26 +122,8 @@ extern "C" void DMA1_Stream6_IRQHandler()
 	f4uart2.DMA1_Steam6_IRQHandler();
 }
 
-//For usart4:
-/*
-F4UART f4uart4(UART4);
-void init_uart4()
-{
-	f4uart4.set_baudrate(115200);
-	//manager.register_UART("UART4", &f4uart4);
-}
-extern "C" void UART4_IRQHandler(void)
-{
-	f4uart4.UART4_IRQHandler();
-}
-extern "C" void DMA1_Stream4_IRQHandler()
-{
-	f4uart4.DMA1_Steam4_IRQHandler();
-}
-*/
 
 //For usart1:
-F4UART f4uart1(USART1);
 IUART * pUART1 = &f4uart1;
 void init_uart1()
 {

@@ -166,8 +166,8 @@ yet_another_pilot::yet_another_pilot()
 
 	for(int i=0; i<3; i++)
 	{
-		gyro_lpf2p[i].set_cutoff_frequency(1000, 40);
-		accel_lpf2p[i].set_cutoff_frequency(1000, 40);
+		gyro_lpf2p[i].set_cutoff_frequency(333.3, 40);
+		accel_lpf2p[i].set_cutoff_frequency(333.3, 40);
 	}
 }
 
@@ -285,8 +285,8 @@ int yet_another_pilot::run_controllers()
 			float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0025f;
 			float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0020f;
 
-			float wx = frame.pixel_flow_x_sum / 25.0f * 100 * PI / 180;
-			float wy = frame.pixel_flow_y_sum / 20.0f * 100 * PI / 180;
+			float wx = pixel_compensated_x / 25.0f * 100 * PI / 180;
+			float wy = pixel_compensated_y / 20.0f * 100 * PI / 180;
 
 			float vx = wx * frame.ground_distance/1000.0f * 1.15f;
 			float vy = wy * frame.ground_distance/1000.0f * 1.15f;
@@ -295,6 +295,9 @@ int yet_another_pilot::run_controllers()
 			float euler_target[3] = {0,0, NAN};
 			of_controller.get_result(&euler_target[0], &euler_target[1]);
 			attitude_controller.set_euler_target(euler_target);
+
+			float pixel_compensated[6] = {pixel_compensated_x, pixel_compensated_y, wx, wy, vx, vy};
+			log2(pixel_compensated, 10, sizeof(pixel_compensated));
 		}
 		else
 		{
@@ -2156,9 +2159,9 @@ void yet_another_pilot::mag_calibrating_worker()
 void yet_another_pilot::main_loop(void)
 {
 	read_sensors();
-	static int n = 0;
-	if (n++ % 3)
-		return;
+//	static int n = 0;
+//	if (n++ % 3)
+//		return;
 	
 	// calculate systime interval
 	static int64_t tic = 0;
@@ -2317,7 +2320,7 @@ int yet_another_pilot::setup(void)
 	read_rc();
 	
 	// get two timers, one for main loop and one for SDCARD logging loop
-	manager.getTimer("mainloop")->set_period(1000);
+	manager.getTimer("mainloop")->set_period(3000);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
 	manager.getTimer("log")->set_period(10000);
 	manager.getTimer("log")->set_callback(sdcard_logging_loop_entry);
@@ -2360,4 +2363,4 @@ int main()
 	}
 }
 
-yet_another_pilot yap;
+__attribute__((section("ccm"))) yet_another_pilot yap;

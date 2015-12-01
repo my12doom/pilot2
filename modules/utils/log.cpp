@@ -15,7 +15,7 @@ FRESULT res;
 FATFS fs;
 uint32_t lost1 = 0;		// buffer full
 
-FIFO<16384> buffer;
+__attribute__((section("dma"))) FIFO<16384> buffer;
 int last_log_flush_time = -999999;
 bool log_ready = false;
 

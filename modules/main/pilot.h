@@ -11,6 +11,7 @@
 #include <Algorithm/pos_estimator.h>
 #include <Algorithm/pos_controll.h>
 #include <Algorithm/of_controller.h>
+#include <Algorithm/of_controller2.h>
 #include <Algorithm/mag_calibration.h>
 #include <Algorithm/motion_detector.h>
 #include <Algorithm/battery_estimator.h>
@@ -84,7 +85,7 @@ public:
 	altitude_estimator alt_estimator;
 	altitude_estimator2 alt_estimator2;
 	altitude_controller alt_controller;
-	OpticalFlowController of_controller;
+	OpticalFlowController2 of_controller;
 	battery_estimator batt;
 	
 	float ground_speed_north;		// unit: m/s

@@ -17,8 +17,10 @@ public:
 	int get_result(float *result_roll, float *result_pitch);		// unit: radian
 
 protected:
+	float m_flow_lpf[2];
 	float m_pid[2][3];	// [roll, pitch][p, i, d], unit: [roll, pitch][meter, meter*s, meter/s], P is integration of flow
 	float m_position_error[2];
 	float m_result[2];		// unit: radian
 	float m_user[2];		// unit: radian
+	float m_braking_time;
 };
