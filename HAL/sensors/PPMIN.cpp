@@ -9,7 +9,7 @@ static int max(int a, int b)
 {
 	return a > b ? b : a;
 }
-int sensors::PPMIN::handle_ppm(int now)
+int sensors::PPMIN::handle_ppm(int64_t now)
 {
 	float delta = 0;
 	if (last_high_tim < 0)

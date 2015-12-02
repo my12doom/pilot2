@@ -28,12 +28,12 @@ namespace sensors
 
 	protected:
 		static void cb_entry(void *parameter, int flags);
-		int handle_ppm(int now);
+		int handle_ppm(int64_t now);
 		int64_t rc_update[10];
 		int16_t rc_input[10];
 		int16_t rc_static[2][10];
 
-		int last_high_tim;// = -1;
+		int64_t last_high_tim;// = -1;
 		int ppm_channel_id;// = 0;
 		int ppm_channel_count;// = 0;
 	};
