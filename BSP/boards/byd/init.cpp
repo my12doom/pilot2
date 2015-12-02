@@ -22,6 +22,11 @@ using namespace STM32F4;
 using namespace dev_v2;
 using namespace sensors;
 
+__attribute__((section("dma"))) F4UART f4uart1(USART1);
+__attribute__((section("dma"))) F4UART f4uart2(USART2);
+__attribute__((section("dma"))) F4UART f4uart3(USART3);
+__attribute__((section("dma"))) F4UART f4uart4(UART4);
+
 void init_led()
 {
 	static F4GPIO f4gpioC4(GPIOC,GPIO_Pin_4);
@@ -66,7 +71,6 @@ extern "C" void TIM2_IRQHandler(void)
 #include <HAL\Interface\IUART.h>
 
 //For usart3:
-F4UART f4uart3(USART3);
 IUART * pUART3 = &f4uart3;
 void init_uart3()
 {
@@ -83,7 +87,6 @@ extern "C" void DMA1_Stream3_IRQHandler()
 }
 
 //For usart2:
-F4UART f4uart2(USART2);
 IUART * pUART2 = &f4uart2;
 void init_uart2()
 {
@@ -100,7 +103,6 @@ extern "C" void DMA1_Stream6_IRQHandler()
 }
 
 //For usart1:
-F4UART f4uart1(USART1);
 IUART * pUART1 = &f4uart1;
 void init_uart1()
 {
