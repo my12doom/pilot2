@@ -69,9 +69,9 @@ int pos_estimator::update_accel(double accel_lat, double accel_lon, int64_t time
 	// update healthy time counter
 	float error_lat_meter = error_lat * latitude_to_meter;
 	float error_lon_meter = error_lon * longtitude_to_meter;
-	float error_total = error_lon_meter * error_lon_meter + error_lat_meter * error_lat_meter;
+	float error_total = sqrt(error_lon_meter * error_lon_meter + error_lat_meter * error_lat_meter);
 	float total_velocity = sqrt (meter.vlongtitude * meter.vlongtitude + meter.vlatitude * meter.vlatitude);
-	if (gps_healthy && error_total < 5 && (healthy() || total_velocity < 0.5f))
+	if (gps_healthy && error_total < 5 && (healthy() || total_velocity < 0.5f))		// healthy: residual <5m, (and velocity < 0.5m/s if not healthy)
 	{
 		pos_healthy_time += dt;
 	}

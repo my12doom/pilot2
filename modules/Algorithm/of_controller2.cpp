@@ -114,8 +114,8 @@ int OpticalFlowController2::update_controller(float flow_roll, float flow_pitch,
 
 
 		// limit maximum flow angle: 10 degree
-		m_result[0] = limit(m_result[0], -10 * PI / 180, 10 * PI / 180);
-		m_result[1] = limit(m_result[1], -10 * PI / 180, 10 * PI / 180);
+		m_result[0] = limit(m_result[0], -20 * PI / 180, 20 * PI / 180);
+		m_result[1] = limit(m_result[1], -20 * PI / 180, 20 * PI / 180);
 	}
 
 	else
