@@ -30,6 +30,8 @@ using namespace math;
 const float PI180 = 180/PI;
 
 // parameters
+static param use_EKF("ekf", 0);		// use EKF estimator
+static param cycle_time("time", 3000);
 static param use_alt_estimator2("alt2", 0);		// use new alt estimator
 static param crash_protect("prot", 0);		// crash protection
 static param pwm_override_max("tmax", NAN);
@@ -1152,7 +1154,8 @@ int yet_another_pilot::calculate_state()
 	ekf_mesurement.Vel_GPS_y=0;
 	
 	int64_t t = systimer->gettime();
-	//ekf_estimator.update(ekf_u,ekf_mesurement,interval);
+	if (use_EKF > 0.5f)
+		ekf_estimator.update(ekf_u,ekf_mesurement,interval);
 	t = systimer->gettime() - t;
 	//printf("%f,%d\r\n",interval, int(t));
 
@@ -1168,12 +1171,18 @@ int yet_another_pilot::calculate_state()
 	//printf("\r(ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5]);
 
 
-	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
-	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
-	euler[2] = radian_add(euler[2], quadcopter_trim[2]);
-	//euler[0] = radian_add(ekf_estimator.ekf_result.roll, quadcopter_trim[0]);
-	//euler[1] = radian_add(ekf_estimator.ekf_result.pitch, quadcopter_trim[1]);
-	//euler[2] = radian_add(ekf_estimator.ekf_result.yaw, quadcopter_trim[2]);
+	if (use_EKF > 0.5f)
+	{
+		euler[0] = radian_add(ekf_estimator.ekf_result.roll, quadcopter_trim[0]);
+		euler[1] = radian_add(ekf_estimator.ekf_result.pitch, quadcopter_trim[1]);
+		euler[2] = radian_add(ekf_estimator.ekf_result.yaw, quadcopter_trim[2]);
+	}
+	else
+	{
+		euler[0] = radian_add(euler[0], quadcopter_trim[0]);
+		euler[1] = radian_add(euler[1], quadcopter_trim[1]);
+		euler[2] = radian_add(euler[2], quadcopter_trim[2]);
+	}
 	
 	body_rate.array[0] = gyro_reading.array[0] + gyro_bias[0];
 	body_rate.array[1] = gyro_reading.array[1] + gyro_bias[1];
@@ -2404,7 +2413,7 @@ int yet_another_pilot::setup(void)
 	read_rc();
 	
 	// get two timers, one for main loop and one for SDCARD logging loop
-	manager.getTimer("mainloop")->set_period(3000);
+	manager.getTimer("mainloop")->set_period(cycle_time);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
 	manager.getTimer("log")->set_period(10000);
 	manager.getTimer("log")->set_callback(sdcard_logging_loop_entry);

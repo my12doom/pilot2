@@ -39,7 +39,7 @@ RCOUT::RCOUT()
 
 	TIM_TimeBaseInit(TIM4, &TIM_TimeBaseStructure);
 
-	TIM_SelectOnePulseMode(TIM4, TIM_OPMode_Single);
+	//TIM_SelectOnePulseMode(TIM4, TIM_OPMode_Single);
 	TIM_Cmd(TIM4, ENABLE);
 
 	TIM_ARRPreloadConfig(TIM4, ENABLE);
