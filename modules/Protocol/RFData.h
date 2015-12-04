@@ -255,6 +255,12 @@ typedef struct
 typedef struct
 {
   short angle_pos[3];
+  short raw_postion_n;
+  short raw_postion_e;
+  short raw_speed_n;
+  short raw_speed_e;
+  short ekf_postion[3];
+  short ekf_speed[3];
 } ekf_data;
 typedef struct
 {

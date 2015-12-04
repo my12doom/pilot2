@@ -54,7 +54,13 @@ private:
 	bool ekf_is_init;
 	float gyro_bias[3];//store gyro zero bias
 	float Be[3],P[169],X[13],Q[81],R[64];
+	//This is for check ekf init
+	float ekf_loopcount;
+	float que_window[3][50];
+	
 public:
+
+
 	EKF_Result ekf_result;
 
 	ekf_estimator();
@@ -64,8 +70,13 @@ public:
 	void init(float roll,float pitch,float yaw);
 
 	int update(EKF_U u,EKF_Mesurement mesurement,const float dT);
-	
+	bool ekf_is_ready();
+
 	//Mag ground length
 	float ground_mag_length;
+	float ekf_is_convergence;
+	float sqrt_variance[3];
+	
+
 
 };

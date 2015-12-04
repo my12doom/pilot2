@@ -36,16 +36,26 @@ void init_ekf_matrix(float Be[3], float P[169], float X[13], float Q[81],
                      float R[64])
 {
   int i;
-  static const float dv0[3] = { 0.8906, 0.0, 0.4547 };//This is depend on where u r
+	static const float dv0[3] = { 0.8906, 0.0, 0.4547 };//This is depend on where u r
 
   static const float v[13] = { 100, 100, 100, 100, 100, 100, 100,
     100, 100, 100, 100, 100, 100 };  //P
 
-  static const float b_v[9] = { 1.0E-15, 1.0E-15, 1.0E-15, 7.0E-2, 7.0E-2, 0.5,
-    8.0E-7, 8.0E-7, 8.0E-7 };
+  static const float b_v[9] = { 1.0E-17, 1.0E-17, 1.0E-17, 3.5E-2, 3.5E-2, 0.5,
+    8.0E-6, 8.0E-6, 8.0E-6 };
 
-  static const float c_v[8] = { 0.001, 0.001, 0.02, 0.8, 0.8, 0.005,
+  static const float c_v[8] = { 1.0E-4, 1.0E-4, 3.5E-3, 0.8, 0.8, 0.005,
     0.005, 0.005 };
+//  static const float dv0[3] = { 0.8906, 0.0, 0.4547 };//This is depend on where u r
+
+//  static const float v[13] = { 100, 100, 100, 100, 100, 100, 100,
+//    100, 100, 100, 100, 100, 100 };  //P
+
+//  static const float b_v[9] = { 1.0E-17, 1.0E-17, 1.0E-17, 3.5E-3, 3.5E-3, 0.5,
+//	6.0E-6, 6.0E-6, 6.0E-6 };
+
+//  static const float c_v[8] = { 1, 1, 8E-2, 1, 1, 0.005,
+//    0.005, 0.005 };// with gps { 0.001, 0.001, 0.02, 0.8, 0.8, 0.005,0.005, 0.005 };
 
   for (i = 0; i < 3; i++) {
     Be[i] = dv0[i];

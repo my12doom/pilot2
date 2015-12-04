@@ -573,9 +573,13 @@ int yet_another_pilot::save_logs()
 	
 	ekf_data ekf =
 	{
-		ekf_estimator.ekf_result.roll* 18000/PI,ekf_estimator.ekf_result.pitch* 18000/PI,ekf_estimator.ekf_result.yaw* 18000/PI 
+		ekf_estimator.ekf_result.roll* 18000/PI,ekf_estimator.ekf_result.pitch* 18000/PI,ekf_estimator.ekf_result.yaw* 18000/PI,
+		estimator.get_raw_meter().latitude*100,estimator.get_raw_meter().longtitude*100,
+		ground_speed_north*1000,ground_speed_east*1000,
+		ekf_estimator.ekf_result.Pos_x*100,ekf_estimator.ekf_result.Pos_y*100,ekf_estimator.ekf_result.Pos_z*100,
+		ekf_estimator.ekf_result.Vel_x*1000,ekf_estimator.ekf_result.Vel_y*1000,ekf_estimator.ekf_result.Vel_z*1000,
 	};
-	log(&ekf, TAG_EKF_DATA, systime);
+	log2(&ekf, TAG_EKF_DATA,sizeof(ekf));
 	
 	quadcopter_data quad = 
 	{
