@@ -441,7 +441,7 @@ int yet_another_pilot::output()
 		// add throttle 
 		min_throttle = limit(-min_roll_pitch, 0, 1);
 		max_throttle = limit(1-max_roll_pitch, 0, 1);
-		float throttle = limit(throttle_result, min_throttle, max_throttle);
+		float throttle = airborne ? throttle_result : limit(throttle_result, min_throttle, max_throttle);	// add throttle only if airborne
 		for(int i=0; i<motor_count; i++)
 			motor_output[i] += throttle;
 		
