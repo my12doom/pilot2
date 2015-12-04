@@ -125,7 +125,8 @@ public:
 	int acc_avg_count[6];// = {0};						// accelerometer calibration average counter.
 	motion_detector motion_acc;						// motion detector for accelerometer calibration.
 	bool islanding;// = false ;
-	bool land_possible;//
+	bool land_possible;
+	bool imu_data_lock;
 
 	// constructor
 	yet_another_pilot();
@@ -135,10 +136,11 @@ public:
 	int setup();
 	void main_loop();
 	void sdcard_logging_loop();
+	void mag_calibrating_worker();
 	static void mag_calibrating_worker_entry(int parameter){((yet_another_pilot*)parameter)->mag_calibrating_worker();}
 	static void main_loop_entry(){yap.main_loop();}
 	static void sdcard_logging_loop_entry(){yap.sdcard_logging_loop();}
-	void mag_calibrating_worker();
+	static void imu_reading_entry(){yap.read_imu_and_filter();}
 	
 	// mag and accelerometer calibration
 	int sensor_calibration();
@@ -161,7 +163,7 @@ public:
 	int set_submode(copter_mode newmode);
 	int calculate_state();
 	int read_sensors();
-	int read_flow();
+	int read_imu_and_filter();		// should be called from a seperate thread(timer) with higher than read_sensors()'s priority
 	int run_controllers();
 	int output();
 	void handle_takeoff();

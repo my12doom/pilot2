@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <stdio.h>
 #include "F4Timer.h"
 #include "stm32f4xx_tim.h"
 using namespace HAL;
@@ -54,8 +55,19 @@ namespace STM32F4
 		}
 		else if(TIM6==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = TIM5_IRQn;		// TODO: IRQ?
+			/*
+			NVIC_InitStructure.NVIC_IRQChannel = TIM6_IRQn;		// TODO: IRQ?
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+			*/
+			printf("TIM6 not supported\n");
+		}
+		else if(TIM7==TIMx)
+		{
+			NVIC_InitStructure.NVIC_IRQChannel = TIM7_IRQn;		// TODO: IRQ?
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);
@@ -75,6 +87,8 @@ namespace STM32F4
 			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5,ENABLE);
 		if(TIM6==TIMx)
 			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6,ENABLE);
+		if(TIM7==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7,ENABLE);
 		TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 		TIM_DeInit(TIMx);
 		TIM_InternalClockConfig(TIMx);
@@ -115,5 +129,4 @@ namespace STM32F4
 		if(cb)
 			cb();
 	}
-
 }

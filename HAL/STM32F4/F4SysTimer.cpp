@@ -40,17 +40,21 @@ namespace STM32F4
 			return (tick_base1 + tick1) / (SystemCoreClock / 1000000);
 	}
 	
-	void F4SysTimer::delayms(int ms)
+	void F4SysTimer::delayms(float ms)
 	{
 		delayus(ms*1000);
 	}
 	
-	void F4SysTimer::delayus(int us)
+	void F4SysTimer::delayus(float us)
 	{
+		static const float overhead = 0.37f;
+		if (us < overhead)
+			return;
+		us -= overhead;
 		if (us < 9000)	// ~ 9ms
 		{
 			volatile int start = reload - SysTick->VAL;
-			volatile int target = (start + us * (SystemCoreClock / 1000000)) % reload;
+			volatile int target = int(start + us * (SystemCoreClock / 1000000)) % reload;
 
 			if (start <= target)
 			{

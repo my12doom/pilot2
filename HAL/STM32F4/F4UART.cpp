@@ -32,7 +32,7 @@ namespace STM32F4
 			GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_USART1);
 			// NVIC config
 			NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);		
@@ -66,7 +66,7 @@ namespace STM32F4
 			GPIO_PinAFConfig(GPIOD, GPIO_PinSource6, GPIO_AF_USART2);
 			// NVIC config
 			NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);		
@@ -100,7 +100,7 @@ namespace STM32F4
 			GPIO_PinAFConfig(GPIOD, GPIO_PinSource9, GPIO_AF_USART3);
 			// NVIC config
 			NVIC_InitStructure.NVIC_IRQChannel = USART3_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);		
@@ -134,7 +134,7 @@ namespace STM32F4
 			GPIO_PinAFConfig(GPIOA, GPIO_PinSource1, GPIO_AF_UART4);
 			// NVIC config
 			NVIC_InitStructure.NVIC_IRQChannel = UART4_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 4;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);		

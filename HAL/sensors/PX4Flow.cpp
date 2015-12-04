@@ -7,6 +7,7 @@ namespace sensors
 	{
 		this->I2C=I2C;
 		px4flow_frame frame= {0};
+		I2C->set_speed(8);
 		int res = read_flow(&frame);
 		//read integral:
 		//px4flow_integral_frame integral_frame= {};

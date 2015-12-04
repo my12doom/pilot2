@@ -11,7 +11,7 @@ namespace STM32F4
 		F4SysTimer();
 		~F4SysTimer(){}
 		virtual int64_t gettime();		// micro-second
-		virtual void delayms(int ms);
-		virtual void delayus(int us);
+		virtual void delayms(float ms);
+		virtual void delayus(float us);
 	};
 }

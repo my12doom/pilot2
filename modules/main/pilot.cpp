@@ -30,6 +30,7 @@ using namespace math;
 const float PI180 = 180/PI;
 
 // parameters
+static param use_alt_estimator2("alt2", 0);		// use new alt estimator
 static param crash_protect("prot", 0);		// crash protection
 static param pwm_override_max("tmax", NAN);
 static param pwm_override_min("tmin", NAN);
@@ -163,11 +164,12 @@ yet_another_pilot::yet_another_pilot()
 	
 	gps_attitude_timeout = 0;
 	land_possible = false;
+	imu_data_lock = false;
 
 	for(int i=0; i<3; i++)
 	{
-		gyro_lpf2p[i].set_cutoff_frequency(333.3, 40);
-		accel_lpf2p[i].set_cutoff_frequency(333.3, 40);
+		gyro_lpf2p[i].set_cutoff_frequency(1000, 60);
+		accel_lpf2p[i].set_cutoff_frequency(1000, 60);
 	}
 }
 
@@ -237,10 +239,16 @@ int yet_another_pilot::run_controllers()
 			user_rate = -user_rate * user_rate * quadcopter_max_descend_rate;
 		}
 
-		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
-		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
-//		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
-//		alt_controller.provide_states(alt_state, NAN, euler, throttle_real, LIMIT_NONE, airborne);
+		if (use_alt_estimator2 > 0.5f)
+		{	
+			float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
+			alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+		}
+		else
+		{
+			float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};			
+			alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+		}
 		
 		// landing?
 		if(islanding)
@@ -697,7 +705,7 @@ int yet_another_pilot::save_logs()
 	return 0;
 }
 
-int yet_another_pilot::read_flow()
+int yet_another_pilot::read_sensors()
 {
 	if (manager.get_flow_count())
 	{
@@ -744,15 +752,6 @@ int yet_another_pilot::read_flow()
 		}
 	}
 
-	return 0;
-}
-
-int yet_another_pilot::read_sensors()
-{
-	int64_t reading_start = systimer->gettime();
-	vector acc = {0};
-	vector gyro = {0};
-	vector mag = {0};
 	
 	if (range_finder)
 	{
@@ -771,164 +770,7 @@ int yet_another_pilot::read_sensors()
 		else
 			printf("\r%.3f", sonar_distance);
 	}
-
-	// read usart source
-	handle_cli(vcp);
-
 	
-
-	// read gyros
-	int healthy_gyro_count = 0;
-	for(int i=0; i<min(manager.get_gyroscope_count(),1); i++)
-	{
-		IGyro* gyroscope = manager.get_gyroscope(i);
-		
-		gyro_data data;
-		if (!gyroscope->healthy() || gyroscope->read(&data) < 0)
-			continue;
-		
-		mpu6050_temperature = data.temperature;
-		gyro.V.x += data.x;
-		gyro.V.y += data.y;
-		gyro.V.z += data.z;
-
-		healthy_gyro_count ++;
-	}
-	if (healthy_gyro_count == 0)
-		critical_errors |= error_gyro;
-	gyro.V.x /= healthy_gyro_count;
-	gyro.V.y /= healthy_gyro_count;
-	gyro.V.z /= healthy_gyro_count;
-
-	// read accelerometers
-	int healthy_acc_count = 0;
-	for(int i=0; i<min(manager.get_accelerometer_count(),1); i++)
-	{
-		IAccelerometer* accelerometer = manager.get_accelerometer(i);
-		
-		accelerometer_data data;
-		if (!accelerometer->healthy() || accelerometer->read(&data) < 0)
-			continue;
-
-		acc.V.x += data.x;
-		acc.V.y += data.y;
-		acc.V.z += data.z;
-
-		healthy_acc_count ++;
-	}
-	if (healthy_acc_count == 0)
-		critical_errors |= error_accelerometer;
-	acc.V.x /= healthy_acc_count;
-	acc.V.y /= healthy_acc_count;
-	acc.V.z /= healthy_acc_count;
-	
-	// apply a 2nd order LPF to gyro readings
-	for(int i=0; i<3; i++)
-		this->gyro_reading.array[i] = gyro_lpf2p[i].apply(gyro.array[i]);
-
-	// read magnetometers
-	int healthy_mag_count = 0;
-	for(int i=0; i<manager.get_magnetometer_count(); i++)
-	{
-		IMagnetometer* magnetometer = manager.get_magnetometer(i);
-		
-		mag_data data;
-		if (!magnetometer->healthy() || magnetometer->read(&data) < 0)
-			continue;
-		
-		mag.V.x += data.x;
-		mag.V.y += data.y;
-		mag.V.z += data.z;
-
-		healthy_mag_count ++ ;
-	}
-	if (healthy_mag_count == 0)
-		critical_errors |= error_magnet;
-	mag.V.x /= healthy_mag_count;
-	mag.V.y /= healthy_mag_count;
-	mag.V.z /= healthy_mag_count;
-
-	if (vcp && (usb_data_publish & data_publish_imu))
-	{
-		gyro_data gyro2 = {0};
-		accelerometer_data acc2 = {0};
-
-		if (manager.get_accelerometer_count()>=2)
-			manager.get_accelerometer(1)->read(&acc2);
-		if (manager.get_gyroscope_count()>=2)
-			manager.get_gyroscope(1)->read(&gyro2);
-
-		if (usb_data_publish & data_publish_binary)
-		{
-			usb_imu_data data = 
-			{
-				systimer->gettime(),
-				{acc.V.x * 1000, acc.V.y * 1000, acc.V.z * 1000,},
-				{gyro.V.x * 18000 / PI, gyro.V.y * 18000 / PI, gyro.V.z * 18000 / PI,},
-				{acc2.x * 1000, acc2.y * 1000, acc2.z * 1000,},
-				{gyro2.x * 18000 / PI, gyro2.y * 18000 / PI, gyro2.z * 18000 / PI,},
-				{mag.V.x, mag.V.y, mag.V.z,},
-			};
-
-			send_package(&data, sizeof(data), data_publish_imu, vcp);
-		}
-		else
-		{
-			char tmp[200];
-			sprintf(tmp, 
-				"imu:%.4f"
-				",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f"
-				",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", systimer->gettime()/1000000.0f,
-			acc.V.x, acc.V.y, acc.V.z, gyro.V.x, gyro.V.y, gyro.V.z, mag.V.x, mag.V.y, mag.V.z, mpu6050_temperature,
-			acc2.x, acc2.y, acc2.z, gyro2.x, gyro2.y, gyro2.z);
-			
-			vcp->write(tmp, strlen(tmp));
-		}
-	}
-
-
-	// read barometers
-	int healthy_baro_count = 0;
-	for(int i=0; i<manager.get_barometer_count(); i++)
-	{
-		IBarometer* barometer = manager.get_barometer(i);
-		
-		baro_data data;
-		if (!barometer->healthy())
-			continue;
-		int res = barometer->read(&data);
-		if (res < 0)
-			continue;
-
-		new_baro_data = res == 0;
-		a_raw_temperature = data.temperature;
-		a_raw_pressure = data.pressure;
-
-		healthy_baro_count ++;
-	}
-	if (healthy_baro_count == 0)
-		critical_errors |= error_baro;
-	
-	if (vcp && (usb_data_publish & data_publish_baro) && new_baro_data)
-	{
-		if (usb_data_publish & data_publish_binary)
-		{
-			usb_baro_data data =
-			{
-				systimer->gettime(),
-				a_raw_pressure,
-				a_raw_temperature*100
-			};
-
-			send_package(&data, sizeof(data), data_publish_baro, vcp);
-		}
-		else
-		{
-			char tmp[200];
-			sprintf(tmp, "baro:%.3f,%.0f,%.3f\n", systimer->gettime()/1000000.0f, a_raw_pressure, a_raw_temperature);
-			vcp->write(tmp, strlen(tmp));
-		}
-	}
 
 	// read GPSs
 	int lowest_hdop = 100000;
@@ -979,37 +821,8 @@ int yet_another_pilot::read_sensors()
 			vcp->write(tmp, strlen(tmp));
 		}
 	}
-
-
-	// bias and scale calibrating
-	float temperature_delta = mpu6050_temperature - temperature0;
-	float gyro_bias[3] = 
-	{
-		-(temperature_delta * gyro_temp_k.array[0] + gyro_temp_a.array[0]),
-		-(temperature_delta * gyro_temp_k.array[1] + gyro_temp_a.array[1]),
-		-(temperature_delta * gyro_temp_k.array[2] + gyro_temp_a.array[2]),
-	};
-	accel_uncalibrated = acc;
-	mag_uncalibrated = mag;
-	gyro_uncalibrated = gyro_reading;
 	
-	for(int i=0; i<3; i++)
-	{
-		acc.array[i] += acc_bias[i];
-		acc.array[i] *= acc_scale[i];
-		mag.array[i] += mag_bias[i];
-		mag.array[i] *= mag_scale[i];
-		gyro_reading.array[i] += gyro_bias[i];
-	}
-	
-	this->mag = mag;
-	
-
-	// apply a 40hz 2nd order LPF to accelerometer readings
-	for(int i=0; i<3; i++)
-		this->accel.array[i] = accel_lpf2p[i].apply(acc.array[i]);
-
-	// accelerometer motion detector and calibration.
+		// accelerometer motion detector and calibration.
 	motion_acc.new_data(accel_uncalibrated);
 	if (motion_acc.get_average(NULL) > 100)
 	{
@@ -1048,10 +861,10 @@ int yet_another_pilot::read_sensors()
 		imu_statics[0][2].array[i] = fmax(accel.array[i], imu_statics[0][2].array[i]);
 		imu_statics[0][3].array[i] = accel.array[i] + imu_statics[0][3].array[i];
 
-		imu_statics[1][0].array[i] = fmin(gyro.array[i], imu_statics[1][0].array[i]);
-		imu_statics[1][1].array[i] = gyro.array[i];
-		imu_statics[1][2].array[i] = fmax(gyro.array[i], imu_statics[1][2].array[i]);
-		imu_statics[1][3].array[i] = gyro.array[i] + imu_statics[1][3].array[i];
+		imu_statics[1][0].array[i] = fmin(gyro_uncalibrated.array[i], imu_statics[1][0].array[i]);
+		imu_statics[1][1].array[i] = gyro_uncalibrated.array[i];
+		imu_statics[1][2].array[i] = fmax(gyro_uncalibrated.array[i], imu_statics[1][2].array[i]);
+		imu_statics[1][3].array[i] = gyro_uncalibrated.array[i] + imu_statics[1][3].array[i];
 	}
 	avg_count ++;
 
@@ -1064,11 +877,227 @@ int yet_another_pilot::read_sensors()
 	
 	mah_consumed += fabs(current) * interval / 3.6f;	// 3.6 mah = 1As
 
+
+	return 0;
+}
+
+int yet_another_pilot::read_imu_and_filter()
+{
+	int64_t reading_start = systimer->gettime();
+	vector acc = {0};
+	vector gyro = {0};
+	vector mag = {0};
+
+	// read gyros
+	int healthy_gyro_count = 0;
+	for(int i=0; i<min(manager.get_gyroscope_count(),1); i++)
+	{
+		IGyro* gyroscope = manager.get_gyroscope(i);
+		
+		gyro_data data;
+		if (!gyroscope->healthy() || gyroscope->read(&data) < 0)
+			continue;
+		
+		mpu6050_temperature = data.temperature;
+		gyro.V.x += data.x;
+		gyro.V.y += data.y;
+		gyro.V.z += data.z;
+
+		healthy_gyro_count ++;
+	}
+	if (healthy_gyro_count == 0)
+		critical_errors |= error_gyro;
+	gyro.V.x /= healthy_gyro_count;
+	gyro.V.y /= healthy_gyro_count;
+	gyro.V.z /= healthy_gyro_count;
+
+	// read accelerometers
+	int healthy_acc_count = 0;
+	for(int i=0; i<min(manager.get_accelerometer_count(),1); i++)
+	{
+		IAccelerometer* accelerometer = manager.get_accelerometer(i);
+		
+		accelerometer_data data;
+		if (!accelerometer->healthy() || accelerometer->read(&data) < 0)
+			continue;
+
+		acc.V.x += data.x;
+		acc.V.y += data.y;
+		acc.V.z += data.z;
+
+		healthy_acc_count ++;
+	}
+	if (healthy_acc_count == 0)
+		critical_errors |= error_accelerometer;
+	acc.V.x /= healthy_acc_count;
+	acc.V.y /= healthy_acc_count;
+	acc.V.z /= healthy_acc_count;
+	
+	// read magnetometer and barometer since we don't have lock support and it is connected to same SPI bus with gyro and acceleromter
+	if (!imu_data_lock)
+	{
+		// read magnetometers
+		int healthy_mag_count = 0;
+		for(int i=0; i<manager.get_magnetometer_count(); i++)
+		{
+			IMagnetometer* magnetometer = manager.get_magnetometer(i);
+			
+			mag_data data;
+			if (!magnetometer->healthy() || magnetometer->read(&data) < 0)
+				continue;
+			
+			mag.V.x += data.x;
+			mag.V.y += data.y;
+			mag.V.z += data.z;
+
+			healthy_mag_count ++ ;
+		}
+		if (healthy_mag_count == 0)
+			critical_errors |= error_magnet;
+		mag.V.x /= healthy_mag_count;
+		mag.V.y /= healthy_mag_count;
+		mag.V.z /= healthy_mag_count;
+
+		if (vcp && (usb_data_publish & data_publish_imu))
+		{
+			gyro_data gyro2 = {0};
+			accelerometer_data acc2 = {0};
+
+			if (manager.get_accelerometer_count()>=2)
+				manager.get_accelerometer(1)->read(&acc2);
+			if (manager.get_gyroscope_count()>=2)
+				manager.get_gyroscope(1)->read(&gyro2);
+
+			if (usb_data_publish & data_publish_binary)
+			{
+				usb_imu_data data = 
+				{
+					systimer->gettime(),
+					{accel_uncalibrated.V.x * 1000, accel_uncalibrated.V.y * 1000, accel_uncalibrated.V.z * 1000,},
+					{gyro_uncalibrated.V.x * 18000 / PI, gyro_uncalibrated.V.y * 18000 / PI, gyro_uncalibrated.V.z * 18000 / PI,},
+					{acc2.x * 1000, acc2.y * 1000, acc2.z * 1000,},
+					{gyro2.x * 18000 / PI, gyro2.y * 18000 / PI, gyro2.z * 18000 / PI,},
+					{mag.V.x, mag.V.y, mag.V.z,},
+				};
+
+				send_package(&data, sizeof(data), data_publish_imu, vcp);
+			}
+			else
+			{
+				char tmp[200];
+				sprintf(tmp, 
+					"imu:%.4f"
+					",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f"
+					",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", systimer->gettime()/1000000.0f,
+				accel_uncalibrated.V.x, accel_uncalibrated.V.y, accel_uncalibrated.V.z, gyro_uncalibrated.V.x, gyro_uncalibrated.V.y, gyro_uncalibrated.V.z, mag.V.x, mag.V.y, mag.V.z, mpu6050_temperature,
+				acc2.x, acc2.y, acc2.z, gyro2.x, gyro2.y, gyro2.z);
+				
+				vcp->write(tmp, strlen(tmp));
+			}
+		}
+
+
+		// read barometers
+		int healthy_baro_count = 0;
+		for(int i=0; i<manager.get_barometer_count(); i++)
+		{
+			IBarometer* barometer = manager.get_barometer(i);
+			
+			baro_data data;
+			if (!barometer->healthy())
+				continue;
+			int res = barometer->read(&data);
+			if (res < 0)
+				continue;
+
+			new_baro_data = res == 0;
+			a_raw_temperature = data.temperature;
+			a_raw_pressure = data.pressure;
+
+			healthy_baro_count ++;
+		}
+		if (healthy_baro_count == 0)
+			critical_errors |= error_baro;
+		
+		if (vcp && (usb_data_publish & data_publish_baro) && new_baro_data)
+		{
+			if (usb_data_publish & data_publish_binary)
+			{
+				usb_baro_data data =
+				{
+					systimer->gettime(),
+					a_raw_pressure,
+					a_raw_temperature*100
+				};
+
+				send_package(&data, sizeof(data), data_publish_baro, vcp);
+			}
+			else
+			{
+				char tmp[200];
+				sprintf(tmp, "baro:%.3f,%.0f,%.3f\n", systimer->gettime()/1000000.0f, a_raw_pressure, a_raw_temperature);
+				vcp->write(tmp, strlen(tmp));
+			}
+		}
+	}
+	
+	// bias and scale calibrating
+	float temperature_delta = mpu6050_temperature - temperature0;
+	float gyro_bias[3] = 
+	{
+		-(temperature_delta * gyro_temp_k.array[0] + gyro_temp_a.array[0]),
+		-(temperature_delta * gyro_temp_k.array[1] + gyro_temp_a.array[1]),
+		-(temperature_delta * gyro_temp_k.array[2] + gyro_temp_a.array[2]),
+	};
+	accel_uncalibrated = acc;
+	mag_uncalibrated = mag;
+	gyro_uncalibrated = gyro_reading;
+	
+	for(int i=0; i<3; i++)
+	{
+		acc.array[i] += acc_bias[i];
+		acc.array[i] *= acc_scale[i];
+		mag.array[i] += mag_bias[i];
+		mag.array[i] *= mag_scale[i];
+		gyro_reading.array[i] += gyro_bias[i];
+	}
+	
+	// copy mag
+	if (!imu_data_lock)
+		this->mag = mag;
+
+	// apply a 40hz 2nd order LPF to accelerometer readings
+	// stop overwriting target data if imu data lock acquired
+	if (!imu_data_lock)
+	{
+		for(int i=0; i<3; i++)
+			this->accel.array[i] = accel_lpf2p[i].apply(acc.array[i]);
+	}
+	else
+	{
+		for(int i=0; i<3; i++)
+			accel_lpf2p[i].apply(acc.array[i]);
+	}
+	
+	
+	// apply a 2nd order LPF to gyro readings
+	// stop overwriting target data if imu data lock acquired
+	if (!imu_data_lock)
+	{
+		for(int i=0; i<3; i++)
+			this->gyro_reading.array[i] = gyro_lpf2p[i].apply(gyro.array[i]);
+	}
+	else
+	{
+		for(int i=0; i<3; i++)
+			gyro_lpf2p[i].apply(gyro.array[i]);
+	}
+
+	// log unfiltered imu data
 	int16_t data[6] = {acc.V.x * 1000, acc.V.y * 1000, acc.V.z * 1000,
 						gyro.V.x * 18000 / PI, gyro.V.y * 18000 / PI, gyro.V.z * 18000 / PI,};
 
-	log2(data, 5, sizeof(data));
-
+	//log2(data, 5, sizeof(data));
 
 	return 0;
 }
@@ -1123,7 +1152,7 @@ int yet_another_pilot::calculate_state()
 	ekf_mesurement.Vel_GPS_y=0;
 	
 	int64_t t = systimer->gettime();
-	ekf_estimator.update(ekf_u,ekf_mesurement,interval);
+	//ekf_estimator.update(ekf_u,ekf_mesurement,interval);
 	t = systimer->gettime() - t;
 	//printf("%f,%d\r\n",interval, int(t));
 
@@ -1142,9 +1171,9 @@ int yet_another_pilot::calculate_state()
 	euler[0] = radian_add(euler[0], quadcopter_trim[0]);
 	euler[1] = radian_add(euler[1], quadcopter_trim[1]);
 	euler[2] = radian_add(euler[2], quadcopter_trim[2]);
-	euler[0] = radian_add(ekf_estimator.ekf_result.roll, quadcopter_trim[0]);
-	euler[1] = radian_add(ekf_estimator.ekf_result.pitch, quadcopter_trim[1]);
-	euler[2] = radian_add(ekf_estimator.ekf_result.yaw, quadcopter_trim[2]);
+	//euler[0] = radian_add(ekf_estimator.ekf_result.roll, quadcopter_trim[0]);
+	//euler[1] = radian_add(ekf_estimator.ekf_result.pitch, quadcopter_trim[1]);
+	//euler[2] = radian_add(ekf_estimator.ekf_result.yaw, quadcopter_trim[2]);
 	
 	body_rate.array[0] = gyro_reading.array[0] + gyro_bias[0];
 	body_rate.array[1] = gyro_reading.array[1] + gyro_bias[1];
@@ -1290,8 +1319,10 @@ int yet_another_pilot::sensor_calibration()
 	int calibrating_count = 900;
 	ground_temperature = 0;
 	
+	int lastt = 0;
 	while(detect_acc.get_average(NULL) < calibrating_count && detect_gyro.get_average(NULL) < calibrating_count)
 	{
+		read_imu_and_filter();
 		read_sensors();
 		if (critical_errors)
 			return -2;
@@ -1299,7 +1330,7 @@ int yet_another_pilot::sensor_calibration()
 			return -1;
 		if (detect_acc.new_data(accel))
 			return -1;
-		systimer->delayus(3000);
+		systimer->delayus(1000);
 
 		printf("\r%d/%d", detect_acc.get_average(NULL), calibrating_count);
 
@@ -1415,10 +1446,16 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 
 	attitude_controller.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controller.reset();
-	float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
-	alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
-//	float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
-//	alt_controller.provide_states(alt_state, NAN, euler, throttle_real, LIMIT_NONE, airborne);
+	if (use_alt_estimator2 > 0.5f)
+	{	
+		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
+	else
+	{
+		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};			
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
 	alt_controller.reset();
 	
 
@@ -1513,7 +1550,7 @@ copter_mode yet_another_pilot::submode_from_stick()
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
 			last_submode = airborne ? (estimator.healthy() ? poshold : optical_flow) : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
- 			last_submode = airborne ? optical_flow : althold;
+ 			last_submode = airborne ? althold : althold;
 //			newmode = althold;
 	}
 
@@ -2206,11 +2243,6 @@ void yet_another_pilot::mag_calibrating_worker()
 
 void yet_another_pilot::main_loop(void)
 {
-	read_sensors();
-//	static int n = 0;
-//	if (n++ % 3)
-//		return;
-	
 	// calculate systime interval
 	static int64_t tic = 0;
 	int64_t round_start_tick = systimer->gettime();
@@ -2227,7 +2259,7 @@ void yet_another_pilot::main_loop(void)
 	if (systimer->gettime() - tic > 1000000)
 	{
 		tic = systimer->gettime();
-		LOGE("speed: %d, systime:%.2f\r\n", cycle_counter, systimer->gettime()/1000000.0f);
+		LOGE("speed: %d(%d), systime:%.2f\r\n", cycle_counter, round_running_time, systimer->gettime()/1000000.0f);
 		loop_hz = cycle_counter;
 		cycle_counter = 0;
 	}
@@ -2240,7 +2272,7 @@ void yet_another_pilot::main_loop(void)
 	// read sensors
 	int64_t read_sensor_cost = systimer->gettime();
 	//read_sensors();
-	read_flow();
+	read_sensors();
 	read_sensor_cost = systimer->gettime() - read_sensor_cost;
 	
 	// provide mag calibration with data
@@ -2282,6 +2314,7 @@ void yet_another_pilot::main_loop(void)
 	run_controllers();
 	output();
 	save_logs();
+	handle_cli(vcp);
 
 	if (armed)
 	{
@@ -2307,6 +2340,9 @@ void yet_another_pilot::main_loop(void)
 		}
 	}
 
+	// unlock imu data
+	imu_data_lock = false;
+	
 	round_running_time = systimer->gettime() - round_start_tick;
 	TRACE("\r%d/%d", int(read_sensor_cost), round_running_time);
 }
@@ -2331,7 +2367,7 @@ void yet_another_pilot::sdcard_logging_loop(void)
 	if (res == 0)
 		tick = t;
 }
-
+	
 int yet_another_pilot::setup(void)
 {	
 	range_finder = (IRangeFinder *)manager.get_device("sonar");
@@ -2372,6 +2408,8 @@ int yet_another_pilot::setup(void)
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
 	manager.getTimer("log")->set_period(10000);
 	manager.getTimer("log")->set_callback(sdcard_logging_loop_entry);
+	manager.getTimer("imu")->set_period(1000);
+	manager.getTimer("imu")->set_callback(imu_reading_entry);
 	
 	return 0;
 }

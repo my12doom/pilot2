@@ -37,6 +37,15 @@ void init_led()
 	static F4GPIO f4gpioC0(GPIOC,GPIO_Pin_0);	
 	static GPIOLED flashlight(&f4gpioC0, true);
 	
+	f4gpioC4.set_mode(MODE_OUT_PushPull);
+	
+	while(0)
+	{
+		f4gpioC4.write(true);
+		systimer->delayus(1.5f);
+		f4gpioC4.write(false);
+		systimer->delayus(1.5f);
+	}
 	
 	manager.register_LED("SD",&led_red);
 	manager.register_LED("state",&led_green);
@@ -49,10 +58,12 @@ void init_led()
 
 static F4Timer f4TIM1(TIM1);
 static F4Timer f4TIM2(TIM2);
+static F4Timer f4TIM7(TIM7);
 void init_timers()
 {
 	manager.register_Timer("mainloop", &f4TIM1);
 	manager.register_Timer("log", &f4TIM2);
+	manager.register_Timer("imu", &f4TIM7);
 }
 extern "C" void TIM1_UP_TIM10_IRQHandler(void)
 {
@@ -63,7 +74,10 @@ extern "C" void TIM2_IRQHandler(void)
 {
 	f4TIM2.call_callback();
 }
-//Timer2
+extern "C" void TIM7_IRQHandler(void)
+{
+	f4TIM7.call_callback();
+}
 
 
 //Define UART Funtion:
@@ -396,10 +410,10 @@ int bsp_init_all()
 		// PID
 		param("rP1", 0.2f)=0.45f;
 		param("rI1", 0.3f)=0.45f;
-		param("rD1", 0.005f)=0.01f;
+		param("rD1", 0.005f)=0.02f;
 		param("rP2", 0.36f)=0.55f;
 		param("rI2", 0.4f)=0.55f;
-		param("rD2", 0.01f)=0.01f;
+		param("rD2", 0.01f)=0.02f;
 		param("sP1", 4.5f)=4.5f;
 		param("sP2", 4.5f)=4.5f;
 
