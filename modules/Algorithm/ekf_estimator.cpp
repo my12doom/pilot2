@@ -11,9 +11,11 @@
 #include <Algorithm/ekf_lib/inc/quaternion_to_euler.h>
 #include <Algorithm/ekf_lib/inc/init_quaternion_by_euler.h>
 
-
-ekf_estimator::ekf_estimator():ekf_is_init(false)
+ekf_estimator::ekf_estimator()
 {
+	ekf_is_init=false;
+	ekf_is_convergence=false;
+	ekf_loopcount=0;
 	for(int i=0;i<3;i++)
 	{
 		gyro_bias[i]=0;
@@ -27,7 +29,9 @@ ekf_estimator::ekf_estimator():ekf_is_init(false)
 		Q[i]=0;
 	for(int i=0;i<169;i++)
 		P[i]=0;
-	
+	for(int i=0;i<3;i++)
+		for(int j=0;j<50;j++)
+			que_window[i][j]=0;
 }
 ekf_estimator::~ekf_estimator()
 {
@@ -94,6 +98,56 @@ void ekf_estimator::init(float ax, float ay, float az, float mx, float my, float
 //	gyro_bias[2]=0;
 //	ekf_is_init = true;
 //}
+bool ekf_estimator::ekf_is_ready()
+{
+	if(ekf_is_convergence)
+		return true;
+	else 
+	{
+		float mean[3]={0,0,0};
+		if(ekf_loopcount<1000)
+		ekf_loopcount=ekf_loopcount+1;
+		sqrt_variance[0]=0;
+		sqrt_variance[1]=0;
+		sqrt_variance[2]=0;
+		for(int i=0;i<49;i++)
+		{
+			que_window[0][i]=que_window[0][i+1];
+			que_window[1][i]=que_window[1][i+1];
+			que_window[2][i]=que_window[2][i+1];
+		}
+		que_window[0][49]=ekf_result.roll;
+		que_window[1][49]=ekf_result.pitch;
+		que_window[2][49]=ekf_result.yaw;
+		for(int i=0;i<50;i++)
+		{
+			mean[0]+=que_window[0][i];
+			mean[1]+=que_window[1][i];
+			mean[2]+=que_window[2][i];
+		}
+		mean[0]=mean[0]/50;
+		mean[1]=mean[1]/50;
+		mean[2]=mean[2]/50;
+		for(int i=0;i<50;i++)
+		{
+			sqrt_variance[0]+=(que_window[0][i]-mean[0])*(que_window[0][i]-mean[0]);
+			sqrt_variance[1]+=(que_window[1][i]-mean[1])*(que_window[1][i]-mean[1]);
+			sqrt_variance[2]+=(que_window[2][i]-mean[2])*(que_window[2][i]-mean[2]);
+		}
+		sqrt_variance[0]=sqrt(sqrt_variance[0]);
+		sqrt_variance[1]=sqrt(sqrt_variance[1]);
+		sqrt_variance[2]=sqrt(sqrt_variance[2]);
+		
+		//if loopcount>800*0.005=4s && sqrt_variance(delt angle)<0.05бу
+		if(ekf_loopcount>=800 && sqrt_variance[0]!=0 && sqrt_variance[1]!=0 && sqrt_variance[2]!=0 && sqrt_variance[0]<=0.05f && sqrt_variance[1]<=0.05f && sqrt_variance[2]<=0.05f)
+		{
+			ekf_is_convergence=1;
+			return true;
+		}
+		return false;
+	}
+
+}
 int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,const float dT)
 {	
 	//Declear F G U
@@ -122,8 +176,6 @@ int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,const float dT)
 	Mag_data[2]= mesurement.Mag_z;
 	Pos[0]=mesurement.Pos_GPS_x;
 	Pos[1]=mesurement.Pos_GPS_y;
-	if(isnan(mesurement.Pos_Baro_z))
-		mesurement.Pos_Baro_z=0;
 	Pos[2]=mesurement.Pos_Baro_z;//use baro replace gps_d
 	Vel[0]=mesurement.Vel_GPS_x;
 	Vel[1]=mesurement.Vel_GPS_y;
@@ -160,7 +212,10 @@ int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,const float dT)
 		
 		
 	}
+	//check ekf if is ready to arm
+	ekf_is_ready();
 	return 1;
 }
+
 
 
