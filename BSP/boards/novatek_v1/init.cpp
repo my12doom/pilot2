@@ -54,7 +54,7 @@ void init_led()
 
 static F4Timer f4TIM1(TIM1);
 static F4Timer f4TIM2(TIM2);
-static F4Timer f4TIM2(TIM7);
+static F4Timer f4TIM7(TIM7);
 void init_timers()
 {
 	manager.register_Timer("mainloop", &f4TIM1);
