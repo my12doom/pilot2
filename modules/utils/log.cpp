@@ -9,6 +9,10 @@
 #include <protocol/common.h>
 #include <HAL/Interface/Interfaces.h>
 
+extern "C"
+{
+#include "SEGGER_RTT.h"
+}
 
 FIL *file = NULL;
 FRESULT res;
@@ -214,6 +218,7 @@ int log_printf(const char*format, ...)
 		return count;
 	
 	printf(buffer);
+	SEGGER_RTT_WriteString(0, buffer);
 	
 	return log2(buffer, TAG_TEXT_LOG, count);
 }
