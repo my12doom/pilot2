@@ -1,5 +1,5 @@
 #pragma once
-#include "IUART.h"
+#include <HAL/Interface/IUART.h>
 #include "stm32F4xx_usart.h"
 
 namespace STM32F4

@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include "IStorage.h"
+#include <HAL/Interface/IStorage.h>
 
 namespace STM32F4
 {

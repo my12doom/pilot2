@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "IInterrupt.h"
+#include <HAL/Interface/IInterrupt.h>
 #include "stm32f4xx.h"
 
 namespace STM32F4

@@ -1,5 +1,5 @@
 #pragma once
-#include "IADC.h"
+#include <HAL/Interface/IADC.h>
 #include "stm32F4xx_gpio.h"
 #include "stm32F4xx_adc.h"
 

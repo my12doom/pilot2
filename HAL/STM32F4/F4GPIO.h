@@ -1,5 +1,5 @@
 #pragma once
-#include "IGPIO.h"
+#include <HAL/Interface/IGPIO.h>
 #include "stm32F4xx_gpio.h"
 
 namespace STM32F4

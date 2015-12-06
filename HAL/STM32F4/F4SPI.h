@@ -1,5 +1,5 @@
 #pragma once
-#include "ISPI.h"
+#include <HAL/Interface/ISPI.h>
 #include <stm32f4xx_spi.h>
 
 namespace STM32F4

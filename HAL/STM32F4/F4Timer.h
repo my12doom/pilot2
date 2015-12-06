@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "ITimer.h"
+#include <HAL/Interface/ITimer.h>
 #include "stm32f4xx.h"
 
 namespace STM32F4

@@ -1,6 +1,5 @@
 #pragma once
-#include "ISysTimer.h"
-
+#include <HAL/Interface/ISysTimer.h>
 #include <stdint.h>
 
 namespace STM32F4 
