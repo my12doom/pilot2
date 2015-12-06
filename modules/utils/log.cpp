@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
 #include "log.h"
 
 #include <FileSystem/ff.h>
@@ -211,7 +212,7 @@ int log_printf(const char*format, ...)
 		
 	va_list args;
 	va_start (args, format);
-	int count = vsnprintf (buffer,sizeof(buffer),format, args);
+	int count = vsprintf (buffer,format, args);
 	va_end (args);
 	
 	if (count < 0)

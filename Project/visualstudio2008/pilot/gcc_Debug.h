@@ -359,6 +359,9 @@
 #ifndef __INT_FAST16_TYPE__
 #define __INT_FAST16_TYPE__ int
 #endif
+#ifndef __STRICT_ANSI__
+#define __STRICT_ANSI__ 1
+#endif
 #ifndef __LDBL_HAS_DENORM__
 #define __LDBL_HAS_DENORM__ 1
 #endif
@@ -1069,6 +1072,8 @@
 
 // --- Include directories begin --- //
 //../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver
+//../../..
+//../../../modules
 //.
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/4.8.2/../../../../arm-eabi/include/c++/4.8.2
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/4.8.2/../../../../arm-eabi/include/c++/4.8.2/arm-eabi/thumb/fpu/cortex_m4
@@ -1077,6 +1082,8 @@
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/4.8.2/include-fixed
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/4.8.2/../../../../arm-eabi/sys-include
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/4.8.2/../../../../arm-eabi/include
+//../../../
+//../../../modules/
 // --- Include directories end --- //
 
 

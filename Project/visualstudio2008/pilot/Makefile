@@ -23,7 +23,7 @@ error:
 	$(error Invalid configuration, please check your inputs)
 endif
 
-SOURCEFILES := ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/misc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_adc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_can.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_crc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_cryp.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_cryp_aes.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_cryp_des.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_cryp_tdes.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dac.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dbgmcu.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dcmi.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dma.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dma2d.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_exti.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_flash.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_fsmc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_gpio.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_hash.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_hash_md5.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_hash_sha1.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_i2c.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_iwdg.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_ltdc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_pwr.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_rcc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_rng.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_rtc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_sai.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_sdio.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_spi.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_syscfg.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_tim.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_usart.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_wwdg.c startup_stm32f4xx.c ../../../HAL/STM32F4/STMLib/system_stm32f4xx_APP.c
+SOURCEFILES := ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/misc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_adc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_can.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_crc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_cryp.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_cryp_aes.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_cryp_des.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_cryp_tdes.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dac.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dbgmcu.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dcmi.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dma.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_dma2d.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_exti.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_flash.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_fsmc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_gpio.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_hash.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_hash_md5.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_hash_sha1.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_i2c.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_iwdg.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_ltdc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_pwr.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_rcc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_rng.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_rtc.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_sai.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_sdio.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_spi.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_syscfg.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_tim.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_usart.c ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver/stm32f4xx_wwdg.c startup_stm32f4xx.c ../../../HAL/STM32F4/STMLib/system_stm32f4xx_APP.c ../../../HAL/Interface/I2C_SW.cpp ../../../HAL/Resources.cpp ../../../HAL/STM32F4/F4ADC.cpp ../../../HAL/STM32F4/F4GPIO.cpp ../../../HAL/STM32F4/F4Interrupt.cpp ../../../HAL/STM32F4/F4SDCard.c ../../../HAL/STM32F4/F4SPI.cpp ../../../HAL/STM32F4/F4Storage.cpp ../../../HAL/STM32F4/F4SysTimer.cpp ../../../HAL/STM32F4/F4Timer.cpp ../../../HAL/STM32F4/F4UART.cpp ../../../HAL/STM32F4/F4VCP.cpp ../../../HAL/STM32F4/stm324xg_eval.c ../../../HAL/STM32F4/stm324xg_eval_sdio_sd.c ../../../HAL/sensors/HMC5983SPI.cpp ../../../HAL/sensors/MPU6000.cpp ../../../HAL/sensors/MS5611_SPI.cpp ../../../HAL/sensors/PPMIN.cpp ../../../HAL/sensors/PX4Flow.cpp ../../../HAL/sensors/Sonar.cpp ../../../HAL/sensors/UartNMEAGPS.cpp ../../../HAL/sensors/UartUbloxNMEAGPS.cpp ../../../HAL/STM32F4/usb_comF4/interrupt.c ../../../HAL/STM32F4/usb_comF4/usb_conf/usb_bsp.c ../../../HAL/STM32F4/usb_comF4/otg/usb_core.c ../../../HAL/STM32F4/usb_comF4/otg/usb_dcd.c ../../../HAL/STM32F4/usb_comF4/otg/usb_dcd_int.c ../../../HAL/STM32F4/usb_comF4/cdc/usbd_cdc_core.c ../../../HAL/STM32F4/usb_comF4/cdc/usbd_cdc_vcp.c ../../../HAL/STM32F4/usb_comF4/core/usbd_core.c ../../../HAL/STM32F4/usb_comF4/usb_conf/usbd_desc.c ../../../HAL/STM32F4/usb_comF4/core/usbd_ioreq.c ../../../HAL/STM32F4/usb_comF4/core/usbd_req.c ../../../HAL/STM32F4/usb_comF4/usb_conf/usbd_usr.c ../../../modules/utils/console.cpp ../../../modules/utils/gauss_newton.cpp ../../../modules/utils/log.cpp ../../../modules/math/LowPassFilter2p.cpp ../../../modules/math/matrix.cpp ../../../modules/utils/param.cpp ../../../modules/utils/SEGGER_RTT.c ../../../modules/utils/space.cpp ../../../modules/utils/vector.c ../../../modules/Algorithm/ahrs.cpp ../../../modules/Algorithm/altitude_controller.cpp ../../../modules/Algorithm/altitude_estimator.cpp ../../../modules/Algorithm/altitude_estimator2.cpp ../../../modules/Algorithm/attitude_controller.cpp ../../../modules/Algorithm/battery_estimator.cpp ../../../modules/Algorithm/ekf_estimator.cpp ../../../modules/Algorithm/mag_calibration.cpp ../../../modules/Algorithm/motion_detector.cpp ../../../modules/Algorithm/motor_mixer.cpp ../../../modules/Algorithm/of_controller.cpp ../../../modules/Algorithm/of_controller2.cpp ../../../modules/Algorithm/pos_controll.cpp ../../../modules/Algorithm/pos_estimator.cpp ../../../modules/Algorithm/ekf_lib/src/ekf_13state_initialize.c ../../../modules/Algorithm/ekf_lib/src/ekf_13state_terminate.c ../../../modules/Algorithm/ekf_lib/src/f.c ../../../modules/Algorithm/ekf_lib/src/h.c ../../../modules/Algorithm/ekf_lib/src/init_ekf_matrix.c ../../../modules/Algorithm/ekf_lib/src/init_quaternion_by_euler.c ../../../modules/Algorithm/ekf_lib/src/INS_Correction.c ../../../modules/Algorithm/ekf_lib/src/INS_CovariancePrediction.c ../../../modules/Algorithm/ekf_lib/src/INS_SetState.c ../../../modules/Algorithm/ekf_lib/src/INSSetMagNorth.c ../../../modules/Algorithm/ekf_lib/src/inv.c ../../../modules/Algorithm/ekf_lib/src/LinearFG.c ../../../modules/Algorithm/ekf_lib/src/LinearizeH.c ../../../modules/Algorithm/ekf_lib/src/normlise_quaternion.c ../../../modules/Algorithm/ekf_lib/src/quaternion_to_euler.c ../../../modules/Algorithm/ekf_lib/src/rt_nonfinite.c ../../../modules/Algorithm/ekf_lib/src/rtGetInf.c ../../../modules/Algorithm/ekf_lib/src/rtGetNaN.c ../../../modules/Algorithm/ekf_lib/src/RungeKutta.c ../../../modules/Algorithm/ekf_lib/src/SerialUpdate.c ../../../modules/FileSystem/ff.c ../../../modules/NMEA/context.c ../../../modules/NMEA/gmath.c ../../../modules/NMEA/info.c ../../../modules/NMEA/parse.c ../../../modules/NMEA/parser.c ../../../modules/NMEA/sentence.c ../../../modules/NMEA/time.c ../../../modules/NMEA/tok.c ../../../modules/main/pilot.cpp ../../../BSP/boards/byd/AsyncWorker.cpp ../../../BSP/boards/byd/init.cpp ../../../BSP/boards/byd/RCOUT.cpp ../../../BSP/boards/byd/RGBLED.cpp
 EXTERNAL_LIBS := 
 EXTERNAL_LIBS_COPIED := $(foreach lib, $(EXTERNAL_LIBS),$(BINARYDIR)/$(notdir $(lib)))
 
@@ -303,4 +303,368 @@ $(BINARYDIR)/stm32f4xx_wwdg.o : ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_
 
 $(BINARYDIR)/system_stm32f4xx_APP.o : ../../../HAL/STM32F4/STMLib/system_stm32f4xx_APP.c $(all_make_files) |$(BINARYDIR)
 	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/I2C_SW.o : ../../../HAL/Interface/I2C_SW.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/Resources.o : ../../../HAL/Resources.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4ADC.o : ../../../HAL/STM32F4/F4ADC.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4GPIO.o : ../../../HAL/STM32F4/F4GPIO.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4Interrupt.o : ../../../HAL/STM32F4/F4Interrupt.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4SDCard.o : ../../../HAL/STM32F4/F4SDCard.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4SPI.o : ../../../HAL/STM32F4/F4SPI.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4Storage.o : ../../../HAL/STM32F4/F4Storage.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4SysTimer.o : ../../../HAL/STM32F4/F4SysTimer.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4Timer.o : ../../../HAL/STM32F4/F4Timer.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4UART.o : ../../../HAL/STM32F4/F4UART.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/F4VCP.o : ../../../HAL/STM32F4/F4VCP.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/stm324xg_eval.o : ../../../HAL/STM32F4/stm324xg_eval.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/stm324xg_eval_sdio_sd.o : ../../../HAL/STM32F4/stm324xg_eval_sdio_sd.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/HMC5983SPI.o : ../../../HAL/sensors/HMC5983SPI.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/MPU6000.o : ../../../HAL/sensors/MPU6000.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/MS5611_SPI.o : ../../../HAL/sensors/MS5611_SPI.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/PPMIN.o : ../../../HAL/sensors/PPMIN.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/PX4Flow.o : ../../../HAL/sensors/PX4Flow.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/Sonar.o : ../../../HAL/sensors/Sonar.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/UartNMEAGPS.o : ../../../HAL/sensors/UartNMEAGPS.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/UartUbloxNMEAGPS.o : ../../../HAL/sensors/UartUbloxNMEAGPS.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/interrupt.o : ../../../HAL/STM32F4/usb_comF4/interrupt.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usb_bsp.o : ../../../HAL/STM32F4/usb_comF4/usb_conf/usb_bsp.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usb_core.o : ../../../HAL/STM32F4/usb_comF4/otg/usb_core.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usb_dcd.o : ../../../HAL/STM32F4/usb_comF4/otg/usb_dcd.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usb_dcd_int.o : ../../../HAL/STM32F4/usb_comF4/otg/usb_dcd_int.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usbd_cdc_core.o : ../../../HAL/STM32F4/usb_comF4/cdc/usbd_cdc_core.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usbd_cdc_vcp.o : ../../../HAL/STM32F4/usb_comF4/cdc/usbd_cdc_vcp.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usbd_core.o : ../../../HAL/STM32F4/usb_comF4/core/usbd_core.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usbd_desc.o : ../../../HAL/STM32F4/usb_comF4/usb_conf/usbd_desc.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usbd_ioreq.o : ../../../HAL/STM32F4/usb_comF4/core/usbd_ioreq.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usbd_req.o : ../../../HAL/STM32F4/usb_comF4/core/usbd_req.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/usbd_usr.o : ../../../HAL/STM32F4/usb_comF4/usb_conf/usbd_usr.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/console.o : ../../../modules/utils/console.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/gauss_newton.o : ../../../modules/utils/gauss_newton.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/log.o : ../../../modules/utils/log.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/LowPassFilter2p.o : ../../../modules/math/LowPassFilter2p.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/matrix.o : ../../../modules/math/matrix.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/param.o : ../../../modules/utils/param.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/SEGGER_RTT.o : ../../../modules/utils/SEGGER_RTT.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/space.o : ../../../modules/utils/space.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/vector.o : ../../../modules/utils/vector.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/ahrs.o : ../../../modules/Algorithm/ahrs.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/altitude_controller.o : ../../../modules/Algorithm/altitude_controller.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/altitude_estimator.o : ../../../modules/Algorithm/altitude_estimator.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/altitude_estimator2.o : ../../../modules/Algorithm/altitude_estimator2.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/attitude_controller.o : ../../../modules/Algorithm/attitude_controller.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/battery_estimator.o : ../../../modules/Algorithm/battery_estimator.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/ekf_estimator.o : ../../../modules/Algorithm/ekf_estimator.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/mag_calibration.o : ../../../modules/Algorithm/mag_calibration.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/motion_detector.o : ../../../modules/Algorithm/motion_detector.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/motor_mixer.o : ../../../modules/Algorithm/motor_mixer.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/of_controller.o : ../../../modules/Algorithm/of_controller.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/of_controller2.o : ../../../modules/Algorithm/of_controller2.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/pos_controll.o : ../../../modules/Algorithm/pos_controll.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/pos_estimator.o : ../../../modules/Algorithm/pos_estimator.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/ekf_13state_initialize.o : ../../../modules/Algorithm/ekf_lib/src/ekf_13state_initialize.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/ekf_13state_terminate.o : ../../../modules/Algorithm/ekf_lib/src/ekf_13state_terminate.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/f.o : ../../../modules/Algorithm/ekf_lib/src/f.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/h.o : ../../../modules/Algorithm/ekf_lib/src/h.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/init_ekf_matrix.o : ../../../modules/Algorithm/ekf_lib/src/init_ekf_matrix.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/init_quaternion_by_euler.o : ../../../modules/Algorithm/ekf_lib/src/init_quaternion_by_euler.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/INS_Correction.o : ../../../modules/Algorithm/ekf_lib/src/INS_Correction.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/INS_CovariancePrediction.o : ../../../modules/Algorithm/ekf_lib/src/INS_CovariancePrediction.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/INS_SetState.o : ../../../modules/Algorithm/ekf_lib/src/INS_SetState.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/INSSetMagNorth.o : ../../../modules/Algorithm/ekf_lib/src/INSSetMagNorth.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/inv.o : ../../../modules/Algorithm/ekf_lib/src/inv.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/LinearFG.o : ../../../modules/Algorithm/ekf_lib/src/LinearFG.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/LinearizeH.o : ../../../modules/Algorithm/ekf_lib/src/LinearizeH.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/normlise_quaternion.o : ../../../modules/Algorithm/ekf_lib/src/normlise_quaternion.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/quaternion_to_euler.o : ../../../modules/Algorithm/ekf_lib/src/quaternion_to_euler.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/rt_nonfinite.o : ../../../modules/Algorithm/ekf_lib/src/rt_nonfinite.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/rtGetInf.o : ../../../modules/Algorithm/ekf_lib/src/rtGetInf.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/rtGetNaN.o : ../../../modules/Algorithm/ekf_lib/src/rtGetNaN.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/RungeKutta.o : ../../../modules/Algorithm/ekf_lib/src/RungeKutta.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/SerialUpdate.o : ../../../modules/Algorithm/ekf_lib/src/SerialUpdate.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/ff.o : ../../../modules/FileSystem/ff.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/context.o : ../../../modules/NMEA/context.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/gmath.o : ../../../modules/NMEA/gmath.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/info.o : ../../../modules/NMEA/info.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/parse.o : ../../../modules/NMEA/parse.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/parser.o : ../../../modules/NMEA/parser.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/sentence.o : ../../../modules/NMEA/sentence.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/time.o : ../../../modules/NMEA/time.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/tok.o : ../../../modules/NMEA/tok.c $(all_make_files) |$(BINARYDIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/pilot.o : ../../../modules/main/pilot.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/AsyncWorker.o : ../../../BSP/boards/byd/AsyncWorker.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/init.o : ../../../BSP/boards/byd/init.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/RCOUT.o : ../../../BSP/boards/byd/RCOUT.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
+
+
+$(BINARYDIR)/RGBLED.o : ../../../BSP/boards/byd/RGBLED.cpp $(all_make_files) |$(BINARYDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@ -MD -MF $(@:.o=.dep)
 

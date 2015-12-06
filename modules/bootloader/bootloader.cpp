@@ -316,14 +316,20 @@ int handle_uart(HAL::IUART &uart1)
 int main()	
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
+	PWR_BackupAccessCmd(ENABLE);
+
 	//RDP();
-	uart1.set_baudrate(115200);
 	check_sdcard();
 	led.write(0,0,0);
 	
 	//if (check_rom_crc())
+	void * bkp = (void*)0x40024000;
+	if (memcmp(bkp, "hello", 6))
 		run_rom();
 	
+	//uart1.set_baudrate(115200);
 	F4UART vcp(USART1);
 	while(1)
 	{
@@ -340,7 +346,7 @@ void run_rom()
     { 
         // TODO: close all BSP
 		uart1.destroy();
-		NVIC_DisableIRQ(SysTick_IRQn);
+		SysTick->CTRL  &= ~SysTick_CTRL_ENABLE_Msk;                    // Disable SysTick
 		
 		FLASH_Lock();
 

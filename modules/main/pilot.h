@@ -82,12 +82,12 @@ public:
 	int64_t last_gps_tick;// = 0;
 	pos_estimator estimator;
 	pos_controller controller;
-	attitude_controller attitude_controller;
+	attitude_controller attitude_controll;
 	altitude_estimator alt_estimator;
 	altitude_estimator2 alt_estimator2;
 	altitude_controller alt_controller;
 	OpticalFlowController2 of_controller;
-	ekf_estimator ekf_estimator;
+	ekf_estimator ekf_est;
 	battery_estimator batt;
 	
 	float ground_speed_north;		// unit: m/s

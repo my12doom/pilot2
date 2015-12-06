@@ -6,15 +6,15 @@ BINARYDIR := Release
 
 #Additional flags
 PREPROCESSOR_MACROS := NDEBUG RELEASE STM32F40_41xxx USE_STDPERIPH_DRIVER
-INCLUDE_DIRS := STMLib/STM32F4xx_StdPeriph_Driver
+INCLUDE_DIRS := ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver ../../../ ../../../modules/
 LIBRARY_DIRS := 
 LIBRARY_NAMES := 
 ADDITIONAL_LINKER_INPUTS := 
 MACOS_FRAMEWORKS := 
 LINUX_PACKAGES := 
 
-CFLAGS := -ggdb -ffunction-sections -O3 -ffunction-sections -fdata-sections
-CXXFLAGS := -ggdb -ffunction-sections -fno-exceptions -fno-rtti -O3 -ffunction-sections -fdata-sections
+CFLAGS := -ggdb -ffunction-sections -O3 -ffunction-sections -fdata-sections  -std=c99
+CXXFLAGS := -ggdb -ffunction-sections -fno-exceptions -fno-rtti -O3 -ffunction-sections -fdata-sections  -std=c++98
 ASFLAGS := 
 LDFLAGS := -Wl,-gc-sections
 COMMONFLAGS := 

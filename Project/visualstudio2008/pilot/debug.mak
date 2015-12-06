@@ -6,15 +6,15 @@ BINARYDIR := Debug
 
 #Additional flags
 PREPROCESSOR_MACROS := DEBUG STM32F40_41xxx USE_STDPERIPH_DRIVER
-INCLUDE_DIRS := ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver
+INCLUDE_DIRS := ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver ../../../ ../../../modules/
 LIBRARY_DIRS := 
 LIBRARY_NAMES := 
 ADDITIONAL_LINKER_INPUTS := 
 MACOS_FRAMEWORKS := 
 LINUX_PACKAGES := 
 
-CFLAGS := -ggdb -ffunction-sections -O0
-CXXFLAGS := -ggdb -ffunction-sections -fno-exceptions -fno-rtti -O0
+CFLAGS := -ggdb -ffunction-sections -O0 -std=c99
+CXXFLAGS := -ggdb -ffunction-sections -fno-exceptions -fno-rtti -O0 -std=c++98
 ASFLAGS := 
 LDFLAGS := -Wl,-gc-sections
 COMMONFLAGS := 

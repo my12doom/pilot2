@@ -94,9 +94,9 @@ int pos_controller::set_desired_velocity(float *desired_velocity)
 int pos_controller::set_desired_stick(float *stick)
 {
 	float desired_velocity[2] = {stick[1] * 5, stick[0] * 5};
-	if (abs(desired_velocity[0]) < 0.4f)
+	if (fabs(desired_velocity[0]) < 0.4f)
 		desired_velocity[0] = 0;
-	if (abs(desired_velocity[1]) < 0.4f)
+	if (fabs(desired_velocity[1]) < 0.4f)
 		desired_velocity[1] = 0;
 
 	set_desired_velocity(desired_velocity);

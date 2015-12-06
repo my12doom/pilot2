@@ -215,7 +215,7 @@ int yet_another_pilot::calculate_baro_altitude()
 
 int yet_another_pilot::run_controllers()
 {
-	attitude_controller.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	attitude_controll.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	
 	// airborne or armed and throttle up
 	bool after_unlock_action = airborne || rc[2] > 0.55f;
@@ -273,12 +273,12 @@ int yet_another_pilot::run_controllers()
 		if (after_unlock_action)	// airborne or armed and throttle up
 		{
 			float stick[3] = {rc[0], rc[1], NAN};
-			attitude_controller.update_target_from_stick(stick, interval);
+			attitude_controll.update_target_from_stick(stick, interval);
 		}
 		else
 		{
 			float euler_target[3] = {0,0, NAN};
-			attitude_controller.set_euler_target(euler_target);
+			attitude_controll.set_euler_target(euler_target);
 		}
 	}
 
@@ -304,7 +304,7 @@ int yet_another_pilot::run_controllers()
 			of_controller.update_controller(vx, vy, stick_roll, stick_pitch, interval);
 			float euler_target[3] = {0,0, NAN};
 			of_controller.get_result(&euler_target[0], &euler_target[1]);
-			attitude_controller.set_euler_target(euler_target);
+			attitude_controll.set_euler_target(euler_target);
 
 			float pixel_compensated[6] = {pixel_compensated_x, pixel_compensated_y, wx, wy, vx, vy};
 			log2(pixel_compensated, 10, sizeof(pixel_compensated));
@@ -312,7 +312,7 @@ int yet_another_pilot::run_controllers()
 		else
 		{
 			float euler_target[3] = {0,0, euler[2]};
-			attitude_controller.set_euler_target(euler_target);
+			attitude_controll.set_euler_target(euler_target);
 		}
 
 		// TODO : handle yaw flow
@@ -324,7 +324,7 @@ int yet_another_pilot::run_controllers()
 		float euler_target[3] = {0,0, NAN};
 		euler_target[0] = bluetooth_roll;
 		euler_target[1] = bluetooth_pitch;
-		attitude_controller.set_euler_target(euler_target);
+		attitude_controll.set_euler_target(euler_target);
 	}
 	else if (submode == poshold)
 	{
@@ -341,10 +341,10 @@ int yet_another_pilot::run_controllers()
 				float ne_velocity[2];
 				if(use_EKF > 0.5f)
 				{
-					ne_pos[0]= ekf_estimator.ekf_result.Pos_x;
-					ne_pos[1]=ekf_estimator.ekf_result.Pos_y;
-					ne_velocity[0] = ekf_estimator.ekf_result.Vel_x;
-					ne_velocity[1] = ekf_estimator.ekf_result.Vel_y;
+					ne_pos[0]= ekf_est.ekf_result.Pos_x;
+					ne_pos[1]=ekf_est.ekf_result.Pos_y;
+					ne_velocity[0] = ekf_est.ekf_result.Vel_x;
+					ne_velocity[1] = ekf_est.ekf_result.Vel_y;
 				}
 				else
 				{
@@ -365,7 +365,7 @@ int yet_another_pilot::run_controllers()
 				controller.update_controller(dt);
 				controller.get_target_angles(euler_target);
 				euler_target[2] = NAN;
-				attitude_controller.set_euler_target(euler_target);
+				attitude_controll.set_euler_target(euler_target);
 			}
 		}
 	}
@@ -374,12 +374,12 @@ int yet_another_pilot::run_controllers()
 	if (after_unlock_action)	// airborne or armed and throttle up
 	{
 		float yaw_array[3] = {NAN, NAN, rc[3]};
-		attitude_controller.update_target_from_stick(yaw_array, interval);
+		attitude_controll.update_target_from_stick(yaw_array, interval);
 	}
 	else
 	{
 		float yaw_array[3] = {NAN, NAN, euler[2]};
-		attitude_controller.set_euler_target(yaw_array);
+		attitude_controll.set_euler_target(yaw_array);
 	}
 
 	// check airborne
@@ -390,7 +390,7 @@ int yet_another_pilot::run_controllers()
 		airborne = true;
 	}
 	
-	attitude_controller.update(interval);
+	attitude_controll.update(interval);
 
 	return 0;
 }
@@ -402,7 +402,7 @@ int yet_another_pilot::output()
 {
 	float pid_result[3];
 	motor_saturated = false;
-	attitude_controller.get_result(pid_result);
+	attitude_controll.get_result(pid_result);
 	if (armed)
 	{
 		int matrix = (float)motor_matrix;
@@ -559,8 +559,8 @@ int yet_another_pilot::save_logs()
 	{
 		alt_estimator.state[0] * 100,
 		0,//airspeed_sensor_data * 1000,
-		{attitude_controller.pid[0][0]*180*100/PI, attitude_controller.pid[1][0]*180*100/PI, attitude_controller.pid[2][0]*180*100/PI},
-		{attitude_controller.body_rate_sp[0]*180*100/PI, attitude_controller.body_rate_sp[1]*180*100/PI, attitude_controller.body_rate_sp[2]*180*100/PI},
+		{attitude_controll.pid[0][0]*180*100/PI, attitude_controll.pid[1][0]*180*100/PI, attitude_controll.pid[2][0]*180*100/PI},
+		{attitude_controll.body_rate_sp[0]*180*100/PI, attitude_controll.body_rate_sp[1]*180*100/PI, attitude_controll.body_rate_sp[2]*180*100/PI},
 		armed ? 1 : 0,
 		mah_consumed,
 	};
@@ -569,8 +569,8 @@ int yet_another_pilot::save_logs()
 
 	pilot_data2 pilot2 = 
 	{
-		{attitude_controller.pid[0][1]*180*100/PI, attitude_controller.pid[1][1]*180*100/PI, attitude_controller.pid[2][1]*180*100/PI},
-		{attitude_controller.pid[0][2]*180*100/PI, attitude_controller.pid[1][2]*180*100/PI, attitude_controller.pid[2][2]*180*100/PI},
+		{attitude_controll.pid[0][1]*180*100/PI, attitude_controll.pid[1][1]*180*100/PI, attitude_controll.pid[2][1]*180*100/PI},
+		{attitude_controll.pid[0][2]*180*100/PI, attitude_controll.pid[1][2]*180*100/PI, attitude_controll.pid[2][2]*180*100/PI},
 	};
 
 	log(&pilot2, TAG_PILOT_DATA2, systime);
@@ -585,11 +585,11 @@ int yet_another_pilot::save_logs()
 	
 	ekf_data ekf =
 	{
-		{ekf_estimator.ekf_result.roll* 18000/PI,ekf_estimator.ekf_result.pitch* 18000/PI,ekf_estimator.ekf_result.yaw* 18000/PI},
+		{ekf_est.ekf_result.roll* 18000/PI,ekf_est.ekf_result.pitch* 18000/PI,ekf_est.ekf_result.yaw* 18000/PI},
 		estimator.get_raw_meter().latitude*100,estimator.get_raw_meter().longtitude*100,
 		ground_speed_north*1000,ground_speed_east*1000,
-		{ekf_estimator.ekf_result.Pos_x*100,ekf_estimator.ekf_result.Pos_y*100,ekf_estimator.ekf_result.Pos_z*100},
-		{ekf_estimator.ekf_result.Vel_x*1000,ekf_estimator.ekf_result.Vel_y*1000,ekf_estimator.ekf_result.Vel_z*1000},
+		{ekf_est.ekf_result.Pos_x*100,ekf_est.ekf_result.Pos_y*100,ekf_est.ekf_result.Pos_z*100},
+		{ekf_est.ekf_result.Vel_x*1000,ekf_est.ekf_result.Vel_y*1000,ekf_est.ekf_result.Vel_z*1000},
 	};
 	
 	log2(&ekf, TAG_EKF_DATA,sizeof(ekf));
@@ -597,9 +597,9 @@ int yet_another_pilot::save_logs()
 	quadcopter_data quad = 
 	{
 		euler[0] * 18000/PI, euler[1] * 18000/PI, euler[2] * 18000/PI,
-		attitude_controller.euler_sp[0] * 18000/PI, attitude_controller.euler_sp[1] * 18000/PI, attitude_controller.euler_sp[2] * 18000/PI,
+		attitude_controll.euler_sp[0] * 18000/PI, attitude_controll.euler_sp[1] * 18000/PI, attitude_controll.euler_sp[2] * 18000/PI,
 		body_rate.array[0] * 18000/PI, body_rate.array[1] * 18000/PI, body_rate.array[2] * 18000/PI,
-		attitude_controller.body_rate_sp[0] * 18000/PI,  attitude_controller.body_rate_sp[1] * 18000/PI, attitude_controller.body_rate_sp[2] * 18000/PI, 
+		attitude_controll.body_rate_sp[0] * 18000/PI,  attitude_controll.body_rate_sp[1] * 18000/PI, attitude_controll.body_rate_sp[2] * 18000/PI, 
 	};
 
 	log(&quad, TAG_QUADCOPTER_DATA, systime);
@@ -1183,7 +1183,7 @@ int yet_another_pilot::calculate_state()
 	
 	int64_t t = systimer->gettime();
 	if (use_EKF > 0.5f)
-		ekf_estimator.update(ekf_u,ekf_mesurement,interval);
+		ekf_est.update(ekf_u,ekf_mesurement,interval);
 	t = systimer->gettime() - t;
 	//printf("%f,%d\r\n",interval, int(t));
 
@@ -1201,9 +1201,9 @@ int yet_another_pilot::calculate_state()
 
 	if (use_EKF > 0.5f)
 	{
-		euler[0] = radian_add(ekf_estimator.ekf_result.roll, quadcopter_trim[0]);
-		euler[1] = radian_add(ekf_estimator.ekf_result.pitch, quadcopter_trim[1]);
-		euler[2] = radian_add(ekf_estimator.ekf_result.yaw, quadcopter_trim[2]);
+		euler[0] = radian_add(ekf_est.ekf_result.roll, quadcopter_trim[0]);
+		euler[1] = radian_add(ekf_est.ekf_result.pitch, quadcopter_trim[1]);
+		euler[2] = radian_add(ekf_est.ekf_result.yaw, quadcopter_trim[2]);
 	}
 	else
 	{
@@ -1425,7 +1425,7 @@ int yet_another_pilot::sensor_calibration()
 		mag_avg.V.x, mag_avg.V.y, mag_avg.V.z, 
 		gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
 
-	ekf_estimator.init(-1*accel_avg.V.x, -1*accel_avg.V.y, -1*accel_avg.V.z,-1*mag_avg.V.x, -1*mag_avg.V.y, mag_avg.V.z,gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
+	ekf_est.init(-1*accel_avg.V.x, -1*accel_avg.V.y, -1*accel_avg.V.z,-1*mag_avg.V.x, -1*mag_avg.V.y, mag_avg.V.z,gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
 	
 	return 0;
 }
@@ -1456,7 +1456,7 @@ int yet_another_pilot::set_submode(copter_mode newmode)
 		controller.get_target_angles(euler_target);
 		controller.reset();
 		euler_target[2] = NAN;
-		attitude_controller.set_euler_target(euler_target);
+		attitude_controll.set_euler_target(euler_target);
 	}
 
 	if (!has_alt_controller && to_use_alt_controller)
@@ -1480,10 +1480,10 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 {
 	if (arm == armed)
 		return 0;
-	if (use_EKF > 0.5f && !ekf_estimator.ekf_is_ready())
+	if (use_EKF > 0.5f && !ekf_est.ekf_is_ready())
 		return -1;
-	attitude_controller.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
-	attitude_controller.reset();
+	attitude_controll.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	attitude_controll.reset();
 	if (use_alt_estimator2 > 0.5f)
 	{	
 		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};

@@ -111,8 +111,8 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 		{
 			float delta_yaw = ((fabs(stick[2]) < yaw_dead_band) ? 0 : stick[2]) * dt * QUADCOPTER_ACRO_YAW_RATE;
 			float new_target = radian_add(euler_sp[2], delta_yaw);
-			float old_error = abs(radian_sub(euler_sp[2], euler[2]));
-			float new_error = abs(radian_sub(new_target, euler[2]));
+			float old_error = fabs(radian_sub(euler_sp[2], euler[2]));
+			float new_error = fabs(radian_sub(new_target, euler[2]));
 			if (new_error < ((airborne&&!motor_state)?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) || new_error < old_error)	// decrease max allowed yaw offset if any motor saturated
 				euler_sp[2] = new_target;
 		}

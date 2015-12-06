@@ -83,7 +83,7 @@
         </KeyValue>
         <KeyValue>
           <Key>com.sysprogs.jlink.targetinterface</Key>
-          <Value>JTAG</Value>
+          <Value>SWD</Value>
         </KeyValue>
         <KeyValue>
           <Key>com.sysprogs.jlink.speed</Key>
