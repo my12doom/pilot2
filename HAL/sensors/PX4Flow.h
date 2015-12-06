@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <Interfaces.h>
-#include <HAL\Interface\IFlow.h>
+#include <HAL/Interface/Interfaces.h>
+#include <HAL/Interface/IFlow.h>
 
 namespace sensors
 {

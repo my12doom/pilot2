@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <Interfaces.h>
+#include <HAL/Interface/Interfaces.h>
 #include <HAL/Interface/IBarometer.h>
 
 namespace sensors
