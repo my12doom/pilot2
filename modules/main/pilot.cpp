@@ -337,10 +337,22 @@ int yet_another_pilot::run_controllers()
 			if (dt < 1.0f)
 			{
 				position_meter meter = estimator.get_estimation_meter();
-
-
-				float ne_pos[2] = {meter.latitude, meter.longtitude};
-				float ne_velocity[2] = {meter.vlatitude, meter.vlongtitude};
+				float ne_pos[2];
+				float ne_velocity[2];
+				if(use_EKF > 0.5f)
+				{
+					ne_pos[0]= ekf_estimator.ekf_result.Pos_x;
+					ne_pos[1]=ekf_estimator.ekf_result.Pos_y;
+					ne_velocity[0] = ekf_estimator.ekf_result.Vel_x;
+					ne_velocity[1] = ekf_estimator.ekf_result.Vel_y;
+				}
+				else
+				{
+					ne_pos[0]= meter.latitude;
+					ne_pos[1]= meter.longtitude;
+					ne_velocity[0] = meter.vlatitude;
+					ne_velocity[1] = meter.vlongtitude;
+				}
 				float desired_velocity[2] = {rc[1] * 5, rc[0] * 5};
 				if (abs(desired_velocity[0]) < 0.4f)
 					desired_velocity[0] = 0;
@@ -573,12 +585,13 @@ int yet_another_pilot::save_logs()
 	
 	ekf_data ekf =
 	{
-		ekf_estimator.ekf_result.roll* 18000/PI,ekf_estimator.ekf_result.pitch* 18000/PI,ekf_estimator.ekf_result.yaw* 18000/PI,
+		{ekf_estimator.ekf_result.roll* 18000/PI,ekf_estimator.ekf_result.pitch* 18000/PI,ekf_estimator.ekf_result.yaw* 18000/PI},
 		estimator.get_raw_meter().latitude*100,estimator.get_raw_meter().longtitude*100,
 		ground_speed_north*1000,ground_speed_east*1000,
-		ekf_estimator.ekf_result.Pos_x*100,ekf_estimator.ekf_result.Pos_y*100,ekf_estimator.ekf_result.Pos_z*100,
-		ekf_estimator.ekf_result.Vel_x*1000,ekf_estimator.ekf_result.Vel_y*1000,ekf_estimator.ekf_result.Vel_z*1000,
+		{ekf_estimator.ekf_result.Pos_x*100,ekf_estimator.ekf_result.Pos_y*100,ekf_estimator.ekf_result.Pos_z*100},
+		{ekf_estimator.ekf_result.Vel_x*1000,ekf_estimator.ekf_result.Vel_y*1000,ekf_estimator.ekf_result.Vel_z*1000},
 	};
+	
 	log2(&ekf, TAG_EKF_DATA,sizeof(ekf));
 	
 	quadcopter_data quad = 
@@ -1151,11 +1164,22 @@ int yet_another_pilot::calculate_state()
 	ekf_mesurement.Mag_x=mag.array[0];
 	ekf_mesurement.Mag_y=mag.array[1];
 	ekf_mesurement.Mag_z=mag.array[2];
-	ekf_mesurement.Pos_GPS_x=0;
-	ekf_mesurement.Pos_GPS_y=0;
+
 	ekf_mesurement.Pos_Baro_z=a_raw_altitude;
-	ekf_mesurement.Vel_GPS_x=0;
-	ekf_mesurement.Vel_GPS_y=0;
+	if(estimator.home_set)
+	{
+		ekf_mesurement.Pos_GPS_x=estimator.get_raw_meter().latitude;
+		ekf_mesurement.Pos_GPS_y=estimator.get_raw_meter().longtitude;
+		ekf_mesurement.Vel_GPS_x=ground_speed_north;
+		ekf_mesurement.Vel_GPS_y=ground_speed_east;
+	}
+	else
+	{	
+		ekf_mesurement.Pos_GPS_x=0;
+		ekf_mesurement.Pos_GPS_y=0;		
+		ekf_mesurement.Vel_GPS_x=0;
+		ekf_mesurement.Vel_GPS_y=0;
+	}
 	
 	int64_t t = systimer->gettime();
 	if (use_EKF > 0.5f)
@@ -1456,7 +1480,8 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 {
 	if (arm == armed)
 		return 0;
-
+	if (use_EKF > 0.5f && !ekf_estimator.ekf_is_ready())
+		return -1;
 	attitude_controller.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controller.reset();
 	if (use_alt_estimator2 > 0.5f)
