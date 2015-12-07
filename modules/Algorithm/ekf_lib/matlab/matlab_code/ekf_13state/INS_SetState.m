@@ -1,0 +1,15 @@
+function X = INS_SetState(p_x,p_y,p_z,v_x,v_y,v_z,q0,q1,q2,q3,gyro_x_bias,gyro_y_bias,gyro_z_bias)
+X=zeros(13,1);
+X(1)=p_x;
+X(2)=p_y;
+X(3)=p_z;
+X(4)=v_x;
+X(5)=v_y;
+X(6)=v_z;
+X(7)=q0;
+X(8)=q1;
+X(9)=q2;
+X(10)=q3;
+X(11)=gyro_x_bias;
+X(12)=gyro_y_bias;
+X(13)=gyro_z_bias;
