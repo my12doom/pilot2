@@ -215,7 +215,7 @@ int yet_another_pilot::calculate_baro_altitude()
 
 int yet_another_pilot::run_controllers()
 {
-	attitude_controll.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : NULL, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	
 	// airborne or armed and throttle up
 	bool after_unlock_action = airborne || rc[2] > 0.55f;
@@ -1481,8 +1481,11 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	if (arm == armed)
 		return 0;
 	if (use_EKF > 0.5f && !ekf_est.ekf_is_ready())
+	{
+		LOGE("arm failed: EKF not ready\n");
 		return -1;
-	attitude_controll.provide_states(euler, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	}
+	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : NULL, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controll.reset();
 	if (use_alt_estimator2 > 0.5f)
 	{	
@@ -1507,6 +1510,9 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	
 	armed = arm;
 	set_submode(submode_from_stick());
+	
+	LOGE("arm OK\n");
+	
 	return 0;
 }
 
@@ -1678,12 +1684,12 @@ int yet_another_pilot::check_stick()
 				if (armed)
 				{
 					disarm();
-					LOGE("disarmed!\n");
+					LOGE("stick disarm!\n");
 				}
 				else
 				{
 					arm();
-					LOGE("armed!\n");
+					LOGE("stick arm!\n");
 				}
 			}
 		}
@@ -2427,6 +2433,7 @@ int yet_another_pilot::setup(void)
 	STOP_ALL_MOTORS();
 	
 	estimator.set_gps_latency(0);
+	attitude_controll.set_quaternion_mode(use_EKF > 0.5f);
 	SAFE_ON(flashlight);
 
 
@@ -2440,6 +2447,9 @@ int yet_another_pilot::setup(void)
 
 	SAFE_OFF(flashlight);
 	read_rc();
+	for(int i=0; i<6; i++)
+		if (g_pwm_input_update[i] < systimer->gettime() - 200000)
+			critical_errors |= error_RC;
 	
 	// get two timers, one for main loop and one for SDCARD logging loop
 	manager.getTimer("mainloop")->set_period(cycle_time);

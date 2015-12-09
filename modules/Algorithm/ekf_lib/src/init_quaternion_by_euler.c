@@ -52,6 +52,14 @@ void init_quaternion_by_euler(float roll, float pitch, float yaw, float *q0,
   *q3 = (real32_T)sin(yaw / 2.0F) * (real32_T)cos(pitch / 2.0F) * (real32_T)cos
     (roll / 2.0F) - (real32_T)cos(yaw / 2.0F) * (real32_T)sin(pitch / 2.0F) *
     (real32_T)sin(roll / 2.0F);
+
+  // normalise
+  float sq = 1.0f/sqrt(*q0**q0 + *q1**q1 + *q2**q2 + *q3**q3);
+	
+  *q0 *= sq;
+  *q1 *= sq;
+  *q2 *= sq;
+  *q3 *= sq;
 }
 
 /*

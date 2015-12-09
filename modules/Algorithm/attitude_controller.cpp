@@ -2,6 +2,7 @@
 #include <string.h>
 #include <Protocol/common.h>
 #include <utils/param.h>
+#include <math/quaternion.h>
 
 // parameters
 #define yaw_dead_band 0.08f
@@ -43,16 +44,17 @@ attitude_controller::~attitude_controller()
 
 // provide current copter state
 // parameters:
-// attitude[0-2] : [roll, pitch, yaw] in euler mode, [q0~q3] in quaternion mode.
+// euler[0-2] : [roll, pitch, yaw]
+// quaternion[0-3] : [q0~q3]
 // body rate[0-2] : [roll, pitch, yaw] rate in body frame.
 // motor state: a combination of motor_limit enum, or 0 if all motors are normal, the controller will stop integrating at any saturated axis
 // airborne: the controller will not integrate on ground.
-int attitude_controller::provide_states(const float *attitude, const float *body_rate, uint32_t motor_state, bool airborne)
+int attitude_controller::provide_states(const float *euler, const float *quaternion, const float *bodyrate, uint32_t motor_state, bool airborne)
 {
-	if (use_quaternion)
-		memcpy(quaternion, attitude, sizeof(float)*4);
-	else
-		memcpy(euler, attitude, sizeof(float)*3);
+	if (euler)
+		memcpy(this->euler, euler, sizeof(float)*3);
+	if (quaternion)
+		memcpy(this->quaternion, quaternion, sizeof(float)*4);
 
 	memcpy(this->body_rate, body_rate, sizeof(float)*3);
 	this->motor_state = motor_state;
@@ -76,13 +78,10 @@ int attitude_controller::set_quaternion_target(const float *quaternion)
 
 int attitude_controller::set_euler_target(const float *euler)
 {
-	if (use_quaternion)
-		return -1;		// TODO: set quaternion target properly
-
 	for(int i=0; i<3; i++)
 		if (!isnan(euler[i]))
-			euler_sp[i] = euler[i];
-	
+			euler_sp[i] = euler[i];		
+
 	return 0;
 }
 
@@ -92,39 +91,29 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 	// setpoint will be updated in update();
 	// update set point if stick command exists
 	// caller can pass any of three axis NAN to disable updading of that axis. to update yaw stick only in optical flow mode for example
-	if (!use_quaternion)
+	// roll & pitch
+	for(int i=0; i<2; i++)
 	{
-		// roll & pitch
-		for(int i=0; i<2; i++)
-		{
-			if (isnan(stick[i]))
-				continue;
+		if (isnan(stick[i]))
+			continue;
 
-			float limit_l = euler_sp[i] - 2*PI * dt;
-			float limit_r = euler_sp[i] + 2*PI * dt;
-			euler_sp[i] = stick[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
-			euler_sp[i] = limit(euler_sp[i], limit_l, limit_r);
-		}
-		
-		// yaw
-		if (!isnan(stick[2]))
-		{
-			float delta_yaw = ((fabs(stick[2]) < yaw_dead_band) ? 0 : stick[2]) * dt * QUADCOPTER_ACRO_YAW_RATE;
-			float new_target = radian_add(euler_sp[2], delta_yaw);
-			float old_error = fabs(radian_sub(euler_sp[2], euler[2]));
-			float new_error = fabs(radian_sub(new_target, euler[2]));
-			if (new_error < ((airborne&&!motor_state)?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) || new_error < old_error)	// decrease max allowed yaw offset if any motor saturated
-				euler_sp[2] = new_target;
-		}
-	}
-	else
-	{
-		// TODO: there is no rate limitation here.
-		// TODO: there isn't even a implementation!
-		
-		return -1;
+		float limit_l = euler_sp[i] - 2*PI * dt;
+		float limit_r = euler_sp[i] + 2*PI * dt;
+		euler_sp[i] = stick[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
+		euler_sp[i] = limit(euler_sp[i], limit_l, limit_r);
 	}
 	
+	// yaw
+	if (!isnan(stick[2]))
+	{
+		float delta_yaw = ((fabs(stick[2]) < yaw_dead_band) ? 0 : stick[2]) * dt * QUADCOPTER_ACRO_YAW_RATE;
+		float new_target = radian_add(euler_sp[2], delta_yaw);
+		float old_error = fabs(radian_sub(euler_sp[2], euler[2]));
+		float new_error = fabs(radian_sub(new_target, euler[2]));
+		if (new_error < ((airborne&&!motor_state)?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) || new_error < old_error)	// decrease max allowed yaw offset if any motor saturated
+			euler_sp[2] = new_target;
+	}
+
 	return 0;
 }
 
@@ -132,11 +121,19 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 // dt: time interval
 int attitude_controller::update(float dt)
 {
-
 	// outter loop, attitude -> body frame rate
 	if (use_quaternion)
 	{
-		// TODO: implemente it!
+		float q_desired[4];
+		float q_error[4];
+		float body_frame_error[3];
+		RPY2Quaternion(euler_sp, q_desired);
+		quat_inverse(q_desired);
+		quat_mult(q_desired, quaternion, q_error);
+		quat_inverse(q_error);
+		Quaternion2RPY(q_error, body_frame_error);
+		for(int i=0; i<3; i++)
+			body_rate_sp[i] = limit(body_frame_error[i] * pid_factor2[i][0], -PI, PI);
 	}
 	else
 	{
@@ -145,8 +142,8 @@ int attitude_controller::update(float dt)
 			body_rate_sp[i] = radian_sub(euler_sp[i], euler[i]) * pid_factor2[i][0];
 			body_rate_sp[i] = limit(body_rate_sp[i], -PI, PI);
 		}
-	}
-	
+	}	
+
 	
 	// inner loop, body frame rate -> body frame torque.
 	for(int i=0; i<3; i++)
