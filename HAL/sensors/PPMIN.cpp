@@ -3,11 +3,11 @@
 
 static int min(int a, int b)
 {
-	return a > b ? a : b;
+	return a > b ? b : a;
 }
 static int max(int a, int b)
 {
-	return a > b ? b : a;
+	return a > b ? a : b;
 }
 int sensors::PPMIN::handle_ppm(int64_t now)
 {
@@ -29,14 +29,14 @@ int sensors::PPMIN::handle_ppm(int64_t now)
 	{
 		ppm_channel_count = ppm_channel_id;
 		ppm_channel_id = 0;
-		//TRACE("        %.0f\r", delta);
+		//printf("        %.0f    \r", delta);
 	}
 	else if (ppm_channel_id < sizeof(rc_input)/sizeof(rc_input[0]))
 	{
 		rc_input[ppm_channel_id] = delta;
 		rc_static[0][ppm_channel_id] = min(rc_static[0][ppm_channel_id], rc_input[ppm_channel_id]);
 		rc_static[1][ppm_channel_id] = max(rc_static[1][ppm_channel_id], rc_input[ppm_channel_id]);
-		//TRACE("%.0f,", g_pwm_input[ppm_channel_id-1]);
+		//printf("%d,", rc_input[ppm_channel_id]);
 
 		rc_update[ppm_channel_id] = systimer->gettime();
 
