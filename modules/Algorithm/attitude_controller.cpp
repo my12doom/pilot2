@@ -49,7 +49,7 @@ attitude_controller::~attitude_controller()
 // body rate[0-2] : [roll, pitch, yaw] rate in body frame.
 // motor state: a combination of motor_limit enum, or 0 if all motors are normal, the controller will stop integrating at any saturated axis
 // airborne: the controller will not integrate on ground.
-int attitude_controller::provide_states(const float *euler, const float *quaternion, const float *bodyrate, uint32_t motor_state, bool airborne)
+int attitude_controller::provide_states(const float *euler, const float *quaternion, const float *body_rate, uint32_t motor_state, bool airborne)
 {
 	if (euler)
 		memcpy(this->euler, euler, sizeof(float)*3);

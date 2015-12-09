@@ -16,7 +16,7 @@ public:
 	// body rate[0-2] : [roll, pitch, yaw] rate in body frame.
 	// motor state: a combination of motor_limit enum, or 0 if all motors are normal, the controller will stop integrating at any saturated axis
 	// airborne: the controller will not integrate on ground.
-	int provide_states(const float *euler, const float *quaternion, const float *bodyrate, uint32_t motor_state, bool airborne);
+	int provide_states(const float *euler, const float *quaternion, const float *body_rate, uint32_t motor_state, bool airborne);
 
 	// call one of these three to set attitude target
 	// pass NAN for any euler axis if you want it to remain unchanged
