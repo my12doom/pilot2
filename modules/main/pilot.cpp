@@ -2447,10 +2447,7 @@ int yet_another_pilot::setup(void)
 
 	SAFE_OFF(flashlight);
 	read_rc();
-	for(int i=0; i<6; i++)
-		if (g_pwm_input_update[i] < systimer->gettime() - 200000)
-			critical_errors |= error_RC;
-	
+		
 	// get two timers, one for main loop and one for SDCARD logging loop
 	manager.getTimer("mainloop")->set_period(cycle_time);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
