@@ -71,7 +71,7 @@
       <Entries>
         <KeyValue>
           <Key>com.sysprogs.jlink.root</Key>
-          <Value>C:\Program Files (x86)\SEGGER\JLinkARM_V474a</Value>
+          <Value>C:\Program Files (x86)\SEGGER\JLink_V510c</Value>
         </KeyValue>
         <KeyValue>
           <Key>com.sysprogs.jlink.connection</Key>

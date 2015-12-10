@@ -1,9 +1,13 @@
 #include "F4UART.h"
 #include <stdint.h>
 #include "stm32f4xx.h"
+
+
 namespace STM32F4
 {
-	F4UART::F4UART(USART_TypeDef * USARTx):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),dma_running(0),end_sentence(0)
+	static F4UART * uart_table[6] = {0};
+
+	F4UART::F4UART(USART_TypeDef * USARTx):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),tx_dma_running(0)
 	{
 		
 		this->USARTx=USARTx;
@@ -171,7 +175,7 @@ namespace STM32F4
 			//RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 		}
 		
-		dma_init();
+		dma_tx_init();
 
 	}
 	int F4UART::set_baudrate(int baudrate)
@@ -190,15 +194,17 @@ namespace STM32F4
 		USART_ITConfig(USARTx, USART_IT_RXNE, ENABLE);
 		return 1;
 	}
-	void F4UART::dma_init()
+	void F4UART::dma_tx_init()
 	{
+		uint32_t tx_DMA_Channel;
+		uint8_t DMA_Stream_IRQ;
+
 		if(USART1 == USARTx)
 		{
 			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
-			this->DMA_Channel=DMA_Channel_4;
-			this->DMA_Stream_IRQ=DMA2_Stream7_IRQn;
-			this->DMAy_Streamx=DMA2_Stream7;
-			this->RCC_AHB1Periph=RCC_AHB1Periph_DMA2;
+			tx_DMA_Channel=DMA_Channel_4;
+			DMA_Stream_IRQ=DMA2_Stream7_IRQn;
+			this->tx_DMAy_Streamx=DMA2_Stream7;
 			NVIC_InitTypeDef NVIC_InitStructure;
 			NVIC_InitStructure.NVIC_IRQChannel = DMA_Stream_IRQ;  
 			//ToDO: change the Priority by using multi-usart:
@@ -210,10 +216,9 @@ namespace STM32F4
 		else if(USART2 == USARTx )
 		{
 			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
-			this->DMA_Channel=DMA_Channel_4;
-			this->DMA_Stream_IRQ=DMA1_Stream6_IRQn;
-			this->DMAy_Streamx=DMA1_Stream6;
-			this->RCC_AHB1Periph=RCC_AHB1Periph_DMA1;
+			tx_DMA_Channel=DMA_Channel_4;
+			DMA_Stream_IRQ=DMA1_Stream6_IRQn;
+			this->tx_DMAy_Streamx=DMA1_Stream6;
 			NVIC_InitTypeDef NVIC_InitStructure;
 			NVIC_InitStructure.NVIC_IRQChannel = DMA_Stream_IRQ;  
 			//ToDO: change the Priority by using multi-usart:
@@ -225,10 +230,9 @@ namespace STM32F4
 		else if(USART3 == USARTx )
 		{
 			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
-			this->DMA_Channel=DMA_Channel_4;
-			this->DMA_Stream_IRQ=DMA1_Stream3_IRQn;
-			this->DMAy_Streamx=DMA1_Stream3;
-			this->RCC_AHB1Periph=RCC_AHB1Periph_DMA1;
+			tx_DMA_Channel=DMA_Channel_4;
+			DMA_Stream_IRQ=DMA1_Stream3_IRQn;
+			this->tx_DMAy_Streamx=DMA1_Stream3;
 			NVIC_InitTypeDef NVIC_InitStructure;
 			NVIC_InitStructure.NVIC_IRQChannel = DMA_Stream_IRQ;  
 			//ToDO: change the Priority by using multi-usart:
@@ -240,10 +244,9 @@ namespace STM32F4
 		else if(UART4 == USARTx )	
 		{
 			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
-			this->DMA_Channel=DMA_Channel_4;
-			this->DMA_Stream_IRQ=DMA1_Stream4_IRQn;
-			this->DMAy_Streamx=DMA1_Stream4;
-			this->RCC_AHB1Periph=RCC_AHB1Periph_DMA1;
+			tx_DMA_Channel=DMA_Channel_4;
+			DMA_Stream_IRQ=DMA1_Stream4_IRQn;
+			tx_DMAy_Streamx=DMA1_Stream4;
 			NVIC_InitTypeDef NVIC_InitStructure;
 			NVIC_InitStructure.NVIC_IRQChannel = DMA_Stream_IRQ;  
 			//ToDO: change the Priority by using multi-usart:
@@ -266,8 +269,8 @@ namespace STM32F4
 		}
 		DMA_InitTypeDef DMA_InitStructure = {0};
 		
-		DMA_DeInit(DMAy_Streamx);  
-		DMA_InitStructure.DMA_Channel = DMA_Channel; 
+		DMA_DeInit(tx_DMAy_Streamx);  
+		DMA_InitStructure.DMA_Channel = tx_DMA_Channel; 
 		DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(USARTx->DR));
 		DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)&tx_buffer;
 		DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
@@ -282,8 +285,8 @@ namespace STM32F4
 		DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull; 
 		DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single; 
 		DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single; 
-		DMA_Init(DMAy_Streamx, &DMA_InitStructure);
-		DMA_ITConfig(DMAy_Streamx,DMA_IT_TC,ENABLE);
+		DMA_Init(tx_DMAy_Streamx, &DMA_InitStructure);
+		DMA_ITConfig(tx_DMAy_Streamx,DMA_IT_TC,ENABLE);
 		USART_DMACmd(USARTx, USART_DMAReq_Tx, ENABLE); 
 	}
 	int F4UART::write(const void *buf, int count)
@@ -294,7 +297,7 @@ namespace STM32F4
 		int old_size = tx_end-tx_start < 0 ? tx_end-tx_start + sizeof(tx_buffer) : tx_end-tx_start;
 		if (count + old_size > sizeof(tx_buffer))
 		{
-			dma_handle_queue();
+			dma_handle_tx_queue();
 			return 0;		// reject all data if buffer overrun
 		}
 
@@ -307,7 +310,7 @@ namespace STM32F4
 		if (count<0)
 		count += sizeof(tx_buffer);
 
-		dma_handle_queue();
+		dma_handle_tx_queue();
 
 		return count;
 	}
@@ -369,57 +372,41 @@ namespace STM32F4
 	int F4UART::peak(void *data, int max_count)
 	{
 		char *p = (char*)data;
-		int _end_sentence = end_sentence;
+		int _end = end;
 		int j=0;
 		int i;
 		int size;
 		int lastR = 0;
-		if (_end_sentence == start)
-			return -1;
-		size = _end_sentence - start;
+		if (_end == start)
+			return 0;
+		size = _end - start;
 		if (size<0)
 			size += sizeof(buffer);
-		if (size >= max_count)
-			return -2;
-		for(i=start; i!= _end_sentence; i=(i+1)%sizeof(buffer))
-		{
-			if (buffer[i] == '\r')
-			{
-				if (lastR)
-					p[j++] = buffer[i];
-				lastR = !lastR;
-			}
-
-			p[j++] = buffer[i];
-			if (buffer[i] == '\n')
-			{
-				i=(i+1)%sizeof(buffer);
-				break;
-			}
-		}
-		p[j] = 0;
-		return j;
+		if (max_count > size)
+			max_count = size;
+		for(i=0; i<max_count; i++)
+			p[i] = buffer[(i+start)%sizeof(buffer)];
+		return max_count;
 	}
-	int F4UART::dma_handle_queue()
-	{		
-		
-		if (dma_running)
+	int F4UART::dma_handle_tx_queue()
+	{
+		if (tx_dma_running)
 			return 0;
 
-		DMA_Cmd(DMAy_Streamx, DISABLE);
+		DMA_Cmd(tx_DMAy_Streamx, DISABLE);
 
 		ongoing_tx_size = tx_end - tx_start;
 		if (ongoing_tx_size == 0)
 			return 0;
 		if (ongoing_tx_size < 0)
-			ongoing_tx_size = sizeof(tx_buffer) - tx_start;
+			ongoing_tx_size = sizeof(tx_buffer) - tx_start;	// never cross the end of tx buffer
 		
-		DMAy_Streamx->NDTR = ongoing_tx_size;
-		DMAy_Streamx->M0AR = (uint32_t)tx_buffer + tx_start;
+		tx_DMAy_Streamx->NDTR = ongoing_tx_size;
+		tx_DMAy_Streamx->M0AR = (uint32_t)tx_buffer + tx_start;
 
-		DMA_Cmd(DMAy_Streamx, ENABLE);
+		DMA_Cmd(tx_DMAy_Streamx, ENABLE);
 
-		dma_running = 1;
+		tx_dma_running = 1;
 
 		//ERROR("!!%d!!", ongoing_tx_size);
 
@@ -428,7 +415,7 @@ namespace STM32F4
 	
 	int F4UART::flush()
 	{
-		while(dma_running)
+		while(tx_dma_running)
 			;
 		
 		return 0;
@@ -439,8 +426,8 @@ namespace STM32F4
 	{	
 		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
 		DMA_ClearFlag(DMA1_Stream4, DMA_FLAG_TCIF4);
-		dma_running = 0;
-		dma_handle_queue();
+		tx_dma_running = 0;
+		dma_handle_tx_queue();
 	}
 	void F4UART::UART4_IRQHandler(void)
 	{
@@ -457,9 +444,6 @@ namespace STM32F4
 			buffer[end] = c;
 			end++;
 			end %= sizeof(buffer);
-			if (c == '\n')
-				end_sentence = end;
-
 		}
 	}
 	//For usart1:
@@ -467,8 +451,8 @@ namespace STM32F4
 	{	
 		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
 		DMA_ClearFlag(DMA2_Stream7, DMA_FLAG_TCIF7);
-		dma_running = 0;
-		dma_handle_queue();
+		tx_dma_running = 0;
+		dma_handle_tx_queue();
 	}
 	void F4UART::USART1_IRQHandler(void)
 	{
@@ -485,9 +469,6 @@ namespace STM32F4
 			buffer[end] = c;
 			end++;
 			end %= sizeof(buffer);
-			if (c == '\n')
-				end_sentence = end;
-
 		}
 	}
 	//just for usart3:
@@ -495,8 +476,8 @@ namespace STM32F4
 	{	
 		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
 		DMA_ClearFlag(DMA1_Stream3, DMA_FLAG_TCIF3);//? 3|4?
-		dma_running = 0;
-		dma_handle_queue();
+		tx_dma_running = 0;
+		dma_handle_tx_queue();
 	}
 	void F4UART::USART3_IRQHandler(void)
 	{
@@ -513,9 +494,6 @@ namespace STM32F4
 			buffer[end] = c;
 			end++;
 			end %= sizeof(buffer);
-			if (c == '\n')
-				end_sentence = end;
-
 		}
 	}
 	//just for usart2:
@@ -523,8 +501,8 @@ namespace STM32F4
 	{	
 		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
 		DMA_ClearFlag(DMA1_Stream6, DMA_FLAG_TCIF6);//? 3|4?
-		dma_running = 0;
-		dma_handle_queue();
+		tx_dma_running = 0;
+		dma_handle_tx_queue();
 	}
 	void F4UART::USART2_IRQHandler(void)
 	{
@@ -541,9 +519,6 @@ namespace STM32F4
 			buffer[end] = c;
 			end++;
 			end %= sizeof(buffer);
-			if (c == '\n')
-				end_sentence = end;
-
 		}
 	}
 	
@@ -551,6 +526,6 @@ namespace STM32F4
 	{
 		USART_Cmd(USARTx, DISABLE);
 		USART_ITConfig(USARTx, USART_IT_RXNE, DISABLE);
-		DMA_Cmd(DMAy_Streamx, DISABLE);
+		DMA_Cmd(tx_DMAy_Streamx, DISABLE);
 	}
 }
