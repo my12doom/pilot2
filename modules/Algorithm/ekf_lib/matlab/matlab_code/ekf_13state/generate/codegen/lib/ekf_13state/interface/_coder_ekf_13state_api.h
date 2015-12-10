@@ -2,7 +2,7 @@
  * File: _coder_ekf_13state_api.h 
  *  
  * MATLAB Coder version            : 2.6 
- * C/C++ source code generated on  : 03-Dec-2015 17:00:31 
+ * C/C++ source code generated on  : 09-Dec-2015 17:37:13 
  */
 
 #ifndef ___CODER_EKF_13STATE_API_H__
@@ -20,6 +20,8 @@
 extern void ekf_13state_initialize(emlrtContext *aContext);
 extern void ekf_13state_terminate(void);
 extern void ekf_13state_atexit(void);
+extern void body2ned_api(const mxArray *prhs[2], const mxArray *plhs[1]);
+extern void body2ned(float q_now[4], float vector_body[3], float vector_ned[3]);
 extern void f_api(const mxArray *prhs[2], const mxArray *plhs[1]);
 extern void f(float X[13], float U[6], double Xresult[13]);
 extern void h_api(const mxArray *prhs[2], const mxArray *plhs[1]);
@@ -37,6 +39,8 @@ extern void LinearFG_api(const mxArray *prhs[2], const mxArray *plhs[2]);
 extern void LinearFG(float X[13], float U[6], double F[169], double G[117]);
 extern void LinearizeH_api(const mxArray *prhs[2], const mxArray *plhs[1]);
 extern void LinearizeH(float X[13], float Be[3], double H[104]);
+extern void ned2body_api(const mxArray *prhs[2], const mxArray *plhs[1]);
+extern void ned2body(float q_now[4], float vector_ned[3], float vector_body[3]);
 extern void normlise_quaternion_api(const mxArray *prhs[1], const mxArray *plhs[1]);
 extern void quaternion_to_euler_api(const mxArray * const prhs[5], const mxArray *plhs[3]);
 extern void quaternion_to_euler(signed char is_radian, float q0, float q1, float q2, float q3, float *roll, float *pitch, float *yaw);

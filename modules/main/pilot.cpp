@@ -163,7 +163,7 @@ yet_another_pilot::yet_another_pilot()
 	memset(&gyro_reading, 0, sizeof(gyro_reading));
 	memset(&body_rate, 0, sizeof(body_rate));
 	memset(&accel, 0, sizeof(accel));
-	
+	memset(&v_flow_ned,0,sizeof(v_flow_ned));
 	gps_attitude_timeout = 0;
 	land_possible = false;
 	imu_data_lock = false;
@@ -588,6 +588,7 @@ int yet_another_pilot::save_logs()
 		{ekf_est.ekf_result.roll* 18000/PI,ekf_est.ekf_result.pitch* 18000/PI,ekf_est.ekf_result.yaw* 18000/PI},
 		estimator.get_raw_meter().latitude*100,estimator.get_raw_meter().longtitude*100,
 		ground_speed_north*1000,ground_speed_east*1000,
+		v_flow_ned[0]*1000,v_flow_ned[1]*1000,//optical flow ned velocity
 		{ekf_est.ekf_result.Pos_x*100,ekf_est.ekf_result.Pos_y*100,ekf_est.ekf_result.Pos_z*100},
 		{ekf_est.ekf_result.Vel_x*1000,ekf_est.ekf_result.Vel_y*1000,ekf_est.ekf_result.Vel_z*1000},
 	};
@@ -1175,10 +1176,23 @@ int yet_another_pilot::calculate_state()
 	}
 	else
 	{	
+		float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0025f;
+		float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0020f;
+
+		float wx = pixel_compensated_x / 25.0f * 100 * PI / 180;
+		float wy = pixel_compensated_y / 20.0f * 100 * PI / 180;
+		
+		float v_flow_body[3];
+		v_flow_body[0] = wy * frame.ground_distance/1000.0f * 1.15f;
+		v_flow_body[1] = -wx * frame.ground_distance/1000.0f * 1.15f;
+		v_flow_body[2] = 0;
+		
+		ekf_est.tf_body2ned(v_flow_body,v_flow_ned);
+		
 		ekf_mesurement.Pos_GPS_x=0;
-		ekf_mesurement.Pos_GPS_y=0;		
-		ekf_mesurement.Vel_GPS_x=0;
-		ekf_mesurement.Vel_GPS_y=0;
+		ekf_mesurement.Pos_GPS_y=0;
+		ekf_mesurement.Vel_GPS_x=v_flow_ned[0];
+		ekf_mesurement.Vel_GPS_y=v_flow_ned[1];
 	}
 	
 	int64_t t = systimer->gettime();
@@ -1592,7 +1606,7 @@ copter_mode yet_another_pilot::submode_from_stick()
 		else if (rc[5] > 0.6f)
 // 			newmode = airborne ? optical_flow : althold;
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-			last_submode = airborne ? (estimator.healthy() ? poshold : optical_flow) : althold;
+			last_submode = airborne ? (/*estimator.healthy() ?*/ poshold/* : optical_flow*/) : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
  			last_submode = airborne ? althold : althold;
 //			newmode = althold;

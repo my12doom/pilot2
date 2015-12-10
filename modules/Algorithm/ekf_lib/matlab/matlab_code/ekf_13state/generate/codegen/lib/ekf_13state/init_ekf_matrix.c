@@ -2,7 +2,7 @@
  * File: init_ekf_matrix.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 03-Dec-2015 17:00:31
+ * C/C++ source code generated on  : 09-Dec-2015 17:37:13
  */
 
 /* Include files */
@@ -15,10 +15,12 @@
 #include "LinearizeH.h"
 #include "RungeKutta.h"
 #include "SerialUpdate.h"
+#include "body2ned.h"
 #include "f.h"
 #include "h.h"
 #include "init_ekf_matrix.h"
 #include "init_quaternion_by_euler.h"
+#include "ned2body.h"
 #include "normlise_quaternion.h"
 #include "quaternion_to_euler.h"
 
@@ -41,10 +43,10 @@ void init_ekf_matrix(double Be[3], double P[169], double X[13], double Q[81],
   static const signed char v[13] = { 100, 100, 100, 100, 100, 100, 10, 10, 10,
     10, 100, 100, 100 };
 
-  static const double b_v[9] = { 1.0E-15, 1.0E-15, 1.0E-15, 0.03, 0.03, 0.5,
+  static const double b_v[9] = { 1.0E-17, 1.0E-17, 1.0E-17, 0.035, 0.035, 0.5,
     6.0E-6, 6.0E-6, 6.0E-6 };
 
-  static const double c_v[8] = { 0.0001, 0.0001, 0.0035, 0.8, 0.8, 0.005, 0.005,
+  static const double c_v[8] = { 0.001, 0.001, 0.0035, 0.08, 0.08, 0.005, 0.005,
     0.005 };
 
   for (i = 0; i < 3; i++) {

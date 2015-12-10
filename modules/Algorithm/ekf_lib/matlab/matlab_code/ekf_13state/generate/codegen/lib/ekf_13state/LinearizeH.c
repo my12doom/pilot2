@@ -2,7 +2,7 @@
  * File: LinearizeH.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 03-Dec-2015 17:00:31
+ * C/C++ source code generated on  : 09-Dec-2015 17:37:13
  */
 
 /* Include files */
@@ -15,10 +15,12 @@
 #include "LinearizeH.h"
 #include "RungeKutta.h"
 #include "SerialUpdate.h"
+#include "body2ned.h"
 #include "f.h"
 #include "h.h"
 #include "init_ekf_matrix.h"
 #include "init_quaternion_by_euler.h"
+#include "ned2body.h"
 #include "normlise_quaternion.h"
 #include "quaternion_to_euler.h"
 
@@ -33,28 +35,28 @@
 void LinearizeH(const float X[13], const float Be[3], double H[104])
 {
   signed char I[9];
-  int i0;
+  int i4;
   int k;
   static const signed char iv0[6] = { 1, 0, 0, 1, 0, 0 };
 
   memset(&H[0], 0, 104U * sizeof(double));
 
   /* dP/dP=I; */
-  for (i0 = 0; i0 < 9; i0++) {
-    I[i0] = 0;
+  for (i4 = 0; i4 < 9; i4++) {
+    I[i4] = 0;
   }
 
   for (k = 0; k < 3; k++) {
     I[k + 3 * k] = 1;
-    for (i0 = 0; i0 < 3; i0++) {
-      H[i0 + (k << 3)] = I[i0 + 3 * k];
+    for (i4 = 0; i4 < 3; i4++) {
+      H[i4 + (k << 3)] = I[i4 + 3 * k];
     }
   }
 
   /* dV/dV=I; */
-  for (i0 = 0; i0 < 3; i0++) {
+  for (i4 = 0; i4 < 3; i4++) {
     for (k = 0; k < 2; k++) {
-      H[(k + ((3 + i0) << 3)) + 3] = iv0[k + (i0 << 1)];
+      H[(k + ((3 + i4) << 3)) + 3] = iv0[k + (i4 << 1)];
     }
   }
 

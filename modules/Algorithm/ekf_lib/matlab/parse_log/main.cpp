@@ -2,7 +2,7 @@
 #include <conio.h>
 #include <stdint.h>
 #include<string.h>
-#include <Protocol/RFData.h>
+#include "RFData.h"
 #define PI 3.141592654
 int main(int argc, char* argv[])
 {
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 	//fprintf(out, "Free RAM: 990\r\n");
 	//fprintf(out, "MoMo\r\n");
 	//fprintf(out, "FMT, 9, 23, CURR, IhIh, TimeMS,ThrOut,Volt,Curr\r\n");
-	fprintf(out, "time,gx,gy,gz,ax,ay,az,mx,my,mz,gps_x,gpsy,baro,vx,vy,raw_roll,raw_pitch,raw_yaw,ekf_roll,ekf_pitch,ekf_yaw,ekf_Px,ekf_Py,ekf_Pz,ekf_vx,ekf_vy,ekf_vz\r\n");
+	fprintf(out, "time,gx,gy,gz,ax,ay,az,mx,my,mz,gps_x,gpsy,baro,vx,vy,flow_vx,flow_vy,raw_roll,raw_pitch,raw_yaw,ekf_roll,ekf_pitch,ekf_yaw,ekf_Px,ekf_Py,ekf_Pz,ekf_vx,ekf_vy,ekf_vz\r\n");
 
 	int64_t time = 0;
 	ppm_data ppm;
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
 			memcpy(&quad,data,24);
 			fprintf(out,"%f,",time);
 			fprintf(out,"%f,%f,%f,%f,%f,%f,%f,%f,%f,",sensor.gyro[0]* PI/18000,sensor.gyro[1]* PI/18000,sensor.gyro[2]* PI/18000,imu.accel[0]/100.0,imu.accel[1]/100.0,imu.accel[2]/100.0,sensor.mag[0]/10.0,sensor.mag[1]/10.0,sensor.mag[2]/10.0);
-			fprintf(out,"%f,%f,%f,%f,%f,",ekf.raw_postion_n/100.0f,ekf.raw_postion_e/100.0f,quad2.altitude_baro_raw/100.0f,ekf.raw_speed_n/1000.0f,ekf.raw_speed_e/1000.0f);//To-Do:fill gps data
+			fprintf(out,"%f,%f,%f,%f,%f,%f,%f,",ekf.raw_postion_n/100.0f,ekf.raw_postion_e/100.0f,quad2.altitude_baro_raw/100.0f,ekf.raw_speed_n/1000.0f,ekf.raw_speed_e/1000.0f,ekf.raw_flow_vn/1000.0f,ekf.raw_flow_ve/1000.0f);
 			fprintf(out,"%f,%f,%f,",quad.angle_pos[0]*(PI/18000),quad.angle_pos[1]*(PI/18000),quad.angle_pos[2]*(PI/18000));
 			fprintf(out,"%f,%f,%f,",ekf.angle_pos[0]*(PI/18000),ekf.angle_pos[1]*(PI/18000),ekf.angle_pos[2]*(PI/18000));
 			fprintf(out,"%f,%f,%f,%f,%f,%f\r\n",ekf.ekf_postion[0]/100.0f,ekf.ekf_postion[1]/100.0f,ekf.ekf_postion[2]/100.0f,ekf.ekf_speed[0]/1000.0f,ekf.ekf_speed[1]/1000.0f,ekf.ekf_speed[2]/1000.0f);

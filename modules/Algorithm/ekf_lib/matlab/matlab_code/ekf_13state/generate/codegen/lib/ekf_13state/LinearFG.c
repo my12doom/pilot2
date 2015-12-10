@@ -2,7 +2,7 @@
  * File: LinearFG.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 03-Dec-2015 17:00:31
+ * C/C++ source code generated on  : 09-Dec-2015 17:37:13
  */
 
 /* Include files */
@@ -15,10 +15,12 @@
 #include "LinearizeH.h"
 #include "RungeKutta.h"
 #include "SerialUpdate.h"
+#include "body2ned.h"
 #include "f.h"
 #include "h.h"
 #include "init_ekf_matrix.h"
 #include "init_quaternion_by_euler.h"
+#include "ned2body.h"
 #include "normlise_quaternion.h"
 #include "quaternion_to_euler.h"
 
@@ -34,17 +36,17 @@
 void LinearFG(const float X[13], const float U[6], double F[169], double G[117])
 {
   signed char I[9];
-  int i2;
+  int i3;
   int k;
   memset(&F[0], 0, 169U * sizeof(double));
-  for (i2 = 0; i2 < 9; i2++) {
-    I[i2] = 0;
+  for (i3 = 0; i3 < 9; i3++) {
+    I[i3] = 0;
   }
 
   for (k = 0; k < 3; k++) {
     I[k + 3 * k] = 1;
-    for (i2 = 0; i2 < 3; i2++) {
-      F[i2 + 13 * (3 + k)] = I[i2 + 3 * k];
+    for (i3 = 0; i3 < 3; i3++) {
+      F[i3 + 13 * (3 + k)] = I[i3 + 3 * k];
     }
   }
 
@@ -114,14 +116,14 @@ void LinearFG(const float X[13], const float U[6], double F[169], double G[117])
   G[9] = X[8] / 2.0F;
   G[22] = -X[7] / 2.0F;
   G[35] = -X[6] / 2.0F;
-  for (i2 = 0; i2 < 9; i2++) {
-    I[i2] = 0;
+  for (i3 = 0; i3 < 9; i3++) {
+    I[i3] = 0;
   }
 
   for (k = 0; k < 3; k++) {
     I[k + 3 * k] = 1;
-    for (i2 = 0; i2 < 3; i2++) {
-      G[(i2 + 13 * (6 + k)) + 10] = I[i2 + 3 * k];
+    for (i3 = 0; i3 < 3; i3++) {
+      G[(i3 + 13 * (6 + k)) + 10] = I[i3 + 3 * k];
     }
   }
 }

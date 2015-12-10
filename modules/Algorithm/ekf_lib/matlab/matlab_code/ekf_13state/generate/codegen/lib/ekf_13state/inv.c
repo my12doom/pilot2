@@ -2,7 +2,7 @@
  * File: inv.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 03-Dec-2015 17:00:31
+ * C/C++ source code generated on  : 09-Dec-2015 17:37:13
  */
 
 /* Include files */
@@ -15,10 +15,12 @@
 #include "LinearizeH.h"
 #include "RungeKutta.h"
 #include "SerialUpdate.h"
+#include "body2ned.h"
 #include "f.h"
 #include "h.h"
 #include "init_ekf_matrix.h"
 #include "init_quaternion_by_euler.h"
+#include "ned2body.h"
 #include "normlise_quaternion.h"
 #include "quaternion_to_euler.h"
 #include "inv.h"
@@ -33,7 +35,7 @@
 void invNxN(const float x[64], float y[64])
 {
   float A[64];
-  int i1;
+  int i2;
   signed char ipiv[8];
   int j;
   int c;
@@ -45,13 +47,13 @@ void invNxN(const float x[64], float y[64])
   int i;
   int kAcol;
   signed char p[8];
-  for (i1 = 0; i1 < 64; i1++) {
-    y[i1] = 0.0F;
-    A[i1] = x[i1];
+  for (i2 = 0; i2 < 64; i2++) {
+    y[i2] = 0.0F;
+    A[i2] = x[i2];
   }
 
-  for (i1 = 0; i1 < 8; i1++) {
-    ipiv[i1] = (signed char)(1 + i1);
+  for (i2 = 0; i2 < 8; i2++) {
+    ipiv[i2] = (signed char)(1 + i2);
   }
 
   for (j = 0; j < 7; j++) {
@@ -82,8 +84,8 @@ void invNxN(const float x[64], float y[64])
         }
       }
 
-      i1 = (c - j) + 8;
-      for (i = c + 1; i + 1 <= i1; i++) {
+      i2 = (c - j) + 8;
+      for (i = c + 1; i + 1 <= i2; i++) {
         A[i] /= A[c];
       }
     }
@@ -94,8 +96,8 @@ void invNxN(const float x[64], float y[64])
       smax = A[kAcol];
       if (A[kAcol] != 0.0F) {
         ix = c + 1;
-        i1 = (jBcol - j) + 16;
-        for (k = 9 + jBcol; k + 1 <= i1; k++) {
+        i2 = (jBcol - j) + 16;
+        for (k = 9 + jBcol; k + 1 <= i2; k++) {
           A[k] += A[ix] * -smax;
           ix++;
         }
@@ -106,8 +108,8 @@ void invNxN(const float x[64], float y[64])
     }
   }
 
-  for (i1 = 0; i1 < 8; i1++) {
-    p[i1] = (signed char)(1 + i1);
+  for (i2 = 0; i2 < 8; i2++) {
+    p[i2] = (signed char)(1 + i2);
   }
 
   for (k = 0; k < 7; k++) {

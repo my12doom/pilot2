@@ -2,7 +2,7 @@
  * File: INS_Correction.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 03-Dec-2015 17:00:31
+ * C/C++ source code generated on  : 09-Dec-2015 17:37:13
  */
 
 /* Include files */
@@ -15,12 +15,15 @@
 #include "LinearizeH.h"
 #include "RungeKutta.h"
 #include "SerialUpdate.h"
+#include "body2ned.h"
 #include "f.h"
 #include "h.h"
 #include "init_ekf_matrix.h"
 #include "init_quaternion_by_euler.h"
+#include "ned2body.h"
 #include "normlise_quaternion.h"
 #include "quaternion_to_euler.h"
+#include "normlise_quaternion1.h"
 #include "inv.h"
 
 /* Function Definitions */
@@ -42,18 +45,20 @@ void INS_Correction(const float Mag_data[3], const float Pos[3], const float
   double Z[8];
   float Bnorm;
   double H[104];
+  signed char I[9];
+  int i7;
+  int k;
+  static const signed char iv1[6] = { 1, 0, 0, 1, 0, 0 };
+
+  double Y[8];
   float b_H[104];
-  int i;
-  int i3;
-  int i4;
+  int i8;
   float x[64];
   float y[64];
-  float K[104];
-  double dv1[8];
-  float b_Z[8];
-  float b_X[13];
-  float b_K[169];
+  float K[169];
+  float b_K[104];
   float b_P[169];
+  float b_Z[8];
   Z[0] = Pos[0];
   Z[1] = Pos[1];
   Z[2] = Pos[2];
@@ -85,7 +90,56 @@ void INS_Correction(const float Mag_data[3], const float Pos[3], const float
   Z[5] = Mag_data[0] / Bnorm;
   Z[6] = Mag_data[1] / Bnorm;
   Z[7] = Mag_data[2] / Bnorm;
-  LinearizeH(X, Be, H);
+  memset(&H[0], 0, 104U * sizeof(double));
+
+  /* dP/dP=I; */
+  for (i7 = 0; i7 < 9; i7++) {
+    I[i7] = 0;
+  }
+
+  for (k = 0; k < 3; k++) {
+    I[k + 3 * k] = 1;
+    for (i7 = 0; i7 < 3; i7++) {
+      H[i7 + (k << 3)] = I[i7 + 3 * k];
+    }
+  }
+
+  /* dV/dV=I; */
+  for (i7 = 0; i7 < 3; i7++) {
+    for (k = 0; k < 2; k++) {
+      H[(k + ((3 + i7) << 3)) + 3] = iv1[k + (i7 << 1)];
+    }
+  }
+
+  /* dBb/dq */
+  H[53] = 2.0F * ((X[6] * Be[0] + X[9] * Be[1]) - X[8] * Be[2]);
+  H[61] = 2.0F * ((X[7] * Be[0] + X[8] * Be[1]) + X[9] * Be[2]);
+  H[69] = 2.0F * ((-X[8] * Be[0] + X[7] * Be[1]) - X[6] * Be[2]);
+  H[77] = 2.0F * ((-X[9] * Be[0] + X[6] * Be[1]) + X[7] * Be[2]);
+  H[54] = 2.0F * ((-X[9] * Be[0] + X[6] * Be[1]) + X[7] * Be[2]);
+  H[62] = 2.0F * ((X[8] * Be[0] - X[7] * Be[1]) + X[6] * Be[2]);
+  H[70] = 2.0F * ((X[7] * Be[0] + X[8] * Be[1]) + X[9] * Be[2]);
+  H[78] = 2.0F * ((-X[6] * Be[0] - X[9] * Be[1]) + X[8] * Be[2]);
+  H[55] = 2.0F * ((X[8] * Be[0] - X[7] * Be[1]) + X[6] * Be[2]);
+  H[63] = 2.0F * ((X[9] * Be[0] - X[6] * Be[1]) - X[7] * Be[2]);
+  H[71] = 2.0F * ((X[6] * Be[0] + X[9] * Be[1]) - X[8] * Be[2]);
+  H[79] = 2.0F * ((X[7] * Be[0] + X[8] * Be[1]) + X[9] * Be[2]);
+  Y[0] = X[0];
+  Y[1] = X[1];
+  Y[2] = X[2];
+  Y[3] = X[3];
+  Y[4] = X[4];
+
+  /* Bb=Rbe*Be */
+  Y[5] = ((((X[6] * X[6] + X[7] * X[7]) - X[8] * X[8]) - X[9] * X[9]) * Be[0] +
+          2.0F * (X[7] * X[8] + X[6] * X[9]) * Be[1]) + 2.0F * (X[7] * X[9] - X
+    [6] * X[8]) * Be[2];
+  Y[6] = (2.0F * (X[7] * X[8] - X[6] * X[9]) * Be[0] + (((X[6] * X[6] - X[7] *
+             X[7]) + X[8] * X[8]) - X[9] * X[9]) * Be[1]) + 2.0F * (X[8] * X[9]
+    + X[6] * X[7]) * Be[2];
+  Y[7] = (2.0F * (X[7] * X[9] + X[6] * X[8]) * Be[0] + 2.0F * (X[8] * X[9] - X[6]
+           * X[7]) * Be[1]) + (((X[6] * X[6] - X[7] * X[7]) - X[8] * X[8]) + X[9]
+    * X[9]) * Be[2];
 
   /*  // *************  SerialUpdate ******************* */
   /*  // Does the update step of the Kalman filter for the covariance and estimate */
@@ -102,95 +156,83 @@ void INS_Correction(const float Mag_data[3], const float Pos[3], const float
   /*  // The SensorsUsed variable is a bitwise mask indicating which sensors */
   /*  // should be used in the update. */
   /*  // ************************************************ */
-  for (i = 0; i < 8; i++) {
-    for (i3 = 0; i3 < 13; i3++) {
-      b_H[i + (i3 << 3)] = 0.0F;
-      for (i4 = 0; i4 < 13; i4++) {
-        b_H[i + (i3 << 3)] += (float)H[i + (i4 << 3)] * P[i4 + 13 * i3];
+  for (i7 = 0; i7 < 8; i7++) {
+    for (k = 0; k < 13; k++) {
+      b_H[i7 + (k << 3)] = 0.0F;
+      for (i8 = 0; i8 < 13; i8++) {
+        b_H[i7 + (k << 3)] += (float)H[i7 + (i8 << 3)] * P[i8 + 13 * k];
       }
     }
   }
 
-  for (i = 0; i < 8; i++) {
-    for (i3 = 0; i3 < 8; i3++) {
+  for (i7 = 0; i7 < 8; i7++) {
+    for (k = 0; k < 8; k++) {
       Bnorm = 0.0F;
-      for (i4 = 0; i4 < 13; i4++) {
-        Bnorm += b_H[i + (i4 << 3)] * (float)H[i3 + (i4 << 3)];
+      for (i8 = 0; i8 < 13; i8++) {
+        Bnorm += b_H[i7 + (i8 << 3)] * (float)H[k + (i8 << 3)];
       }
 
-      x[i + (i3 << 3)] = Bnorm + R[i + (i3 << 3)];
+      x[i7 + (k << 3)] = Bnorm + R[i7 + (k << 3)];
     }
   }
 
   invNxN(x, y);
-  for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 8; i3++) {
-      b_H[i + 13 * i3] = 0.0F;
-      for (i4 = 0; i4 < 13; i4++) {
-        b_H[i + 13 * i3] += P[i + 13 * i4] * (float)H[i3 + (i4 << 3)];
+  for (i7 = 0; i7 < 13; i7++) {
+    for (k = 0; k < 8; k++) {
+      b_H[i7 + 13 * k] = 0.0F;
+      for (i8 = 0; i8 < 13; i8++) {
+        b_H[i7 + 13 * k] += P[i7 + 13 * i8] * (float)H[k + (i8 << 3)];
       }
     }
   }
 
-  for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 8; i3++) {
-      K[i + 13 * i3] = 0.0F;
-      for (i4 = 0; i4 < 8; i4++) {
-        K[i + 13 * i3] += b_H[i + 13 * i4] * y[i4 + (i3 << 3)];
+  for (i7 = 0; i7 < 13; i7++) {
+    for (k = 0; k < 8; k++) {
+      b_K[i7 + 13 * k] = 0.0F;
+      for (i8 = 0; i8 < 8; i8++) {
+        b_K[i7 + 13 * k] += b_H[i7 + 13 * i8] * y[i8 + (k << 3)];
+      }
+    }
+
+    for (k = 0; k < 13; k++) {
+      K[i7 + 13 * k] = 0.0F;
+      for (i8 = 0; i8 < 8; i8++) {
+        K[i7 + 13 * k] += b_K[i7 + 13 * i8] * (float)H[i8 + (k << 3)];
       }
     }
   }
 
-  h(X, Be, dv1);
-  for (i = 0; i < 8; i++) {
-    b_Z[i] = (float)(Z[i] - dv1[i]);
-  }
-
-  for (i = 0; i < 13; i++) {
-    Bnorm = 0.0F;
-    for (i3 = 0; i3 < 8; i3++) {
-      Bnorm += K[i + 13 * i3] * b_Z[i3];
-    }
-
-    b_X[i] = X[i] + Bnorm;
-  }
-
-  for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 13; i3++) {
-      b_K[i + 13 * i3] = 0.0F;
-      for (i4 = 0; i4 < 8; i4++) {
-        b_K[i + 13 * i3] += K[i + 13 * i4] * (float)H[i4 + (i3 << 3)];
-      }
-    }
-  }
-
-  for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 13; i3++) {
+  for (i7 = 0; i7 < 13; i7++) {
+    for (k = 0; k < 13; k++) {
       Bnorm = 0.0F;
-      for (i4 = 0; i4 < 13; i4++) {
-        Bnorm += b_K[i + 13 * i4] * P[i4 + 13 * i3];
+      for (i8 = 0; i8 < 13; i8++) {
+        Bnorm += K[i7 + 13 * i8] * P[i8 + 13 * k];
       }
 
-      b_P[i + 13 * i3] = P[i + 13 * i3] - Bnorm;
+      b_P[i7 + 13 * k] = P[i7 + 13 * k] - Bnorm;
     }
   }
 
-  for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 13; i3++) {
-      P[i3 + 13 * i] = b_P[i3 + 13 * i];
+  for (i7 = 0; i7 < 13; i7++) {
+    for (k = 0; k < 13; k++) {
+      P[k + 13 * i7] = b_P[k + 13 * i7];
     }
   }
 
-  for (i = 0; i < 13; i++) {
-    X[i] = b_X[i];
+  for (i7 = 0; i7 < 8; i7++) {
+    b_Z[i7] = (float)(Z[i7] - Y[i7]);
   }
 
-  Bnorm = (real32_T)sqrt(((b_X[6] * b_X[6] + b_X[7] * b_X[7]) + b_X[8] * b_X[8])
-    + b_X[9] * b_X[9]);
-  X[6] = b_X[6] / Bnorm;
-  X[7] = b_X[7] / Bnorm;
-  X[8] = b_X[8] / Bnorm;
-  X[9] = b_X[9] / Bnorm;
+  for (i7 = 0; i7 < 13; i7++) {
+    Bnorm = 0.0F;
+    for (k = 0; k < 8; k++) {
+      Bnorm += b_K[i7 + 13 * k] * b_Z[k];
+    }
+
+    X[i7] += Bnorm;
+  }
+
+  b_normlise_quaternion(X);
 }
 
 /*

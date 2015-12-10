@@ -72,6 +72,10 @@ public:
 	int update(EKF_U u,EKF_Mesurement mesurement,const float dT);
 	bool ekf_is_ready();
 
+	//For frame transfer 
+	void  tf_ned2body(const float vector_ned[3], float vector_body[3]);
+	void  tf_body2ned(const float vector_body[3], float vector_ned[3]);
+
 	//Mag ground length
 	float ground_mag_length;
 	float ekf_is_convergence;

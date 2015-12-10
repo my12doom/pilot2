@@ -10,7 +10,8 @@
 #include <Algorithm/ekf_lib/inc/INS_Correction.h>
 #include <Algorithm/ekf_lib/inc/quaternion_to_euler.h>
 #include <Algorithm/ekf_lib/inc/init_quaternion_by_euler.h>
-
+#include <Algorithm/ekf_lib/inc/ned2body.h>
+#include <Algorithm/ekf_lib/inc/body2ned.h>
 ekf_estimator::ekf_estimator()
 {
 	ekf_is_init=false;
@@ -139,7 +140,7 @@ bool ekf_estimator::ekf_is_ready()
 		sqrt_variance[2]=sqrt(sqrt_variance[2]);
 		
 		//if loopcount>800*0.005=4s && sqrt_variance(delt angle)<0.05бу
-		if(ekf_loopcount>=800 && sqrt_variance[0]!=0 && sqrt_variance[1]!=0 && sqrt_variance[2]!=0 && sqrt_variance[0]<=0.05f && sqrt_variance[1]<=0.05f && sqrt_variance[2]<=0.07f)
+		if(ekf_loopcount>=800 && sqrt_variance[0]!=0 && sqrt_variance[1]!=0 && sqrt_variance[2]!=0 && sqrt_variance[0]<=0.07f && sqrt_variance[1]<=0.7 && sqrt_variance[2]<=0.07f)
 		{
 			ekf_is_convergence=1;
 			return true;
@@ -216,6 +217,17 @@ int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,const float dT)
 	ekf_is_ready();
 	return 1;
 }
+void ekf_estimator::tf_ned2body(const float vector_ned[3], float vector_body[3])
+{
+	float q[4]={ekf_result.q0,ekf_result.q1,ekf_result.q2,ekf_result.q3};
+	ned2body(q,vector_ned,vector_body);
+}
+void ekf_estimator::tf_body2ned(const float vector_body[3], float vector_ned[3])
+{
+	float q[4]={ekf_result.q0,ekf_result.q1,ekf_result.q2,ekf_result.q3};
+	body2ned(q,vector_body,vector_ned);
+}
+
 
 
 

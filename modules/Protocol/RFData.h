@@ -259,6 +259,8 @@ typedef struct
   short raw_postion_e;
   short raw_speed_n;
   short raw_speed_e;
+  short raw_flow_vn;
+  short raw_flow_ve;
   short ekf_postion[3];
   short ekf_speed[3];
 } ekf_data;

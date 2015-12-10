@@ -14,7 +14,7 @@
 <a name="2"><font color="#888888 "><i>    2   </i></font></a><font color="#117755"><I> * File: LinearizeH.c</i></font>
 <a name="3"><font color="#888888 "><i>    3   </i></font></a><font color="#117755"><I> *</i></font>
 <a name="4"><font color="#888888 "><i>    4   </i></font></a><font color="#117755"><I> * MATLAB Coder version            : 2.6</i></font>
-<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 03-Dec-2015 17:00:31</i></font>
+<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 09-Dec-2015 17:37:13</i></font>
 <a name="6"><font color="#888888 "><i>    6   </i></font></a><font color="#117755"><I> */</i></font>
 <a name="7"><font color="#888888 "><i>    7   </i></font></a>
 <a name="8"><font color="#888888 "><i>    8   </i></font></a><font color="#117755"><i>/* Include files */</i></font>
@@ -27,70 +27,72 @@
 <a name="15"><font color="#888888 "><i>   15   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;LinearizeH.h&quot;</font>
 <a name="16"><font color="#888888 "><i>   16   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;RungeKutta.h&quot;</font>
 <a name="17"><font color="#888888 "><i>   17   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;SerialUpdate.h&quot;</font>
-<a name="18"><font color="#888888 "><i>   18   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;f.h&quot;</font>
-<a name="19"><font color="#888888 "><i>   19   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;h.h&quot;</font>
-<a name="20"><font color="#888888 "><i>   20   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;init_ekf_matrix.h&quot;</font>
-<a name="21"><font color="#888888 "><i>   21   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;init_quaternion_by_euler.h&quot;</font>
-<a name="22"><font color="#888888 "><i>   22   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;normlise_quaternion.h&quot;</font>
-<a name="23"><font color="#888888 "><i>   23   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;quaternion_to_euler.h&quot;</font>
-<a name="24"><font color="#888888 "><i>   24   </i></font></a>
-<a name="25"><font color="#888888 "><i>   25   </i></font></a><font color="#117755"><i>/* Function Definitions */</i></font>
+<a name="18"><font color="#888888 "><i>   18   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;body2ned.h&quot;</font>
+<a name="19"><font color="#888888 "><i>   19   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;f.h&quot;</font>
+<a name="20"><font color="#888888 "><i>   20   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;h.h&quot;</font>
+<a name="21"><font color="#888888 "><i>   21   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;init_ekf_matrix.h&quot;</font>
+<a name="22"><font color="#888888 "><i>   22   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;init_quaternion_by_euler.h&quot;</font>
+<a name="23"><font color="#888888 "><i>   23   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;ned2body.h&quot;</font>
+<a name="24"><font color="#888888 "><i>   24   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;normlise_quaternion.h&quot;</font>
+<a name="25"><font color="#888888 "><i>   25   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;quaternion_to_euler.h&quot;</font>
 <a name="26"><font color="#888888 "><i>   26   </i></font></a>
-<a name="27"><font color="#888888 "><i>   27   </i></font></a><font color="#117755"><i>/*</i></font>
-<a name="28"><font color="#888888 "><i>   28   </i></font></a><font color="#117755"><I> * Arguments    : const float X[13]</i></font>
-<a name="29"><font color="#888888 "><i>   29   </i></font></a><font color="#117755"><I> *                const float Be[3]</i></font>
-<a name="30"><font color="#888888 "><i>   30   </i></font></a><font color="#117755"><I> *                double H[104]</i></font>
-<a name="31"><font color="#888888 "><i>   31   </i></font></a><font color="#117755"><I> * Return Type  : void</i></font>
-<a name="32"><font color="#888888 "><i>   32   </i></font></a><font color="#117755"><I> */</i></font>
-<a name="33"><font color="#888888 "><i>   33   </i></font></a><font color="#112266"><b>void</b></font> <a name="fcn_LinearizeH">LinearizeH</a>(<font color="#112266"><b>const</b></font> <font color="#112266"><b>float</b></font> X[13], <font color="#112266"><b>const</b></font> <font color="#112266"><b>float</b></font> Be[3], <font color="#112266"><b>double</b></font> H[104])
-<a name="34"><font color="#888888 "><i>   34   </i></font></a><b>{</b>
-<a name="35"><font color="#888888 "><i>   35   </i></font></a>  <font color="#112266"><b>signed</b></font> <font color="#112266"><b>char</b></font> I[9];
-<a name="36"><font color="#888888 "><i>   36   </i></font></a>  <font color="#112266"><b>int</b></font> i0;
-<a name="37"><font color="#888888 "><i>   37   </i></font></a>  <font color="#112266"><b>int</b></font> k;
-<a name="38"><font color="#888888 "><i>   38   </i></font></a>  <font color="#112266"><b>static</b></font> <font color="#112266"><b>const</b></font> <font color="#112266"><b>signed</b></font> <font color="#112266"><b>char</b></font> iv0[6] = <b>{</b> 1, 0, 0, 1, 0, 0 <b>}</b>;
-<a name="39"><font color="#888888 "><i>   39   </i></font></a>
-<a name="40"><font color="#888888 "><i>   40   </i></font></a>  memset(&amp;H[0], 0, 104U * <font color="#112266"><b>sizeof</b></font>(<font color="#112266"><b>double</b></font>));
+<a name="27"><font color="#888888 "><i>   27   </i></font></a><font color="#117755"><i>/* Function Definitions */</i></font>
+<a name="28"><font color="#888888 "><i>   28   </i></font></a>
+<a name="29"><font color="#888888 "><i>   29   </i></font></a><font color="#117755"><i>/*</i></font>
+<a name="30"><font color="#888888 "><i>   30   </i></font></a><font color="#117755"><I> * Arguments    : const float X[13]</i></font>
+<a name="31"><font color="#888888 "><i>   31   </i></font></a><font color="#117755"><I> *                const float Be[3]</i></font>
+<a name="32"><font color="#888888 "><i>   32   </i></font></a><font color="#117755"><I> *                double H[104]</i></font>
+<a name="33"><font color="#888888 "><i>   33   </i></font></a><font color="#117755"><I> * Return Type  : void</i></font>
+<a name="34"><font color="#888888 "><i>   34   </i></font></a><font color="#117755"><I> */</i></font>
+<a name="35"><font color="#888888 "><i>   35   </i></font></a><font color="#112266"><b>void</b></font> <a name="fcn_LinearizeH">LinearizeH</a>(<font color="#112266"><b>const</b></font> <font color="#112266"><b>float</b></font> X[13], <font color="#112266"><b>const</b></font> <font color="#112266"><b>float</b></font> Be[3], <font color="#112266"><b>double</b></font> H[104])
+<a name="36"><font color="#888888 "><i>   36   </i></font></a><b>{</b>
+<a name="37"><font color="#888888 "><i>   37   </i></font></a>  <font color="#112266"><b>signed</b></font> <font color="#112266"><b>char</b></font> I[9];
+<a name="38"><font color="#888888 "><i>   38   </i></font></a>  <font color="#112266"><b>int</b></font> i4;
+<a name="39"><font color="#888888 "><i>   39   </i></font></a>  <font color="#112266"><b>int</b></font> k;
+<a name="40"><font color="#888888 "><i>   40   </i></font></a>  <font color="#112266"><b>static</b></font> <font color="#112266"><b>const</b></font> <font color="#112266"><b>signed</b></font> <font color="#112266"><b>char</b></font> iv0[6] = <b>{</b> 1, 0, 0, 1, 0, 0 <b>}</b>;
 <a name="41"><font color="#888888 "><i>   41   </i></font></a>
-<a name="42"><font color="#888888 "><i>   42   </i></font></a>  <font color="#117755"><i>/* dP/dP=I; */</i></font>
-<a name="43"><font color="#888888 "><i>   43   </i></font></a>  <font color="#112266"><b>for</b></font> (i0 = 0; i0 &lt; 9; i0++) <b>{</b>
-<a name="44"><font color="#888888 "><i>   44   </i></font></a>    I[i0] = 0;
-<a name="45"><font color="#888888 "><i>   45   </i></font></a>  <b>}</b>
-<a name="46"><font color="#888888 "><i>   46   </i></font></a>
-<a name="47"><font color="#888888 "><i>   47   </i></font></a>  <font color="#112266"><b>for</b></font> (k = 0; k &lt; 3; k++) <b>{</b>
-<a name="48"><font color="#888888 "><i>   48   </i></font></a>    I[k + 3 * k] = 1;
-<a name="49"><font color="#888888 "><i>   49   </i></font></a>    <font color="#112266"><b>for</b></font> (i0 = 0; i0 &lt; 3; i0++) <b>{</b>
-<a name="50"><font color="#888888 "><i>   50   </i></font></a>      H[i0 + (k &lt;&lt; 3)] = I[i0 + 3 * k];
-<a name="51"><font color="#888888 "><i>   51   </i></font></a>    <b>}</b>
-<a name="52"><font color="#888888 "><i>   52   </i></font></a>  <b>}</b>
-<a name="53"><font color="#888888 "><i>   53   </i></font></a>
-<a name="54"><font color="#888888 "><i>   54   </i></font></a>  <font color="#117755"><i>/* dV/dV=I; */</i></font>
-<a name="55"><font color="#888888 "><i>   55   </i></font></a>  <font color="#112266"><b>for</b></font> (i0 = 0; i0 &lt; 3; i0++) <b>{</b>
-<a name="56"><font color="#888888 "><i>   56   </i></font></a>    <font color="#112266"><b>for</b></font> (k = 0; k &lt; 2; k++) <b>{</b>
-<a name="57"><font color="#888888 "><i>   57   </i></font></a>      H[(k + ((3 + i0) &lt;&lt; 3)) + 3] = iv0[k + (i0 &lt;&lt; 1)];
-<a name="58"><font color="#888888 "><i>   58   </i></font></a>    <b>}</b>
-<a name="59"><font color="#888888 "><i>   59   </i></font></a>  <b>}</b>
-<a name="60"><font color="#888888 "><i>   60   </i></font></a>
-<a name="61"><font color="#888888 "><i>   61   </i></font></a>  <font color="#117755"><i>/* dBb/dq */</i></font>
-<a name="62"><font color="#888888 "><i>   62   </i></font></a>  H[53] = 2.0F * ((X[6] * Be[0] + X[9] * Be[1]) - X[8] * Be[2]);
-<a name="63"><font color="#888888 "><i>   63   </i></font></a>  H[61] = 2.0F * ((X[7] * Be[0] + X[8] * Be[1]) + X[9] * Be[2]);
-<a name="64"><font color="#888888 "><i>   64   </i></font></a>  H[69] = 2.0F * ((-X[8] * Be[0] + X[7] * Be[1]) - X[6] * Be[2]);
-<a name="65"><font color="#888888 "><i>   65   </i></font></a>  H[77] = 2.0F * ((-X[9] * Be[0] + X[6] * Be[1]) + X[7] * Be[2]);
-<a name="66"><font color="#888888 "><i>   66   </i></font></a>  H[54] = 2.0F * ((-X[9] * Be[0] + X[6] * Be[1]) + X[7] * Be[2]);
-<a name="67"><font color="#888888 "><i>   67   </i></font></a>  H[62] = 2.0F * ((X[8] * Be[0] - X[7] * Be[1]) + X[6] * Be[2]);
-<a name="68"><font color="#888888 "><i>   68   </i></font></a>  H[70] = 2.0F * ((X[7] * Be[0] + X[8] * Be[1]) + X[9] * Be[2]);
-<a name="69"><font color="#888888 "><i>   69   </i></font></a>  H[78] = 2.0F * ((-X[6] * Be[0] - X[9] * Be[1]) + X[8] * Be[2]);
-<a name="70"><font color="#888888 "><i>   70   </i></font></a>  H[55] = 2.0F * ((X[8] * Be[0] - X[7] * Be[1]) + X[6] * Be[2]);
-<a name="71"><font color="#888888 "><i>   71   </i></font></a>  H[63] = 2.0F * ((X[9] * Be[0] - X[6] * Be[1]) - X[7] * Be[2]);
-<a name="72"><font color="#888888 "><i>   72   </i></font></a>  H[71] = 2.0F * ((X[6] * Be[0] + X[9] * Be[1]) - X[8] * Be[2]);
-<a name="73"><font color="#888888 "><i>   73   </i></font></a>  H[79] = 2.0F * ((X[7] * Be[0] + X[8] * Be[1]) + X[9] * Be[2]);
-<a name="74"><font color="#888888 "><i>   74   </i></font></a><b>}</b>
-<a name="75"><font color="#888888 "><i>   75   </i></font></a>
-<a name="76"><font color="#888888 "><i>   76   </i></font></a><font color="#117755"><i>/*</i></font>
-<a name="77"><font color="#888888 "><i>   77   </i></font></a><font color="#117755"><I> * File trailer for LinearizeH.c</i></font>
-<a name="78"><font color="#888888 "><i>   78   </i></font></a><font color="#117755"><I> *</i></font>
-<a name="79"><font color="#888888 "><i>   79   </i></font></a><font color="#117755"><I> * [EOF]</i></font>
-<a name="80"><font color="#888888 "><i>   80   </i></font></a><font color="#117755"><I> */</i></font>
-<a name="81"><font color="#888888 "><i>   81   </i></font></a></pre>
+<a name="42"><font color="#888888 "><i>   42   </i></font></a>  memset(&amp;H[0], 0, 104U * <font color="#112266"><b>sizeof</b></font>(<font color="#112266"><b>double</b></font>));
+<a name="43"><font color="#888888 "><i>   43   </i></font></a>
+<a name="44"><font color="#888888 "><i>   44   </i></font></a>  <font color="#117755"><i>/* dP/dP=I; */</i></font>
+<a name="45"><font color="#888888 "><i>   45   </i></font></a>  <font color="#112266"><b>for</b></font> (i4 = 0; i4 &lt; 9; i4++) <b>{</b>
+<a name="46"><font color="#888888 "><i>   46   </i></font></a>    I[i4] = 0;
+<a name="47"><font color="#888888 "><i>   47   </i></font></a>  <b>}</b>
+<a name="48"><font color="#888888 "><i>   48   </i></font></a>
+<a name="49"><font color="#888888 "><i>   49   </i></font></a>  <font color="#112266"><b>for</b></font> (k = 0; k &lt; 3; k++) <b>{</b>
+<a name="50"><font color="#888888 "><i>   50   </i></font></a>    I[k + 3 * k] = 1;
+<a name="51"><font color="#888888 "><i>   51   </i></font></a>    <font color="#112266"><b>for</b></font> (i4 = 0; i4 &lt; 3; i4++) <b>{</b>
+<a name="52"><font color="#888888 "><i>   52   </i></font></a>      H[i4 + (k &lt;&lt; 3)] = I[i4 + 3 * k];
+<a name="53"><font color="#888888 "><i>   53   </i></font></a>    <b>}</b>
+<a name="54"><font color="#888888 "><i>   54   </i></font></a>  <b>}</b>
+<a name="55"><font color="#888888 "><i>   55   </i></font></a>
+<a name="56"><font color="#888888 "><i>   56   </i></font></a>  <font color="#117755"><i>/* dV/dV=I; */</i></font>
+<a name="57"><font color="#888888 "><i>   57   </i></font></a>  <font color="#112266"><b>for</b></font> (i4 = 0; i4 &lt; 3; i4++) <b>{</b>
+<a name="58"><font color="#888888 "><i>   58   </i></font></a>    <font color="#112266"><b>for</b></font> (k = 0; k &lt; 2; k++) <b>{</b>
+<a name="59"><font color="#888888 "><i>   59   </i></font></a>      H[(k + ((3 + i4) &lt;&lt; 3)) + 3] = iv0[k + (i4 &lt;&lt; 1)];
+<a name="60"><font color="#888888 "><i>   60   </i></font></a>    <b>}</b>
+<a name="61"><font color="#888888 "><i>   61   </i></font></a>  <b>}</b>
+<a name="62"><font color="#888888 "><i>   62   </i></font></a>
+<a name="63"><font color="#888888 "><i>   63   </i></font></a>  <font color="#117755"><i>/* dBb/dq */</i></font>
+<a name="64"><font color="#888888 "><i>   64   </i></font></a>  H[53] = 2.0F * ((X[6] * Be[0] + X[9] * Be[1]) - X[8] * Be[2]);
+<a name="65"><font color="#888888 "><i>   65   </i></font></a>  H[61] = 2.0F * ((X[7] * Be[0] + X[8] * Be[1]) + X[9] * Be[2]);
+<a name="66"><font color="#888888 "><i>   66   </i></font></a>  H[69] = 2.0F * ((-X[8] * Be[0] + X[7] * Be[1]) - X[6] * Be[2]);
+<a name="67"><font color="#888888 "><i>   67   </i></font></a>  H[77] = 2.0F * ((-X[9] * Be[0] + X[6] * Be[1]) + X[7] * Be[2]);
+<a name="68"><font color="#888888 "><i>   68   </i></font></a>  H[54] = 2.0F * ((-X[9] * Be[0] + X[6] * Be[1]) + X[7] * Be[2]);
+<a name="69"><font color="#888888 "><i>   69   </i></font></a>  H[62] = 2.0F * ((X[8] * Be[0] - X[7] * Be[1]) + X[6] * Be[2]);
+<a name="70"><font color="#888888 "><i>   70   </i></font></a>  H[70] = 2.0F * ((X[7] * Be[0] + X[8] * Be[1]) + X[9] * Be[2]);
+<a name="71"><font color="#888888 "><i>   71   </i></font></a>  H[78] = 2.0F * ((-X[6] * Be[0] - X[9] * Be[1]) + X[8] * Be[2]);
+<a name="72"><font color="#888888 "><i>   72   </i></font></a>  H[55] = 2.0F * ((X[8] * Be[0] - X[7] * Be[1]) + X[6] * Be[2]);
+<a name="73"><font color="#888888 "><i>   73   </i></font></a>  H[63] = 2.0F * ((X[9] * Be[0] - X[6] * Be[1]) - X[7] * Be[2]);
+<a name="74"><font color="#888888 "><i>   74   </i></font></a>  H[71] = 2.0F * ((X[6] * Be[0] + X[9] * Be[1]) - X[8] * Be[2]);
+<a name="75"><font color="#888888 "><i>   75   </i></font></a>  H[79] = 2.0F * ((X[7] * Be[0] + X[8] * Be[1]) + X[9] * Be[2]);
+<a name="76"><font color="#888888 "><i>   76   </i></font></a><b>}</b>
+<a name="77"><font color="#888888 "><i>   77   </i></font></a>
+<a name="78"><font color="#888888 "><i>   78   </i></font></a><font color="#117755"><i>/*</i></font>
+<a name="79"><font color="#888888 "><i>   79   </i></font></a><font color="#117755"><I> * File trailer for LinearizeH.c</i></font>
+<a name="80"><font color="#888888 "><i>   80   </i></font></a><font color="#117755"><I> *</i></font>
+<a name="81"><font color="#888888 "><i>   81   </i></font></a><font color="#117755"><I> * [EOF]</i></font>
+<a name="82"><font color="#888888 "><i>   82   </i></font></a><font color="#117755"><I> */</i></font>
+<a name="83"><font color="#888888 "><i>   83   </i></font></a></pre>
 </td></tr></table>
 </p>
 </body>
