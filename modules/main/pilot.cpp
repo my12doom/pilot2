@@ -301,6 +301,13 @@ int yet_another_pilot::run_controllers()
 			float vx = wx * frame.ground_distance/1000.0f * 1.15f;
 			float vy = wy * frame.ground_distance/1000.0f * 1.15f;
 			
+			
+			//transform fused velocity from ned to body 
+			float v_flow_body[3];
+			ekf_est.tf_ned2body(v_flow_ned,v_flow_body);
+			vx=-v_flow_body[1];
+			vy=v_flow_body[0];
+			
 			of_controller.update_controller(vx, vy, stick_roll, stick_pitch, interval);
 			float euler_target[3] = {0,0, NAN};
 			of_controller.get_result(&euler_target[0], &euler_target[1]);
@@ -1176,14 +1183,14 @@ int yet_another_pilot::calculate_state()
 	}
 	else
 	{	
-		float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0025f;
-		float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0020f;
+		float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0028f;
+		float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0028f;
 
-		float wx = pixel_compensated_x / 25.0f * 100 * PI / 180;
-		float wy = pixel_compensated_y / 20.0f * 100 * PI / 180;
+		float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
+		float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
 		
 		float v_flow_body[3];
-		v_flow_body[0] = wy * frame.ground_distance/1000.0f * 1.15f;
+		v_flow_body[0] = wy * frame.ground_distance/1000.0f * 1.15f;//black magic
 		v_flow_body[1] = -wx * frame.ground_distance/1000.0f * 1.15f;
 		v_flow_body[2] = 0;
 		
@@ -1606,7 +1613,7 @@ copter_mode yet_another_pilot::submode_from_stick()
 		else if (rc[5] > 0.6f)
 // 			newmode = airborne ? optical_flow : althold;
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-			last_submode = airborne ? (/*estimator.healthy() ?*/ poshold/* : optical_flow*/) : althold;
+			last_submode = airborne ? (estimator.healthy() ? poshold : optical_flow) : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
  			last_submode = airborne ? althold : althold;
 //			newmode = althold;
