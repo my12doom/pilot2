@@ -84,54 +84,14 @@ extern "C" void TIM7_IRQHandler(void)
 #include <HAL\STM32F4\F4UART.h>
 #include <HAL\Interface\IUART.h>
 
-//For usart3:
-IUART * pUART3 = &f4uart3;
-void init_uart3()
-{
-	pUART3->set_baudrate(115200);
-	manager.register_UART("UART3",pUART3);
-}
-extern "C" void USART3_IRQHandler(void)
-{
-	f4uart3.USART3_IRQHandler();
-}
-extern "C" void DMA1_Stream3_IRQHandler()
-{
-	f4uart3.DMA1_Steam3_IRQHandler();
-}
 
-//For usart2:
-IUART * pUART2 = &f4uart2;
-void init_uart2()
+void init_uart()
 {
-	pUART2->set_baudrate(115200);
-	manager.register_UART("UART2",pUART2);
+	manager.register_UART("UART1",&f4uart1);
+	manager.register_UART("UART2",&f4uart2);
+	manager.register_UART("UART3",&f4uart3);
+	manager.register_UART("UART4",&f4uart4);
 }
-extern "C" void USART2_IRQHandler(void)
-{
-	f4uart2.USART2_IRQHandler();
-}
-extern "C" void DMA1_Stream6_IRQHandler()
-{
-	f4uart2.DMA1_Steam6_IRQHandler();
-}
-
-//For usart1:
-IUART * pUART1 = &f4uart1;
-void init_uart1()
-{
-	pUART1->set_baudrate(115200);
-	manager.register_UART("UART1",pUART1);
-}
-extern "C" void USART1_IRQHandler(void)
-{
-	f4uart1.USART1_IRQHandler();
-}
-extern "C" void DMA2_Stream7_IRQHandler()
-{
-	f4uart1.DMA2_Steam7_IRQHandler();
-}
-
 
 #include <HAL\STM32F4\F4SPI.h>
 #include <HAL/sensors/MPU6000.h>
@@ -367,12 +327,9 @@ int bsp_init_all()
 	init_led();
 	init_BatteryMonitor();
 //	init_9150();
-//	init_uart4();
-	init_uart3();
-	init_uart2();
+	init_uart();
 	init_VCP();
 	init_timers();
-	init_uart1();
 	init_RC();
 	init_sensors();
 	//init_external_compass();
@@ -422,6 +379,10 @@ int bsp_init_all()
 
 		// frame
 		param("mat", 1)=1;
+		param("alt2", 0)=0;
+		param("ekf", 0)=0;
+		param("time", 3000)=3000;
+		param("maxD", 2)=2;
 	}
 	
 	return 0;

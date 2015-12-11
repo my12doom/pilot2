@@ -21,17 +21,17 @@ namespace STM32F4
 		virtual int readline(void *data, int max_count);
 		virtual int available();		
 			
-		virtual void USART1_IRQHandler(void);
-		virtual void DMA2_Steam7_IRQHandler();
+		void USART1_IRQHandler(void);
+		void DMA2_Steam7_IRQHandler();
 			
-		virtual void USART2_IRQHandler(void);
-		virtual void DMA1_Steam6_IRQHandler();
+		void USART2_IRQHandler(void);
+		void DMA1_Steam6_IRQHandler();
 
-		virtual void USART3_IRQHandler(void);
-		virtual void DMA1_Steam3_IRQHandler();
+		void USART3_IRQHandler(void);
+		void DMA1_Steam3_IRQHandler();
 			
-		virtual void UART4_IRQHandler(void);
-		virtual void DMA1_Steam4_IRQHandler();
+		void UART4_IRQHandler(void);
+		void DMA1_Steam4_IRQHandler();
 		
 		void destroy();
 
@@ -41,17 +41,20 @@ namespace STM32F4
 
 		// TX DMA var:
 		DMA_Stream_TypeDef* tx_DMAy_Streamx;
-		bool tx_dma_running;
+		volatile bool tx_dma_running;
 		int tx_start;
 		int tx_end;
 		int ongoing_tx_size;
 
-		//USART buffer var:
+		// RX buffer:
+		char rx_buffer[RX_BUFFER_SIZE];		// circular buffer
 		int start;
 		int end;
+		int ongoing_rx_start;
+		int ongoing_rx_size;
+		volatile bool rx_dma_running;
 
 		char tx_buffer[TX_BUFFER_SIZE];
-		char buffer[RX_BUFFER_SIZE];		// circular buffer
 
 		void dma_tx_init();
 		int dma_handle_tx_queue();
