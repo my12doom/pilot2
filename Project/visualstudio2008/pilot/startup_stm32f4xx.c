@@ -249,10 +249,15 @@ void __attribute__((naked, noreturn)) Reset_Handler()
 	main();
 	for (;;) ;
 }
-
+#include "stm32f4xx.h"
 void __attribute__((naked, noreturn)) Default_Handler()
 {
 	//If we ended up here, an unexpected interrupt has happened (we did not defined the XXX_Handler function for it).
 	//See the definition of g_pfnVectors above for interrupt handler names.
+  // RESET!
+  SCB->AIRCR  = ((0x5FA << SCB_AIRCR_VECTKEY_Pos)      | 
+                 (SCB->AIRCR & SCB_AIRCR_PRIGROUP_Msk) | 
+                 SCB_AIRCR_SYSRESETREQ_Msk);                   /* Keep priority group unchanged */
+  __DSB();                                                     /* Ensure completion of memory access */              
 	for (;;) ;
 }

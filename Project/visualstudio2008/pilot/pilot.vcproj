@@ -905,6 +905,10 @@
 						Name="EKF_Lib"
 						>
 						<File
+							RelativePath="..\..\..\modules\Algorithm\ekf_lib\src\body2ned.c"
+							>
+						</File>
+						<File
 							RelativePath="..\..\..\modules\Algorithm\ekf_lib\src\ekf_13state_initialize.c"
 							>
 						</File>
@@ -954,6 +958,10 @@
 						</File>
 						<File
 							RelativePath="..\..\..\modules\Algorithm\ekf_lib\src\LinearizeH.c"
+							>
+						</File>
+						<File
+							RelativePath="..\..\..\modules\Algorithm\ekf_lib\src\ned2body.c"
 							>
 						</File>
 						<File

@@ -78,70 +78,16 @@ extern "C" void TIM7_IRQHandler(void)
 
 
 
-//For uart4:
-
-IUART * pUART4 = &f4uart4;
-void init_uart4()
+void init_uart()
 {
-	pUART4->set_baudrate(57600);
-	//pUART4->write("This is UART4\n", 6);
-	manager.register_UART("Wifi",pUART4);
-}
-extern "C" void UART4_IRQHandler(void)
-{
-	f4uart4.UART4_IRQHandler();
-}
-extern "C" void DMA1_Stream4_IRQHandler()
-{
-	f4uart4.DMA1_Steam4_IRQHandler();
-}
-
-//For usart3:
-IUART * pUART3 = &f4uart3;
-void init_uart3()
-{
-	pUART3->set_baudrate(115200);
-	manager.register_UART("UART3",pUART3);
-}
-extern "C" void USART3_IRQHandler(void)
-{
-	f4uart3.USART3_IRQHandler();
-}
-extern "C" void DMA1_Stream3_IRQHandler()
-{
-	f4uart3.DMA1_Steam3_IRQHandler();
-}
-
-//For usart2:
-IUART * pUART2 = &f4uart2;
-void init_uart2()
-{
-	pUART2->set_baudrate(115200);
-	manager.register_UART("UART2",pUART2);
-}
-extern "C" void USART2_IRQHandler(void)
-{
-	f4uart2.USART2_IRQHandler();
-}
-extern "C" void DMA1_Stream6_IRQHandler()
-{
-	f4uart2.DMA1_Steam6_IRQHandler();
-}
-
-//For usart1:
-IUART * pUART1 = &f4uart1;
-void init_uart1()
-{
-	pUART1->set_baudrate(115200);
-	manager.register_UART("UART1",pUART1);
-}
-extern "C" void USART1_IRQHandler(void)
-{
-	f4uart1.USART1_IRQHandler();
-}
-extern "C" void DMA2_Stream7_IRQHandler()
-{
-	f4uart1.DMA2_Steam7_IRQHandler();
+	f4uart1.set_baudrate(115200);
+	f4uart2.set_baudrate(115200);
+	f4uart3.set_baudrate(115200);
+	f4uart4.set_baudrate(115200);
+	manager.register_UART("UART1",&f4uart1);
+	manager.register_UART("UART2",&f4uart2);
+	manager.register_UART("UART3",&f4uart3);
+	manager.register_UART("UART4",&f4uart4);
 }
 
 
@@ -347,12 +293,9 @@ int bsp_init_all()
 	//init_sonar();
 	init_led();
 	init_BatteryMonitor();
-	init_uart4();
-	init_uart3();
-	init_uart2();
+	init_uart();
 	init_VCP();
 	init_timers();
-	init_uart1();
 	init_RC();
 	init_sensors();
 	//init_external_compass();
