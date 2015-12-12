@@ -10,6 +10,6 @@ figure(2)
 %plot(x_aixs,M(:,17),'r',x_aixs,M(:,28),'b')
 plot(x_aixs,M(:,17),'r',x_aixs,M(:,28),'b')
 figure(3)%plot 3D postion
-plot3(M(:,24),M(:,25),M(:,26),'o')
+plot3(M(40000:60000,24),M(40000:-1,25),M(40000:-1,26),'o')
 figure(4)%ned speed estimate
 plot(x_aixs,M(:,27),'b',x_aixs,M(:,28),'r')
