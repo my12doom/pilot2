@@ -338,7 +338,7 @@ int pos_controller::accel_to_lean_angles()
 	// rotate from north-east to forward-right axis
 	float accel_forward = cos_yaw * target_accel[0] + sin_yaw * target_accel[1];
 	float accel_right = -sin_yaw * target_accel[0] + cos_yaw * target_accel[1];
-0
+	
 	// accel to lean angle
 	target_euler[1] = atan2(-accel_forward, G_in_ms2);
 	target_euler[0] = atan2(accel_right/**cos(eulers[1])*/, G_in_ms2);		// maybe target_pitch not needed?
