@@ -292,11 +292,11 @@ int yet_another_pilot::run_controllers()
 			float flow_roll = -frame.flow_comp_m_x/1000.0f * 10;
 			float flow_pitch = -frame.flow_comp_m_y/1000.0f * 10;
 			
-			float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0025f;
-			float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0020f;
+			float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0028f;
+			float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0028f;
 
-			float wx = pixel_compensated_x / 25.0f * 100 * PI / 180;
-			float wy = pixel_compensated_y / 20.0f * 100 * PI / 180;
+			float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
+			float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
 
 			float vx = wx * frame.ground_distance/1000.0f * 1.15f;
 			float vy = wy * frame.ground_distance/1000.0f * 1.15f;
@@ -1606,7 +1606,7 @@ copter_mode yet_another_pilot::submode_from_stick()
 		else if (rc[5] > 0.6f)
 // 			newmode = airborne ? optical_flow : althold;
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-			last_submode = airborne ? (/*estimator.healthy() ?*/ poshold/* : optical_flow*/) : althold;
+			last_submode = airborne ? (estimator.healthy() ? poshold : optical_flow) : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
  			last_submode = airborne ? althold : althold;
 //			newmode = althold;
