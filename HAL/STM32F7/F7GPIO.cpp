@@ -57,6 +57,7 @@ namespace STM32F7_HAL
 			HAL_GPIO_WritePin(this->GPIOx,this->GPIO_Pin, GPIO_PIN_SET);
 			
 		}
+		else
 		{
 			HAL_GPIO_WritePin(this->GPIOx,this->GPIO_Pin, GPIO_PIN_RESET);
 		}	

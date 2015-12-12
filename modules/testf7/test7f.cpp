@@ -89,6 +89,12 @@ void MX_GPIO_Init(void)
 
 }
 
+void delay(int p)
+{
+	while(p--)
+		;
+}
+
 int main()
 {
   HAL_Init();
@@ -101,6 +107,9 @@ int main()
   while (1)
   {
 	led.write(0);
+	delay(6553500);
+	led.write(1);
+	delay(6553500);	  
   }
 }
 	
