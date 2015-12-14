@@ -140,7 +140,7 @@ bool ekf_estimator::ekf_is_ready()
 		sqrt_variance[2]=sqrt(sqrt_variance[2]);
 		
 		//if loopcount>800*0.005=4s && sqrt_variance(delt angle)<0.05бу
-		if(ekf_loopcount>=800 && sqrt_variance[0]!=0 && sqrt_variance[1]!=0 && sqrt_variance[2]!=0 && sqrt_variance[0]<=0.07f && sqrt_variance[1]<=0.7 && sqrt_variance[2]<=0.07f)
+		if(ekf_loopcount>=800 && sqrt_variance[0]!=0 && sqrt_variance[1]!=0 && sqrt_variance[2]!=0 && sqrt_variance[0]<=0.7f && sqrt_variance[1]<=0.7f && sqrt_variance[2]<=0.7f)
 		{
 			ekf_is_convergence=1;
 			return true;
