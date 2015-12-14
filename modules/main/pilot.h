@@ -50,7 +50,7 @@ public:
 	bool acc_cal_requested;// = false;
 	bool acc_cal_done;// = false;
 	bool motor_saturated;// = false;
-	bool rc_fail;// = false;
+	int rc_fail;	// 0 : RF controlling, 1: mobile controlling, 2: mobile overriding, -1: total failure
 	int round_running_time;// = 0;
 	devices::gps_data gps;
 	bool new_gps_data;// = false;
