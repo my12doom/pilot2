@@ -2,7 +2,7 @@
 #include <HAL/Interface/ISysTimer.h>
 #include <stdint.h>
 
-namespace STM32F7
+namespace STM32F7_HAL
 {
 	class F7SysTimer : public HAL::ISysTimer
 	{
@@ -12,5 +12,6 @@ namespace STM32F7
 		virtual int64_t gettime();		// micro-second
 		virtual void delayms(float ms);
 		virtual void delayus(float us);
+		void config();
 	};
 }

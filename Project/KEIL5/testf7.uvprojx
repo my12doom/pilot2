@@ -14,7 +14,7 @@
         <TargetCommonOption>
           <Device>STM32F746NGHx</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32F7xx_DFP.2.2.0</PackID>
+          <PackID>Keil.STM32F7xx_DFP.2.0.0</PackID>
           <PackURL>http://www.keil.com/pack</PackURL>
           <Cpu>IROM(0x08000000,0x100000) IROM2(0x00200000,0x100000) IRAM(0x20010000,0x40000) IRAM2(0x20000000,0x10000) CPUTYPE("Cortex-M7") FPU3(SFPU) CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -350,7 +350,7 @@
           <Cads>
             <interw>1</interw>
             <Optim>1</Optim>
-            <oTime>0</oTime>
+            <oTime>1</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
             <Strict>0</Strict>
@@ -369,7 +369,7 @@
               <MiscControls>--diag_suppress 177,550,1,1295 --gnu</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F746xx,USE_HAL_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\;..\..\modules;..\..\HAL\STM32F7\STMLib\Inc;..\..\HAL\STM32F7\STMLib\Inc\Legacy;..\..\HAL\STM32F7\STMLib\CMSIS\Include;..\..\HAL\STM32F7\STMLib\CMSIS\Device\ST\STM32F7xx\Include;..\..\HAL\Interface;..\..\HAL\STM32F7</IncludePath>
+              <IncludePath>..\..\;..\..\modules;..\..\HAL\STM32F7\STMLib\Inc;..\..\HAL\STM32F7\STMLib\Inc\Legacy;..\..\HAL\STM32F7\STMLib\CMSIS\Include;..\..\HAL\STM32F7\STMLib\CMSIS\Device\ST\STM32F7xx\Include;..\..\HAL\Interface;..\..\HAL\STM32F7;..\..\modules\Algorithm\ekf_lib\inc\</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -493,6 +493,11 @@
               <FileName>F7GPIO.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\HAL\STM32F7\F7GPIO.h</FilePath>
+            </File>
+            <File>
+              <FileName>F7SysTimer.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F7\F7SysTimer.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -803,6 +808,126 @@
               <FileName>stm32f7xx_hal_conf.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\HAL\STM32F7\stm32f7xx_hal_conf.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>EKF</GroupName>
+          <Files>
+            <File>
+              <FileName>body2ned.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\body2ned.c</FilePath>
+            </File>
+            <File>
+              <FileName>ekf_13state_initialize.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\ekf_13state_initialize.c</FilePath>
+            </File>
+            <File>
+              <FileName>ekf_13state_terminate.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\ekf_13state_terminate.c</FilePath>
+            </File>
+            <File>
+              <FileName>f.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\f.c</FilePath>
+            </File>
+            <File>
+              <FileName>h.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\h.c</FilePath>
+            </File>
+            <File>
+              <FileName>init_ekf_matrix.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\init_ekf_matrix.c</FilePath>
+            </File>
+            <File>
+              <FileName>init_quaternion_by_euler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\init_quaternion_by_euler.c</FilePath>
+            </File>
+            <File>
+              <FileName>INS_Correction.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\INS_Correction.c</FilePath>
+            </File>
+            <File>
+              <FileName>INS_CovariancePrediction.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\INS_CovariancePrediction.c</FilePath>
+            </File>
+            <File>
+              <FileName>INS_SetState.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\INS_SetState.c</FilePath>
+            </File>
+            <File>
+              <FileName>INSSetMagNorth.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\INSSetMagNorth.c</FilePath>
+            </File>
+            <File>
+              <FileName>inv.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\inv.c</FilePath>
+            </File>
+            <File>
+              <FileName>LinearFG.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\LinearFG.c</FilePath>
+            </File>
+            <File>
+              <FileName>LinearizeH.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\LinearizeH.c</FilePath>
+            </File>
+            <File>
+              <FileName>ned2body.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\ned2body.c</FilePath>
+            </File>
+            <File>
+              <FileName>normlise_quaternion.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\normlise_quaternion.c</FilePath>
+            </File>
+            <File>
+              <FileName>quaternion_to_euler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\quaternion_to_euler.c</FilePath>
+            </File>
+            <File>
+              <FileName>rt_nonfinite.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\rt_nonfinite.c</FilePath>
+            </File>
+            <File>
+              <FileName>rtGetInf.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\rtGetInf.c</FilePath>
+            </File>
+            <File>
+              <FileName>rtGetNaN.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\rtGetNaN.c</FilePath>
+            </File>
+            <File>
+              <FileName>RungeKutta.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\RungeKutta.c</FilePath>
+            </File>
+            <File>
+              <FileName>SerialUpdate.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_lib\src\SerialUpdate.c</FilePath>
+            </File>
+            <File>
+              <FileName>ekf_estimator.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\ekf_estimator.cpp</FilePath>
             </File>
           </Files>
         </Group>

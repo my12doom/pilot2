@@ -1,8 +1,8 @@
-#include <stm32f7xx_hal.h>
 #include "F7SysTimer.h"
+#include <stm32f7xx_hal.h>
 #include <stdint.h>
 
-namespace STM32F7
+namespace STM32F7_HAL
 {
 	int64_t base = 0;
 	int reload;
@@ -14,11 +14,15 @@ namespace STM32F7
 	
 	F7SysTimer::F7SysTimer()
 	{
+		config();
+	}
+	
+	void F7SysTimer::config()
+	{
 		reload = SystemCoreClock / 100;		// ~ 10ms reload period
 		SysTick_Config(reload);
 		NVIC_SetPriority(SysTick_IRQn, 0x0);
 	}
-	
 	
 	int64_t F7SysTimer::gettime()		// micro-second
 	{
@@ -77,4 +81,4 @@ namespace STM32F7
 	static F7SysTimer timer;
 }
 
-HAL::ISysTimer *systimer = &STM32F7::timer;
+HAL::ISysTimer *systimer = &STM32F7_HAL::timer;
