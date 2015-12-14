@@ -132,18 +132,18 @@ namespace STM32F4
 			RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
 			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
 			//Set Uart4 bind to GPIOD pin8|pin9
-			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
 			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 			GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-			GPIO_Init(GPIOD, &GPIO_InitStructure);
-			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+			GPIO_Init(GPIOB, &GPIO_InitStructure);
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
 			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-			GPIO_Init(GPIOD, &GPIO_InitStructure);
-			GPIO_PinAFConfig(GPIOD, GPIO_PinSource8, GPIO_AF_USART3);
-			GPIO_PinAFConfig(GPIOD, GPIO_PinSource9, GPIO_AF_USART3);
+			GPIO_Init(GPIOB, &GPIO_InitStructure);
+			GPIO_PinAFConfig(GPIOB, GPIO_PinSource10, GPIO_AF_USART3);
+			GPIO_PinAFConfig(GPIOB, GPIO_PinSource11, GPIO_AF_USART3);
 			
 			USART_InitStructure.USART_BaudRate = 115200;
 			USART_InitStructure.USART_WordLength = USART_WordLength_8b;
@@ -624,7 +624,7 @@ namespace STM32F4
 	void F4UART::DMA1_Stream1_IRQHandler()
 	{	
 		end = (ongoing_rx_start + ongoing_rx_size) % sizeof(rx_buffer);
-		DMA_ClearFlag(DMA1_Stream1, DMA_FLAG_TCIF3);
+		DMA_ClearFlag(DMA1_Stream1, DMA_FLAG_TCIF1);
 		rx_dma_running = false;
 		dma_handle_rx_queue();
 	}

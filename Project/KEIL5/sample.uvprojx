@@ -1041,6 +1041,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\utils\log.cpp</FilePath>
             </File>
+            <File>
+              <FileName>SEGGER_RTT.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\utils\SEGGER_RTT.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

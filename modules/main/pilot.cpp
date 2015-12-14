@@ -30,6 +30,7 @@ using namespace math;
 const float PI180 = 180/PI;
 
 // parameters
+static param forced_mobile_controll("mob", 0);		// use mobile controlling even when RF available
 static param use_EKF("ekf", 0);		// use EKF estimator
 static param cycle_time("time", 3000);
 static param use_alt_estimator2("alt2", 0);		// use new alt estimator
@@ -123,7 +124,7 @@ yet_another_pilot::yet_another_pilot()
 ,acc_cal_requested(false)
 ,acc_cal_done(false)
 ,motor_saturated(false)
-,rc_fail(false)
+,rc_fail(0)
 ,round_running_time(0)
 ,new_gps_data(false)
 ,critical_errors(0)
@@ -1532,7 +1533,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	armed = arm;
 	set_submode(submode_from_stick());
 	
-	LOGE("arm OK\n");
+	LOGE("%s OK\n", arm ? "arm" : "disarm");
 	
 	return 0;
 }
@@ -1683,11 +1684,7 @@ int yet_another_pilot::check_stick()
 	// arm action check: RC first four channel active, throttle minimum, elevator stick down, rudder max or min, aileron max or min, for 0.5second
 	static int64_t arm_start_tick = 0;
 	static int64_t arm_command_sent = false;
-	bool rc_fail = false;
-	for(int i=0; i<4; i++)
-		if (g_pwm_input_update[i] < systimer->gettime() - 500000)
-			rc_fail = true;
-	bool arm_action = !rc_fail && rc[2] < 0.1f  && fabs(rc[0]) > 0.85f
+	bool arm_action = rc_fail>=0 && rc[2] < 0.1f  && fabs(rc[0]) > 0.85f
 					&& fabs(rc[1]) > 0.85f && fabs(rc[3]) > 0.85f;
 	if (!arm_action)
 	{
@@ -1905,6 +1902,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	
 	line[byte_count] = 0;
 	int len = strlen(line);
+	const char * keyword = ",stick\n";
 	const char * keyword2 = "stick,";
 	const char * keyword3 = "flashlight";
 	
@@ -1920,7 +1918,23 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			rc_mobile[2] = (rc_mobile[2] - 0.5f) * 1.35f + 0.5f;
 			rc_mobile[3] *= 1.33f;
 		}
-	}	
+	}
+	
+	else if (strstr(line, keyword) == (line+len-strlen(keyword)))
+	{
+		if (sscanf(line, "%f,%f,%f,%f", &rc_mobile[0], &rc_mobile[1], &rc_mobile[2], &rc_mobile[3] ) == 4)
+		{
+			mobile_last_update = systimer->gettime();
+			TRACE("stick:%f,%f,%f,%f\n", rc_mobile[0], rc_mobile[1], rc_mobile[2], rc_mobile[3]);
+			
+			rc_mobile[0] *= 1.33f;
+			rc_mobile[1] *= 1.33f;
+			rc_mobile[2] = (rc_mobile[2] - 0.5f) * 1.35f + 0.5f;
+			rc_mobile[3] *= 1.33f;
+			
+			TRACE("rc_mobile: %f, %f, %f, %f\n", rc_mobile[0], rc_mobile[1], rc_mobile[2], rc_mobile[3]);
+		}
+	}
 
 	else if (strstr(line, "arm") == line)
 	{
@@ -2104,19 +2118,57 @@ int yet_another_pilot::read_rc()
 
 	rc[2] = (rc[2]+1)/2;
 	
-	// rc no signel for 0.5 seconds, or -10% or more throttle
-	if (rc2_update_time > 500000 || g_pwm_input[2] < (rc_setting[2][0] - (rc_setting[2][2] - rc_setting[2][0])/10))
-		rc_fail = true;
-	
-	// wifi controll override
-	if (systimer->gettime() - mobile_last_update < 400000 && rc[6] < -0.5f)
+	// check rf fail
+	// rc no signel for 0.5 seconds, or -10% or less throttle
+	bool rf_fail = false;
 	for(int i=0; i<4; i++)
+		if (g_pwm_input_update[i] < systimer->gettime() - 500000)
+			rf_fail = true;
+	
+	if (g_pwm_input[2] < (rc_setting[2][0] - (rc_setting[2][2] - rc_setting[2][0])/10))
+		rf_fail = true;
+	
+	// controll source selecting
+	if (rf_fail || forced_mobile_controll > 0.5f)
 	{
-		rc[i] = rc_mobile[i];
-		TRACE("%.2f,", rc_mobile[i]);
+		if (systimer->gettime() - mobile_last_update < 1000000)
+		{
+			for(int i=0; i<4; i++)
+			{
+				rc[i] = rc_mobile[i];
+				TRACE("%.2f,", rc_mobile[i]);
+			}
+			rc_fail = forced_mobile_controll > 0.5f ? 2 : 1;
+		}
+		else
+		{
+			rc_fail = -1;
+		}
+	}
+	else
+	{
+		rc_fail = 0;
 	}
 	
-	TRACE("                      ");
+	// send RC fail event
+	static int last_rc_fail = 0;
+	if (rc_fail != last_rc_fail)
+	{
+		switch(rc_fail)
+		{
+		case 0:
+			LOGE("RC restored");
+			break;
+		case -1:
+			LOGE("RC restored");
+			break;
+		case 1:
+		case 2:
+			LOGE("RC from mobile");
+			break;
+		}
+		last_rc_fail = rc_fail;
+	}
 	
 	return 0;
 }

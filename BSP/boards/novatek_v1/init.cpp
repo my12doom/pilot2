@@ -39,7 +39,7 @@ void init_led()
 	static F4GPIO f4gpioB15(GPIOB,GPIO_Pin_15);
 	f4gpioB15.set_mode(HAL::MODE_OUT_PushPull);
 	f4gpioB15.write(true);
-	static GPIOLED flashlight(&f4gpioB15, true);
+	static GPIOLED flashlight(&f4gpioB14, true);
 	
 	flashlight.off();
 	
@@ -302,7 +302,7 @@ int bsp_init_all()
 	init_asyncworker();
 	init_led();
 	init_flow();
-	init_GPS();	
+	init_GPS();
 	
 	// parameter config
 	param bsp_parameter("BSP", 1);
@@ -345,6 +345,8 @@ int bsp_init_all()
 
 		// frame
 		param("mat", 1)=1;
+		param("ekf", 0)=1;
+		param("time", 3000)=5000;
 	}
 	
 	return 0;
