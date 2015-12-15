@@ -4,7 +4,7 @@
 #include <utils/param.h>
 
 #define default_throttle_hover 0.35f
-#define sonar_step_threshold 0.15f
+#define sonar_step_threshold 3.0f
 
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
@@ -59,6 +59,11 @@ altitude_controller::~altitude_controller()
 
 }
 
+static inline float fmax(float a, float b)
+{
+	return a>b?a:b;
+}
+
 // provide system state estimation for controller
 // alt[0-2] : altitude, climb_rate, acceleration
 // sonar: sonar reading ,NAN for invalid reading(no echo or other errors), controller is responsible for filtering and switching between sonar and baro
@@ -84,7 +89,11 @@ int altitude_controller::provide_states(float *alt, float sonar, float *attitude
 	if (!isnan(sonar))
 	{
 		// step response
-		if (!isnan(m_sonar_target) && fabs(sonar - m_last_valid_sonar) >  sonar_step_threshold)
+		// 0.1f : sonar update interval
+		float sonar_update_inteval = 0.1f;
+		float step_change_max = sonar_step_threshold * (fabs(m_baro_states[1]) * sonar_update_inteval + 0.5f * fabs(m_baro_states[2]) * sonar_update_inteval * sonar_update_inteval);
+		step_change_max = fmax(step_change_max, 0.2f);
+		if (!isnan(m_sonar_target) &&  fabs(sonar - m_last_valid_sonar) >  step_change_max)
 			m_sonar_target += sonar - m_last_valid_sonar;
 
 		m_last_valid_sonar = sonar;

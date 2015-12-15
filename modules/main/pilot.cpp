@@ -1751,7 +1751,7 @@ void yet_another_pilot::handle_takeoff()
 	if(is_taking_off && systimer->gettime()>=takeoff_arming_time+2000000)
 	{
 		is_taking_off=false;
-		alt_controller.set_altitude_target(alt_controller.get_altitude_state()+2.0f);
+		alt_controller.set_altitude_target(alt_controller.get_altitude_state()+1.0f);
 		LOGE("\nalread take off\n");
 	}
 }
@@ -1981,7 +1981,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 
 	else if (strstr(line, "state") == line)
 	{
-		sprintf(out, "%f,%f,%f\n", gps.longitude, gps.latitude, (batt.get_internal_voltage() - 10.8f)/(12.6f-10.8f));
+		sprintf(out, "%f,%f,%f,%d\n", gps.longitude, gps.latitude, (batt.get_internal_voltage() - 10.8f)/(12.6f-10.8f), frame.ground_distance);
 		uart->write(out, strlen(out));
 	}
 	
@@ -2143,6 +2143,7 @@ int yet_another_pilot::read_rc()
 		else
 		{
 			rc_fail = -1;
+			disarm();
 		}
 	}
 	else
