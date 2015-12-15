@@ -641,7 +641,7 @@ namespace STM32F4
 	void F4UART::DMA1_Stream2_IRQHandler()
 	{
 		end = (ongoing_rx_start + ongoing_rx_size) % sizeof(rx_buffer);
-		DMA_ClearFlag(DMA1_Stream2, DMA_FLAG_TCIF4);
+		DMA_ClearFlag(DMA1_Stream2, DMA_FLAG_TCIF2);
 		rx_dma_running = false;
 		dma_handle_rx_queue();
 	}
