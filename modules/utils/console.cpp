@@ -13,7 +13,7 @@
 
 using namespace HAL;
 
-const char version_name[] = __DATE__;
+const char version_name[] = __DATE__ " " __TIME__;
 const char bsp_name[] = " unknown";
 
 #define SIGNATURE_ADDRESS 0x0800E800

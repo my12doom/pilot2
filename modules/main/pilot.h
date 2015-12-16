@@ -19,6 +19,11 @@
 
 #include <math/LowPassFilter2p.h>
 
+#include "mode_basic.h"
+#include "mode_althold.h"
+#include "mode_of_loiter.h"
+#include "mode_poshold.h"
+
 class yet_another_pilot;
 extern yet_another_pilot yap;
 
@@ -64,7 +69,15 @@ public:
 	bool airborne;// = false;
 	float takeoff_ground_altitude;// = 0;
 	bool armed;// = false;
-	copter_mode submode;// = basic;
+
+	copter_mode flight_mode;// = basic;
+
+	flight_mode_basic mode_basic;
+	flight_mode_althold mode_althold;
+	flight_mode_of_loiter mode_of_loiter;
+	flight_mode_poshold mode_poshold;
+
+
 	int64_t collision_detected;// = 0;	// remember to clear it before arming
 	int64_t tilt_us;// = 0;	// remember to clear it before arming
 	math::LowPassFilter2p gyro_lpf2p[3];// = {LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40)};	// 2nd order low pass filter for gyro.
@@ -81,7 +94,7 @@ public:
 	int64_t last_tick;// = 0;
 	int64_t last_gps_tick;// = 0;
 	pos_estimator estimator;
-	pos_controller controller;
+	pos_controller pos_control;
 	attitude_controller attitude_controll;
 	altitude_estimator alt_estimator;
 	altitude_estimator2 alt_estimator2;
@@ -128,6 +141,9 @@ public:
 	bool islanding;// = false ;
 	bool land_possible;
 	bool imu_data_lock;
+	int event_count;
+	int events[10];
+	int events_args[10];
 
 	// constructor
 	yet_another_pilot();
@@ -161,7 +177,7 @@ public:
 	int check_stick();
 	int disarm();
 	int arm(bool arm = true);
-	int set_submode(copter_mode newmode);
+	int set_mode(copter_mode newmode);
 	int calculate_state();
 	int read_sensors();
 	int read_imu_and_filter();		// should be called from a seperate thread(timer) with higher than read_sensors()'s priority
@@ -169,7 +185,11 @@ public:
 	int output();
 	void handle_takeoff();
 	int save_logs();
-	copter_mode submode_from_stick();
+	copter_mode mode_from_stick();
+
+	// event handling
+	int new_event(int event, int arg);
+	int handle_events();
 	
 	// UART functions
 	int handle_cli(HAL::IUART *uart);
@@ -186,7 +206,19 @@ public:
 	void output_rc();
 	void STOP_ALL_MOTORS();
 	int calculate_baro_altitude();
+
+	int default_alt_controlling();
 	
 //protected:
+};
+
+enum yap_events
+{
+	event_arm,
+	event_disarm,
+	event_airborne,
+	event_touchdown,
+	event_pos_ready,
+	event_pos_bad,
 };
 

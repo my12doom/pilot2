@@ -89,7 +89,7 @@ void init_uart()
 {
 	manager.register_UART("UART1",&f4uart1);
 	manager.register_UART("UART2",&f4uart2);
-	manager.register_UART("UART3",&f4uart3);
+	manager.register_UART("Wifi",&f4uart3);
 	manager.register_UART("UART4",&f4uart4);
 }
 

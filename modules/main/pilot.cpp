@@ -47,12 +47,6 @@ static param quadcopter_trim[3] =
 	param("trmP", 0 * PI / 180),			// pitch
 	param("trmY", 0.0f),					// yaw
 };
-static param quadcopter_range[3] = 
-{
-	param("rngR", PI / 5),			// roll
-	param("rngP", PI / 5),			// pitch
-	param("rngY", PI / 8),			// yaw
-};
 
 static param _gyro_bias[2][4] =	//[p1,p2][temperature,g0,g1,g2]
 {
@@ -135,14 +129,14 @@ yet_another_pilot::yet_another_pilot()
 ,airborne(false)
 ,takeoff_ground_altitude(0)
 ,armed(false)
-,submode(basic)
+,flight_mode(basic)
 ,collision_detected(0)	// remember to clear it before arming
 ,tilt_us(0)	// remember to clear it before arming
 //,gyro_lpf2p({LowPassFilter2p(333.3, 40),LowPassFilter2p(333.3, 40),LowPassFilter2p(333.3, 40)})	// 2nd order low pass filter for gyro.
 
 ,last_tick(0)
 ,last_gps_tick(0)
-,voltage(0)
+,voltage(12)
 ,current(0)
 ,interval(0)
 ,new_baro_data(false)
@@ -168,6 +162,7 @@ yet_another_pilot::yet_another_pilot()
 	gps_attitude_timeout = 0;
 	land_possible = false;
 	imu_data_lock = false;
+	event_count = 0;
 
 	for(int i=0; i<3; i++)
 	{
@@ -212,194 +207,85 @@ int yet_another_pilot::calculate_baro_altitude()
 	return 0;
 }
 
+int yet_another_pilot::default_alt_controlling()
+{
+	float landing_rate = ((alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) && !alt_controller.sonar_actived()) ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
+	float max_climb_rate = islanding ? (landing_rate + quadcopter_auto_landing_rate_final) : quadcopter_max_climb_rate;	// very low climbe rate even if max throttle in landing state
+	
+	float v = rc[2] - 0.5f;
+	float user_rate;
+	if (fabs(v)<0.05f)
+		user_rate = 0;
+	else if (v>= 0.05f)
+	{
+		user_rate = (v-0.05f)/0.45f;
+		user_rate = user_rate * user_rate * max_climb_rate;
+	}
+	else
+	{
+		user_rate = (v+0.05f)/0.45f;
+		user_rate = -user_rate * user_rate * quadcopter_max_descend_rate;
+	}
 
+	if (use_alt_estimator2 > 0.5f)
+	{	
+		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
+	else
+	{
+		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};			
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
+	
+	// landing?
+	if(islanding)
+		user_rate -= landing_rate;
+
+	alt_controller.update(interval, user_rate);
+	
+	throttle_result = alt_controller.get_result();
+
+	TRACE("\rthr=%f/%f", throttle_result, alt_controller.get_result());
+
+	return 0;
+}
 
 int yet_another_pilot::run_controllers()
 {
 	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : NULL, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	
-	// airborne or armed and throttle up
-	bool after_unlock_action = airborne || rc[2] > 0.55f;
-
-	// throttle
-	if (submode == althold || submode == poshold || submode == bluetooth || submode == optical_flow)
+	switch(flight_mode)
 	{
-		float landing_rate = ((alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) && !alt_controller.sonar_actived()) ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
-		float max_climb_rate = islanding ? (landing_rate + quadcopter_auto_landing_rate_final) : quadcopter_max_climb_rate;	// very low climbe rate even if max throttle in landing state
-		
-		float v = rc[2] - 0.5f;
-		float user_rate;
-		if (fabs(v)<0.05f)
-			user_rate = 0;
-		else if (v>= 0.05f)
-		{
-			user_rate = (v-0.05f)/0.45f;
-			user_rate = user_rate * user_rate * max_climb_rate;
-		}
-		else
-		{
-			user_rate = (v+0.05f)/0.45f;
-			user_rate = -user_rate * user_rate * quadcopter_max_descend_rate;
-		}
-
-		if (use_alt_estimator2 > 0.5f)
-		{	
-			float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
-			alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
-		}
-		else
-		{
-			float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};			
-			alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
-		}
-		
-		// landing?
-		if(islanding)
-			user_rate -= landing_rate;
-
-		alt_controller.update(interval, user_rate);
-		
-		throttle_result = alt_controller.get_result();
-
-		TRACE("\rthr=%f/%f", throttle_result, alt_controller.get_result());
-	}
-	else
-	{
-		throttle_result = rc[2];
-	}
-
-	// attitude
-	if (submode == basic || submode == althold)
-	{
-		if (after_unlock_action)	// airborne or armed and throttle up
-		{
-			float stick[3] = {rc[0], rc[1], NAN};
-			attitude_controll.update_target_from_stick(stick, interval);
-		}
-		else
-		{
-			float euler_target[3] = {0,0, NAN};
-			attitude_controll.set_euler_target(euler_target);
-		}
-	}
-
-	else if (submode == optical_flow)
-	{
-		if (after_unlock_action)	// airborne or armed and throttle up
-		{
-			float stick_roll = rc[0] * quadcopter_range[0];
-			float stick_pitch = -rc[1] * quadcopter_range[1];	// pitch stick and coordinate are reversed
-
-			float flow_roll = -frame.flow_comp_m_x/1000.0f * 10;
-			float flow_pitch = -frame.flow_comp_m_y/1000.0f * 10;
-			
-			float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0028f;
-			float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0028f;
-
-			float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
-			float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
-
-			float vx = wx * frame.ground_distance/1000.0f * 1.15f;
-			float vy = wy * frame.ground_distance/1000.0f * 1.15f;
-			
-			
-			//transform fused velocity from ned to body 
-			float v_flow_body[3];
-			ekf_est.tf_ned2body(v_flow_ned,v_flow_body);
-			vx=-v_flow_body[1];
-			vy=v_flow_body[0];
-			
-			of_controller.update_controller(vx, vy, stick_roll, stick_pitch, interval);
-			float euler_target[3] = {0,0, NAN};
-			of_controller.get_result(&euler_target[0], &euler_target[1]);
-			attitude_controll.set_euler_target(euler_target);
-
-			float pixel_compensated[6] = {pixel_compensated_x, pixel_compensated_y, wx, wy, vx, vy};
-			log2(pixel_compensated, 10, sizeof(pixel_compensated));
-		}
-		else
-		{
-			float euler_target[3] = {0,0, euler[2]};
-			attitude_controll.set_euler_target(euler_target);
-		}
-
-		// TODO : handle yaw flow
-
-	}
-
-	else if (submode == bluetooth)
-	{
-		float euler_target[3] = {0,0, NAN};
-		euler_target[0] = bluetooth_roll;
-		euler_target[1] = bluetooth_pitch;
-		attitude_controll.set_euler_target(euler_target);
-	}
-	else if (submode == poshold)
-	{
-		// 10hz pos controller rate
-		static int64_t last_pos_controll_time = 0;
-		float dt = (systimer->gettime() - last_pos_controll_time) / 1000000.0f;
-		if (dt > 0.1f)
-		{
-			last_pos_controll_time = systimer->gettime();
-			if (dt < 1.0f)
-			{
-				position_meter meter = estimator.get_estimation_meter();
-				float ne_pos[2];
-				float ne_velocity[2];
-				if(use_EKF > 0.5f)
-				{
-					ne_pos[0]= ekf_est.ekf_result.Pos_x;
-					ne_pos[1]=ekf_est.ekf_result.Pos_y;
-					ne_velocity[0] = ekf_est.ekf_result.Vel_x;
-					ne_velocity[1] = ekf_est.ekf_result.Vel_y;
-				}
-				else
-				{
-					ne_pos[0]= meter.latitude;
-					ne_pos[1]= meter.longtitude;
-					ne_velocity[0] = meter.vlatitude;
-					ne_velocity[1] = meter.vlongtitude;
-				}
-				float desired_velocity[2] = {rc[1] * 5, rc[0] * 5};
-				if (abs(desired_velocity[0]) < 0.4f)
-					desired_velocity[0] = 0;
-				if (abs(desired_velocity[1]) < 0.4f)
-					desired_velocity[1] = 0;
-
-				float euler_target[3];
-				controller.provide_attitue_position(euler, ne_pos, ne_velocity);
-				controller.set_desired_velocity(desired_velocity);
-				controller.update_controller(dt);
-				controller.get_target_angles(euler_target);
-				euler_target[2] = NAN;
-				attitude_controll.set_euler_target(euler_target);
-			}
-		}
-	}
-
-	// yaw:
-	if (after_unlock_action)	// airborne or armed and throttle up
-	{
-		float yaw_array[3] = {NAN, NAN, rc[3]};
-		attitude_controll.update_target_from_stick(yaw_array, interval);
-	}
-	else
-	{
-		float yaw_array[3] = {NAN, NAN, euler[2]};
-		attitude_controll.set_euler_target(yaw_array);
-	}
-
-	// check airborne
-	if ( (alt_estimator.state[0] > takeoff_ground_altitude + 1.0f) ||
-		(alt_estimator.state[0] > takeoff_ground_altitude && throttle_result > alt_controller.throttle_hover) ||
-		(throttle_result > alt_controller.throttle_hover + QUADCOPTER_THROTTLE_RESERVE))
-	{
-		airborne = true;
+		case basic:
+			mode_basic.loop(interval);
+			break;
+		case althold:
+			mode_althold.loop(interval);
+			break;
+		case poshold:
+			mode_poshold.loop(interval);
+			break;
+		case optical_flow:
+			mode_of_loiter.loop(interval);
+			break;
 	}
 	
 	attitude_controll.update(interval);
 
+
+	// check airborne
+	if ((alt_estimator.state[0] > takeoff_ground_altitude + 1.0f) ||
+		(alt_estimator.state[0] > takeoff_ground_altitude && throttle_result > alt_controller.throttle_hover) ||
+		(throttle_result > alt_controller.throttle_hover + QUADCOPTER_THROTTLE_RESERVE))
+	{
+		if (!airborne && armed)
+		{
+			airborne = true;
+			new_event(event_airborne, 0);
+		}
+	}
+	
 	return 0;
 }
 
@@ -618,7 +504,7 @@ int yet_another_pilot::save_logs()
 	{
 		alt_estimator.state[1] * 100,
 		airborne,
-		submode,
+		flight_mode,
 		alt_estimator.state[0] * 100,
 		alt_estimator.state[2] * 100,
 		a_raw_altitude * 100,
@@ -681,14 +567,14 @@ int yet_another_pilot::save_logs()
 	// pos controller data1
 	pos_controller_data pc = 
 	{
-		controller.setpoint[0],
-		controller.setpoint[1],
-		controller.pos[0],
-		controller.pos[1],
-		controller.target_velocity[0]*1000,
-		controller.target_velocity[1]*1000,
-		controller.velocity[0]*1000,
-		controller.velocity[1]*1000,
+		pos_control.setpoint[0],
+		pos_control.setpoint[1],
+		pos_control.pos[0],
+		pos_control.pos[1],
+		pos_control.target_velocity[0]*1000,
+		pos_control.target_velocity[1]*1000,
+		pos_control.velocity[0]*1000,
+		pos_control.velocity[1]*1000,
 	};
 	log(&pc, TAG_POS_CONTROLLER_DATA1, systime);
 
@@ -696,11 +582,11 @@ int yet_another_pilot::save_logs()
 	// pos controller data2
 	pos_controller_data2 pc2 = 
 	{
-		controller.target_accel[0]*1000,
-		controller.target_accel[1]*1000,
+		pos_control.target_accel[0]*1000,
+		pos_control.target_accel[1]*1000,
 		{
-			{controller.pid[0][0]*100, controller.pid[0][1]*100, controller.pid[0][2]*100,},
-			{controller.pid[1][0]*100, controller.pid[1][1]*100, controller.pid[1][2]*100,},
+			{pos_control.pid[0][0]*100, pos_control.pid[0][1]*100, pos_control.pid[0][2]*100,},
+			{pos_control.pid[1][0]*100, pos_control.pid[1][1]*100, pos_control.pid[1][2]*100,},
 		}
 	};
 
@@ -1207,7 +1093,7 @@ int yet_another_pilot::calculate_state()
 	if (use_EKF > 0.5f)
 		ekf_est.update(ekf_u,ekf_mesurement,interval);
 	t = systimer->gettime() - t;
-	//printf("%f,%d\r\n",interval, int(t));
+// 	printf("%f,%d\r\n",interval, int(t));
 
 	//For debug
 //	float ekf_buffer[6];
@@ -1452,48 +1338,35 @@ int yet_another_pilot::sensor_calibration()
 	return 0;
 }
 
-int yet_another_pilot::set_submode(copter_mode newmode)
+int yet_another_pilot::set_mode(copter_mode newmode)
 {
 	if (!armed)
 		newmode = invalid;
-	if (newmode == submode)
+	if (newmode == flight_mode)
 		return 0;
 
-	bool has_pos_controller = submode == poshold;
-	bool to_use_pos_controller = newmode == poshold;
-	bool has_alt_controller = submode == poshold || submode == althold || submode == bluetooth || submode == optical_flow;
-	bool to_use_alt_controller = newmode == poshold || newmode == althold || newmode == bluetooth || newmode == optical_flow;
-	
-	if (!has_pos_controller && to_use_pos_controller)
-	{
-		// reset pos controller
-		position_meter meter = estimator.get_estimation_meter();
-		float ne_pos[2] = {meter.latitude, meter.longtitude};
-		float ne_velocity[2] = {meter.vlatitude, meter.vlongtitude};
-		float desired_velocity[2] = {0, 0};
-		float euler_target[3];
+	int error = 0;
 
-		controller.provide_attitue_position(euler, ne_pos, ne_velocity);
-		controller.set_desired_velocity(desired_velocity);
-		controller.get_target_angles(euler_target);
-		controller.reset();
-		euler_target[2] = NAN;
-		attitude_controll.set_euler_target(euler_target);
-	}
-
-	if (!has_alt_controller && to_use_alt_controller)
+	switch(newmode)
 	{
-		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
-		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
-		alt_controller.reset();
-	}
-
-	if (newmode == optical_flow && submode != optical_flow)
-	{
-		of_controller.reset();
+	case basic:
+		error = mode_basic.setup();
+		break;
+	case althold:
+		error = mode_althold.setup();
+		break;
+	case poshold:
+		error = mode_poshold.setup();
+		break;
+	case optical_flow:
+		error = mode_of_loiter.setup();
+		break;
 	}
 	
-	submode = newmode;
+	if (error >= 0)
+		flight_mode = newmode;
+	else
+		LOGE("FAILED entering %d mode\n", newmode);
 
 	return 0;
 }
@@ -1531,7 +1404,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	islanding = false;
 	
 	armed = arm;
-	set_submode(submode_from_stick());
+	set_mode(mode_from_stick());
 	
 	LOGE("%s OK\n", arm ? "arm" : "disarm");
 	
@@ -1604,10 +1477,10 @@ int yet_another_pilot::finish_accel_cal()
 	return 0;
 }
 
-copter_mode yet_another_pilot::submode_from_stick()
+copter_mode yet_another_pilot::mode_from_stick()
 {
 	static copter_mode last_submode = althold;
-	if (g_pwm_input_update[5] > systimer->gettime() - 500000)
+	if (!rc_fail)
 	{
 		if (rc[5] < -0.6f)
 			last_submode = basic;
@@ -1621,6 +1494,34 @@ copter_mode yet_another_pilot::submode_from_stick()
 	}
 
 	return last_submode;
+}
+
+int yet_another_pilot::new_event(int event, int arg)
+{
+	int max_count = countof(events);
+
+	if (event_count >= max_count)
+		return -1;
+
+	events[event_count] = event;
+	events_args[event_count++] = arg;
+
+	return 0;
+}
+
+int yet_another_pilot::handle_events()
+{
+	for(int i=0; i<event_count; i++)
+	{
+		int event = events[i];
+		int arg = events_args[i];
+
+		// TODO;
+	}
+
+	event_count = 0;
+
+	return 0;
 }
 
 
@@ -1652,7 +1553,7 @@ int yet_another_pilot::check_stick()
 	}
 
 	// submode switch
-	set_submode(submode_from_stick());
+	set_mode(mode_from_stick());
 
 	// emergency switch
 	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
@@ -2182,12 +2083,22 @@ int yet_another_pilot::lowpower_handling()
 	static float lowpower1 = 0;
 	static float lowpower2 = 0;
 
-	if (voltage > 6 && voltage < 10.2f)
+#if 0
+	float ref_voltage = voltage;
+	float low_voltage1 = 10.8f;
+	float low_voltage2 = 10.2f;
+#else
+	float ref_voltage = batt.get_internal_voltage();
+	float low_voltage1 = 11.0f;
+	float low_voltage2 = 10.8f;
+#endif
+
+	if (ref_voltage > 6 && ref_voltage < low_voltage2)
 	{
 		lowpower2 += interval;
 	}
 	
-	else if (voltage > 6 && voltage<10.8f)
+	else if (ref_voltage > 6 && ref_voltage<low_voltage1)
 	{
 		lowpower1 += interval;
 		lowpower2 = 0;
@@ -2207,6 +2118,18 @@ int yet_another_pilot::lowpower_handling()
 
 	if (lowpower >= 2)
 		islanding = true;
+	
+	IUART * telemetry = manager.getUART("power");
+	if (telemetry)
+	{
+		static int64_t last_send = 0;
+		if (systimer->gettime() - last_send > 100000)
+		{
+			last_send = systimer->gettime();
+			uint8_t d = lowpower + '0';
+			telemetry->write(&d, 1);
+		}
+	}
 
 	return 0;
 }
@@ -2386,6 +2309,7 @@ void yet_another_pilot::main_loop(void)
 	check_stick();
 	handle_takeoff();
 	handle_wifi_controll(manager.getUART("Wifi"));
+	handle_events();
 
 	// read sensors
 	int64_t read_sensor_cost = systimer->gettime();
