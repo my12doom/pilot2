@@ -1,6 +1,8 @@
 #include "battery_estimator.h"
 #include <HAL/Interface/Interfaces.h>
 #include <protocol/common.h>
+#include <utils/log.h>
+#include <protocol/RfData.h>
 
 static const matrix Q
 (
@@ -86,6 +88,8 @@ int battery_estimator::update(const float voltage, const float current, const fl
 	{
 		TRACE("Batt:%.3f/%.3fV, %d mOhm", voltage, x.data[0], int(x.data[1]*1000));
 		last_log = systimer->gettime();
+		
+		log2(x.data, TAG_BATT, 8);
 	}
 
 	return 0;

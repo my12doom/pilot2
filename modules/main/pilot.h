@@ -128,6 +128,9 @@ public:
 	bool islanding;// = false ;
 	bool land_possible;
 	bool imu_data_lock;
+	int event_count;
+	int events[10];
+	int events_args[10];
 
 	// constructor
 	yet_another_pilot();
@@ -161,7 +164,7 @@ public:
 	int check_stick();
 	int disarm();
 	int arm(bool arm = true);
-	int set_submode(copter_mode newmode);
+	int set_mode(copter_mode newmode);
 	int calculate_state();
 	int read_sensors();
 	int read_imu_and_filter();		// should be called from a seperate thread(timer) with higher than read_sensors()'s priority
@@ -169,7 +172,11 @@ public:
 	int output();
 	void handle_takeoff();
 	int save_logs();
-	copter_mode submode_from_stick();
+	copter_mode mode_from_stick();
+
+	// event handling
+	int new_event(int event, int arg);
+	int handle_events();
 	
 	// UART functions
 	int handle_cli(HAL::IUART *uart);
@@ -188,5 +195,15 @@ public:
 	int calculate_baro_altitude();
 	
 //protected:
+};
+
+enum yap_events
+{
+	event_arm,
+	event_disarm,
+	event_airborne,
+	event_touchdown,
+	event_pos_ready,
+	event_pos_bad,
 };
 

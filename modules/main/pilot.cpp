@@ -142,7 +142,7 @@ yet_another_pilot::yet_another_pilot()
 
 ,last_tick(0)
 ,last_gps_tick(0)
-,voltage(0)
+,voltage(12)
 ,current(0)
 ,interval(0)
 ,new_baro_data(false)
@@ -168,6 +168,7 @@ yet_another_pilot::yet_another_pilot()
 	gps_attitude_timeout = 0;
 	land_possible = false;
 	imu_data_lock = false;
+	event_count = 0;
 
 	for(int i=0; i<3; i++)
 	{
@@ -391,11 +392,15 @@ int yet_another_pilot::run_controllers()
 	}
 
 	// check airborne
-	if ( (alt_estimator.state[0] > takeoff_ground_altitude + 1.0f) ||
+	if ((alt_estimator.state[0] > takeoff_ground_altitude + 1.0f) ||
 		(alt_estimator.state[0] > takeoff_ground_altitude && throttle_result > alt_controller.throttle_hover) ||
 		(throttle_result > alt_controller.throttle_hover + QUADCOPTER_THROTTLE_RESERVE))
 	{
-		airborne = true;
+		if (!airborne && armed)
+		{
+			airborne = true;
+			new_event(event_airborne, 0);
+		}
 	}
 	
 	attitude_controll.update(interval);
@@ -1452,7 +1457,7 @@ int yet_another_pilot::sensor_calibration()
 	return 0;
 }
 
-int yet_another_pilot::set_submode(copter_mode newmode)
+int yet_another_pilot::set_mode(copter_mode newmode)
 {
 	if (!armed)
 		newmode = invalid;
@@ -1531,7 +1536,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	islanding = false;
 	
 	armed = arm;
-	set_submode(submode_from_stick());
+	set_mode(mode_from_stick());
 	
 	LOGE("%s OK\n", arm ? "arm" : "disarm");
 	
@@ -1604,10 +1609,10 @@ int yet_another_pilot::finish_accel_cal()
 	return 0;
 }
 
-copter_mode yet_another_pilot::submode_from_stick()
+copter_mode yet_another_pilot::mode_from_stick()
 {
 	static copter_mode last_submode = althold;
-	if (g_pwm_input_update[5] > systimer->gettime() - 500000)
+	if (!rc_fail)
 	{
 		if (rc[5] < -0.6f)
 			last_submode = basic;
@@ -1621,6 +1626,34 @@ copter_mode yet_another_pilot::submode_from_stick()
 	}
 
 	return last_submode;
+}
+
+int yet_another_pilot::new_event(int event, int arg)
+{
+	int max_count = countof(events);
+
+	if (event_count >= max_count)
+		return -1;
+
+	events[event_count] = event;
+	events_args[event_count++] = arg;
+
+	return 0;
+}
+
+int yet_another_pilot::handle_events()
+{
+	for(int i=0; i<event_count; i++)
+	{
+		int event = events[i];
+		int arg = events_args[i];
+
+		// TODO;
+	}
+
+	event_count = 0;
+
+	return 0;
 }
 
 
@@ -1652,7 +1685,7 @@ int yet_another_pilot::check_stick()
 	}
 
 	// submode switch
-	set_submode(submode_from_stick());
+	set_mode(mode_from_stick());
 
 	// emergency switch
 	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
@@ -2182,12 +2215,22 @@ int yet_another_pilot::lowpower_handling()
 	static float lowpower1 = 0;
 	static float lowpower2 = 0;
 
-	if (voltage > 6 && voltage < 10.2f)
+#if 0
+	float ref_voltage = voltage;
+	float low_voltage1 = 10.8f;
+	float low_voltage2 = 10.2f;
+#else
+	float ref_voltage = batt.get_internal_voltage();
+	float low_voltage1 = 11.0f;
+	float low_voltage2 = 10.8f;
+#endif
+
+	if (ref_voltage > 6 && ref_voltage < low_voltage2)
 	{
 		lowpower2 += interval;
 	}
 	
-	else if (voltage > 6 && voltage<10.8f)
+	else if (ref_voltage > 6 && ref_voltage<low_voltage1)
 	{
 		lowpower1 += interval;
 		lowpower2 = 0;
@@ -2386,6 +2429,7 @@ void yet_another_pilot::main_loop(void)
 	check_stick();
 	handle_takeoff();
 	handle_wifi_controll(manager.getUART("Wifi"));
+	handle_events();
 
 	// read sensors
 	int64_t read_sensor_cost = systimer->gettime();

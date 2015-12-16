@@ -344,6 +344,7 @@ typedef struct
 enum EXTENDED_DATA_TYPES
 {
 	TAG_TEXT_LOG = 2,
+	TAG_BATT = 17,
 };
 
 #endif
