@@ -41,7 +41,7 @@ void init_led()
 	f4gpioB15.write(true);
 	static GPIOLED flashlight(&f4gpioB14, true);
 	
-	flashlight.off();
+	flashlight.on();
 	
 	manager.register_LED("SD",&led_red);
 	manager.register_LED("state",&led_green);
@@ -83,12 +83,19 @@ void init_uart()
 	f4uart1.set_baudrate(115200);
 	f4uart2.set_baudrate(115200);
 	f4uart3.set_baudrate(115200);
-	f4uart4.set_baudrate(115200);
+	f4uart4.set_baudrate(57600);
 	manager.register_UART("UART1",&f4uart1);
 	manager.register_UART("UART2",&f4uart2);
 	manager.register_UART("UART3",&f4uart3);
 	manager.register_UART("Wifi",&f4uart4);
+	
+	while(0)
+	{
+		f4uart4.write("hello", 5);
+		systimer->delayms(500);
 	}
+		
+}
 
 
 #include <HAL\STM32F4\F4SPI.h>
@@ -189,19 +196,22 @@ int init_asyncworker()
 
 void init_BatteryMonitor()
 {
+	static F4ADC ref25(ADC1,ADC_Channel_4);
 	static F4ADC f4adc1_Ch8(ADC1,ADC_Channel_8);	
 	static F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
 	static F4ADC vcc5v_half_adc(ADC1,ADC_Channel_3);
 	
-	static ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4095*(150.0f+51.0f)/51.0f);
-	static ADCBatteryVoltage vcc5v(&vcc5v_half_adc, 3.3f*2/4095);
-	static ADCBatteryVoltage vcc5v_half(&vcc5v_half_adc, 3.3f/4095);
+	static ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4095*(150.0f+50.0f)/50.0f, &ref25, 2.495f/3.3f*4095);
+	static ADCBatteryVoltage vcc5v(&vcc5v_half_adc, 3.3f*2/4095, &ref25, 2.495f/3.3f*4095);
+	static ADCBatteryVoltage vcc5v_half(&vcc5v_half_adc, 3.3f/4095, &ref25, 2.495f/3.3f*4095);
 	static ADCBatteryVoltage current_ad(&f4adc1_Ch8, 3.3f/4095);
 	static differential_monitor battery_current(&vcc5v_half, &current_ad, 1/0.066f);
+	static ADCReference vcc(&ref25, 2.495f, 4095);
 
 	manager.register_BatteryVoltage("BatteryVoltage",&battery_voltage);
 	manager.register_BatteryVoltage("BatteryCurrent", &battery_current);
 	manager.register_BatteryVoltage("5V", &vcc5v);
+	manager.register_BatteryVoltage("vcc", &vcc);
 }
 
 int init_flow()

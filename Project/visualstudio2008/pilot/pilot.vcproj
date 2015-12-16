@@ -1099,6 +1099,42 @@
 				Name="main"
 				>
 				<File
+					RelativePath="..\..\..\modules\main\flight_mode.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\main\mode_althold.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\main\mode_althold.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\main\mode_basic.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\main\mode_basic.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\main\mode_of_loiter.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\main\mode_of_loiter.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\main\mode_poshold.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\main\mode_poshold.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\modules\main\pilot.cpp"
 					>
 				</File>
