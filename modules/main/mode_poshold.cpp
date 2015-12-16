@@ -8,8 +8,24 @@ static param use_EKF("ekf", 0);		// use EKF estimator
 int flight_mode_poshold::setup()
 {
 	yap.alt_controller.reset();
+
+	// reset pos controller
+	position_meter meter = yap.estimator.get_estimation_meter();
+	float ne_pos[2] = {meter.latitude, meter.longtitude};
+	float ne_velocity[2] = {meter.vlatitude, meter.vlongtitude};
+	float desired_velocity[2] = {0, 0};
+	float euler_target[3];
+
+	yap.pos_control.provide_attitue_position(euler, ne_pos, ne_velocity);
+	yap.pos_control.set_desired_velocity(desired_velocity);
+	yap.pos_control.get_target_angles(euler_target);
+	yap.pos_control.reset();
+	euler_target[2] = NAN;
+	yap.attitude_controll.set_euler_target(euler_target);
+
 	return 0;
 }
+
 int flight_mode_poshold::exit()
 {
 	return 0;

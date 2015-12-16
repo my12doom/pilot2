@@ -129,7 +129,7 @@ yet_another_pilot::yet_another_pilot()
 ,airborne(false)
 ,takeoff_ground_altitude(0)
 ,armed(false)
-,submode(basic)
+,flight_mode(basic)
 ,collision_detected(0)	// remember to clear it before arming
 ,tilt_us(0)	// remember to clear it before arming
 //,gyro_lpf2p({LowPassFilter2p(333.3, 40),LowPassFilter2p(333.3, 40),LowPassFilter2p(333.3, 40)})	// 2nd order low pass filter for gyro.
@@ -255,15 +255,19 @@ int yet_another_pilot::run_controllers()
 {
 	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : NULL, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	
-	switch(submode)
+	switch(flight_mode)
 	{
 		case basic:
+			mode_basic.loop(interval);
 			break;
 		case althold:
+			mode_althold.loop(interval);
 			break;
 		case poshold:
+			mode_poshold.loop(interval);
 			break;
 		case optical_flow:
+			mode_of_loiter.loop(interval);
 			break;
 	}
 	
@@ -500,7 +504,7 @@ int yet_another_pilot::save_logs()
 	{
 		alt_estimator.state[1] * 100,
 		airborne,
-		submode,
+		flight_mode,
 		alt_estimator.state[0] * 100,
 		alt_estimator.state[2] * 100,
 		a_raw_altitude * 100,
@@ -1338,44 +1342,31 @@ int yet_another_pilot::set_mode(copter_mode newmode)
 {
 	if (!armed)
 		newmode = invalid;
-	if (newmode == submode)
+	if (newmode == flight_mode)
 		return 0;
 
-	bool has_pos_controller = submode == poshold;
-	bool to_use_pos_controller = newmode == poshold;
-	bool has_alt_controller = submode == poshold || submode == althold || submode == bluetooth || submode == optical_flow;
-	bool to_use_alt_controller = newmode == poshold || newmode == althold || newmode == bluetooth || newmode == optical_flow;
-	
-	if (!has_pos_controller && to_use_pos_controller)
-	{
-		// reset pos controller
-		position_meter meter = estimator.get_estimation_meter();
-		float ne_pos[2] = {meter.latitude, meter.longtitude};
-		float ne_velocity[2] = {meter.vlatitude, meter.vlongtitude};
-		float desired_velocity[2] = {0, 0};
-		float euler_target[3];
+	int error = 0;
 
-		pos_control.provide_attitue_position(euler, ne_pos, ne_velocity);
-		pos_control.set_desired_velocity(desired_velocity);
-		pos_control.get_target_angles(euler_target);
-		pos_control.reset();
-		euler_target[2] = NAN;
-		attitude_controll.set_euler_target(euler_target);
-	}
-
-	if (!has_alt_controller && to_use_alt_controller)
+	switch(newmode)
 	{
-		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};
-		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
-		alt_controller.reset();
-	}
-
-	if (newmode == optical_flow && submode != optical_flow)
-	{
-		of_controller.reset();
+	case basic:
+		error = mode_basic.setup();
+		break;
+	case althold:
+		error = mode_althold.setup();
+		break;
+	case poshold:
+		error = mode_poshold.setup();
+		break;
+	case optical_flow:
+		error = mode_of_loiter.setup();
+		break;
 	}
 	
-	submode = newmode;
+	if (error >= 0)
+		flight_mode = newmode;
+	else
+		LOGE("FAILED entering %d mode\n", newmode);
 
 	return 0;
 }

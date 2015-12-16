@@ -13,6 +13,7 @@ static param quadcopter_range[3] =
 int flight_mode_of_loiter::setup()
 {
 	yap.alt_controller.reset();
+	yap.of_controller.reset();
 	
 	return 0;
 }
