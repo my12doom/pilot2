@@ -81,7 +81,7 @@ public:
 	int64_t last_tick;// = 0;
 	int64_t last_gps_tick;// = 0;
 	pos_estimator estimator;
-	pos_controller controller;
+	pos_controller pos_control;
 	attitude_controller attitude_controll;
 	altitude_estimator alt_estimator;
 	altitude_estimator2 alt_estimator2;
@@ -193,6 +193,8 @@ public:
 	void output_rc();
 	void STOP_ALL_MOTORS();
 	int calculate_baro_altitude();
+
+	int default_alt_controlling();
 	
 //protected:
 };
