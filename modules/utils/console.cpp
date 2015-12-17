@@ -448,7 +448,7 @@ extern "C" int parse_command_line(const char *line, char *out)
 	else if (strstr(line, "selftest") == line)
 	{
 		int flow_count = manager.get_flow_count();
-		int cmos_version_ok = yap.frame.cmos_version == 0x1324;
+		int cmos_version_ok = (yap.frame.cmos_version == 0x1324 || yap.frame.cmos_version == 0x76) && yap.frame.frame_count;
 		
 		sprintf(out, "%d,%d,%d\n", yap.critical_errors, int(yap.voltage*1000), flow_count <= 0 ? -1 : (cmos_version_ok ? 0 : -2));
 		

@@ -1814,10 +1814,6 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			mobile_last_update = systimer->gettime();
 			TRACE("stick:%f,%f,%f,%f\n", rc_mobile[0], rc_mobile[1], rc_mobile[2], rc_mobile[3]);
 			
-			rc_mobile[0] *= 1.33f;
-			rc_mobile[1] *= 1.33f;
-			rc_mobile[2] = (rc_mobile[2] - 0.5f) * 1.35f + 0.5f;
-			rc_mobile[3] *= 1.33f;
 		}
 	}
 	
@@ -2044,7 +2040,6 @@ int yet_another_pilot::read_rc()
 		else
 		{
 			rc_fail = -1;
-			disarm();
 		}
 	}
 	else
@@ -2062,7 +2057,7 @@ int yet_another_pilot::read_rc()
 			LOGE("RC restored");
 			break;
 		case -1:
-			LOGE("RC restored");
+			LOGE("RC failed");
 			break;
 		case 1:
 		case 2:
