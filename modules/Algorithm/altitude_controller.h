@@ -53,7 +53,7 @@ public:
 	int m_motor_state;
 	bool m_airborne;
 
-
+	int64_t last_update;
 	float baro_target;// = 0;
 	float target_climb_rate;// = 0;
 	float target_accel;// = 0;

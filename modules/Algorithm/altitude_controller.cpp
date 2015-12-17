@@ -2,6 +2,7 @@
 #include <string.h>
 #include <Protocol/common.h>
 #include <utils/param.h>
+#include <HAL/Interface/Interfaces.h>
 
 #define default_throttle_hover 0.35f
 #define sonar_step_threshold 3.0f
@@ -52,6 +53,7 @@ altitude_controller::altitude_controller()
 	memset(altitude_error_pid, 0, sizeof(altitude_error_pid));
 	memset(climb_rate_error_pid, 0, sizeof(climb_rate_error_pid));
 	memset(climb_rate_error_pid, 0, sizeof(climb_rate_error_pid));
+	last_update = 0;
 }
 
 altitude_controller::~altitude_controller()
@@ -121,6 +123,9 @@ float altitude_controller::get_altitude_state()
 // user_rate: user desired climb rate, usually from stick.
 int altitude_controller::update(float dt, float user_rate)
 {
+	if (systimer->gettime() - last_update > 1000000)
+		reset();
+
 	// sonar switching	
 	if (isnan(m_sonar) == isnan(m_sonar_target))				// reset ticker if sonar state didn't changed
 		m_sonar_ticker = 0;
@@ -270,6 +275,8 @@ int altitude_controller::update(float dt, float user_rate)
 		TRACE("\rthrottle_hover=%f", throttle_hover);
 	}
 
+	last_update = systimer->gettime();
+
 	return 0;
 }
 
@@ -279,6 +286,9 @@ int altitude_controller::update(float dt, float user_rate)
 // or maintain current altitude.
 int altitude_controller::reset()
 {
+	if (systimer->gettime() - last_update < 100000)
+		return 0;
+
 	baro_target = m_airborne ? m_baro_states[0] : (m_baro_states[0]-1.2f);
 	feed_forward_factor = m_airborne ? 0.35f : 0.35f;
 	accel_error_pid[0] = NAN;
