@@ -100,5 +100,31 @@ int flight_mode_RTL::loop(float dt)
 // 		yap.attitude_controll.set_euler_target(euler_target);
 // 	}
 
+
+	switch (stage)
+	{
+	case turn_around:
+		if (false)
+			stage = rise;
+		break;
+	case rise:
+		if (false)
+			stage = move;
+		break;
+	case move:
+		if (false)
+			stage = loiter;
+		break;
+	case loiter:
+		if (false)
+			stage = down;
+		break;
+	case down:
+		break;
+	}
+
+	if (!yap.estimator.healthy())
+		yap.new_event(event_pos_bad, 0);
+
 	return 0;
 }
