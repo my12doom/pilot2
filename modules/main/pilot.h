@@ -195,6 +195,7 @@ public:
 	int handle_cli(HAL::IUART *uart);
 	int handle_uart4_controll();
 	int handle_wifi_controll(HAL::IUART *uart);
+	int stupid_joystick();
 		
 	// helper functions
 	float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert);	

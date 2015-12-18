@@ -2114,6 +2114,11 @@ int yet_another_pilot::lowpower_handling()
 	if (lowpower >= 2)
 		islanding = true;
 	
+	return 0;
+}
+
+int yet_another_pilot::stupid_joystick()
+{
 	IUART * telemetry = manager.getUART("power");
 	if (telemetry)
 	{
@@ -2121,11 +2126,51 @@ int yet_another_pilot::lowpower_handling()
 		if (systimer->gettime() - last_send > 100000)
 		{
 			last_send = systimer->gettime();
-			uint8_t d = lowpower + '0';
-			telemetry->write(&d, 1);
+			uint8_t d[3] = {0x1, lowpower};
+			d[2] = d[0] ^ d[1];
+			telemetry->write(d, 3);
+		}
+		
+		uint8_t rx[3];
+		int count = 0;
+		static int64_t last_packet = 0;
+		while(telemetry->available() >= 3)
+		{
+			last_packet = systimer->gettime();
+			telemetry->read(rx, 1);
+			if (rx[0] != 1)
+				continue;
+			telemetry->read(rx+1, 2);
+			count = 3;
+		}
+		
+		// clear all buffer if no packet arrive for 0.5 second
+		if (systimer->gettime() - last_packet > 500000)
+		{
+			char tmp[100];
+			telemetry->read(tmp, 100);
+		}
+		
+		
+		if (rx[0] == 1 && rx[2] == (rx[0]^rx[1]))
+		{
+			if (rx[1])
+			{
+				LOGE("flashlight on by telemtry");
+				SAFE_ON(flashlight);
+			}
+			else
+			{
+				LOGE("flashlight off by telemtry");
+				SAFE_OFF(flashlight);
+			}
+		}
+		else if (count == 3)
+		{
+			LOGE("stupid telmetry rx: %d,%d,%d", rx[0], rx[1], rx[2]);
 		}
 	}
-
+	
 	return 0;
 }
 
@@ -2305,6 +2350,7 @@ void yet_another_pilot::main_loop(void)
 	handle_takeoff();
 	handle_wifi_controll(manager.getUART("Wifi"));
 	handle_events();
+	stupid_joystick();
 
 	// read sensors
 	int64_t read_sensor_cost = systimer->gettime();
