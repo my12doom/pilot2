@@ -388,7 +388,7 @@ int yet_another_pilot::output()
 		// add throttle 
 		min_throttle = limit(-min_roll_pitch, 0, 1);
 		max_throttle = limit(1-max_roll_pitch, 0, 1);
-		float throttle = airborne ? throttle_result : limit(throttle_result, min_throttle, max_throttle);	// add throttle only if airborne
+		float throttle = !airborne ? throttle_result : limit(throttle_result, min_throttle, max_throttle);	// add throttle only if airborne
 		for(int i=0; i<motor_count; i++)
 			motor_output[i] += throttle;
 		
@@ -1023,7 +1023,7 @@ int yet_another_pilot::read_imu_and_filter()
 	// stop overwriting target data if imu data lock acquired
 	if (!imu_data_lock)
 	{
-		float alpha = 0.001f / (0.001f + 1.0f/(2*PI * 10.0f));
+		float alpha = 0.001f / (0.001f + 1.0f/(2*PI * 20.0f));
 		for(int i=0; i<3; i++)
 			this->accel.array[i] = acc.array[i]*alpha + this->accel.array[i] * (1-alpha);
 	}
@@ -1529,7 +1529,7 @@ copter_mode yet_another_pilot::mode_from_stick()
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
 			last_submode = airborne ? (estimator.healthy() ? poshold : optical_flow) : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
- 			last_submode = airborne ? althold : althold;
+ 			last_submode = althold;
 //			newmode = althold;
 	}
 
