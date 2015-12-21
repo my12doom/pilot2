@@ -50,8 +50,8 @@ int flight_mode_of_loiter::loop(float dt)
 		//transform fused velocity from ned to body 
 		float v_flow_body[3];
 		yap.ekf_est.tf_ned2body(yap.v_flow_ned,v_flow_body);
-		vx=-v_flow_body[1];
-		vy=v_flow_body[0];
+		//vx=-v_flow_body[1];
+		//vy=v_flow_body[0];
 
 		yap.of_controller.update_controller(vx, vy, stick_roll, stick_pitch, dt);
 		float euler_target[3] = {0,0, NAN};

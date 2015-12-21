@@ -207,6 +207,45 @@ int yet_another_pilot::calculate_baro_altitude()
 	return 0;
 }
 
+int yet_another_pilot::get_pos_velocity_ned(float *pos, float *velocity)
+{
+	if(use_EKF > 0.5f)
+	{
+		if (!ekf_est.ekf_is_ready())
+			return -1;
+
+		if (pos)
+		{
+			pos[0]= ekf_est.ekf_result.Pos_x;
+			pos[1]=ekf_est.ekf_result.Pos_y;
+		}
+		if (velocity)
+		{
+			velocity[0] = ekf_est.ekf_result.Vel_x;
+			velocity[1] = ekf_est.ekf_result.Vel_y;
+		}
+	}
+	else
+	{
+		if (!estimator.healthy())
+			return -1;
+
+		position_meter meter = estimator.get_estimation_meter();
+		if (pos)
+		{
+			pos[0]= meter.latitude;
+			pos[1]= meter.longtitude;
+		}
+		if (velocity)
+		{
+			velocity[0] = meter.vlatitude;
+			velocity[1] = meter.vlongtitude;
+		}
+	}
+
+	return 0;
+}
+
 int yet_another_pilot::default_alt_controlling()
 {
 	float landing_rate = ((alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) && !alt_controller.sonar_actived()) ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
@@ -984,8 +1023,9 @@ int yet_another_pilot::read_imu_and_filter()
 	// stop overwriting target data if imu data lock acquired
 	if (!imu_data_lock)
 	{
+		float alpha = 0.001f / (0.001f + 1.0f/(2*PI * 10.0f));
 		for(int i=0; i<3; i++)
-			this->accel.array[i] = accel_lpf2p[i].apply(acc.array[i]);
+			this->accel.array[i] = acc.array[i]*alpha + this->accel.array[i] * (1-alpha);
 	}
 	else
 	{

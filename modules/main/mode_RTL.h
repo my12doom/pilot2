@@ -21,4 +21,9 @@ protected:
 		loiter,
 		down,
 	} stage;
+
+	float home_pos_ne[2];
+	float start_pos_ne[2];
+	float yaw_target;
+	float bearing;
 };

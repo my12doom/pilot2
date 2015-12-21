@@ -207,8 +207,9 @@ public:
 	void output_rc();
 	void STOP_ALL_MOTORS();
 	int calculate_baro_altitude();
-
 	int default_alt_controlling();
+	int get_pos_velocity_ned(float *pos, float *velocity);
+
 	
 //protected:
 };

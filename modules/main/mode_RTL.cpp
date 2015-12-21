@@ -27,6 +27,8 @@ int flight_mode_RTL::setup()
 	euler_target[2] = NAN;
 	yap.attitude_controll.set_euler_target(euler_target);
 
+	yap.get_pos_velocity_ned(start_pos_ne, NULL);
+
 	stage = turn_around;
 
 	return 0;
@@ -40,7 +42,7 @@ int flight_mode_RTL::loop(float dt)
 {
 // TODO
 // 	// altitude
-// 	yap.default_alt_controlling();
+	yap.default_alt_controlling();
 // 
 // 	// attitude, roll and pitch
 // 	// airborne or armed and throttle up

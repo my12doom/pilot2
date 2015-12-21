@@ -50,21 +50,7 @@ int flight_mode_poshold::loop(float dt)
 			{
 				float ne_pos[2];
 				float ne_velocity[2];
-				if(use_EKF > 0.5f)
-				{
-					ne_pos[0]= yap.ekf_est.ekf_result.Pos_x;
-					ne_pos[1]=yap.ekf_est.ekf_result.Pos_y;
-					ne_velocity[0] = yap.ekf_est.ekf_result.Vel_x;
-					ne_velocity[1] = yap.ekf_est.ekf_result.Vel_y;
-				}
-				else
-				{
-					position_meter meter = yap.estimator.get_estimation_meter();
-					ne_pos[0]= meter.latitude;
-					ne_pos[1]= meter.longtitude;
-					ne_velocity[0] = meter.vlatitude;
-					ne_velocity[1] = meter.vlongtitude;
-				}
+				yap.get_pos_velocity_ned(ne_pos, ne_velocity);
 				float desired_velocity[2] = {yap.rc[1] * 5, yap.rc[0] * 5};
 				if (abs(desired_velocity[0]) < 0.4f)
 					desired_velocity[0] = 0;

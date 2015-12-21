@@ -87,6 +87,10 @@ extern "C" void TIM7_IRQHandler(void)
 
 void init_uart()
 {
+	f4uart1.set_baudrate(115200);
+	f4uart2.set_baudrate(115200);
+	f4uart3.set_baudrate(115200);
+	f4uart4.set_baudrate(115200);
 	manager.register_UART("UART1",&f4uart1);
 	manager.register_UART("UART2",&f4uart2);
 	manager.register_UART("Wifi",&f4uart3);
@@ -380,8 +384,8 @@ int bsp_init_all()
 		// frame
 		param("mat", 1)=1;
 		param("alt2", 0)=0;
-		param("ekf", 0)=0;
-		param("time", 3000)=3000;
+		param("ekf", 0)=1;
+		param("time", 3000)=5000;
 		param("maxD", 2)=2;
 	}
 	
