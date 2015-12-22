@@ -41,6 +41,7 @@ static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
 static param quadcopter_auto_landing_rate_fast("flrt", 1.5f);		// absolute value of fast automated landing speed in meter/s, 
 static param quadcopter_auto_landing_rate_final("lrat", 0.5f);		// absolute value of final approach speed in meter/s
+static param max_altitude("limV", 100);
 static param quadcopter_trim[3] = 
 {
 	param("trmR", 0 * PI / 18),				// roll
@@ -248,7 +249,8 @@ int yet_another_pilot::get_pos_velocity_ned(float *pos, float *velocity)
 
 int yet_another_pilot::default_alt_controlling()
 {
-	float landing_rate = ((alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) && !alt_controller.sonar_actived()) ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
+	bool fast_stage = (alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) && !alt_controller.sonar_actived();
+	float landing_rate = fast_stage ? quadcopter_auto_landing_rate_fast : quadcopter_auto_landing_rate_final;
 	float max_climb_rate = islanding ? (landing_rate + quadcopter_auto_landing_rate_final) : quadcopter_max_climb_rate;	// very low climbe rate even if max throttle in landing state
 	
 	float v = rc[2] - 0.5f;
@@ -279,7 +281,17 @@ int yet_another_pilot::default_alt_controlling()
 	
 	// landing?
 	if(islanding)
-		user_rate -= landing_rate;
+	{
+		if (fast_stage)
+			user_rate = -landing_rate;		// disable user interaction in fast landing stage.
+		else
+			user_rate -= landing_rate;		// landing rate is combination of user stick and automated landing rate.
+	}
+
+	// altitude limit
+	bool vertical_limit_reached = isnan(max_altitude) ? false : (alt_estimator.state[0] > takeoff_ground_altitude + max_altitude);
+	if (vertical_limit_reached)
+		user_rate = fmin(user_rate, 0);
 
 	alt_controller.update(interval, user_rate);
 	
@@ -2079,6 +2091,10 @@ int yet_another_pilot::read_rc()
 		}
 		else
 		{
+			rc[0] = 0;
+			rc[1] = 0;
+			rc[2] = 0.5;
+			rc[3] = 0;
 			rc_fail = -1;
 		}
 	}
