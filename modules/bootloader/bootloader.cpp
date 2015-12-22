@@ -16,15 +16,6 @@ using namespace STM32F4;
 F4UART uart1(USART1);
 dev_v2::RGBLED led;
 
-extern "C" void USART1_IRQHandler(void)
-{
-	uart1.USART1_IRQHandler();
-}
-extern "C" void DMA2_Stream7_IRQHandler()
-{
-	uart1.DMA2_Steam7_IRQHandler();
-}
-
 // constants
 const uint32_t ApplicationAddress = 0x8008000;
 float color[5][3] = 
@@ -36,6 +27,11 @@ float color[5][3] =
 	{0.2,1,0},
 };
 
+extern "C" int log_printf(const char*format, ...)
+{
+	// do nothing
+	return 0;
+}
 
 class ymodem_rec : public ymodem_receiver
 {
