@@ -144,6 +144,8 @@ public:
 	int event_count;
 	int events[10];
 	int events_args[10];
+	float home[2];
+	float home_set;
 
 	// constructor
 	yet_another_pilot();
@@ -209,6 +211,9 @@ public:
 	int calculate_baro_altitude();
 	int default_alt_controlling();
 	int get_pos_velocity_ned(float *pos, float *velocity);
+	int get_home(float *home_pos);
+	int set_home(const float *new_home);
+	int set_home_LLH(const float *LLH);
 
 	
 //protected:
@@ -222,5 +227,6 @@ enum yap_events
 	event_touchdown,
 	event_pos_ready,
 	event_pos_bad,
+	event_home_set,
 };
 

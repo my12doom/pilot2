@@ -58,6 +58,10 @@ public:
 	position_meter get_raw_meter(){return meter_raw;}
 	position get_home(){return home;}
 	bool healthy();
+
+	// helper
+	position NED2LLH(const float ne[2]);
+	position_meter LLH2NED(const float LL[2]);
 	
 	double error_lon;
 	double error_lat;

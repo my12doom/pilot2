@@ -164,6 +164,7 @@ yet_another_pilot::yet_another_pilot()
 	land_possible = false;
 	imu_data_lock = false;
 	event_count = 0;
+	home_set = false;
 
 	for(int i=0; i<3; i++)
 	{
@@ -205,6 +206,43 @@ int yet_another_pilot::calculate_baro_altitude()
 	if (fabs(a_raw_altitude) < 5.0f)
 		ground_temperature = a_raw_temperature;
 
+	return 0;
+}
+
+int yet_another_pilot::set_home(const float *new_home)
+{
+	if (!new_home || estimator.healthy())
+		return -1;
+
+	memcpy(home, new_home, sizeof(new_home));
+	home_set = true;
+	new_event(event_home_set, 0);
+
+	position llh = estimator.NED2LLH(new_home);
+
+	LOGE("home set to:%f / %f, %f - %f\n", home[0], home[1], llh.latitude, llh.longtitude);
+
+	return 0;
+}
+
+int yet_another_pilot::set_home_LLH(const float * new_home)
+{
+	if (!estimator.home_set)
+		return -1;
+
+	position_meter meter = estimator.LLH2NED(new_home);
+
+	float ne[2] = {meter.latitude, meter.longtitude};
+
+	return set_home(ne);
+}
+
+int yet_another_pilot::get_home(float * home_pos)
+{
+	if (!home_set)
+		return -1;
+
+	memcpy(home_pos, home, sizeof(home));
 	return 0;
 }
 
@@ -1454,6 +1492,13 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	throttle_result = 0;
 	airborne = false;
 	islanding = false;
+
+	// update home
+	if (estimator.healthy())
+	{
+		get_pos_velocity_ned(home, NULL);
+		set_home(home);
+	}
 	
 	armed = arm;
 	set_mode(mode_from_stick());
@@ -2481,6 +2526,14 @@ void yet_another_pilot::main_loop(void)
 
 	// unlock imu data
 	imu_data_lock = false;
+
+	// update home once position ready
+	if (!home_set && estimator.healthy())
+	{
+		get_pos_velocity_ned(home, NULL);
+		set_home(home);
+	}
+
 	
 	round_running_time = systimer->gettime() - round_start_tick;
 	TRACE("\r%d/%d", int(read_sensor_cost), round_running_time);

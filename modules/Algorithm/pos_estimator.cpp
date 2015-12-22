@@ -178,6 +178,32 @@ int pos_estimator::update_gps(COORDTYPE lat, COORDTYPE lon, float hdop, int64_t 
 	return 0;
 }
 
+position pos_estimator::NED2LLH(const float ne[2])
+{	
+	position o = home;
+
+	if (!home_set)
+		return o;
+
+	o.latitude += ne[0] / latitude_to_meter;
+	o.longtitude += ne[1] / longtitude_to_meter;
+
+	return o;
+}
+
+// position_meter pos_estimator::LLH2NED(const float LL[2])
+// {
+// 	position_meter o = {0};
+// 
+// 	if (!home_set)
+// 		return o;
+// 
+// 	o.latitude = (LL[0] - home.latitude) * latitude_to_meter;
+// 	o.longtitude = (LL[1] - home.longtitude) * longtitude_to_meter;
+// 
+// 	return o;
+// }
+
 position pos_estimator::get_estimation()
 {
 	position o = 
