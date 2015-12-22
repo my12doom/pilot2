@@ -174,7 +174,10 @@ int altitude_estimator::update(float accelz, float baro, float dt)
 	matrix_mul(P1, F, 4, 4, tmp, 4, 4);
 
 	// covariance
-	matrix_add(P1, Q, 4, 4);
+	float Q2[16];
+	for(int i=0; i<16; i++)
+		Q2[i] = Q[i] * dt / 0.003f;		// normalize Q to dt = 0.003s
+	matrix_add(P1, Q2, 4, 4);
 
 	// controll vector
 	//state1[2] = state1[2] * 0.8f * 0.2f * (target_accel);

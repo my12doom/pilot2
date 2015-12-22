@@ -192,7 +192,7 @@ int altitude_controller::update(float dt, float user_rate)
 	//climb_rate_error = limit(climb_rate_error, -quadcopter_max_descend_rate, quadcopter_max_climb_rate);
 
 	// apply a 2Hz LPF to rate error
-	const float RC = 1.0f/(2*3.1415926 * 5.0f);
+	const float RC = 1.0f/(2*3.1415926 * 2.0f);
 	float alpha = dt / (dt + RC);
 	// 5Hz LPF filter
 	const float RC5 = 1.0f/(2*3.1415926 * 2.0f);
@@ -217,7 +217,7 @@ int altitude_controller::update(float dt, float user_rate)
 	}
 	else
 	{
-		accel_error = accel_error_pid[0] * (1-alpha) + alpha * accel_error;
+		accel_error = accel_error_pid[0] * (1-alpha5) + alpha5 * accel_error;
 	}
 
 	// core pid
@@ -297,6 +297,8 @@ int altitude_controller::reset()
 	climb_rate_error_pid[0] = NAN;
 	m_sonar_ticker = 0;
 	m_sonar_target = NAN;
+
+	LOGE("altitude_controller::reset()\n");
 
 	return 0;
 }
