@@ -82,7 +82,7 @@ void init_uart()
 {
 	f4uart1.set_baudrate(115200);
 	f4uart2.set_baudrate(115200);
-	f4uart3.set_baudrate(115200);
+	f4uart3.set_baudrate(38400);
 	f4uart4.set_baudrate(57600);
 	manager.register_UART("UART1",&f4uart1);
 	manager.register_UART("UART2",&f4uart2);
