@@ -193,15 +193,16 @@ extern "C" int parse_command_line(const char *line, char *out)
 		count += sprintf(out, "rc:");
 		
 		IRCIN *rcin = manager.get_RCIN();
+		const int channel_count = 8;
 		
-		int16_t static_min[6];
-		int16_t static_max[6];
-		int16_t current[6];
+		int16_t static_min[channel_count];
+		int16_t static_max[channel_count];
+		int16_t current[channel_count];
 		
-		rcin->get_channel_data(current, 0, 6);
-		rcin->get_statistics_data(static_min, static_max, 0, 6);		
+		rcin->get_channel_data(current, 0, channel_count);
+		rcin->get_statistics_data(static_min, static_max, 0, channel_count);		
 		
-		for(i=0; i<6; i++)
+		for(i=0; i<channel_count; i++)
 		{
 			volatile float p0 = static_min[i];
 			volatile float p1 = current[i];
