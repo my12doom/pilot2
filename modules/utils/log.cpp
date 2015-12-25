@@ -201,7 +201,7 @@ extern "C" DWORD get_fattime(void)
 	time_t current_time = _unix_time + (systimer->gettime() - sys_time) / 1000000;
 	_tm = *localtime(&current_time);
 	
-	LOGE("\r%d, %d", current_time, _tm.tm_sec);
+	TRACE("\r%d, %d", current_time, _tm.tm_sec);
 	
 	return make_fattime(_tm.tm_sec, _tm.tm_min, _tm.tm_hour, _tm.tm_mday, _tm.tm_mon, _tm.tm_year);
 }

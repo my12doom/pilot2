@@ -211,7 +211,7 @@ int yet_another_pilot::calculate_baro_altitude()
 
 int yet_another_pilot::set_home(const float *new_home)
 {
-	if (!new_home || estimator.healthy())
+	if (!new_home || !estimator.healthy())
 		return -1;
 
 	memcpy(home, new_home, sizeof(new_home));
@@ -220,7 +220,7 @@ int yet_another_pilot::set_home(const float *new_home)
 
 	position llh = estimator.NED2LLH(new_home);
 
-	LOGE("home set to:%f / %f, %f - %f\n", home[0], home[1], llh.latitude, llh.longtitude);
+	LOGE("home set to:%f / %f, %f - %f\n", home[0], home[1], llh.latitude / double(COORDTIMES), llh.longtitude / double(COORDTIMES));
 
 	return 0;
 }
@@ -1949,6 +1949,13 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		const char *disarmed = "disarmed\n";
 		uart->write(disarmed, strlen(disarmed));
 	}
+
+	else if (strstr(line, "hello") == line)
+	{
+		char out[200];
+		sprintf(out, "yap(%s)(bsp %s)\n", version_name, bsp_name);
+		uart->write(out, strlen(out));
+	}
 	
 	else if (strstr(line, "takeoff") == line)
 	{
@@ -1975,7 +1982,35 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 
 	else if (strstr(line, "state") == line)
 	{
-		sprintf(out, "%f,%f,%f,%d\n", gps.longitude, gps.latitude, (batt.get_internal_voltage() - 10.8f)/(12.6f-10.8f), frame.ground_distance);
+		float pos[2] = {0};
+		float velocity[2] = {0};
+
+		bool pos_ready = false;
+		if (home_set)
+		{
+			if (pos_ready = get_pos_velocity_ned(pos, velocity) == 0)
+			{
+				pos[0] -= home[0];
+				pos[1] -= home[1];
+			}
+		}
+		float distance = sqrt(pos[0] * pos[0] + pos[1] * pos[1]);
+		float v = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
+		float battery = (batt.get_internal_voltage() - 10.6f)/(12.6f-10.6f);
+		battery = limit(battery, 0, 1);
+
+		sprintf(out, 
+			"state,%f,%f,%s,%.1f,%.1f,"		// gps latitude, longitude, gps ready, altitude, vertical velocity,
+			"%.1f,%.2f,"			// horizontal distance, horizontal velocity, 
+			"%.1f,%.1f,%.1f,"	// attitude: roll, pitch, yaw
+			"%s,%s,"			// airborne, sonar actived
+			"%.2f,%.1f\n",			// battery, 
+			gps.latitude, gps.longitude, pos_ready ? "true" : "false", alt_estimator.state[0], alt_estimator.state[1],
+			distance, v,
+			euler[0] * 180 / PI, euler[1] * 180 / PI, euler[2] * 180 / PI,
+			airborne ? "true" : "false", alt_controller.sonar_actived() ? "true" : "false",
+			battery, batt.get_internal_voltage());
+			
 		uart->write(out, strlen(out));
 	}
 	
@@ -2340,7 +2375,7 @@ int yet_another_pilot::light_words()
 		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220 && log_ready))
 		{
 			if (rgb && mag_calibration_state == 0)
-				rgb->write(estimator.healthy() ? 0 : 0.8,1,0);
+				rgb->write(estimator.healthy() ? 0 : 1.0,1,0);
 		}
 		else
 		{
@@ -2498,7 +2533,7 @@ void yet_another_pilot::main_loop(void)
 	run_controllers();
 	output();
 	save_logs();
-	handle_cli(vcp);
+ 	handle_cli(vcp);
 
 	if (armed)
 	{

@@ -195,9 +195,9 @@ extern "C" int parse_command_line(const char *line, char *out)
 		IRCIN *rcin = manager.get_RCIN();
 		const int channel_count = 8;
 		
-		int16_t static_min[channel_count];
-		int16_t static_max[channel_count];
-		int16_t current[channel_count];
+		int16_t static_min[channel_count] = {0};
+		int16_t static_max[channel_count] = {0};
+		int16_t current[channel_count] = {0};
 		
 		rcin->get_channel_data(current, 0, channel_count);
 		rcin->get_statistics_data(static_min, static_max, 0, channel_count);		
