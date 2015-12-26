@@ -42,6 +42,7 @@ static param quadcopter_max_descend_rate("maxD", 2);
 static param quadcopter_auto_landing_rate_fast("flrt", 1.5f);		// absolute value of fast automated landing speed in meter/s, 
 static param quadcopter_auto_landing_rate_final("lrat", 0.5f);		// absolute value of final approach speed in meter/s
 static param max_altitude("limV", 100);
+static param max_distance("limH", 100);
 static param quadcopter_trim[3] = 
 {
 	param("trmR", 0 * PI / 18),				// roll
@@ -1359,7 +1360,7 @@ int yet_another_pilot::sensor_calibration()
 	{
 		read_imu_and_filter();
 		read_sensors();
-		if (critical_errors)
+		if (critical_errors & (error_baro | error_gyro | error_magnet | error_accelerometer))
 			return -2;
 		if (detect_gyro.new_data(gyro_reading))
 			return -1;
