@@ -6,16 +6,14 @@
 #include <utils/param.h>
 
 // constants
-static float leash_pos = 6.0f;
-static float leash = 5.0f;
+// static float leash = 5.0f;
 static float linear_distance = 5.0f;
-static float max_speed = 5.0f;
+static param max_speed("maxH", 5.0f);
 static float max_speed_ff = 2.0f;
 static bool use_desired_feed_forward = false;
 static float feed_forward_factor = 1;
 static float rate2accel[4] = {1.5f, 0.5f, 0.2f, 2.0f};
 static float pos2rate_P = 1.0f;
-
 
 // "parameters/constants"
 static param quadcopter_range[3] = 
@@ -220,7 +218,8 @@ int pos_controller::move_desire_pos(float dt)
 	float new_distance = length(new_setpoint[0]-pos[0], new_setpoint[1] - pos[1]);
 	float old_distance = length(setpoint[0]-pos[0], setpoint[1] - pos[1]);
 
-	if ( new_distance < leash_pos || new_distance < old_distance)
+	float leash = max_speed * 1.2f;
+	if ( new_distance < leash || new_distance < old_distance)
 	{
 		setpoint[0] = new_setpoint[0];
 		setpoint[1] = new_setpoint[1];
@@ -237,6 +236,7 @@ int pos_controller::pos_to_rate(float dt)
 	float distance_to_target = length(error[0], error[1]);
 
 	// limit distance target
+	float leash = max_speed;
 	if (distance_to_target > leash)
 	{
 		error[0] *= leash / distance_to_target;
