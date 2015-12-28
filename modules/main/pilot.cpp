@@ -2014,6 +2014,22 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			
 		uart->write(out, strlen(out));
 	}
+
+	else if (strstr(line, "param") == line)
+	{
+		char out[200];
+		float limV = *find_param("limV");
+		float limH = *find_param("limH");
+		float maxH = *find_param("maxH");
+		float maxD = *find_param("maxD");
+		float maxC = *find_param("maxC");
+		float raty = *find_param("raty");
+
+		sprintf(out, "param,%.2f,%.2f,%.2f,%.2f,%.2f,%f\n",
+			limV, limH, maxH, maxD, maxC, raty);
+
+		uart->write(out, strlen(out));
+	}
 	
 	else if (strstr(line, "mag_cal_state") == line)
 	{
