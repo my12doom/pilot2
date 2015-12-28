@@ -30,6 +30,9 @@ namespace sensors
 		//   pass -1 for it to wait infinitly
 		ubx_packet* read_ubx_packet(int timeout);
 
+		// return pointer to local ubx_packet if valid ubx_packet found in UART buffer, NULL if not found.
+		//   will return immediatly
+		ubx_packet* read_ubx_packet();
 
 		// try to enable a message type, or pass enable=false to disable it.
 		//   return 0 if succeeded

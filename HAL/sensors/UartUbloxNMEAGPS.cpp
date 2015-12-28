@@ -261,6 +261,63 @@ ubx_packet* UartUbloxNMEAGPS::read_ubx_packet(int timeout)
 	return 0;
 }
 
+ubx_packet* UartUbloxNMEAGPS::read_ubx_packet()
+{
+	if (uart->available() <= 2)
+		return NULL;
+
+	uint8_t data[6];
+
+	// search header "\xB5\x62"
+	while(uart->available() > 6)
+	{
+		uart->peak(data, 2);
+
+		if (data[0] != 0xB5 || data[1] != 0x62)
+		{
+			// not header, remove invalid data
+			uart->read(data, data[1] == 0xB5 ? 1 : 2);
+		}
+		else
+		{
+			// 2byte B562, 4byte payload header, 2 byte CRC
+			uart->peak(data, 6);
+			int size = (int)data[5] << 8 | data[4];
+
+			if (uart->available() < size + 8)
+				return NULL;
+
+			ubx_packet * pkt = &_packet;
+			pkt->payload_size = size;
+			uart->read(data, 2);	// B562
+			uart->read(&pkt->cls, 1);
+			uart->read(&pkt->id, 1);
+			uart->read(pkt->payload, size);
+			uart->read(&pkt->crc, 2);
+
+			// check CRC
+			uint8_t CK_A = 0;
+			uint8_t CK_B = 0;
+			for(int i=0; i<4; i++)
+			{
+				CK_A = CK_A + ((uint8_t*)pkt)[i];
+				CK_B = CK_B + CK_A;
+			}
+			for(int i=0; i<pkt->payload_size; i++)
+			{
+				CK_A = CK_A + pkt->payload[i];
+				CK_B = CK_B + CK_A;
+			}
+
+			pkt->crc_ok = pkt->crc == (CK_A | (CK_B<<8));
+
+			return pkt;
+		}
+	}
+
+	return NULL;
+}
+
 int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 {
 	UartNMEAGPS::init(uart, baudrate);
