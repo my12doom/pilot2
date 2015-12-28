@@ -45,7 +45,8 @@ void ekf_estimator::init(float ax, float ay, float az, float mx, float my, float
     float initialHdg=0,cosHeading=0, sinHeading=0;
 	float q0=0,q1=0,q2=0,q3=0;//quaternion
 	ground_mag_length = sqrt(mx*mx + my*my + mz*mz);
-
+	
+	float roll,pitch,yaw;
 
 	gyro_bias[0] = gx;
 	gyro_bias[1] = gy;
@@ -78,7 +79,11 @@ void ekf_estimator::init(float ax, float ay, float az, float mx, float my, float
     q1 = sinRoll * cosPitch * cosHeading - cosRoll * sinPitch * sinHeading;
     q2 = cosRoll * sinPitch * cosHeading + sinRoll * cosPitch * sinHeading;
     q3 = cosRoll * cosPitch * sinHeading - sinRoll * sinPitch * cosHeading;
+	
+	quaternion_to_euler(0, q0, q1,q2,q3, &roll, &pitch, &yaw);
+	  
 
+	
 	//generate All Matrix init value 
 	init_ekf_matrix(Be,P,X,Q,R);
 	
@@ -140,7 +145,7 @@ bool ekf_estimator::ekf_is_ready()
 		sqrt_variance[2]=sqrt(sqrt_variance[2]);
 		
 		//if loopcount>800*0.005=4s && sqrt_variance(delt angle)<0.05бу
-		if(ekf_loopcount>=800 && sqrt_variance[0]!=0 && sqrt_variance[1]!=0 && sqrt_variance[2]!=0 && sqrt_variance[0]<=0.7f && sqrt_variance[1]<=0.7f && sqrt_variance[2]<=0.7f)
+		if(ekf_loopcount>=800 && sqrt_variance[0]!=0 && sqrt_variance[1]!=0 && sqrt_variance[2]!=0 && sqrt_variance[0]<=1.0f && sqrt_variance[1]<=1.0f && sqrt_variance[2]<=1.0f)
 		{
 			ekf_is_convergence=1;
 			return true;
@@ -217,11 +222,22 @@ int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,const float dT)
 	ekf_is_ready();
 	return 1;
 }
+void ekf_estimator::set_mesurement_R(float R_position,float R_velocity)
+{
+	R[0]=R_position;
+	R[8]=R_position;
+	//R[18] is baro height R
+	R[27]=R_velocity;
+	R[36]=R_velocity;
+	
+}
+//tranform frame  from ned to body
 void ekf_estimator::tf_ned2body(const float vector_ned[3], float vector_body[3])
 {
 	float q[4]={ekf_result.q0,ekf_result.q1,ekf_result.q2,ekf_result.q3};
 	ned2body(q,vector_ned,vector_body);
 }
+//tranform frame  from body to ned
 void ekf_estimator::tf_body2ned(const float vector_body[3], float vector_ned[3])
 {
 	float q[4]={ekf_result.q0,ekf_result.q1,ekf_result.q2,ekf_result.q3};

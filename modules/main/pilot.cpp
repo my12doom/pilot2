@@ -1152,12 +1152,13 @@ int yet_another_pilot::calculate_state()
 	ekf_mesurement.Mag_z=mag.array[2];
 
 	ekf_mesurement.Pos_Baro_z=a_raw_altitude;
-	if(estimator.home_set)
+	if(estimator.healthy())
 	{
 		ekf_mesurement.Pos_GPS_x=estimator.get_raw_meter().latitude;
 		ekf_mesurement.Pos_GPS_y=estimator.get_raw_meter().longtitude;
 		ekf_mesurement.Vel_GPS_x=ground_speed_north;
 		ekf_mesurement.Vel_GPS_y=ground_speed_east;
+		ekf_est.set_mesurement_R(1.0E-3,0.08);
 	}
 	else
 	{	
@@ -1187,15 +1188,15 @@ int yet_another_pilot::calculate_state()
 // 	printf("%f,%d\r\n",interval, int(t));
 
 	//For debug
-//	float ekf_buffer[6];
-//	ekf_buffer[0]=ekf_estimator.ekf_result.roll*180/3.1415f;
-//	ekf_buffer[1]=ekf_estimator.ekf_result.pitch*180/3.1415f;
-//	ekf_buffer[2]=ekf_estimator.ekf_result.yaw*180/3.1415f;
-//	ekf_buffer[3]=euler[0]*180/3.1415f;
-//	ekf_buffer[4]=euler[1]*180/3.1415f;
-//	ekf_buffer[5]=euler[2]*180/3.1415f;
+	float ekf_buffer[6];
+	ekf_buffer[0]=ekf_est.ekf_result.roll*180/3.1415f;
+	ekf_buffer[1]=ekf_est.ekf_result.pitch*180/3.1415f;
+	ekf_buffer[2]=ekf_est.ekf_result.yaw*180/3.1415f;
+	ekf_buffer[3]=euler[0]*180/3.1415f;
+	ekf_buffer[4]=euler[1]*180/3.1415f;
+	ekf_buffer[5]=euler[2]*180/3.1415f;
 
-	//printf("\r(ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5]);
+	printf("\r(ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5]);
 
 
 	if (use_EKF > 0.5f)
