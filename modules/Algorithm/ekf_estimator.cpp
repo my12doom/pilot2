@@ -147,8 +147,8 @@ bool ekf_estimator::ekf_is_ready()
 		sqrt_variance[1]=sqrt(sqrt_variance[1]);
 		sqrt_variance[2]=sqrt(sqrt_variance[2]);
 		
-		//if loopcount>800*0.005=4s && sqrt_variance(delt angle)<0.05бу
-		if(ekf_loopcount>=800 && sqrt_variance[0]!=0 && sqrt_variance[1]!=0 && sqrt_variance[2]!=0 && sqrt_variance[0]<=1.0f && sqrt_variance[1]<=1.0f && sqrt_variance[2]<=1.0f)
+		//if loopcount>100*0.005=0.5s && sqrt_variance(delt angle)<0.05бу
+		if(ekf_loopcount>=100 && sqrt_variance[0]!=0 && sqrt_variance[1]!=0 && sqrt_variance[2]!=0 && sqrt_variance[0]<=1.0f && sqrt_variance[1]<=1.0f && sqrt_variance[2]<=1.0f)
 		{
 			ekf_is_convergence=1;
 			return true;
@@ -228,7 +228,7 @@ int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,const float dT)
 void ekf_estimator::set_mesurement_R(float R_position,float R_velocity)
 {
 	R[0]=R_position;
-	R[8]=R_position;
+	R[9]=R_position;
 	//R[18] is baro height R
 	R[27]=R_velocity;
 	R[36]=R_velocity;
