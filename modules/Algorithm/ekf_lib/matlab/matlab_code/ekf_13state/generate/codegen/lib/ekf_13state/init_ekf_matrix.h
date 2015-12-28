@@ -2,7 +2,7 @@
  * File: init_ekf_matrix.h
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 #ifndef __INIT_EKF_MATRIX_H__

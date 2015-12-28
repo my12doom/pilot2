@@ -2,7 +2,7 @@
 ## Makefile generated for MATLAB file/project 'ekf_13state'. 
 ## 
 ## Makefile     : ekf_13state_rtw.mk
-## Generated on : Wed Dec 09 17:37:20 2015
+## Generated on : Mon Dec 28 15:45:44 2015
 ## MATLAB Coder version: 2.6 (R2014a)
 ## 
 ## Build Info:
@@ -152,7 +152,7 @@ BUILD_TYPE = "Static Library"
 ## INCLUDE PATHS
 ###########################################################################
 
-INCLUDES_BUILDINFO = -I$(START_DIR) -I$(START_DIR)/codegen/lib/ekf_13state -IZ:/Code/euler_pilot/modules/Algorithm/ekf_lib/matlab/matlab_code/ekf_13state -IZ:/Code/KalmanFilter_Python/matlab/ekf_13state -I$(MATLAB_ROOT)/extern/include -I$(MATLAB_ROOT)/simulink/include -I$(MATLAB_ROOT)/rtw/c/src -I$(MATLAB_ROOT)/rtw/c/src/ext_mode/common -I$(MATLAB_ROOT)/rtw/c/ert
+INCLUDES_BUILDINFO = -I$(START_DIR) -I$(START_DIR)/codegen/lib/ekf_13state -IZ:/Code/euler_pilot/modules/Algorithm/ekf_lib/matlab/matlab_code/ekf_13state -I$(MATLAB_ROOT)/extern/include -I$(MATLAB_ROOT)/simulink/include -I$(MATLAB_ROOT)/rtw/c/src -I$(MATLAB_ROOT)/rtw/c/src/ext_mode/common -I$(MATLAB_ROOT)/rtw/c/ert
 
 INCLUDES = $(INCLUDES_BUILDINFO)
 
@@ -168,7 +168,7 @@ DEFINES = $(DEFINES_STANDARD)
 ## SOURCE FILES
 ###########################################################################
 
-SRCS = $(START_DIR)/codegen/lib/ekf_13state/ekf_13state_initialize.c $(START_DIR)/codegen/lib/ekf_13state/ekf_13state_terminate.c $(START_DIR)/codegen/lib/ekf_13state/body2ned.c $(START_DIR)/codegen/lib/ekf_13state/f.c $(START_DIR)/codegen/lib/ekf_13state/h.c $(START_DIR)/codegen/lib/ekf_13state/init_ekf_matrix.c $(START_DIR)/codegen/lib/ekf_13state/init_quaternion_by_euler.c $(START_DIR)/codegen/lib/ekf_13state/INS_Correction.c $(START_DIR)/codegen/lib/ekf_13state/INS_CovariancePrediction.c $(START_DIR)/codegen/lib/ekf_13state/INS_SetState.c $(START_DIR)/codegen/lib/ekf_13state/INSSetMagNorth.c $(START_DIR)/codegen/lib/ekf_13state/LinearFG.c $(START_DIR)/codegen/lib/ekf_13state/LinearizeH.c $(START_DIR)/codegen/lib/ekf_13state/ned2body.c $(START_DIR)/codegen/lib/ekf_13state/normlise_quaternion.c $(START_DIR)/codegen/lib/ekf_13state/quaternion_to_euler.c $(START_DIR)/codegen/lib/ekf_13state/RungeKutta.c $(START_DIR)/codegen/lib/ekf_13state/SerialUpdate.c $(START_DIR)/codegen/lib/ekf_13state/inv.c $(START_DIR)/codegen/lib/ekf_13state/normlise_quaternion1.c $(START_DIR)/codegen/lib/ekf_13state/f1.c $(START_DIR)/codegen/lib/ekf_13state/rt_nonfinite.c $(START_DIR)/codegen/lib/ekf_13state/rtGetNaN.c $(START_DIR)/codegen/lib/ekf_13state/rtGetInf.c
+SRCS = $(START_DIR)/codegen/lib/ekf_13state/ekf_13state_initialize.c $(START_DIR)/codegen/lib/ekf_13state/ekf_13state_terminate.c $(START_DIR)/codegen/lib/ekf_13state/body2ned.c $(START_DIR)/codegen/lib/ekf_13state/f.c $(START_DIR)/codegen/lib/ekf_13state/h.c $(START_DIR)/codegen/lib/ekf_13state/init_ekf_matrix.c $(START_DIR)/codegen/lib/ekf_13state/init_quaternion_by_euler.c $(START_DIR)/codegen/lib/ekf_13state/INS_Correction.c $(START_DIR)/codegen/lib/ekf_13state/INS_CovariancePrediction.c $(START_DIR)/codegen/lib/ekf_13state/INS_SetState.c $(START_DIR)/codegen/lib/ekf_13state/INSSetMagNorth.c $(START_DIR)/codegen/lib/ekf_13state/LinearFG.c $(START_DIR)/codegen/lib/ekf_13state/LinearizeH.c $(START_DIR)/codegen/lib/ekf_13state/ned2body.c $(START_DIR)/codegen/lib/ekf_13state/normlise_quaternion.c $(START_DIR)/codegen/lib/ekf_13state/quaternion_to_euler.c $(START_DIR)/codegen/lib/ekf_13state/RungeKutta.c $(START_DIR)/codegen/lib/ekf_13state/SerialUpdate.c $(START_DIR)/codegen/lib/ekf_13state/inv.c $(START_DIR)/codegen/lib/ekf_13state/rt_nonfinite.c $(START_DIR)/codegen/lib/ekf_13state/rtGetNaN.c $(START_DIR)/codegen/lib/ekf_13state/rtGetInf.c
 
 ALL_SRCS = $(SRCS)
 
@@ -176,7 +176,7 @@ ALL_SRCS = $(SRCS)
 ## OBJECTS
 ###########################################################################
 
-OBJS = ekf_13state_initialize.obj ekf_13state_terminate.obj body2ned.obj f.obj h.obj init_ekf_matrix.obj init_quaternion_by_euler.obj INS_Correction.obj INS_CovariancePrediction.obj INS_SetState.obj INSSetMagNorth.obj LinearFG.obj LinearizeH.obj ned2body.obj normlise_quaternion.obj quaternion_to_euler.obj RungeKutta.obj SerialUpdate.obj inv.obj normlise_quaternion1.obj f1.obj rt_nonfinite.obj rtGetNaN.obj rtGetInf.obj
+OBJS = ekf_13state_initialize.obj ekf_13state_terminate.obj body2ned.obj f.obj h.obj init_ekf_matrix.obj init_quaternion_by_euler.obj INS_Correction.obj INS_CovariancePrediction.obj INS_SetState.obj INSSetMagNorth.obj LinearFG.obj LinearizeH.obj ned2body.obj normlise_quaternion.obj quaternion_to_euler.obj RungeKutta.obj SerialUpdate.obj inv.obj rt_nonfinite.obj rtGetNaN.obj rtGetInf.obj
 
 ALL_OBJS = $(OBJS)
 

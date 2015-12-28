@@ -2,7 +2,7 @@
  * File: LinearizeH.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 /* Include files */
@@ -37,7 +37,7 @@ void LinearizeH(const float X[13], const float Be[3], double H[104])
   signed char I[9];
   int i4;
   int k;
-  static const signed char iv0[6] = { 1, 0, 0, 1, 0, 0 };
+  static const signed char iv1[6] = { 1, 0, 0, 1, 0, 0 };
 
   memset(&H[0], 0, 104U * sizeof(double));
 
@@ -56,7 +56,7 @@ void LinearizeH(const float X[13], const float Be[3], double H[104])
   /* dV/dV=I; */
   for (i4 = 0; i4 < 3; i4++) {
     for (k = 0; k < 2; k++) {
-      H[(k + ((3 + i4) << 3)) + 3] = iv0[k + (i4 << 1)];
+      H[(k + ((3 + i4) << 3)) + 3] = iv1[k + (i4 << 1)];
     }
   }
 

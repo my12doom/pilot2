@@ -2,7 +2,7 @@
  * File: _coder_ekf_13state_api.h 
  *  
  * MATLAB Coder version            : 2.6 
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13 
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29 
  */
 
 #ifndef ___CODER_EKF_13STATE_API_H__
@@ -43,11 +43,11 @@ extern void ned2body_api(const mxArray *prhs[2], const mxArray *plhs[1]);
 extern void ned2body(float q_now[4], float vector_ned[3], float vector_body[3]);
 extern void normlise_quaternion_api(const mxArray *prhs[1], const mxArray *plhs[1]);
 extern void quaternion_to_euler_api(const mxArray * const prhs[5], const mxArray *plhs[3]);
-extern void quaternion_to_euler(signed char is_radian, float q0, float q1, float q2, float q3, float *roll, float *pitch, float *yaw);
+extern void quaternion_to_euler(float is_radian, float q0, float q1, float q2, float q3, float *roll, float *pitch, float *yaw);
 extern void RungeKutta_api(const mxArray *prhs[3], const mxArray *plhs[1]);
 extern void SerialUpdate_api(const mxArray *prhs[6], const mxArray *plhs[2]);
 extern void ekf_13state_xil_terminate(void);
-extern void INS_Correction(float Mag_data[3], float Pos[3], float Vel[2], float X[13], float R[64], float P[169], float Be[3]);
+extern void INS_Correction(float Mag_data[3], float Pos[3], float Vel[3], float X[13], float R[64], float P[169], float Be[3]);
 extern void INS_CovariancePrediction(float F[169], float G[117], float Q[81], float dT, float P[169]);
 extern void INSSetMagNorth(float Be[3]);
 extern void normlise_quaternion(float X[13]);

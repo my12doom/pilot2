@@ -14,7 +14,7 @@
 <a name="2"><font color="#888888 "><i>    2   </i></font></a><font color="#117755"><I> * File: LinearFG.c</i></font>
 <a name="3"><font color="#888888 "><i>    3   </i></font></a><font color="#117755"><I> *</i></font>
 <a name="4"><font color="#888888 "><i>    4   </i></font></a><font color="#117755"><I> * MATLAB Coder version            : 2.6</i></font>
-<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 09-Dec-2015 17:37:13</i></font>
+<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 28-Dec-2015 15:54:29</i></font>
 <a name="6"><font color="#888888 "><i>    6   </i></font></a><font color="#117755"><I> */</i></font>
 <a name="7"><font color="#888888 "><i>    7   </i></font></a>
 <a name="8"><font color="#888888 "><i>    8   </i></font></a><font color="#117755"><i>/* Include files */</i></font>
@@ -48,17 +48,17 @@
 <a name="36"><font color="#888888 "><i>   36   </i></font></a><font color="#112266"><b>void</b></font> <a name="fcn_LinearFG">LinearFG</a>(<font color="#112266"><b>const</b></font> <font color="#112266"><b>float</b></font> X[13], <font color="#112266"><b>const</b></font> <font color="#112266"><b>float</b></font> U[6], <font color="#112266"><b>double</b></font> F[169], <font color="#112266"><b>double</b></font> G[117])
 <a name="37"><font color="#888888 "><i>   37   </i></font></a><b>{</b>
 <a name="38"><font color="#888888 "><i>   38   </i></font></a>  <font color="#112266"><b>signed</b></font> <font color="#112266"><b>char</b></font> I[9];
-<a name="39"><font color="#888888 "><i>   39   </i></font></a>  <font color="#112266"><b>int</b></font> i3;
+<a name="39"><font color="#888888 "><i>   39   </i></font></a>  <font color="#112266"><b>int</b></font> i6;
 <a name="40"><font color="#888888 "><i>   40   </i></font></a>  <font color="#112266"><b>int</b></font> k;
 <a name="41"><font color="#888888 "><i>   41   </i></font></a>  memset(&amp;F[0], 0, 169U * <font color="#112266"><b>sizeof</b></font>(<font color="#112266"><b>double</b></font>));
-<a name="42"><font color="#888888 "><i>   42   </i></font></a>  <font color="#112266"><b>for</b></font> (i3 = 0; i3 &lt; 9; i3++) <b>{</b>
-<a name="43"><font color="#888888 "><i>   43   </i></font></a>    I[i3] = 0;
+<a name="42"><font color="#888888 "><i>   42   </i></font></a>  <font color="#112266"><b>for</b></font> (i6 = 0; i6 &lt; 9; i6++) <b>{</b>
+<a name="43"><font color="#888888 "><i>   43   </i></font></a>    I[i6] = 0;
 <a name="44"><font color="#888888 "><i>   44   </i></font></a>  <b>}</b>
 <a name="45"><font color="#888888 "><i>   45   </i></font></a>
 <a name="46"><font color="#888888 "><i>   46   </i></font></a>  <font color="#112266"><b>for</b></font> (k = 0; k &lt; 3; k++) <b>{</b>
 <a name="47"><font color="#888888 "><i>   47   </i></font></a>    I[k + 3 * k] = 1;
-<a name="48"><font color="#888888 "><i>   48   </i></font></a>    <font color="#112266"><b>for</b></font> (i3 = 0; i3 &lt; 3; i3++) <b>{</b>
-<a name="49"><font color="#888888 "><i>   49   </i></font></a>      F[i3 + 13 * (3 + k)] = I[i3 + 3 * k];
+<a name="48"><font color="#888888 "><i>   48   </i></font></a>    <font color="#112266"><b>for</b></font> (i6 = 0; i6 &lt; 3; i6++) <b>{</b>
+<a name="49"><font color="#888888 "><i>   49   </i></font></a>      F[i6 + 13 * (3 + k)] = I[i6 + 3 * k];
 <a name="50"><font color="#888888 "><i>   50   </i></font></a>    <b>}</b>
 <a name="51"><font color="#888888 "><i>   51   </i></font></a>  <b>}</b>
 <a name="52"><font color="#888888 "><i>   52   </i></font></a>
@@ -128,14 +128,14 @@
 <a name="116"><font color="#888888 "><i>  116   </i></font></a>  G[9] = X[8] / 2.0F;
 <a name="117"><font color="#888888 "><i>  117   </i></font></a>  G[22] = -X[7] / 2.0F;
 <a name="118"><font color="#888888 "><i>  118   </i></font></a>  G[35] = -X[6] / 2.0F;
-<a name="119"><font color="#888888 "><i>  119   </i></font></a>  <font color="#112266"><b>for</b></font> (i3 = 0; i3 &lt; 9; i3++) <b>{</b>
-<a name="120"><font color="#888888 "><i>  120   </i></font></a>    I[i3] = 0;
+<a name="119"><font color="#888888 "><i>  119   </i></font></a>  <font color="#112266"><b>for</b></font> (i6 = 0; i6 &lt; 9; i6++) <b>{</b>
+<a name="120"><font color="#888888 "><i>  120   </i></font></a>    I[i6] = 0;
 <a name="121"><font color="#888888 "><i>  121   </i></font></a>  <b>}</b>
 <a name="122"><font color="#888888 "><i>  122   </i></font></a>
 <a name="123"><font color="#888888 "><i>  123   </i></font></a>  <font color="#112266"><b>for</b></font> (k = 0; k &lt; 3; k++) <b>{</b>
 <a name="124"><font color="#888888 "><i>  124   </i></font></a>    I[k + 3 * k] = 1;
-<a name="125"><font color="#888888 "><i>  125   </i></font></a>    <font color="#112266"><b>for</b></font> (i3 = 0; i3 &lt; 3; i3++) <b>{</b>
-<a name="126"><font color="#888888 "><i>  126   </i></font></a>      G[(i3 + 13 * (6 + k)) + 10] = I[i3 + 3 * k];
+<a name="125"><font color="#888888 "><i>  125   </i></font></a>    <font color="#112266"><b>for</b></font> (i6 = 0; i6 &lt; 3; i6++) <b>{</b>
+<a name="126"><font color="#888888 "><i>  126   </i></font></a>      G[(i6 + 13 * (6 + k)) + 10] = I[i6 + 3 * k];
 <a name="127"><font color="#888888 "><i>  127   </i></font></a>    <b>}</b>
 <a name="128"><font color="#888888 "><i>  128   </i></font></a>  <b>}</b>
 <a name="129"><font color="#888888 "><i>  129   </i></font></a><b>}</b>

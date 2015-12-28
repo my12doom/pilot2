@@ -2,7 +2,7 @@
  * File: quaternion_to_euler.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 /* Include files */
@@ -71,7 +71,7 @@ static float rt_atan2f_snf(float u0, float u1)
 }
 
 /*
- * Arguments    : signed char is_radian
+ * Arguments    : float is_radian
  *                float q0
  *                float q1
  *                float q2
@@ -81,8 +81,8 @@ static float rt_atan2f_snf(float u0, float u1)
  *                float *yaw
  * Return Type  : void
  */
-void quaternion_to_euler(signed char is_radian, float q0, float q1, float q2,
-  float q3, float *roll, float *pitch, float *yaw)
+void quaternion_to_euler(float is_radian, float q0, float q1, float q2, float q3,
+  float *roll, float *pitch, float *yaw)
 {
   float x;
   *roll = rt_atan2f_snf(2.0F * (q2 * q3 + q0 * q1), ((q0 * q0 - q1 * q1) - q2 *
@@ -91,7 +91,7 @@ void quaternion_to_euler(signed char is_radian, float q0, float q1, float q2,
   *pitch = -x;
   *yaw = rt_atan2f_snf(2.0F * (q1 * q2 + q0 * q3), ((q0 * q0 + q1 * q1) - q2 *
     q2) - q3 * q3);
-  if (is_radian == 0) {
+  if (is_radian == 0.0F) {
     *roll = *roll * 180.0F / 3.14159274F;
     *pitch = -x * 180.0F / 3.14159274F;
     *yaw = *yaw * 180.0F / 3.14159274F;

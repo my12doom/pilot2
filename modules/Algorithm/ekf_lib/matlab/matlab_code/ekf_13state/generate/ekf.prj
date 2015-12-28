@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.matlabcoder" plugin-version="R2014a_nu">
-  <configuration build-checksum="1454522587" file="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\generate\ekf.prj" location="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\generate" name="ekf" target="target.matlab.coder" target-name="MEX, C, and C++ Code Generation">
+  <configuration build-checksum="1438181252" file="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\generate\ekf.prj" location="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\generate" name="ekf" target="target.matlab.coder" target-name="MEX, C, and C++ Code Generation">
     <profile key="profile.mex">
       <param.MergeInstrumentationResults>false</param.MergeInstrumentationResults>
       <param.BuiltInstrumentedMex>false</param.BuiltInstrumentedMex>
@@ -326,7 +326,7 @@
     <param.AutoInferUseUnboundedSize>false</param.AutoInferUseUnboundedSize>
     <param.AutoInferVariableSizeThreshold>1024</param.AutoInferVariableSizeThreshold>
     <param.AutoInferUnboundedSizeThreshold>2048</param.AutoInferUnboundedSizeThreshold>
-    <param.AnnotationChecksum>1324581979</param.AnnotationChecksum>
+    <param.AnnotationChecksum>3964591012</param.AnnotationChecksum>
     <param.mex.outputfile>body2ned_mex</param.mex.outputfile>
     <param.grt.outputfile>ekf_13state</param.grt.outputfile>
     <param.artifact>option.target.artifact.lib</param.artifact>
@@ -441,27 +441,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\ned2body.m">
-        <Inputs fileName="ned2body.m" functionName="ned2body">
-          <Input Name="q_now">
-            <Class>single</Class>
-            <Size>4 x 1</Size>
-            <Value />
-            <InitialValue />
-            <UserDefined>true</UserDefined>
-            <Complex>false</Complex>
-          </Input>
-          <Input Name="vector_ned">
-            <Class>single</Class>
-            <Size>3 x 1</Size>
-            <Value />
-            <InitialValue />
-            <UserDefined>true</UserDefined>
-            <Complex>false</Complex>
-          </Input>
-        </Inputs>
-      </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\f.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\f.m">
         <Inputs fileName="f.m" functionName="f">
           <Input Name="X">
             <Class>single</Class>
@@ -481,7 +461,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\h.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\h.m">
         <Inputs fileName="h.m" functionName="h">
           <Input Name="X">
             <Class>single</Class>
@@ -501,8 +481,8 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\init_ekf_matrix.m" />
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\init_quaternion_by_euler.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\init_ekf_matrix.m" />
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\init_quaternion_by_euler.m">
         <Inputs fileName="init_quaternion_by_euler.m" functionName="init_quaternion_by_euler">
           <Input Name="roll">
             <Class>single</Class>
@@ -530,7 +510,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\INS_Correction.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\INS_Correction.m">
         <Inputs fileName="INS_Correction.m" functionName="INS_Correction">
           <Input Name="Mag_data">
             <Class>single</Class>
@@ -550,7 +530,7 @@
           </Input>
           <Input Name="Vel">
             <Class>single</Class>
-            <Size>2 x 1</Size>
+            <Size>3 x 1</Size>
             <Value />
             <InitialValue />
             <UserDefined>true</UserDefined>
@@ -590,7 +570,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\INS_CovariancePrediction.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\INS_CovariancePrediction.m">
         <Inputs fileName="INS_CovariancePrediction.m" functionName="INS_CovariancePrediction">
           <Input Name="F">
             <Class>single</Class>
@@ -634,7 +614,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\INS_SetState.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\INS_SetState.m">
         <Inputs fileName="INS_SetState.m" functionName="INS_SetState">
           <Input Name="p_x">
             <Class>single</Class>
@@ -742,7 +722,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\INSSetMagNorth.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\INSSetMagNorth.m">
         <Inputs fileName="INSSetMagNorth.m" functionName="INSSetMagNorth">
           <Input Name="Be">
             <Class>single</Class>
@@ -754,7 +734,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\LinearFG.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\LinearFG.m">
         <Inputs fileName="LinearFG.m" functionName="LinearFG">
           <Input Name="X">
             <Class>single</Class>
@@ -774,7 +754,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\LinearizeH.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\LinearizeH.m">
         <Inputs fileName="LinearizeH.m" functionName="LinearizeH">
           <Input Name="X">
             <Class>single</Class>
@@ -794,7 +774,27 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\normlise_quaternion.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\ned2body.m">
+        <Inputs fileName="ned2body.m" functionName="ned2body">
+          <Input Name="q_now">
+            <Class>single</Class>
+            <Size>4 x 1</Size>
+            <Value />
+            <InitialValue />
+            <UserDefined>true</UserDefined>
+            <Complex>false</Complex>
+          </Input>
+          <Input Name="vector_ned">
+            <Class>single</Class>
+            <Size>3 x 1</Size>
+            <Value />
+            <InitialValue />
+            <UserDefined>true</UserDefined>
+            <Complex>false</Complex>
+          </Input>
+        </Inputs>
+      </file>
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\normlise_quaternion.m">
         <Inputs fileName="normlise_quaternion.m" functionName="normlise_quaternion">
           <Input Name="X">
             <Class>single</Class>
@@ -806,10 +806,10 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\quaternion_to_euler.m">
+      <file custom-data-expanded="true" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\quaternion_to_euler.m">
         <Inputs fileName="quaternion_to_euler.m" functionName="quaternion_to_euler">
           <Input Name="is_radian">
-            <Class>int8</Class>
+            <Class>single</Class>
             <Size>1 x 1</Size>
             <Value />
             <InitialValue />
@@ -850,7 +850,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\RungeKutta.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\RungeKutta.m">
         <Inputs fileName="RungeKutta.m" functionName="RungeKutta">
           <Input Name="X">
             <Class>single</Class>
@@ -878,7 +878,7 @@
           </Input>
         </Inputs>
       </file>
-      <file custom-data-expanded="false" value="Z:\Code\KalmanFilter_Python\matlab\ekf_13state\SerialUpdate.m">
+      <file custom-data-expanded="false" value="Z:\Code\euler_pilot\modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\SerialUpdate.m">
         <Inputs fileName="SerialUpdate.m" functionName="SerialUpdate">
           <Input Name="H">
             <Class>single</Class>

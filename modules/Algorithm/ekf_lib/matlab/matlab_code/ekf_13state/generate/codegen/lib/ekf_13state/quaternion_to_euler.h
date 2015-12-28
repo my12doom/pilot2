@@ -2,7 +2,7 @@
  * File: quaternion_to_euler.h
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 #ifndef __QUATERNION_TO_EULER_H__
@@ -19,8 +19,8 @@
 #include "ekf_13state_types.h"
 
 /* Function Declarations */
-extern void quaternion_to_euler(signed char is_radian, float q0, float q1, float
-  q2, float q3, float *roll, float *pitch, float *yaw);
+extern void quaternion_to_euler(float is_radian, float q0, float q1, float q2,
+  float q3, float *roll, float *pitch, float *yaw);
 
 #endif
 
