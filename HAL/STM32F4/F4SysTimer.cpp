@@ -1,4 +1,3 @@
-#pragma once
 #include "F4SysTimer.h"
 #include <stm32f4xx.h>
 #include <stdint.h>
