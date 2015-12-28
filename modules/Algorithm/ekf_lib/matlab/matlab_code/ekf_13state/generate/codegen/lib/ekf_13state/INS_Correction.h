@@ -2,7 +2,7 @@
  * File: INS_Correction.h
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 #ifndef __INS_CORRECTION_H__
@@ -20,7 +20,7 @@
 
 /* Function Declarations */
 extern void INS_Correction(const float Mag_data[3], const float Pos[3], const
-  float Vel[2], float X[13], const float R[64], float P[169], const float Be[3]);
+  float Vel[3], float X[13], const float R[64], float P[169], const float Be[3]);
 
 #endif
 

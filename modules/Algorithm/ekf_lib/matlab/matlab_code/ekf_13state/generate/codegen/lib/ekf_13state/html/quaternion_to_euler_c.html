@@ -14,7 +14,7 @@
 <a name="2"><font color="#888888 "><i>    2   </i></font></a><font color="#117755"><I> * File: quaternion_to_euler.c</i></font>
 <a name="3"><font color="#888888 "><i>    3   </i></font></a><font color="#117755"><I> *</i></font>
 <a name="4"><font color="#888888 "><i>    4   </i></font></a><font color="#117755"><I> * MATLAB Coder version            : 2.6</i></font>
-<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 09-Dec-2015 17:37:13</i></font>
+<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 28-Dec-2015 15:54:29</i></font>
 <a name="6"><font color="#888888 "><i>    6   </i></font></a><font color="#117755"><I> */</i></font>
 <a name="7"><font color="#888888 "><i>    7   </i></font></a>
 <a name="8"><font color="#888888 "><i>    8   </i></font></a><font color="#117755"><i>/* Include files */</i></font>
@@ -83,7 +83,7 @@
 <a name="71"><font color="#888888 "><i>   71   </i></font></a><b>}</b>
 <a name="72"><font color="#888888 "><i>   72   </i></font></a>
 <a name="73"><font color="#888888 "><i>   73   </i></font></a><font color="#117755"><i>/*</i></font>
-<a name="74"><font color="#888888 "><i>   74   </i></font></a><font color="#117755"><I> * Arguments    : signed char is_radian</i></font>
+<a name="74"><font color="#888888 "><i>   74   </i></font></a><font color="#117755"><I> * Arguments    : float is_radian</i></font>
 <a name="75"><font color="#888888 "><i>   75   </i></font></a><font color="#117755"><I> *                float q0</i></font>
 <a name="76"><font color="#888888 "><i>   76   </i></font></a><font color="#117755"><I> *                float q1</i></font>
 <a name="77"><font color="#888888 "><i>   77   </i></font></a><font color="#117755"><I> *                float q2</i></font>
@@ -93,8 +93,8 @@
 <a name="81"><font color="#888888 "><i>   81   </i></font></a><font color="#117755"><I> *                float *yaw</i></font>
 <a name="82"><font color="#888888 "><i>   82   </i></font></a><font color="#117755"><I> * Return Type  : void</i></font>
 <a name="83"><font color="#888888 "><i>   83   </i></font></a><font color="#117755"><I> */</i></font>
-<a name="84"><font color="#888888 "><i>   84   </i></font></a><font color="#112266"><b>void</b></font> <a name="fcn_quaternion_to_euler">quaternion_to_euler</a>(<font color="#112266"><b>signed</b></font> <font color="#112266"><b>char</b></font> is_radian, <font color="#112266"><b>float</b></font> q0, <font color="#112266"><b>float</b></font> q1, <font color="#112266"><b>float</b></font> q2,
-<a name="85"><font color="#888888 "><i>   85   </i></font></a>  <font color="#112266"><b>float</b></font> q3, <font color="#112266"><b>float</b></font> *roll, <font color="#112266"><b>float</b></font> *pitch, <font color="#112266"><b>float</b></font> *yaw)
+<a name="84"><font color="#888888 "><i>   84   </i></font></a><font color="#112266"><b>void</b></font> <a name="fcn_quaternion_to_euler">quaternion_to_euler</a>(<font color="#112266"><b>float</b></font> is_radian, <font color="#112266"><b>float</b></font> q0, <font color="#112266"><b>float</b></font> q1, <font color="#112266"><b>float</b></font> q2, <font color="#112266"><b>float</b></font> q3,
+<a name="85"><font color="#888888 "><i>   85   </i></font></a>  <font color="#112266"><b>float</b></font> *roll, <font color="#112266"><b>float</b></font> *pitch, <font color="#112266"><b>float</b></font> *yaw)
 <a name="86"><font color="#888888 "><i>   86   </i></font></a><b>{</b>
 <a name="87"><font color="#888888 "><i>   87   </i></font></a>  <font color="#112266"><b>float</b></font> x;
 <a name="88"><font color="#888888 "><i>   88   </i></font></a>  *roll = <a href="#fcn_rt_atan2f_snf" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_rt_atan2f_snf');" target="_self"><font color="#1122aa">rt_atan2f_snf</font></a>(2.0F * (q2 * q3 + q0 * q1), ((q0 * q0 - q1 * q1) - q2 *
@@ -103,7 +103,7 @@
 <a name="91"><font color="#888888 "><i>   91   </i></font></a>  *pitch = -x;
 <a name="92"><font color="#888888 "><i>   92   </i></font></a>  *yaw = <a href="#fcn_rt_atan2f_snf" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_rt_atan2f_snf');" target="_self"><font color="#1122aa">rt_atan2f_snf</font></a>(2.0F * (q1 * q2 + q0 * q3), ((q0 * q0 + q1 * q1) - q2 *
 <a name="93"><font color="#888888 "><i>   93   </i></font></a>    q2) - q3 * q3);
-<a name="94"><font color="#888888 "><i>   94   </i></font></a>  <font color="#112266"><b>if</b></font> (is_radian == 0) <b>{</b>
+<a name="94"><font color="#888888 "><i>   94   </i></font></a>  <font color="#112266"><b>if</b></font> (is_radian == 0.0F) <b>{</b>
 <a name="95"><font color="#888888 "><i>   95   </i></font></a>    *roll = *roll * 180.0F / 3.14159274F;
 <a name="96"><font color="#888888 "><i>   96   </i></font></a>    *pitch = -x * 180.0F / 3.14159274F;
 <a name="97"><font color="#888888 "><i>   97   </i></font></a>    *yaw = *yaw * 180.0F / 3.14159274F;

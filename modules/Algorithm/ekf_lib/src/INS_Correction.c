@@ -2,7 +2,7 @@
  * File: INS_Correction.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 27-Nov-2015 13:49:02
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 /* Include files */
@@ -15,10 +15,12 @@
 #include "LinearizeH.h"
 #include "RungeKutta.h"
 #include "SerialUpdate.h"
+#include "body2ned.h"
 #include "f.h"
 #include "h.h"
 #include "init_ekf_matrix.h"
 #include "init_quaternion_by_euler.h"
+#include "ned2body.h"
 #include "normlise_quaternion.h"
 #include "quaternion_to_euler.h"
 #include "inv.h"
@@ -28,7 +30,7 @@
 /*
  * Arguments    : const float Mag_data[3]
  *                const float Pos[3]
- *                const float Vel[2]
+ *                const float Vel[3]
  *                float X[13]
  *                const float R[64]
  *                float P[169]
@@ -36,20 +38,23 @@
  * Return Type  : void
  */
 void INS_Correction(const float Mag_data[3], const float Pos[3], const float
-                    Vel[2], float X[13], const float R[64], float P[169], const
+                    Vel[3], float X[13], const float R[64], float P[169], const
                     float Be[3])
 {
   double Z[8];
+  float q_now[4];
+  float Me[3];
   float Bnorm;
+  float b_Me[3];
   double H[104];
   float b_H[104];
   int i;
-  int i3;
-  int i4;
+  int i7;
+  int i8;
   float x[64];
   float y[64];
   float K[104];
-  double dv1[8];
+  double dv0[8];
   float b_Z[8];
   float b_X[13];
   float b_K[169];
@@ -61,30 +66,21 @@ void INS_Correction(const float Mag_data[3], const float Pos[3], const float
   Z[4] = Vel[1];
 
   /*  %% do lots of things to remove megnetic Z value */
-  /*  % Bnorm=sqrt(Mag_data(1)^2+Mag_data(2)^2+Mag_data(3)^2); */
-  /*  % Mb_x=Mag_data(1)/Bnorm; */
-  /*  % Mb_y=Mag_data(2)/Bnorm; */
-  /*  % Mb_z=Mag_data(3)/Bnorm; */
-  /*  %body frame to earth frame */
-  /*  Mbe=[q0^2+q1^2-q2^2-q3^2,2*(q1*q2+q0*q3),2*(q1*q3-q0*q2);2*(q1*q2-q0*q3),q0^2-q1^2+q2^2-q3^2,2*(q2*q3+q0*q1);2*(q1*q3+q0*q2),2*(q2*q3-q0*q1),q0^2-q1^2-q2^2+q3^2]; */
-  /*  %earth frame to body frame and remove z value */
-  /*  Meb=Mbe'; */
-  /*  Mned_x=Meb(1,1)*Mag_data(1) + Meb(1,2)*Mag_data(2) + Meb(1,3)*Mag_data(3); */
-  /*  Mned_y=Meb(2,1)*Mag_data(1) + Meb(2,2)*Mag_data(2) + Meb(2,3)*Mag_data(3); */
-  /*  %normlize it  */
-  /*  Bnorm=sqrt(Mned_x^2+Mned_y^2); */
-  /*  Mned_x=Mag_data(1)/Bnorm; */
-  /*  Mned_y=Mag_data(2)/Bnorm; */
-  /*  %transfer megnetic to body frame */
-  /*  Mb_x=Mbe(1,1)*Mned_x + Mbe(1,2)*Mned_y; */
-  /*  Mb_y=Mbe(2,1)*Mned_x + Mbe(2,2)*Mned_y; */
-  /*  Mb_z=Mbe(3,1)*Mned_x + Mbe(3,2)*Mned_y; */
-  /* %This is original openpilot method */
-  Bnorm = (real32_T)sqrt((Mag_data[0] * Mag_data[0] + Mag_data[1] * Mag_data[1])
-    + Mag_data[2] * Mag_data[2]);
-  Z[5] = Mag_data[0] / Bnorm;
-  Z[6] = Mag_data[1] / Bnorm;
-  Z[7] = Mag_data[2] / Bnorm;
+  q_now[0] = X[6];
+  q_now[1] = X[7];
+  q_now[2] = X[8];
+  q_now[3] = X[9];
+  body2ned(q_now, Mag_data, Me);
+  Bnorm = (real32_T)sqrt(Me[0] * Me[0] + Me[1] * Me[1]);
+  b_Me[0] = Me[0] / Bnorm;
+  b_Me[1] = Me[1] / Bnorm;
+  b_Me[2] = 0.0F;
+  ned2body(q_now, b_Me, Me);
+
+  /* % */
+  Z[5] = Me[0];
+  Z[6] = Me[1];
+  Z[7] = Me[2];
   LinearizeH(X, Be, H);
 
   /*  // *************  SerialUpdate ******************* */
@@ -103,81 +99,81 @@ void INS_Correction(const float Mag_data[3], const float Pos[3], const float
   /*  // should be used in the update. */
   /*  // ************************************************ */
   for (i = 0; i < 8; i++) {
-    for (i3 = 0; i3 < 13; i3++) {
-      b_H[i + (i3 << 3)] = 0.0F;
-      for (i4 = 0; i4 < 13; i4++) {
-        b_H[i + (i3 << 3)] += (float)H[i + (i4 << 3)] * P[i4 + 13 * i3];
+    for (i7 = 0; i7 < 13; i7++) {
+      b_H[i + (i7 << 3)] = 0.0F;
+      for (i8 = 0; i8 < 13; i8++) {
+        b_H[i + (i7 << 3)] += (float)H[i + (i8 << 3)] * P[i8 + 13 * i7];
       }
     }
   }
 
   for (i = 0; i < 8; i++) {
-    for (i3 = 0; i3 < 8; i3++) {
+    for (i7 = 0; i7 < 8; i7++) {
       Bnorm = 0.0F;
-      for (i4 = 0; i4 < 13; i4++) {
-        Bnorm += b_H[i + (i4 << 3)] * (float)H[i3 + (i4 << 3)];
+      for (i8 = 0; i8 < 13; i8++) {
+        Bnorm += b_H[i + (i8 << 3)] * (float)H[i7 + (i8 << 3)];
       }
 
-      x[i + (i3 << 3)] = Bnorm + R[i + (i3 << 3)];
+      x[i + (i7 << 3)] = Bnorm + R[i + (i7 << 3)];
     }
   }
 
   invNxN(x, y);
   for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 8; i3++) {
-      b_H[i + 13 * i3] = 0.0F;
-      for (i4 = 0; i4 < 13; i4++) {
-        b_H[i + 13 * i3] += P[i + 13 * i4] * (float)H[i3 + (i4 << 3)];
+    for (i7 = 0; i7 < 8; i7++) {
+      b_H[i + 13 * i7] = 0.0F;
+      for (i8 = 0; i8 < 13; i8++) {
+        b_H[i + 13 * i7] += P[i + 13 * i8] * (float)H[i7 + (i8 << 3)];
       }
     }
   }
 
   for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 8; i3++) {
-      K[i + 13 * i3] = 0.0F;
-      for (i4 = 0; i4 < 8; i4++) {
-        K[i + 13 * i3] += b_H[i + 13 * i4] * y[i4 + (i3 << 3)];
+    for (i7 = 0; i7 < 8; i7++) {
+      K[i + 13 * i7] = 0.0F;
+      for (i8 = 0; i8 < 8; i8++) {
+        K[i + 13 * i7] += b_H[i + 13 * i8] * y[i8 + (i7 << 3)];
       }
     }
   }
 
-  h(X, Be, dv1);
+  h(X, Be, dv0);
   for (i = 0; i < 8; i++) {
-    b_Z[i] = (float)(Z[i] - dv1[i]);
+    b_Z[i] = (float)(Z[i] - dv0[i]);
   }
 
   for (i = 0; i < 13; i++) {
     Bnorm = 0.0F;
-    for (i3 = 0; i3 < 8; i3++) {
-      Bnorm += K[i + 13 * i3] * b_Z[i3];
+    for (i7 = 0; i7 < 8; i7++) {
+      Bnorm += K[i + 13 * i7] * b_Z[i7];
     }
 
     b_X[i] = X[i] + Bnorm;
   }
 
   for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 13; i3++) {
-      b_K[i + 13 * i3] = 0.0F;
-      for (i4 = 0; i4 < 8; i4++) {
-        b_K[i + 13 * i3] += K[i + 13 * i4] * (float)H[i4 + (i3 << 3)];
+    for (i7 = 0; i7 < 13; i7++) {
+      b_K[i + 13 * i7] = 0.0F;
+      for (i8 = 0; i8 < 8; i8++) {
+        b_K[i + 13 * i7] += K[i + 13 * i8] * (float)H[i8 + (i7 << 3)];
       }
     }
   }
 
   for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 13; i3++) {
+    for (i7 = 0; i7 < 13; i7++) {
       Bnorm = 0.0F;
-      for (i4 = 0; i4 < 13; i4++) {
-        Bnorm += b_K[i + 13 * i4] * P[i4 + 13 * i3];
+      for (i8 = 0; i8 < 13; i8++) {
+        Bnorm += b_K[i + 13 * i8] * P[i8 + 13 * i7];
       }
 
-      b_P[i + 13 * i3] = P[i + 13 * i3] - Bnorm;
+      b_P[i + 13 * i7] = P[i + 13 * i7] - Bnorm;
     }
   }
 
   for (i = 0; i < 13; i++) {
-    for (i3 = 0; i3 < 13; i3++) {
-      P[i3 + 13 * i] = b_P[i3 + 13 * i];
+    for (i7 = 0; i7 < 13; i7++) {
+      P[i7 + 13 * i] = b_P[i7 + 13 * i];
     }
   }
 

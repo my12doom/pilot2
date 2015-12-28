@@ -74,7 +74,7 @@ void INS_CovariancePrediction(const float F[169], const float G[117], const
     for (i6 = 0; i6 < 13; i6++) {
       fv1[i5 + 13 * i6] = 0.0F;
       for (i7 = 0; i7 < 13; i7++) {
-        fv1[i5 + 13 * i6] += fv0[i5 + 13 * i7] * P[i7 + 13 * i6];
+         fv1[i5 + 13 * i6] += fv0[i5 + 13 * i7] * P[i7 + 13 * i6];
       }
     }
   }

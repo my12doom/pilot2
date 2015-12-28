@@ -14,7 +14,7 @@
 <a name="2"><font color="#888888 "><i>    2   </i></font></a><font color="#117755"><I> * File: RungeKutta.c</i></font>
 <a name="3"><font color="#888888 "><i>    3   </i></font></a><font color="#117755"><I> *</i></font>
 <a name="4"><font color="#888888 "><i>    4   </i></font></a><font color="#117755"><I> * MATLAB Coder version            : 2.6</i></font>
-<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 09-Dec-2015 17:37:13</i></font>
+<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 28-Dec-2015 15:54:29</i></font>
 <a name="6"><font color="#888888 "><i>    6   </i></font></a><font color="#117755"><I> */</i></font>
 <a name="7"><font color="#888888 "><i>    7   </i></font></a>
 <a name="8"><font color="#888888 "><i>    8   </i></font></a><font color="#117755"><i>/* Include files */</i></font>
@@ -35,74 +35,72 @@
 <a name="23"><font color="#888888 "><i>   23   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;ned2body.h&quot;</font>
 <a name="24"><font color="#888888 "><i>   24   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;normlise_quaternion.h&quot;</font>
 <a name="25"><font color="#888888 "><i>   25   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;quaternion_to_euler.h&quot;</font>
-<a name="26"><font color="#888888 "><i>   26   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;normlise_quaternion1.h&quot;</font>
-<a name="27"><font color="#888888 "><i>   27   </i></font></a><font color="#992211">#</font><font color="#992211"><b>include</b></font> <font color="#992211">&quot;f1.h&quot;</font>
+<a name="26"><font color="#888888 "><i>   26   </i></font></a>
+<a name="27"><font color="#888888 "><i>   27   </i></font></a><font color="#117755"><i>/* Function Definitions */</i></font>
 <a name="28"><font color="#888888 "><i>   28   </i></font></a>
-<a name="29"><font color="#888888 "><i>   29   </i></font></a><font color="#117755"><i>/* Function Definitions */</i></font>
-<a name="30"><font color="#888888 "><i>   30   </i></font></a>
-<a name="31"><font color="#888888 "><i>   31   </i></font></a><font color="#117755"><i>/*</i></font>
-<a name="32"><font color="#888888 "><i>   32   </i></font></a><font color="#117755"><I> * 2nd order runge-kutta implement</i></font>
-<a name="33"><font color="#888888 "><i>   33   </i></font></a><font color="#117755"><I> * Arguments    : float X[13]</i></font>
-<a name="34"><font color="#888888 "><i>   34   </i></font></a><font color="#117755"><I> *                const float U[6]</i></font>
-<a name="35"><font color="#888888 "><i>   35   </i></font></a><font color="#117755"><I> *                float dT</i></font>
-<a name="36"><font color="#888888 "><i>   36   </i></font></a><font color="#117755"><I> * Return Type  : void</i></font>
-<a name="37"><font color="#888888 "><i>   37   </i></font></a><font color="#117755"><I> */</i></font>
-<a name="38"><font color="#888888 "><i>   38   </i></font></a><font color="#112266"><b>void</b></font> <a name="fcn_RungeKutta">RungeKutta</a>(<font color="#112266"><b>float</b></font> X[13], <font color="#112266"><b>const</b></font> <font color="#112266"><b>float</b></font> U[6], <font color="#112266"><b>float</b></font> dT)
-<a name="39"><font color="#888888 "><i>   39   </i></font></a><b>{</b>
-<a name="40"><font color="#888888 "><i>   40   </i></font></a>  <font color="#112266"><b>float</b></font> Xlast[13];
-<a name="41"><font color="#888888 "><i>   41   </i></font></a>  <font color="#112266"><b>int</b></font> i;
-<a name="42"><font color="#888888 "><i>   42   </i></font></a>  <font color="#112266"><b>double</b></font> k1[13];
-<a name="43"><font color="#888888 "><i>   43   </i></font></a>  <font color="#112266"><b>float</b></font> y;
-<a name="44"><font color="#888888 "><i>   44   </i></font></a>  <font color="#112266"><b>float</b></font> b_X[13];
-<a name="45"><font color="#888888 "><i>   45   </i></font></a>  <font color="#112266"><b>double</b></font> k2[13];
-<a name="46"><font color="#888888 "><i>   46   </i></font></a>  <font color="#112266"><b>float</b></font> b_y;
-<a name="47"><font color="#888888 "><i>   47   </i></font></a>  <font color="#112266"><b>double</b></font> k3[13];
-<a name="48"><font color="#888888 "><i>   48   </i></font></a>  <font color="#112266"><b>double</b></font> dv1[13];
-<a name="49"><font color="#888888 "><i>   49   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
-<a name="50"><font color="#888888 "><i>   50   </i></font></a>    Xlast[i] = X[i];
-<a name="51"><font color="#888888 "><i>   51   </i></font></a>  <b>}</b>
-<a name="52"><font color="#888888 "><i>   52   </i></font></a>
-<a name="53"><font color="#888888 "><i>   53   </i></font></a>  <a href="f1_c.html#fcn_b_f" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_b_f');" target="_self"><font color="#1122aa">b_f</font></a>(X, U, k1);
-<a name="54"><font color="#888888 "><i>   54   </i></font></a>  y = 0.5F * dT;
-<a name="55"><font color="#888888 "><i>   55   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
-<a name="56"><font color="#888888 "><i>   56   </i></font></a>    X[i] += y * (<font color="#112266"><b>float</b></font>)k1[i];
-<a name="57"><font color="#888888 "><i>   57   </i></font></a>  <b>}</b>
-<a name="58"><font color="#888888 "><i>   58   </i></font></a>
-<a name="59"><font color="#888888 "><i>   59   </i></font></a>  y = 0.5F * dT;
-<a name="60"><font color="#888888 "><i>   60   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
-<a name="61"><font color="#888888 "><i>   61   </i></font></a>    b_X[i] = X[i] + y * (<font color="#112266"><b>float</b></font>)k1[i];
-<a name="62"><font color="#888888 "><i>   62   </i></font></a>  <b>}</b>
-<a name="63"><font color="#888888 "><i>   63   </i></font></a>
-<a name="64"><font color="#888888 "><i>   64   </i></font></a>  <a href="f1_c.html#fcn_b_f" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_b_f');" target="_self"><font color="#1122aa">b_f</font></a>(b_X, U, k2);
-<a name="65"><font color="#888888 "><i>   65   </i></font></a>  y = 0.5F * dT;
-<a name="66"><font color="#888888 "><i>   66   </i></font></a>  b_y = 0.5F * dT;
-<a name="67"><font color="#888888 "><i>   67   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
-<a name="68"><font color="#888888 "><i>   68   </i></font></a>    b_X[i] = (Xlast[i] + y * (<font color="#112266"><b>float</b></font>)k2[i]) + b_y * (<font color="#112266"><b>float</b></font>)k2[i];
-<a name="69"><font color="#888888 "><i>   69   </i></font></a>  <b>}</b>
-<a name="70"><font color="#888888 "><i>   70   </i></font></a>
-<a name="71"><font color="#888888 "><i>   71   </i></font></a>  <a href="f1_c.html#fcn_b_f" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_b_f');" target="_self"><font color="#1122aa">b_f</font></a>(b_X, U, k3);
-<a name="72"><font color="#888888 "><i>   72   </i></font></a>  y = 0.5F * dT;
-<a name="73"><font color="#888888 "><i>   73   </i></font></a>
-<a name="74"><font color="#888888 "><i>   74   </i></font></a>  <font color="#117755"><i>/*  X=Xlast+dT*f(X,U); */</i></font>
-<a name="75"><font color="#888888 "><i>   75   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
-<a name="76"><font color="#888888 "><i>   76   </i></font></a>    b_X[i] = (Xlast[i] + y * (<font color="#112266"><b>float</b></font>)k3[i]) + dT * (<font color="#112266"><b>float</b></font>)k3[i];
-<a name="77"><font color="#888888 "><i>   77   </i></font></a>  <b>}</b>
-<a name="78"><font color="#888888 "><i>   78   </i></font></a>
-<a name="79"><font color="#888888 "><i>   79   </i></font></a>  <a href="f1_c.html#fcn_b_f" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_b_f');" target="_self"><font color="#1122aa">b_f</font></a>(b_X, U, dv1);
-<a name="80"><font color="#888888 "><i>   80   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
-<a name="81"><font color="#888888 "><i>   81   </i></font></a>    X[i] = Xlast[i] + dT * (<font color="#112266"><b>float</b></font>)(((k1[i] + 2.0 * k2[i]) + 2.0 * k3[i]) + dv1[i])
-<a name="82"><font color="#888888 "><i>   82   </i></font></a>      / 6.0F;
-<a name="83"><font color="#888888 "><i>   83   </i></font></a>  <b>}</b>
-<a name="84"><font color="#888888 "><i>   84   </i></font></a>
-<a name="85"><font color="#888888 "><i>   85   </i></font></a>  <a href="normlise_quaternion1_c.html#fcn_b_normlise_quaternion" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_b_normlise_quaternion');" target="_self"><font color="#1122aa">b_normlise_quaternion</font></a>(X);
-<a name="86"><font color="#888888 "><i>   86   </i></font></a><b>}</b>
-<a name="87"><font color="#888888 "><i>   87   </i></font></a>
-<a name="88"><font color="#888888 "><i>   88   </i></font></a><font color="#117755"><i>/*</i></font>
-<a name="89"><font color="#888888 "><i>   89   </i></font></a><font color="#117755"><I> * File trailer for RungeKutta.c</i></font>
-<a name="90"><font color="#888888 "><i>   90   </i></font></a><font color="#117755"><I> *</i></font>
-<a name="91"><font color="#888888 "><i>   91   </i></font></a><font color="#117755"><I> * [EOF]</i></font>
-<a name="92"><font color="#888888 "><i>   92   </i></font></a><font color="#117755"><I> */</i></font>
-<a name="93"><font color="#888888 "><i>   93   </i></font></a></pre>
+<a name="29"><font color="#888888 "><i>   29   </i></font></a><font color="#117755"><i>/*</i></font>
+<a name="30"><font color="#888888 "><i>   30   </i></font></a><font color="#117755"><I> * 2nd order runge-kutta implement</i></font>
+<a name="31"><font color="#888888 "><i>   31   </i></font></a><font color="#117755"><I> * Arguments    : float X[13]</i></font>
+<a name="32"><font color="#888888 "><i>   32   </i></font></a><font color="#117755"><I> *                const float U[6]</i></font>
+<a name="33"><font color="#888888 "><i>   33   </i></font></a><font color="#117755"><I> *                float dT</i></font>
+<a name="34"><font color="#888888 "><i>   34   </i></font></a><font color="#117755"><I> * Return Type  : void</i></font>
+<a name="35"><font color="#888888 "><i>   35   </i></font></a><font color="#117755"><I> */</i></font>
+<a name="36"><font color="#888888 "><i>   36   </i></font></a><font color="#112266"><b>void</b></font> <a name="fcn_RungeKutta">RungeKutta</a>(<font color="#112266"><b>float</b></font> X[13], <font color="#112266"><b>const</b></font> <font color="#112266"><b>float</b></font> U[6], <font color="#112266"><b>float</b></font> dT)
+<a name="37"><font color="#888888 "><i>   37   </i></font></a><b>{</b>
+<a name="38"><font color="#888888 "><i>   38   </i></font></a>  <font color="#112266"><b>float</b></font> Xlast[13];
+<a name="39"><font color="#888888 "><i>   39   </i></font></a>  <font color="#112266"><b>int</b></font> i;
+<a name="40"><font color="#888888 "><i>   40   </i></font></a>  <font color="#112266"><b>double</b></font> k1[13];
+<a name="41"><font color="#888888 "><i>   41   </i></font></a>  <font color="#112266"><b>float</b></font> y;
+<a name="42"><font color="#888888 "><i>   42   </i></font></a>  <font color="#112266"><b>float</b></font> b_X[13];
+<a name="43"><font color="#888888 "><i>   43   </i></font></a>  <font color="#112266"><b>double</b></font> k2[13];
+<a name="44"><font color="#888888 "><i>   44   </i></font></a>  <font color="#112266"><b>float</b></font> b_y;
+<a name="45"><font color="#888888 "><i>   45   </i></font></a>  <font color="#112266"><b>double</b></font> k3[13];
+<a name="46"><font color="#888888 "><i>   46   </i></font></a>  <font color="#112266"><b>double</b></font> dv1[13];
+<a name="47"><font color="#888888 "><i>   47   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
+<a name="48"><font color="#888888 "><i>   48   </i></font></a>    Xlast[i] = X[i];
+<a name="49"><font color="#888888 "><i>   49   </i></font></a>  <b>}</b>
+<a name="50"><font color="#888888 "><i>   50   </i></font></a>
+<a name="51"><font color="#888888 "><i>   51   </i></font></a>  <a href="f_c.html#fcn_f" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_f');" target="_self"><font color="#1122aa">f</font></a>(X, U, k1);
+<a name="52"><font color="#888888 "><i>   52   </i></font></a>  y = 0.5F * dT;
+<a name="53"><font color="#888888 "><i>   53   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
+<a name="54"><font color="#888888 "><i>   54   </i></font></a>    X[i] += y * (<font color="#112266"><b>float</b></font>)k1[i];
+<a name="55"><font color="#888888 "><i>   55   </i></font></a>  <b>}</b>
+<a name="56"><font color="#888888 "><i>   56   </i></font></a>
+<a name="57"><font color="#888888 "><i>   57   </i></font></a>  y = 0.5F * dT;
+<a name="58"><font color="#888888 "><i>   58   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
+<a name="59"><font color="#888888 "><i>   59   </i></font></a>    b_X[i] = X[i] + y * (<font color="#112266"><b>float</b></font>)k1[i];
+<a name="60"><font color="#888888 "><i>   60   </i></font></a>  <b>}</b>
+<a name="61"><font color="#888888 "><i>   61   </i></font></a>
+<a name="62"><font color="#888888 "><i>   62   </i></font></a>  <a href="f_c.html#fcn_f" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_f');" target="_self"><font color="#1122aa">f</font></a>(b_X, U, k2);
+<a name="63"><font color="#888888 "><i>   63   </i></font></a>  y = 0.5F * dT;
+<a name="64"><font color="#888888 "><i>   64   </i></font></a>  b_y = 0.5F * dT;
+<a name="65"><font color="#888888 "><i>   65   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
+<a name="66"><font color="#888888 "><i>   66   </i></font></a>    b_X[i] = (Xlast[i] + y * (<font color="#112266"><b>float</b></font>)k2[i]) + b_y * (<font color="#112266"><b>float</b></font>)k2[i];
+<a name="67"><font color="#888888 "><i>   67   </i></font></a>  <b>}</b>
+<a name="68"><font color="#888888 "><i>   68   </i></font></a>
+<a name="69"><font color="#888888 "><i>   69   </i></font></a>  <a href="f_c.html#fcn_f" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_f');" target="_self"><font color="#1122aa">f</font></a>(b_X, U, k3);
+<a name="70"><font color="#888888 "><i>   70   </i></font></a>  y = 0.5F * dT;
+<a name="71"><font color="#888888 "><i>   71   </i></font></a>
+<a name="72"><font color="#888888 "><i>   72   </i></font></a>  <font color="#117755"><i>/*  X=Xlast+dT*f(X,U); */</i></font>
+<a name="73"><font color="#888888 "><i>   73   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
+<a name="74"><font color="#888888 "><i>   74   </i></font></a>    b_X[i] = (Xlast[i] + y * (<font color="#112266"><b>float</b></font>)k3[i]) + dT * (<font color="#112266"><b>float</b></font>)k3[i];
+<a name="75"><font color="#888888 "><i>   75   </i></font></a>  <b>}</b>
+<a name="76"><font color="#888888 "><i>   76   </i></font></a>
+<a name="77"><font color="#888888 "><i>   77   </i></font></a>  <a href="f_c.html#fcn_f" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_f');" target="_self"><font color="#1122aa">f</font></a>(b_X, U, dv1);
+<a name="78"><font color="#888888 "><i>   78   </i></font></a>  <font color="#112266"><b>for</b></font> (i = 0; i &lt; 13; i++) <b>{</b>
+<a name="79"><font color="#888888 "><i>   79   </i></font></a>    X[i] = Xlast[i] + dT * (<font color="#112266"><b>float</b></font>)(((k1[i] + 2.0 * k2[i]) + 2.0 * k3[i]) + dv1[i])
+<a name="80"><font color="#888888 "><i>   80   </i></font></a>      / 6.0F;
+<a name="81"><font color="#888888 "><i>   81   </i></font></a>  <b>}</b>
+<a name="82"><font color="#888888 "><i>   82   </i></font></a>
+<a name="83"><font color="#888888 "><i>   83   </i></font></a>  <a href="normlise_quaternion_c.html#fcn_normlise_quaternion" onclick="if (top) if (top.docHiliteMe) top.docHiliteMe(window, 'fcn_normlise_quaternion');" target="_self"><font color="#1122aa">normlise_quaternion</font></a>(X);
+<a name="84"><font color="#888888 "><i>   84   </i></font></a><b>}</b>
+<a name="85"><font color="#888888 "><i>   85   </i></font></a>
+<a name="86"><font color="#888888 "><i>   86   </i></font></a><font color="#117755"><i>/*</i></font>
+<a name="87"><font color="#888888 "><i>   87   </i></font></a><font color="#117755"><I> * File trailer for RungeKutta.c</i></font>
+<a name="88"><font color="#888888 "><i>   88   </i></font></a><font color="#117755"><I> *</i></font>
+<a name="89"><font color="#888888 "><i>   89   </i></font></a><font color="#117755"><I> * [EOF]</i></font>
+<a name="90"><font color="#888888 "><i>   90   </i></font></a><font color="#117755"><I> */</i></font>
+<a name="91"><font color="#888888 "><i>   91   </i></font></a></pre>
 </td></tr></table>
 </p>
 </body>

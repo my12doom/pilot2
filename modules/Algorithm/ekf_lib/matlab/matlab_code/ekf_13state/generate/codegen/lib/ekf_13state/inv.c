@@ -2,7 +2,7 @@
  * File: inv.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 /* Include files */
@@ -35,7 +35,7 @@
 void invNxN(const float x[64], float y[64])
 {
   float A[64];
-  int i2;
+  int i5;
   signed char ipiv[8];
   int j;
   int c;
@@ -47,13 +47,13 @@ void invNxN(const float x[64], float y[64])
   int i;
   int kAcol;
   signed char p[8];
-  for (i2 = 0; i2 < 64; i2++) {
-    y[i2] = 0.0F;
-    A[i2] = x[i2];
+  for (i5 = 0; i5 < 64; i5++) {
+    y[i5] = 0.0F;
+    A[i5] = x[i5];
   }
 
-  for (i2 = 0; i2 < 8; i2++) {
-    ipiv[i2] = (signed char)(1 + i2);
+  for (i5 = 0; i5 < 8; i5++) {
+    ipiv[i5] = (signed char)(1 + i5);
   }
 
   for (j = 0; j < 7; j++) {
@@ -84,8 +84,8 @@ void invNxN(const float x[64], float y[64])
         }
       }
 
-      i2 = (c - j) + 8;
-      for (i = c + 1; i + 1 <= i2; i++) {
+      i5 = (c - j) + 8;
+      for (i = c + 1; i + 1 <= i5; i++) {
         A[i] /= A[c];
       }
     }
@@ -96,8 +96,8 @@ void invNxN(const float x[64], float y[64])
       smax = A[kAcol];
       if (A[kAcol] != 0.0F) {
         ix = c + 1;
-        i2 = (jBcol - j) + 16;
-        for (k = 9 + jBcol; k + 1 <= i2; k++) {
+        i5 = (jBcol - j) + 16;
+        for (k = 9 + jBcol; k + 1 <= i5; k++) {
           A[k] += A[ix] * -smax;
           ix++;
         }
@@ -108,8 +108,8 @@ void invNxN(const float x[64], float y[64])
     }
   }
 
-  for (i2 = 0; i2 < 8; i2++) {
-    p[i2] = (signed char)(1 + i2);
+  for (i5 = 0; i5 < 8; i5++) {
+    p[i5] = (signed char)(1 + i5);
   }
 
   for (k = 0; k < 7; k++) {

@@ -2,7 +2,7 @@
  * File: init_ekf_matrix.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 /* Include files */
@@ -38,7 +38,7 @@ void init_ekf_matrix(double Be[3], double P[169], double X[13], double Q[81],
                      double R[64])
 {
   int i;
-  static const double dv0[3] = { 0.8906, 0.0, 0.4547 };
+  static const signed char iv0[3] = { 1, 0, 0 };
 
   static const signed char v[13] = { 100, 100, 100, 100, 100, 100, 10, 10, 10,
     10, 100, 100, 100 };
@@ -50,7 +50,7 @@ void init_ekf_matrix(double Be[3], double P[169], double X[13], double Q[81],
     0.005 };
 
   for (i = 0; i < 3; i++) {
-    Be[i] = dv0[i];
+    Be[i] = iv0[i];
   }
 
   /* local mageetic unit vector */

@@ -2,7 +2,7 @@
  * File: RungeKutta.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 /* Include files */
@@ -23,8 +23,6 @@
 #include "ned2body.h"
 #include "normlise_quaternion.h"
 #include "quaternion_to_euler.h"
-#include "normlise_quaternion1.h"
-#include "f1.h"
 
 /* Function Definitions */
 
@@ -50,7 +48,7 @@ void RungeKutta(float X[13], const float U[6], float dT)
     Xlast[i] = X[i];
   }
 
-  b_f(X, U, k1);
+  f(X, U, k1);
   y = 0.5F * dT;
   for (i = 0; i < 13; i++) {
     X[i] += y * (float)k1[i];
@@ -61,14 +59,14 @@ void RungeKutta(float X[13], const float U[6], float dT)
     b_X[i] = X[i] + y * (float)k1[i];
   }
 
-  b_f(b_X, U, k2);
+  f(b_X, U, k2);
   y = 0.5F * dT;
   b_y = 0.5F * dT;
   for (i = 0; i < 13; i++) {
     b_X[i] = (Xlast[i] + y * (float)k2[i]) + b_y * (float)k2[i];
   }
 
-  b_f(b_X, U, k3);
+  f(b_X, U, k3);
   y = 0.5F * dT;
 
   /*  X=Xlast+dT*f(X,U); */
@@ -76,13 +74,13 @@ void RungeKutta(float X[13], const float U[6], float dT)
     b_X[i] = (Xlast[i] + y * (float)k3[i]) + dT * (float)k3[i];
   }
 
-  b_f(b_X, U, dv1);
+  f(b_X, U, dv1);
   for (i = 0; i < 13; i++) {
     X[i] = Xlast[i] + dT * (float)(((k1[i] + 2.0 * k2[i]) + 2.0 * k3[i]) + dv1[i])
       / 6.0F;
   }
 
-  b_normlise_quaternion(X);
+  normlise_quaternion(X);
 }
 
 /*

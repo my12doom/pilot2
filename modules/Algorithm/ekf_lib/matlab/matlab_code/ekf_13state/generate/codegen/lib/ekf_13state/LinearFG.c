@@ -2,7 +2,7 @@
  * File: LinearFG.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 /* Include files */
@@ -36,17 +36,17 @@
 void LinearFG(const float X[13], const float U[6], double F[169], double G[117])
 {
   signed char I[9];
-  int i3;
+  int i6;
   int k;
   memset(&F[0], 0, 169U * sizeof(double));
-  for (i3 = 0; i3 < 9; i3++) {
-    I[i3] = 0;
+  for (i6 = 0; i6 < 9; i6++) {
+    I[i6] = 0;
   }
 
   for (k = 0; k < 3; k++) {
     I[k + 3 * k] = 1;
-    for (i3 = 0; i3 < 3; i3++) {
-      F[i3 + 13 * (3 + k)] = I[i3 + 3 * k];
+    for (i6 = 0; i6 < 3; i6++) {
+      F[i6 + 13 * (3 + k)] = I[i6 + 3 * k];
     }
   }
 
@@ -116,14 +116,14 @@ void LinearFG(const float X[13], const float U[6], double F[169], double G[117])
   G[9] = X[8] / 2.0F;
   G[22] = -X[7] / 2.0F;
   G[35] = -X[6] / 2.0F;
-  for (i3 = 0; i3 < 9; i3++) {
-    I[i3] = 0;
+  for (i6 = 0; i6 < 9; i6++) {
+    I[i6] = 0;
   }
 
   for (k = 0; k < 3; k++) {
     I[k + 3 * k] = 1;
-    for (i3 = 0; i3 < 3; i3++) {
-      G[(i3 + 13 * (6 + k)) + 10] = I[i3 + 3 * k];
+    for (i6 = 0; i6 < 3; i6++) {
+      G[(i6 + 13 * (6 + k)) + 10] = I[i6 + 3 * k];
     }
   }
 }

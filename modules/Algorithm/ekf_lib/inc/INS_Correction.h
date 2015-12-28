@@ -2,7 +2,7 @@
  * File: INS_Correction.h
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 27-Nov-2015 13:49:02
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 #ifndef __INS_CORRECTION_H__
@@ -19,15 +19,12 @@
 #include "ekf_13state_types.h"
 
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
 /* Function Declarations */
 extern void INS_Correction(const float Mag_data[3], const float Pos[3], const
-  float Vel[2], float X[13], const float R[64], float P[169], const float Be[3]);
+  float Vel[3], float X[13], const float R[64], float P[169], const float Be[3]);
 
 #ifdef __cplusplus
 }

@@ -10,36 +10,27 @@ Z(2)=Pos(2);
 Z(3)=Pos(3);
 Z(4)=Vel(1);
 Z(5)=Vel(2);
+
 % %% do lots of things to remove megnetic Z value
-% % Bnorm=sqrt(Mag_data(1)^2+Mag_data(2)^2+Mag_data(3)^2);
-% % Mb_x=Mag_data(1)/Bnorm;
-% % Mb_y=Mag_data(2)/Bnorm;
-% % Mb_z=Mag_data(3)/Bnorm;
-% %body frame to earth frame
-% Mbe=[q0^2+q1^2-q2^2-q3^2,2*(q1*q2+q0*q3),2*(q1*q3-q0*q2);2*(q1*q2-q0*q3),q0^2-q1^2+q2^2-q3^2,2*(q2*q3+q0*q1);2*(q1*q3+q0*q2),2*(q2*q3-q0*q1),q0^2-q1^2-q2^2+q3^2];
-% %earth frame to body frame and remove z value
-% Meb=Mbe';
-% Mned_x=Meb(1,1)*Mag_data(1) + Meb(1,2)*Mag_data(2) + Meb(1,3)*Mag_data(3);
-% Mned_y=Meb(2,1)*Mag_data(1) + Meb(2,2)*Mag_data(2) + Meb(2,3)*Mag_data(3);
-% %normlize it 
-% Bnorm=sqrt(Mned_x^2+Mned_y^2);
-% Mned_x=Mag_data(1)/Bnorm;
-% Mned_y=Mag_data(2)/Bnorm;
-% %transfer megnetic to body frame
-% Mb_x=Mbe(1,1)*Mned_x + Mbe(1,2)*Mned_y;
-% Mb_y=Mbe(2,1)*Mned_x + Mbe(2,2)*Mned_y;
-% Mb_z=Mbe(3,1)*Mned_x + Mbe(3,2)*Mned_y;
+
+q_now=[q0;q1;q2;q3];
+Me=body2ned(q_now,Mag_data);
+Bnorm=sqrt(Me(1)^2+Me(2)^2);
+Me_x=Me(1)/Bnorm;
+Me_y=Me(2)/Bnorm;
+Me=[Me_x;Me_y;0];
+Mb=ned2body(q_now,Me);
+
+%%
 
 
-%%This is original openpilot method
-Bnorm=sqrt(Mag_data(1)^2+Mag_data(2)^2+Mag_data(3)^2);
-Mb_x=Mag_data(1)/Bnorm;
-Mb_y=Mag_data(2)/Bnorm;
-Mb_z=Mag_data(3)/Bnorm;
 
-Z(6)=Mb_x;
-Z(7)=Mb_y;
-Z(8)=Mb_z;
+
+
+
+Z(6)=Mb(1);
+Z(7)=Mb(2);
+Z(8)=Mb(3);
 
 H=LinearizeH(X,Be);
 Y=h(X,Be);

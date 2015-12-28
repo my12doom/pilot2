@@ -14,7 +14,7 @@
 <a name="2"><font color="#888888 "><i>    2   </i></font></a><font color="#117755"><I> * File: ned2body.c</i></font>
 <a name="3"><font color="#888888 "><i>    3   </i></font></a><font color="#117755"><I> *</i></font>
 <a name="4"><font color="#888888 "><i>    4   </i></font></a><font color="#117755"><I> * MATLAB Coder version            : 2.6</i></font>
-<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 09-Dec-2015 17:37:13</i></font>
+<a name="5"><font color="#888888 "><i>    5   </i></font></a><font color="#117755"><I> * C/C++ source code generated on  : 28-Dec-2015 15:54:29</i></font>
 <a name="6"><font color="#888888 "><i>    6   </i></font></a><font color="#117755"><I> */</i></font>
 <a name="7"><font color="#888888 "><i>    7   </i></font></a>
 <a name="8"><font color="#888888 "><i>    8   </i></font></a><font color="#117755"><i>/* Include files */</i></font>
@@ -48,8 +48,8 @@
 <a name="36"><font color="#888888 "><i>   36   </i></font></a>              vector_body[3])
 <a name="37"><font color="#888888 "><i>   37   </i></font></a><b>{</b>
 <a name="38"><font color="#888888 "><i>   38   </i></font></a>  <font color="#112266"><b>float</b></font> b_q_now[9];
-<a name="39"><font color="#888888 "><i>   39   </i></font></a>  <font color="#112266"><b>int</b></font> i5;
-<a name="40"><font color="#888888 "><i>   40   </i></font></a>  <font color="#112266"><b>int</b></font> i6;
+<a name="39"><font color="#888888 "><i>   39   </i></font></a>  <font color="#112266"><b>int</b></font> i2;
+<a name="40"><font color="#888888 "><i>   40   </i></font></a>  <font color="#112266"><b>int</b></font> i3;
 <a name="41"><font color="#888888 "><i>   41   </i></font></a>  b_q_now[0] = ((q_now[0] * q_now[0] + q_now[1] * q_now[1]) - q_now[2] * q_now[2])
 <a name="42"><font color="#888888 "><i>   42   </i></font></a>    - q_now[3] * q_now[3];
 <a name="43"><font color="#888888 "><i>   43   </i></font></a>  b_q_now[3] = 2.0F * (q_now[1] * q_now[2] + q_now[0] * q_now[3]);
@@ -62,10 +62,10 @@
 <a name="50"><font color="#888888 "><i>   50   </i></font></a>  b_q_now[5] = 2.0F * (q_now[2] * q_now[3] - q_now[0] * q_now[1]);
 <a name="51"><font color="#888888 "><i>   51   </i></font></a>  b_q_now[8] = ((q_now[0] * q_now[0] - q_now[1] * q_now[1]) - q_now[2] * q_now[2])
 <a name="52"><font color="#888888 "><i>   52   </i></font></a>    + q_now[3] * q_now[3];
-<a name="53"><font color="#888888 "><i>   53   </i></font></a>  <font color="#112266"><b>for</b></font> (i5 = 0; i5 &lt; 3; i5++) <b>{</b>
-<a name="54"><font color="#888888 "><i>   54   </i></font></a>    vector_body[i5] = 0.0F;
-<a name="55"><font color="#888888 "><i>   55   </i></font></a>    <font color="#112266"><b>for</b></font> (i6 = 0; i6 &lt; 3; i6++) <b>{</b>
-<a name="56"><font color="#888888 "><i>   56   </i></font></a>      vector_body[i5] += b_q_now[i5 + 3 * i6] * vector_ned[i6];
+<a name="53"><font color="#888888 "><i>   53   </i></font></a>  <font color="#112266"><b>for</b></font> (i2 = 0; i2 &lt; 3; i2++) <b>{</b>
+<a name="54"><font color="#888888 "><i>   54   </i></font></a>    vector_body[i2] = 0.0F;
+<a name="55"><font color="#888888 "><i>   55   </i></font></a>    <font color="#112266"><b>for</b></font> (i3 = 0; i3 &lt; 3; i3++) <b>{</b>
+<a name="56"><font color="#888888 "><i>   56   </i></font></a>      vector_body[i2] += b_q_now[i2 + 3 * i3] * vector_ned[i3];
 <a name="57"><font color="#888888 "><i>   57   </i></font></a>    <b>}</b>
 <a name="58"><font color="#888888 "><i>   58   </i></font></a>  <b>}</b>
 <a name="59"><font color="#888888 "><i>   59   </i></font></a><b>}</b>

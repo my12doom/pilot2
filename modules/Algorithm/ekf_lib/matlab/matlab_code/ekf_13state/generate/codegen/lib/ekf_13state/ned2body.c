@@ -2,7 +2,7 @@
  * File: ned2body.c
  *
  * MATLAB Coder version            : 2.6
- * C/C++ source code generated on  : 09-Dec-2015 17:37:13
+ * C/C++ source code generated on  : 28-Dec-2015 15:54:29
  */
 
 /* Include files */
@@ -36,8 +36,8 @@ void ned2body(const float q_now[4], const float vector_ned[3], float
               vector_body[3])
 {
   float b_q_now[9];
-  int i5;
-  int i6;
+  int i2;
+  int i3;
   b_q_now[0] = ((q_now[0] * q_now[0] + q_now[1] * q_now[1]) - q_now[2] * q_now[2])
     - q_now[3] * q_now[3];
   b_q_now[3] = 2.0F * (q_now[1] * q_now[2] + q_now[0] * q_now[3]);
@@ -50,10 +50,10 @@ void ned2body(const float q_now[4], const float vector_ned[3], float
   b_q_now[5] = 2.0F * (q_now[2] * q_now[3] - q_now[0] * q_now[1]);
   b_q_now[8] = ((q_now[0] * q_now[0] - q_now[1] * q_now[1]) - q_now[2] * q_now[2])
     + q_now[3] * q_now[3];
-  for (i5 = 0; i5 < 3; i5++) {
-    vector_body[i5] = 0.0F;
-    for (i6 = 0; i6 < 3; i6++) {
-      vector_body[i5] += b_q_now[i5 + 3 * i6] * vector_ned[i6];
+  for (i2 = 0; i2 < 3; i2++) {
+    vector_body[i2] = 0.0F;
+    for (i3 = 0; i3 < 3; i3++) {
+      vector_body[i2] += b_q_now[i2 + 3 * i3] * vector_ned[i3];
     }
   }
 }

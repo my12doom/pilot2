@@ -81,12 +81,15 @@ void ekf_estimator::init(float ax, float ay, float az, float mx, float my, float
     q3 = cosRoll * cosPitch * sinHeading - sinRoll * sinPitch * cosHeading;
 	
 	quaternion_to_euler(0, q0, q1,q2,q3, &roll, &pitch, &yaw);
-	  
-
+	pitch=-pitch;
+	
+	init_quaternion_by_euler(roll,pitch,yaw,&q0,&q1,&q2,&q3);
 	
 	//generate All Matrix init value 
 	init_ekf_matrix(Be,P,X,Q,R);
 	
+	
+
 	//Set X init value
 	INS_SetState(0,0,0,0,0,0,q0,q1,q2,q3,0,0,0,X);
 	
