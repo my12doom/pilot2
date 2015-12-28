@@ -72,6 +72,9 @@ public:
 	int update(EKF_U u,EKF_Mesurement mesurement,const float dT);
 	bool ekf_is_ready();
 
+
+	//use to set ekf R matrix
+	void set_mesurement_R(float R_position,float R_velocity);
 	//For frame transfer 
 	void  tf_ned2body(const float vector_ned[3], float vector_body[3]);
 	void  tf_body2ned(const float vector_body[3], float vector_ned[3]);
