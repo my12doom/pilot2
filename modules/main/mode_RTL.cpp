@@ -10,7 +10,7 @@ int flight_mode_RTL::setup()
 	yap.alt_controller.reset();
 
 	// is position estimator ready?
-	if (!yap.estimator.healthy())
+	if (!yap.pos_estimator_ready())
 		return -1;
 
 	// reset pos controller
@@ -41,8 +41,6 @@ int flight_mode_RTL::exit()
 int flight_mode_RTL::loop(float dt)
 {
 // TODO
-// 	// altitude
-	yap.default_alt_controlling();
 // 
 // 	// attitude, roll and pitch
 // 	// airborne or armed and throttle up
@@ -102,30 +100,46 @@ int flight_mode_RTL::loop(float dt)
 // 		yap.attitude_controll.set_euler_target(euler_target);
 // 	}
 
+	// altitude
+	yap.default_alt_controlling();
 
 	switch (stage)
 	{
 	case turn_around:
-		if (false)
-			stage = rise;
+		{
+			// spin slowly ( 45 degree/s) toward bearing
+
+			// 
+			if (false)
+				stage = rise;
+		}
 		break;
 	case rise:
-		if (false)
-			stage = move;
+		{
+			if (false)
+				stage = move;
+		}
 		break;
 	case move:
+		{
 		if (false)
 			stage = loiter;
+		}
 		break;
 	case loiter:
+		{
 		if (false)
 			stage = down;
+		}
 		break;
 	case down:
+		{
+
+		}
 		break;
 	}
 
-	if (!yap.estimator.healthy())
+	if (!yap.pos_estimator_ready())
 		yap.new_event(event_pos_bad, 0);
 
 	return 0;

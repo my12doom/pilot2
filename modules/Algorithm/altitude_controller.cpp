@@ -192,10 +192,10 @@ int altitude_controller::update(float dt, float user_rate)
 	//climb_rate_error = limit(climb_rate_error, -quadcopter_max_descend_rate, quadcopter_max_climb_rate);
 
 	// apply a 2Hz LPF to rate error
-	const float RC = 1.0f/(2*3.1415926 * 2.0f);
+	const float RC = 1.0f/(2*3.1415926 * 5.0f);
 	float alpha = dt / (dt + RC);
 	// 5Hz LPF filter
-	const float RC5 = 1.0f/(2*3.1415926 * 2.0f);
+	const float RC5 = 1.0f/(2*3.1415926 * 5.0f);
 	float alpha5 = dt / (dt + RC5);
 	// 30Hz LPF for derivative factor
 	const float RC30 = 1.0f/(2*3.1415926 * 30.0f);

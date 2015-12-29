@@ -212,7 +212,7 @@ int yet_another_pilot::calculate_baro_altitude()
 
 int yet_another_pilot::set_home(const float *new_home)
 {
-	if (!new_home || !estimator.healthy())
+	if (!new_home || !pos_estimator_ready())
 		return -1;
 
 	memcpy(home, new_home, sizeof(new_home));
@@ -238,6 +238,19 @@ int yet_another_pilot::set_home_LLH(const float * new_home)
 	return set_home(ne);
 }
 
+bool yet_another_pilot::pos_estimator_ready()
+{
+	if (use_EKF > 0.5f)
+	{
+		// TODO: use EKF estimator to determine healthy
+		return estimator.healthy();
+	}
+	else
+	{
+		return estimator.healthy();
+	}
+}
+
 int yet_another_pilot::get_home(float * home_pos)
 {
 	if (!home_set)
@@ -249,11 +262,11 @@ int yet_another_pilot::get_home(float * home_pos)
 
 int yet_another_pilot::get_pos_velocity_ned(float *pos, float *velocity)
 {
+	if (!pos_estimator_ready())
+		return -1;
+
 	if(use_EKF > 0.5f)
 	{
-		if (!ekf_est.ekf_is_ready())
-			return -1;
-
 		if (pos)
 		{
 			pos[0]= ekf_est.ekf_result.Pos_x;
@@ -267,9 +280,6 @@ int yet_another_pilot::get_pos_velocity_ned(float *pos, float *velocity)
 	}
 	else
 	{
-		if (!estimator.healthy())
-			return -1;
-
 		position_meter meter = estimator.get_estimation_meter();
 		if (pos)
 		{
@@ -1196,7 +1206,10 @@ int yet_another_pilot::calculate_state()
 	ekf_buffer[4]=euler[1]*180/3.1415f;
 	ekf_buffer[5]=euler[2]*180/3.1415f;
 
-	printf("\r(ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5]);
+// 	printf("\r(ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f, P:%f,%f,%f,%f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5],
+// 		ekf_est.P[6*14], ekf_est.P[6*14], ekf_est.P[6*14], ekf_est.P[6*14]);
+
+// 	printf("%.3f:pos:%f,%f, vel:%f,%f\n", systimer->gettime() / 1000000.0f, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_x, ekf_est.ekf_result.Vel_y);
 
 
 	if (use_EKF > 0.5f)
@@ -1496,7 +1509,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	islanding = false;
 
 	// update home
-	if (estimator.healthy())
+	if (pos_estimator_ready())
 	{
 		get_pos_velocity_ned(home, NULL);
 		set_home(home);
@@ -1586,7 +1599,7 @@ copter_mode yet_another_pilot::mode_from_stick()
 		else if (rc[5] > 0.6f)
 // 			newmode = airborne ? optical_flow : althold;
 // 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-			last_submode = airborne ? (estimator.healthy() ? poshold : optical_flow) : althold;
+			last_submode = airborne ? (pos_estimator_ready() ? poshold : optical_flow) : althold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
  			last_submode = althold;
 //			newmode = althold;
@@ -2393,7 +2406,7 @@ int yet_another_pilot::light_words()
 		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220 && log_ready))
 		{
 			if (rgb && mag_calibration_state == 0)
-				rgb->write(estimator.healthy() ? 0 : 1.0,1,0);
+				rgb->write(pos_estimator_ready() ? 0 : 1.0,1,0);
 		}
 		else
 		{
@@ -2581,7 +2594,7 @@ void yet_another_pilot::main_loop(void)
 	imu_data_lock = false;
 
 	// update home once position ready
-	if (!home_set && estimator.healthy())
+	if (!home_set && pos_estimator_ready())
 	{
 		get_pos_velocity_ned(home, NULL);
 		set_home(home);

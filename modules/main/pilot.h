@@ -214,6 +214,7 @@ public:
 	int get_home(float *home_pos);
 	int set_home(const float *new_home);
 	int set_home_LLH(const float *LLH);
+	bool pos_estimator_ready();
 
 	
 //protected:

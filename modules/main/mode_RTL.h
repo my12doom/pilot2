@@ -26,4 +26,8 @@ protected:
 	float start_pos_ne[2];
 	float yaw_target;
 	float bearing;
+
+
+	float turn_around_tick;
+	float 
 };
