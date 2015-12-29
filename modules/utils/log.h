@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <time.h>
+#include <Protocol/RFData.h>
 
 extern bool log_ready;
 

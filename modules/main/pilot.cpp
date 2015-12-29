@@ -1469,12 +1469,20 @@ int yet_another_pilot::set_mode(copter_mode newmode)
 	case optical_flow:
 		error = mode_of_loiter.setup();
 		break;
+	case RTL:
+		error = mode_RTL.setup();
+		break;
 	}
 	
 	if (error >= 0)
+	{
 		flight_mode = newmode;
+		LOGE("new flight mode: %d\n", flight_mode);
+	}
 	else
+	{
 		LOGE("FAILED entering %d mode\n", newmode);
+	}
 
 	return 0;
 }
@@ -1510,6 +1518,8 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	throttle_result = 0;
 	airborne = false;
 	islanding = false;
+	last_position_ready = pos_estimator_ready();
+	last_airborne = false;
 
 	// update home
 	if (pos_estimator_ready())
@@ -1519,7 +1529,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	}
 	
 	armed = arm;
-	set_mode(mode_from_stick());
+	do_mode_switching();
 	
 	LOGE("%s OK\n", arm ? "arm" : "disarm");
 	
@@ -1592,23 +1602,74 @@ int yet_another_pilot::finish_accel_cal()
 	return 0;
 }
 
+int yet_another_pilot::do_mode_switching()
+{
+	copter_mode mode = mode_from_stick();
+
+	if (!airborne && mode != basic)
+		mode = althold;
+
+	if (!pos_estimator_ready() && mode == poshold)
+		mode = optical_flow;
+
+	return set_mode(mode);
+}
+
+int yet_another_pilot::handle_mode_switching()
+{
+	copter_mode stick_mode = mode_from_stick();
+
+	// did stick mode changed?
+	if (last_mode_from_switch != stick_mode)
+	{
+		new_event(event_mode_switch_changed, 0);
+
+		last_mode_from_switch = stick_mode;
+
+		LOGE("mode switch changed to %d\n", stick_mode);
+
+		do_mode_switching();
+	}
+
+	// position ready state changed?
+	if (pos_estimator_ready() != last_position_ready)
+	{
+		new_event(pos_estimator_ready() ? event_pos_ready : event_pos_bad, 0);
+
+		last_position_ready = pos_estimator_ready();
+
+		LOGE("position estimator state changed: %s\n", last_position_ready ? "ready" : "failed");
+
+		do_mode_switching();
+	}
+
+	// airborne state changed?
+	if (!last_airborne && airborne)
+	{
+		last_airborne = true;
+
+		LOGE("airborne!\n", last_position_ready ? "ready" : "failed");
+
+		do_mode_switching();
+	}
+
+	return 0;
+}
+
 copter_mode yet_another_pilot::mode_from_stick()
 {
-	static copter_mode last_submode = althold;
+	static copter_mode stick_mode = althold;
 	if (!rc_fail)
 	{
 		if (rc[5] < -0.6f)
-			last_submode = basic;
+			stick_mode = basic;
 		else if (rc[5] > 0.6f)
-// 			newmode = airborne ? optical_flow : althold;
-// 			newmode = (bluetooth_last_update > systimer->gettime() - 500000) ? bluetooth : althold;
-			last_submode = airborne ? (pos_estimator_ready() ? poshold : optical_flow) : althold;
+			stick_mode = RTL;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
- 			last_submode = althold;
-//			newmode = althold;
+ 			stick_mode = althold;
 	}
 
-	return last_submode;
+	return stick_mode;
 }
 
 int yet_another_pilot::new_event(int event, int arg)
@@ -1668,7 +1729,7 @@ int yet_another_pilot::check_stick()
 	}
 
 	// submode switch
-	set_mode(mode_from_stick());
+	handle_mode_switching();
 
 	// emergency switch
 	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.

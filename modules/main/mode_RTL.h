@@ -2,6 +2,16 @@
 
 #include "flight_mode.h"
 
+
+typedef struct  
+{
+	float pos[2];
+	float pos_setpoint[2];
+	float euler_setpoint[3];
+	float baro_setpoint;
+	float sonar_setpoint;
+} RTL_state;
+
 class flight_mode_RTL : IFlightMode
 {
 public:
@@ -32,4 +42,6 @@ protected:
 	float rising_tick;
 	float move_tick;
 	float loiter_tick;
+
+	RTL_state s;
 };

@@ -189,7 +189,13 @@ public:
 	int output();
 	void handle_takeoff();
 	int save_logs();
+	int handle_mode_switching();
+	int do_mode_switching();		// should and only should be called by handle_mode_switching() or arm(), when armed, airborne state, position estimator state, or mode switch changed.
 	copter_mode mode_from_stick();
+
+	copter_mode last_mode_from_switch;
+	bool last_airborne;
+	bool last_position_ready;
 
 	// event handling
 	int new_event(int event, int arg);
@@ -231,5 +237,6 @@ enum yap_events
 	event_pos_ready,
 	event_pos_bad,
 	event_home_set,
+	event_mode_switch_changed,
 };
 

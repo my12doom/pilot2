@@ -7,6 +7,12 @@ static param use_EKF("ekf", 0);		// use EKF estimator
 
 int flight_mode_poshold::setup()
 {
+	if (!yap.pos_estimator_ready())
+	{
+		LOGE("poshold failed: position estimator not ready\n");
+		return -1;
+	}
+
 	yap.alt_controller.reset();
 
 	// reset pos controller

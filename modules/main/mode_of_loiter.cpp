@@ -53,6 +53,11 @@ int flight_mode_of_loiter::loop(float dt)
 		//vx=-v_flow_body[1];
 		//vy=v_flow_body[0];
 
+		if (yap.frame.qual < 100)
+		{
+			vx = vy = 0;
+		}
+
 		yap.of_controller.update_controller(vx, vy, stick_roll, stick_pitch, dt);
 		float euler_target[3] = {0,0, NAN};
 		yap.of_controller.get_result(&euler_target[0], &euler_target[1]);

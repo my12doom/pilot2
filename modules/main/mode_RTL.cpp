@@ -1,6 +1,8 @@
 #include "mode_RTL.h"
 #include "pilot.h"
 #include <utils/param.h>
+#include <utils/log.h>
+
 
 static param RTL_turning_speed("rtlT", PI/4);		// RTL yaw turning speed, radian/s
 static param RTL_max_climbing_speed("rtlC", 3.0);	// RTL climbing speed
@@ -18,7 +20,10 @@ int flight_mode_RTL::setup()
 
 	// is position estimator ready?
 	if (!yap.pos_estimator_ready())
+	{
+		LOGE("RTL failed: position not ready\n");
 		return -1;
+	}
 
 	// reset pos controller
 	position_meter meter = yap.estimator.get_estimation_meter();
@@ -44,7 +49,22 @@ int flight_mode_RTL::setup()
 	home_pos_ne[0] = yap.home[0];
 	home_pos_ne[1] = yap.home[1];
 
-	stage = turn_around;
+	float bearing_north = home_pos_ne[0] - ne_pos[0];
+	float bearing_east = home_pos_ne[1] - ne_pos[1];
+	float distance = sqrt(bearing_north * bearing_north + bearing_east * bearing_east);
+
+	if (distance > 5.0f)
+	{
+		LOGE("RTL distance: %.2f, turning around\n", distance);
+		stage = turn_around;
+	}
+	else
+	{
+		LOGE("RTL distance: %.2f, move toward home directly\n", distance);
+		stage = move;
+	}
+
+	LOGE("RTL start, pos=%.2f,%.2f, home=%.2f,%.2f\n", start_pos_ne[0], start_pos_ne[1], home_pos_ne[0], home_pos_ne[1]);
 
 	return 0;
 }
@@ -94,7 +114,11 @@ int flight_mode_RTL::loop(float dt)
 				turn_around_tick += dt;
 
 				if (turn_around_tick > 1)
+				{
 					stage = rise;
+
+					LOGE("RTL: turn around done\n");
+				}
 			}
 			else
 			{
@@ -121,7 +145,10 @@ int flight_mode_RTL::loop(float dt)
 			{
 				rising_tick += dt;
 				if (rising_tick > 1)
+				{
 					stage = move;
+					LOGE("RTL: rising done, alt=%.2f\n", yap.alt_estimator.state[0]);
+				}
 			}
 			else
 			{
@@ -136,8 +163,8 @@ int flight_mode_RTL::loop(float dt)
 		{
 			// hold altitude and yaw
 			yap.alt_controller.update(dt, 0);
-			float euler_sp[3] = {NAN, NAN, bearing};
-			yap.attitude_controll.set_euler_target(euler_sp);
+// 			float euler_sp[3] = {NAN, NAN, bearing};
+// 			yap.attitude_controll.set_euler_target(euler_sp);
 
 			// move toward home
 			yap.pos_control.set_setpoint(home_pos_ne, false);
@@ -148,7 +175,11 @@ int flight_mode_RTL::loop(float dt)
 				if (distance < 2.0f)
 				{
 					move_tick += dt;
-					stage = loiter;
+					if (move_tick > 1.0f)
+					{
+						LOGE("RTL: moving done, pos=%.2f,%.2f\n", ne_pos[0], ne_pos[1]);
+						stage = loiter;
+					}
 				}
 				else
 				{
@@ -160,7 +191,10 @@ int flight_mode_RTL::loop(float dt)
 				loiter_tick += dt;
 
 				if (loiter_tick > RTL_loiter_time)
+				{
+					LOGE("RTL: loiter done, pos=%.2f,%.2f\n", ne_pos[0], ne_pos[1]);
 					stage = down;
+				}
 			}
 
 		}
@@ -183,6 +217,8 @@ int flight_mode_RTL::loop(float dt)
 	yap.pos_control.update_controller(dt);
 	yap.pos_control.get_target_angles(euler_target);
 	euler_target[2] = NAN;
+
+	// attitude
 	yap.attitude_controll.set_euler_target(euler_target);
 
 	// throttle;
@@ -190,6 +226,22 @@ int flight_mode_RTL::loop(float dt)
 
 	if (!yap.pos_estimator_ready())
 		yap.new_event(event_pos_bad, 0);
+
+	// log
+	s.euler_setpoint[0] = yap.attitude_controll.euler_sp[0];
+	s.euler_setpoint[1] = yap.attitude_controll.euler_sp[1];
+	s.euler_setpoint[2] = yap.attitude_controll.euler_sp[2];
+
+	s.pos[0] = ne_pos[0];
+	s.pos[1] = ne_pos[1];
+
+	s.pos_setpoint[0] = yap.pos_control.setpoint[0];
+	s.pos_setpoint[1] = yap.pos_control.setpoint[1];
+	
+	s.baro_setpoint = yap.alt_controller.baro_target;
+	s.sonar_setpoint = yap.alt_controller.m_sonar_target;
+
+	log2(&s, TAG_RTL_STATE, sizeof(s));
 
 	return 0;
 }
