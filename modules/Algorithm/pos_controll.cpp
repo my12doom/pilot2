@@ -154,39 +154,46 @@ int pos_controller::get_target_angles(float *target_angles)
 	return 0;
 }
 
-int pos_controller::set_setpoint(float *pos)
+int pos_controller::set_setpoint(float *pos, bool reset /*= true*/)
 {
-	// reset pid, reset desired pos
-	memset(pid, 0, sizeof(pid));
-	pid[0][2] = NAN;
-	pid[1][2] = NAN;
-	last_target_velocity[0] = NAN;
-	ff[0] = 0;
-	ff[1] = 0;
+	float distance_ne[2] = {setpoint[0] - pos[0], setpoint[1] - pos[1]};
+	float distance = sqrt(distance_ne[0]*distance_ne[0] + distance_ne[1] * distance_ne[1]);
 
+	// reset pid if new setpoint is too far away from current setpoint, or forced reset.
+	if (reset || distance > max_speed)
+	{
+		memset(pid, 0, sizeof(pid));
+		pid[0][2] = NAN;
+		pid[1][2] = NAN;
+		last_target_velocity[0] = NAN;
+		ff[0] = 0;
+		ff[1] = 0;
+
+		// lean angle to accel
+		float accel_target[2];		// [forward, right]
+		accel_target[0] = G_in_ms2 * (-sin(eulers[1])/cos(eulers[1]));		// lean forward = negetive pitch angle
+		accel_target[1] = G_in_ms2 * (sin(eulers[0])/cos(eulers[0]));
+
+		// rotate accel from forward-right to north-east axis
+		float accel_north = cos_yaw * accel_target[0] - sin_yaw * accel_target[1];
+		float accel_east = sin_yaw * accel_target[0] + cos_yaw * accel_target[1];
+
+		// set integrator to correct numbers to achieve smooth transition
+		if (rate2accel[1] > 0)
+		{
+			pid[0][1] = accel_north / rate2accel[1];
+			pid[1][1] = accel_east / rate2accel[1];
+		}
+		else
+		{
+			pid[0][1] = 0;
+			pid[1][1] = 0;
+		}
+	}
+
+	// set desired pos
 	setpoint[0] = pos[0];
 	setpoint[1] = pos[1];
-
-	// lean angle to accel
-	float accel_target[2];		// [forward, right]
-	accel_target[0] = G_in_ms2 * (-sin(eulers[1])/cos(eulers[1]));		// lean forward = negetive pitch angle
-	accel_target[1] = G_in_ms2 * (sin(eulers[0])/cos(eulers[0]));
-
-	// rotate accel from forward-right to north-east axis
-	float accel_north = cos_yaw * accel_target[0] - sin_yaw * accel_target[1];
-	float accel_east = sin_yaw * accel_target[0] + cos_yaw * accel_target[1];
-
-	// set integrator to correct numbers to achieve smooth transition
-	if (rate2accel[1] > 0)
-	{
-		pid[0][1] = accel_north / rate2accel[1];
-		pid[1][1] = accel_east / rate2accel[1];
-	}
-	else
-	{
-		pid[0][1] = 0;
-		pid[1][1] = 0;
-	}
 
 	// TODO : do other checking and initializing
 

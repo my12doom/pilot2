@@ -29,5 +29,7 @@ protected:
 
 
 	float turn_around_tick;
-	float 
+	float rising_tick;
+	float move_tick;
+	float loiter_tick;
 };

@@ -24,7 +24,7 @@ public:
 	// set new setpoints in earth frame(north,east)
 	// use this to achieve waypoint navigating
 	// the controller should do procedures similar to reset() to get smooth transition
-	virtual int set_setpoint(float *pos) = 0;
+	virtual int set_setpoint(float *pos, bool reset = true) = 0;
 
 	// provide the position controller with attitude and position infomation.
 	virtual int provide_attitue_position(float *eulers, float *pos, float *velocity) = 0;
@@ -48,7 +48,7 @@ public:
 	virtual int set_desired_stick(float *stick);
 	virtual int update_controller(float dt);
 	virtual int get_target_angles(float *target_angles);
-	virtual int set_setpoint(float *pos);
+	virtual int set_setpoint(float *pos, bool reset = true);
 	virtual int provide_attitue_position(float *eulers, float *pos, float *velocity);
 
 // private:
