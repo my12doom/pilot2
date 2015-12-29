@@ -23,6 +23,7 @@
 #include "mode_althold.h"
 #include "mode_of_loiter.h"
 #include "mode_poshold.h"
+#include "mode_RTL.h"
 
 class yet_another_pilot;
 extern yet_another_pilot yap;
@@ -76,6 +77,7 @@ public:
 	flight_mode_althold mode_althold;
 	flight_mode_of_loiter mode_of_loiter;
 	flight_mode_poshold mode_poshold;
+	flight_mode_RTL mode_RTL;
 
 
 	int64_t collision_detected;// = 0;	// remember to clear it before arming

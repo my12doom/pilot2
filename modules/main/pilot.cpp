@@ -316,17 +316,6 @@ int yet_another_pilot::default_alt_controlling()
 		user_rate = (v+0.05f)/0.45f;
 		user_rate = -user_rate * user_rate * quadcopter_max_descend_rate;
 	}
-
-	if (use_alt_estimator2 > 0.5f)
-	{	
-		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
-		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
-	}
-	else
-	{
-		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};			
-		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
-	}
 	
 	// landing?
 	if(islanding)
@@ -354,7 +343,18 @@ int yet_another_pilot::default_alt_controlling()
 int yet_another_pilot::run_controllers()
 {
 	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : NULL, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
-	
+
+	if (use_alt_estimator2 > 0.5f)
+	{	
+		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
+	else
+	{
+		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};			
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
+
 	switch(flight_mode)
 	{
 		case basic:
@@ -368,6 +368,9 @@ int yet_another_pilot::run_controllers()
 			break;
 		case optical_flow:
 			mode_of_loiter.loop(interval);
+			break;
+		case RTL:
+			mode_RTL.loop(interval);
 			break;
 	}
 	

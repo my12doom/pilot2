@@ -67,7 +67,10 @@ int flight_mode_RTL::loop(float dt)
 	// bearing
 	float bearing_north = home_pos_ne[0] - ne_pos[0];
 	float bearing_east = home_pos_ne[1] - ne_pos[1];
-	float bearing = atan2(bearing_north, bearing_east);
+	float bearing = atan2(bearing_east, bearing_north);
+	float distance = sqrt(bearing_north * bearing_north + bearing_east * bearing_east);
+	if (distance < 5)
+		bearing = yap.attitude_controll.euler_sp[2];
 
 	switch (stage)
 	{
@@ -142,7 +145,6 @@ int flight_mode_RTL::loop(float dt)
 			// have we reached home?
 			if (stage == move)
 			{
-				float distance = sqrt(bearing_north * bearing_north + bearing_east * bearing_east);
 				if (distance < 2.0f)
 				{
 					move_tick += dt;
@@ -175,6 +177,16 @@ int flight_mode_RTL::loop(float dt)
 		}
 		break;
 	}
+
+	// position
+	float euler_target[3] = {NAN, NAN, NAN};
+	yap.pos_control.update_controller(dt);
+	yap.pos_control.get_target_angles(euler_target);
+	euler_target[2] = NAN;
+	yap.attitude_controll.set_euler_target(euler_target);
+
+	// throttle;
+	yap.throttle_result = yap.alt_controller.get_result();
 
 	if (!yap.pos_estimator_ready())
 		yap.new_event(event_pos_bad, 0);
