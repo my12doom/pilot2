@@ -43,6 +43,7 @@ int flight_mode_RTL::setup()
 	turn_around_tick = 0;
 	loiter_tick = 0;
 	rising_tick = 0;
+	move_tick = 0;
 
 	// record current position and home
 	yap.get_pos_velocity_ned(start_pos_ne, NULL);
@@ -138,7 +139,7 @@ int flight_mode_RTL::loop(float dt)
 			// rise up
 			float speed = (yap.takeoff_ground_altitude + RTL_altitude - yap.alt_estimator.state[0]) * pid_factor_alt;
 			speed = limit(speed, 0, RTL_max_climbing_speed);
-			yap.alt_controller.update(dt, RTL_max_climbing_speed);
+			yap.alt_controller.update(dt, speed);
 
 			// have we reached desired altitude?
 			if (yap.alt_estimator.state[0] > yap.takeoff_ground_altitude + RTL_altitude - 1)
