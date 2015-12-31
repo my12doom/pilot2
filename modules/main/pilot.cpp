@@ -166,6 +166,7 @@ yet_another_pilot::yet_another_pilot()
 	imu_data_lock = false;
 	event_count = 0;
 	home_set = false;
+	rc_fail_tick = 0;
 
 	for(int i=0; i<3; i++)
 	{
@@ -714,7 +715,7 @@ int yet_another_pilot::save_logs()
 
 	rc_mobile_data mobile = 
 	{
-		{rc_mobile[0] * 1000, rc_mobile[0] * 1000, rc_mobile[0] * 1000, rc_mobile[0] * 1000,},
+		{rc_mobile[0] * 1000, rc_mobile[1] * 1000, rc_mobile[2] * 1000, rc_mobile[3] * 1000,},
 		min((systimer->gettime() - mobile_last_update)/1000, 65535),
 	};
 	log(&mobile, TAG_MOBILE_DATA, systime);
@@ -1664,7 +1665,7 @@ copter_mode yet_another_pilot::mode_from_stick()
 		if (rc[5] < -0.6f)
 			stick_mode = basic;
 		else if (rc[5] > 0.6f)
-			stick_mode = RTL;
+			stick_mode = poshold;
 		else if (rc[5] > -0.5f && rc[5] < 0.5f)
  			stick_mode = althold;
 	}
@@ -2271,11 +2272,20 @@ int yet_another_pilot::read_rc()
 			rc[2] = 0.5;
 			rc[3] = 0;
 			rc_fail = -1;
+
+			float new_rc_fail_tick = rc_fail_tick + interval;
+			if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
+			{
+				LOGE("rc fail, RTL\n");
+				set_mode(RTL);
+			}
+			rc_fail_tick = new_rc_fail_tick;
 		}
 	}
 	else
 	{
 		rc_fail = 0;
+		rc_fail_tick = 0;
 	}
 	
 	// send RC fail event
