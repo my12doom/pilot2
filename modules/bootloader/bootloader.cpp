@@ -5,6 +5,7 @@
 #include <FileSystem/ff.h>
 #include <utils/ymodem.h>
 #include <utils/param.h>
+#include <utils/space.h>
 #include <stdio.h>
 #include <Protocol/crc32.h>
 #include <string.h>
@@ -110,6 +111,13 @@ void erase_rom(HAL::IUART *uart)
 	rom_crc = 0;
 	rom_size.save();
 	rom_crc.save();
+	
+	// set the "boot" flag and resort parameters
+	param bootloader_flag("boot", 1);
+	bootloader_flag = 1.0f;
+	bootloader_flag.save();
+	space_resort();
+	
 	
 	int sector_count = sizeof(pages)/sizeof(pages[0]);
 		
