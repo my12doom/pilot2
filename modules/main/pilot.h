@@ -67,7 +67,6 @@ public:
 	float ground_temperature;// = 0;
 	float rc[8];// = {0};			// ailerron : full left -1, elevator : full down -1, throttle: full down 0, rudder, full left -1
 	float rc_mobile[4];// = {0};	// rc from mobile devices
-	float accelz;// = 0;
 	bool airborne;// = false;
 	float takeoff_ground_altitude;// = 0;
 	bool armed;// = false;
@@ -92,7 +91,6 @@ public:
 	vector gyro_uncalibrated;
 	vector accel_uncalibrated;
 	vector mag_uncalibrated;
-	vector accel_earth_frame;
 
 	int64_t last_tick;// = 0;
 	int64_t last_gps_tick;// = 0;

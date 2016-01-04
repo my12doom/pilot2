@@ -127,7 +127,6 @@ yet_another_pilot::yet_another_pilot()
 ,cycle_counter(0)
 ,ground_pressure(0)
 ,ground_temperature(0)
-,accelz(0)
 ,airborne(false)
 ,takeoff_ground_altitude(0)
 ,armed(false)
@@ -343,16 +342,16 @@ int yet_another_pilot::default_alt_controlling()
 
 int yet_another_pilot::run_controllers()
 {
-	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : NULL, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 
 	if (use_alt_estimator2 > 0.5f)
 	{	
-		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
+		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + acc_ned[2]};
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
 	else
 	{
-		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};			
+		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + acc_ned[2]};			
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
 
@@ -543,7 +542,7 @@ int yet_another_pilot::save_logs()
 	ned_data ned = 
 	{
 		0,
-		{accel_earth_frame.array[0] * 1000, accel_earth_frame.array[1] * 1000, accel_earth_frame.array[2] * 1000},
+		{acc_ned[0] * 1000, acc_ned[1] * 1000, acc_ned[2] * 1000},
 		p.latitude * double(10000000.0/COORDTIMES), 
 		p.longtitude * double(10000000.0/COORDTIMES), 
 		error_lat : pmeter.vlatitude*100,
@@ -612,7 +611,7 @@ int yet_another_pilot::save_logs()
 		alt_estimator.state[0] * 100,
 		alt_estimator.state[2] * 100,
 		a_raw_altitude * 100,
-		0,//accelz_mwc * 100,
+		0,//acc_ned[2]_mwc * 100,
 		loop_hz,
 		THROTTLE_IDLE + throttle_result * (THROTTLE_MAX-THROTTLE_IDLE),
 		kalman_accel_bias : alt_estimator.state[3] * 1000,
@@ -657,7 +656,7 @@ int yet_another_pilot::save_logs()
 		alt_controller.target_climb_rate * 100,
 		0,//alt_estimatorCF.state[1] * 100,
 		alt_controller.target_accel * 100,
-		0,//(accelz + alt_estimatorCF.state[3]) * 100,
+		0,//(acc_ned[2] + alt_estimatorCF.state[3]) * 100,
 		throttle_result*1000,
 		yaw_launch * 18000 / PI,
 		euler[2] * 18000 / PI,
@@ -1144,14 +1143,13 @@ int yet_another_pilot::calculate_state()
 	}
 
 	NonlinearSO3AHRSupdate(
-	accel.array[0], accel.array[1], accel.array[2], 
-	mag.array[0], mag.array[1], mag.array[2],
+	-accel.array[0], -accel.array[1], -accel.array[2], 
+	-mag.array[0], -mag.array[1], mag.array[2],
 	gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
 	0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval,
 	acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
 //	
 	//EKF estimator update
-	EKF_Result ekf_result;
 	EKF_U ekf_u;
 	EKF_Mesurement ekf_mesurement;
 	
@@ -1236,22 +1234,22 @@ int yet_another_pilot::calculate_state()
 	float mag_size = sqrt(mag.array[0]*mag.array[0]+mag.array[1]*mag.array[1]+mag.array[2]*mag.array[2]);
 	TRACE("mag_size:%.3f, %.0f, %.0f, %.0f    \n", mag_size, mag.array[0], mag.array[1], mag.array[2]);
 	TRACE("euler:%.2f,%.2f,%.2f, systime:%f, bias:%.2f/%.2f/%.2f, pressure=%.2f \n ", euler[0]*PI180, euler[1]*PI180, euler[2]*PI180, systimer->gettime()/1000000.0f, gyro_bias[0]*PI180, gyro_bias[1]*PI180, gyro_bias[2]*PI180, a_raw_pressure);
+	TRACE("acc ned:%.2f, %.2f, %.2f\n", acc_ned[0], acc_ned[1], acc_ned[2]);
 
-	for(int i=0; i<3; i++)
-		accel_earth_frame.array[i] = acc_ned[i];
+	TRACE("q cf:%.3f,%.3f,%.3f,%.3f, q ekf: %.3f,%.3f,%.3f,%.3f\n", q0, q1, q2, q3, ekf_est.ekf_result.q0, ekf_est.ekf_result.q1, ekf_est.ekf_result.q2, ekf_est.ekf_result.q3);
 
 	calculate_baro_altitude();
 
-	accelz = acc_ned[2];
+	acc_ned[2] = acc_ned[2];
 
 	alt_estimator.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
 	alt_estimator.set_static_mode(!armed);
-	alt_estimator.update(accelz, a_raw_altitude, interval);
+	alt_estimator.update(acc_ned[2], a_raw_altitude, interval);
 	bool tilt_ok = (euler[0] > -PI/6) && (euler[0] < PI/6) && (euler[1] > -PI/6) && (euler[1] < PI/6);
 	alt_estimator2.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
 	alt_estimator2.set_static_mode(!armed);
-	alt_estimator2.update(accelz, a_raw_altitude, tilt_ok ? sonar_distance : NAN, interval);
-	estimator.update_accel(accel_earth_frame.array[0], accel_earth_frame.array[1], systimer->gettime());
+	alt_estimator2.update(acc_ned[2], a_raw_altitude, tilt_ok ? sonar_distance : NAN, interval);
+	estimator.update_accel(-acc_ned[0], -acc_ned[1], systimer->gettime());
 
 	if (new_gps_data)
 	{
@@ -1438,8 +1436,8 @@ int yet_another_pilot::sensor_calibration()
 
 
 
-	NonlinearSO3AHRSinit(accel_avg.V.x, accel_avg.V.y, accel_avg.V.z, 
-		mag_avg.V.x, mag_avg.V.y, mag_avg.V.z, 
+	NonlinearSO3AHRSinit(-accel_avg.V.x, -accel_avg.V.y, -accel_avg.V.z, 
+		-mag_avg.V.x, -mag_avg.V.y, mag_avg.V.z, 
 		gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
 
 	ekf_est.init(-1*accel_avg.V.x, -1*accel_avg.V.y, -1*accel_avg.V.z,-1*mag_avg.V.x, -1*mag_avg.V.y, mag_avg.V.z,gyro_avg.V.x, gyro_avg.V.y, gyro_avg.V.z);
@@ -1497,16 +1495,16 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 		LOGE("arm failed: EKF not ready\n");
 		return -1;
 	}
-	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : NULL, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controll.reset();
 	if (use_alt_estimator2 > 0.5f)
 	{	
-		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + accelz};
+		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + acc_ned[2]};
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
 	else
 	{
-		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + accelz};			
+		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + acc_ned[2]};			
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
 	alt_controller.reset();
