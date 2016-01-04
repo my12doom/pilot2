@@ -94,6 +94,7 @@ void RDP()
 void run_rom();
 void erase_rom(HAL::IUART *uart)
 {
+	led.write(1,1,1);
 	uint32_t pages[] =
 	{
 		FLASH_Sector_2,
@@ -327,7 +328,7 @@ int main()
 	//RDP();
 	check_sdcard();
 	led.write(0,0,0);
-	
+
 	//if (check_rom_crc())
 	void * bkp = (void*)0x40024000;
 	if (memcmp(bkp, "hello", 6))
@@ -371,7 +372,6 @@ void run_rom()
 }
 
 
-/*
 struct __FILE { int handle;  };
 #define ITM_Port8(n)    (*((volatile unsigned char *)(0xE0000000+4*n)))
 #define ITM_Port16(n)   (*((volatile unsigned short*)(0xE0000000+4*n)))
@@ -388,4 +388,3 @@ extern "C" int fputc(int ch, FILE *f)
 	}
 	return (ch);
 }
-*/
