@@ -2473,12 +2473,44 @@ int yet_another_pilot::light_words()
 	}
 	else		// normal flashlight, double flash if SDCARD running, single flash if SDCARD failed
 	{
+		float color[3];
+
+		if (rc_fail < 0)
+		{
+			// blue flash for RC failure.
+			color[0] = 0;
+			color[1] = 0;
+			color[2] = 1;
+		}
+
+		else if (pos_estimator_ready() && mode_from_stick() == poshold)
+		{
+			// gree flash for poshold mode and pos estimator ready.
+			color[0] = 0;
+			color[1] = 1;
+			color[2] = 0;
+		}
+		else if (flight_mode == RTL)
+		{
+			// purple flash for RTL
+			color[0] = 1;
+			color[1] = 0;
+			color[2] = 1;
+		}
+		else
+		{
+			// yellow flash for other state
+			color[0] = 1;
+			color[1] = 1;
+			color[2] = 0;
+		}
+
 		int64_t systime = systimer->gettime();
 		int time_mod_1500 = (systime%1500000)/1000;
 		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220 && log_ready))
 		{
 			if (rgb && mag_calibration_state == 0)
-				rgb->write(pos_estimator_ready() ? 0 : 1.0,1,0);
+				rgb->write(color[0], color[1], color[2]);
 		}
 		else
 		{
