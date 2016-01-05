@@ -201,7 +201,7 @@ void init_BatteryMonitor()
 	static F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
 	static F4ADC vcc5v_half_adc(ADC1,ADC_Channel_3);
 	
-	static ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4095*(150.0f+50.0f)/50.0f, &ref25, 2.495f/3.3f*4095);
+	static ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4095*(150.0f+51.0f)/51.0f, &ref25, 2.495f/3.3f*4095);
 	static ADCBatteryVoltage vcc5v(&vcc5v_half_adc, 3.3f*2/4095, &ref25, 2.495f/3.3f*4095);
 	static ADCBatteryVoltage vcc5v_half(&vcc5v_half_adc, 3.3f/4095, &ref25, 2.495f/3.3f*4095);
 	static ADCBatteryVoltage current_ad(&f4adc1_Ch8, 3.3f/4095);
