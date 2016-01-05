@@ -189,7 +189,7 @@ public:
 	void handle_takeoff();
 	int save_logs();
 	int handle_mode_switching();
-	int do_mode_switching();		// should and only should be called by handle_mode_switching() or arm(), when armed, airborne state, position estimator state, or mode switch changed.
+	int execute_mode_switching_from_stick();		// should and only should be called by handle_mode_switching() or arm(), when armed, airborne state, position estimator state, or mode switch changed.
 	copter_mode mode_from_stick();
 
 	copter_mode last_mode_from_switch;

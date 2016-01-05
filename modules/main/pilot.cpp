@@ -1490,6 +1490,13 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 {
 	if (arm == armed)
 		return 0;
+
+	if (lowpower > 1)
+	{
+		LOGE("arm failed: power critical\n");
+		return -2;
+	}
+
 	if (use_EKF > 0.5f && !ekf_est.ekf_is_ready())
 	{
 		LOGE("arm failed: EKF not ready\n");
@@ -1528,7 +1535,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	}
 	
 	armed = arm;
-	do_mode_switching();
+	execute_mode_switching_from_stick();
 	
 	LOGE("%s OK\n", arm ? "arm" : "disarm");
 	
@@ -1601,7 +1608,7 @@ int yet_another_pilot::finish_accel_cal()
 	return 0;
 }
 
-int yet_another_pilot::do_mode_switching()
+int yet_another_pilot::execute_mode_switching_from_stick()
 {
 	copter_mode mode = mode_from_stick();
 
@@ -1627,7 +1634,7 @@ int yet_another_pilot::handle_mode_switching()
 
 		LOGE("mode switch changed to %d\n", stick_mode);
 
-		do_mode_switching();
+		execute_mode_switching_from_stick();
 	}
 
 	// position ready state changed?
@@ -1639,7 +1646,7 @@ int yet_another_pilot::handle_mode_switching()
 
 		LOGE("position estimator state changed: %s\n", last_position_ready ? "ready" : "failed");
 
-		do_mode_switching();
+		execute_mode_switching_from_stick();
 	}
 
 	// airborne state changed?
@@ -1649,7 +1656,7 @@ int yet_another_pilot::handle_mode_switching()
 
 		LOGE("airborne!\n", last_position_ready ? "ready" : "failed");
 
-		do_mode_switching();
+		execute_mode_switching_from_stick();
 	}
 
 	return 0;
@@ -2015,7 +2022,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		check_stick();	// to set submode and reset all controller
 		alt_controller.set_altitude_target(alt_controller.get_altitude_state()-2.0f);
 
-		const char *armed = "armed\n";
+		const char *armed = "arm,ok\n";
 		uart->write(armed, strlen(armed));
 	}
 
@@ -2024,20 +2031,20 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		LOGE("mobile disarm\n");
 
 		disarm();
-		const char *disarmed = "disarmed\n";
+		const char *disarmed = "disarm,ok\n";
 		uart->write(disarmed, strlen(disarmed));
 	}
 
 	else if (strstr(line, "hello") == line)
 	{
 		char out[200];
-		sprintf(out, "yap(%s)(bsp %s)\n", version_name, bsp_name);
+		sprintf(out, "hello,yap(%s)(bsp %s)\n", version_name, bsp_name);
 		uart->write(out, strlen(out));
 	}
 	
 	else if (strstr(line, "takeoff") == line)
 	{
-		const char *tak = "taking off\n";
+		const char *tak = "takeoff,ok\n";
 		uart->write(tak, strlen(tak));
 		start_taking_off();
 	}
@@ -2045,7 +2052,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	else if (strstr(line, "land") == line)
 	{
 		LOGE("mobile land\n");
-		const char *land = "landing\n";
+		const char *land = "land,ok\n";
 		uart->write(land, strlen(land));
 
 		islanding = true;
@@ -2054,8 +2061,17 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	else if (strstr(line, "RTL") == line)
 	{
 		LOGE("mobile RTL\n");
-		const char *rtl = "RTLing\n";
+		const char *rtl = "RTL,ok\n";
 		uart->write(rtl, strlen(rtl));
+		set_mode(RTL);
+	}
+
+	else if (strstr(line, "STOPRTL") == line)
+	{
+		LOGE("mobile stop RTL\n");
+		const char *rtl = "STOPRTL,ok\n";
+		uart->write(rtl, strlen(rtl));
+		execute_mode_switching_from_stick();
 	}
 
 	else if (strstr(line, "state") == line)
@@ -2111,14 +2127,14 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	else if (strstr(line, "mag_cal_state") == line)
 	{
 		mag_calibration_stage stage = mag_calibrator.get_stage();
-		sprintf(out, "%d,%d\n", mag_calibration_state ? (stage+1) : 0, last_mag_calibration_result);
+		sprintf(out, "mag_cal_state,%d,%d\n", mag_calibration_state ? (stage+1) : 0, last_mag_calibration_result);
 		uart->write(out, strlen(out));
 	}
 
 	else if (strstr(line, "mag_cal") == line)
 	{
 		reset_mag_cal();
-		uart->write("ok\n", 3);
+		uart->write("mag_cal,ok\n", 11);
 	}	
 	
 	else if (strstr(line, "acc_cal_state\n") == line)
@@ -2142,7 +2158,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	else if (strstr(line, "acc_cal\n") == line)
 	{
 		reset_accel_cal();
-		uart->write("ok\n", 3);
+		uart->write("acc_cal,ok\n", 3);
 	}
 
 	else if (strstr(line, "flashlight") == line)
@@ -2168,7 +2184,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		const char * comma = strstr(line+4, ",");
 		if (!comma)
 		{
-			uart->write("fail\n", 5);
+			uart->write("set,,fail\n", 10);
 			return -1;
 		}
 
@@ -2184,12 +2200,14 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 				v = NAN;
 			*pv = v;
 			param(para_name, 0).save();
-			uart->write("ok\n", 3);
+			uart->write("set,", 4);
+			uart->write(para_name, strlen(para_name));
+			uart->write(",ok\n", 4);
 			return 3;
 		}
 		else
 		{
-			uart->write("fail\n", 5);
+			uart->write("set,,not found\n", 16);
 			return -1;
 		}
 	}
@@ -2208,11 +2226,16 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			else
 				sprintf(out, "%f\n", *pv);
 
+			uart->write("get,", 4);
+			uart->write(para_name, strlen(para_name));
+			uart->write(",,", 1);
 			uart->write(out, strlen(out));
 		}
 		else
 		{
-			uart->write("null\n", 5);
+			uart->write("get,", 4);
+			uart->write(para_name, strlen(para_name));
+			uart->write(",fail\n", 6);
 			return -1;
 		}
 
@@ -2471,6 +2494,12 @@ int yet_another_pilot::light_words()
 		else
 			rgb->write(0,0,0);
 	}
+	else if (flight_mode == RTL)
+	{
+		// purple light for RTL
+		if (rgb && mag_calibration_state == 0)
+			rgb->write(1,0,1);
+	}
 	else		// normal flashlight, double flash if SDCARD running, single flash if SDCARD failed
 	{
 		float color[3];
@@ -2485,17 +2514,10 @@ int yet_another_pilot::light_words()
 
 		else if (pos_estimator_ready() && mode_from_stick() == poshold)
 		{
-			// gree flash for poshold mode and pos estimator ready.
+			// green flash for poshold mode and pos estimator ready.
 			color[0] = 0;
 			color[1] = 1;
 			color[2] = 0;
-		}
-		else if (flight_mode == RTL)
-		{
-			// purple flash for RTL
-			color[0] = 1;
-			color[1] = 0;
-			color[2] = 1;
 		}
 		else
 		{
