@@ -65,6 +65,9 @@ int flight_mode_RTL::setup()
 		stage = move;
 	}
 
+	if (yap.flashlight)
+		yap.flashlight->on();
+
 	LOGE("RTL start, pos=%.2f,%.2f, home=%.2f,%.2f\n", start_pos_ne[0], start_pos_ne[1], home_pos_ne[0], home_pos_ne[1]);
 
 	return 0;

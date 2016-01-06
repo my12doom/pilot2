@@ -1737,6 +1737,29 @@ int yet_another_pilot::check_stick()
 	// submode switch
 	handle_mode_switching();
 
+	// flashlight toggle:
+	// flips mode switch twice in 1 seconds
+	static float last_ch5 = 0;
+	if (fabs(rc[5]-last_ch5) > 0.20f)
+	{
+		last_ch5 = rc[5];
+		static int ch5_flip_count = 0;
+		static int64_t last_ch5_flip_time = 0;
+
+		if (systimer->gettime() - last_ch5_flip_time < 1000000)
+			ch5_flip_count ++;
+		else
+			ch5_flip_count = 1;
+		last_ch5_flip_time = systimer->gettime();
+
+		if (ch5_flip_count ==2 && flashlight)
+		{
+			LOGE("toggle flashlight\n");
+			flashlight->toggle();
+		}
+
+	}
+
 	// emergency switch
 	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
 	if (g_pwm_input_update[4] > systimer->gettime() - 500000)
