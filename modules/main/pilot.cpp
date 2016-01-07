@@ -1089,7 +1089,8 @@ int yet_another_pilot::read_imu_and_filter()
 	{
 		float alpha = 0.001f / (0.001f + 1.0f/(2*PI * 20.0f));
 		for(int i=0; i<3; i++)
-			this->accel.array[i] = acc.array[i]*alpha + this->accel.array[i] * (1-alpha);
+//			this->accel.array[i] = accel_lpf2p[i].apply(acc.array[i]);
+ 			this->accel.array[i] = acc.array[i]*alpha + this->accel.array[i] * (1-alpha);
 	}
 	else
 	{
@@ -1213,6 +1214,22 @@ int yet_another_pilot::calculate_state()
 
 // 	printf("%.3f:pos:%f,%f, vel:%f,%f\n", systimer->gettime() / 1000000.0f, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_x, ekf_est.ekf_result.Vel_y);
 
+//	float a_body[3] = {accel.array[0], accel.array[1], accel.array[2]};
+//	float a_ned[3];
+//	ekf_est.tf_ned2body(a_body, a_ned);
+
+// 	extern float a_in_f[3];
+// 	float yaw_cf = atan2f(NED2BODY[0][1], NED2BODY[0][0]);
+// 	printf("%.3f, %.2f, %.2f, %.2f, %.2f,%.2f, %.2f, %.2f\n", systimer->gettime()/1000000.0f, a_in_f[0], a_in_f[1], -acc_ned[0], -acc_ned[1], ekf_est.ekf_result.Vel_x, ekf_est.ekf_result.Vel_y, accel.array[2]);
+// 	float acc_data[6];	// [acc_N_ekf, acc_E_ekf, acc_N_cf, acc_E_cf, V_N_EKF, V_E,EKF];
+// 	acc_data[0] = a_in_f[0];
+// 	acc_data[1] = a_in_f[1];
+// 	acc_data[2] = ekf_est.ekf_result.Vel_x;
+// 	acc_data[3] = ekf_est.ekf_result.Vel_y;
+// 	acc_data[4] = -acc_ned[0];
+// 	acc_data[5] = -acc_ned[1];
+// 
+// 	log2(acc_data, TAG_ACC_DATA, sizeof(acc_data));
 
 	if (use_EKF > 0.5f)
 	{
@@ -1491,6 +1508,12 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	if (arm == armed)
 		return 0;
 
+	if (mag_calibration_state)
+	{
+		LOGE("arm failed: calibrating magnetometer\n");
+		return -1;
+	}
+
 	if (lowpower > 1)
 	{
 		LOGE("arm failed: power critical\n");
@@ -1552,6 +1575,12 @@ void yet_another_pilot::reset_mag_cal()
 	LOGE("start magnetometer calibrating");
 	mag_calibrator.reset();
 	mag_calibration_state = 1;
+}
+
+void yet_another_pilot::cancel_mag_cal()
+{
+	LOGE("cancel magnetometer calibrating\n");
+	mag_calibration_state = 0;
 }
 
 void yet_another_pilot::reset_accel_cal()
@@ -1780,9 +1809,12 @@ int yet_another_pilot::check_stick()
 				flip_count = 1;
 			last_flip_time = systimer->gettime();
 			
-			if (flip_count >10 && mag_calibration_state == 0)
+			if (flip_count == 10)
 			{
-				reset_mag_cal();
+				if (mag_calibration_state)
+					cancel_mag_cal();
+				else
+					reset_mag_cal();
 			}
 		}
 	}
@@ -2159,6 +2191,11 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	{
 		reset_mag_cal();
 		uart->write("mag_cal,ok\n", 11);
+	}	
+	else if (strstr(line, "cancel_mag_cal") == line)
+	{
+		cancel_mag_cal();
+		uart->write("cancel_mag_cal,ok\n", 11);
 	}	
 	
 	else if (strstr(line, "acc_cal_state\n") == line)

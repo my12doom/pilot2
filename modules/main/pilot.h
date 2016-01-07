@@ -167,6 +167,7 @@ public:
 	int finish_accel_cal();
 	void reset_accel_cal();
 	void reset_mag_cal();
+	void cancel_mag_cal();
 	
 	// automated functions
 	int start_taking_off();
