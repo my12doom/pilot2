@@ -36,8 +36,12 @@ public:
 	// the controller will try to output low throttle if not airborne,
 	// or maintain current altitude.
 	int reset();
+
 	//get altitude target 
 	float get_altitude_state();
+
+	// return whether this controller is used( update() called in less than 0.1 seconds)
+	bool used();
 	
 	float get_result();
 

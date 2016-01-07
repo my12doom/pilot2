@@ -280,13 +280,20 @@ int altitude_controller::update(float dt, float user_rate)
 	return 0;
 }
 
+bool altitude_controller::used()
+{
+	if (systimer->gettime() - last_update < 100000)
+		return true;
+	return false;
+}
+
 // reset controller
 // call this if the controller has just been engaged
 // the controller will try to output low throttle if not airborne,
 // or maintain current altitude.
 int altitude_controller::reset()
 {
-	if (systimer->gettime() - last_update < 100000)
+	if (used())
 		return 0;
 
 	baro_target = m_airborne ? m_baro_states[0] : (m_baro_states[0]-1.2f);
