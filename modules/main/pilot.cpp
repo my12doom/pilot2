@@ -1507,24 +1507,27 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 {
 	if (arm == armed)
 		return 0;
-
-	if (mag_calibration_state)
+	if (arm)
 	{
-		LOGE("arm failed: calibrating magnetometer\n");
-		return -1;
+		if (mag_calibration_state)
+		{
+			LOGE("arm failed: calibrating magnetometer\n");
+			return -1;
+		}
+
+		if (lowpower > 1)
+		{
+			LOGE("arm failed: power critical\n");
+			return -2;
+		}
+
+		if (use_EKF > 0.5f && !ekf_est.ekf_is_ready())
+		{
+			LOGE("arm failed: EKF not ready\n");
+			return -1;
+		}
 	}
 
-	if (lowpower > 1)
-	{
-		LOGE("arm failed: power critical\n");
-		return -2;
-	}
-
-	if (use_EKF > 0.5f && !ekf_est.ekf_is_ready())
-	{
-		LOGE("arm failed: EKF not ready\n");
-		return -1;
-	}
 	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controll.reset();
 	if (use_alt_estimator2 > 0.5f)
