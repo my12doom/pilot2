@@ -1901,7 +1901,7 @@ int yet_another_pilot::land_detector()
 
 	if ((rc[2] < 0.1f || (islanding && throttle_result < 0.2f))					// landing and low throttle output, or just throttle stick down
 		&& fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f)	// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
-		&& (!alt_controller.used() || (alt_controller.target_climb_rate < 0 && alt_estimator.state[1] > alt_controller.target_climb_rate + (quadcopter_max_descend_rate/4.0f)))	// alt controller not running or can't reach target descending rate
+		&& (!alt_controller.used() || (alt_controller.target_climb_rate < 0 && alt_estimator.state[1] > alt_controller.target_climb_rate))	// alt controller not running or can't reach target descending rate
 // 		&& fabs(alt_estimator.state[2] + alt_estimator.state[3]) < 0.5f			// low acceleration
 	)
 	{
