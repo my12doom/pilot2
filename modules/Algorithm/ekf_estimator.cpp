@@ -46,14 +46,12 @@ void ekf_estimator::init(float ax, float ay, float az, float mx, float my, float
 	float q0=0,q1=0,q2=0,q3=0;//quaternion
 	ground_mag_length = sqrt(mx*mx + my*my + mz*mz);
 	
-	float roll,pitch,yaw;
-
 	gyro_bias[0] = gx;
 	gyro_bias[1] = gy;
 	gyro_bias[2] = gz;
 
     initialRoll = atan2(-ay, -az);
-    initialPitch = atan2(-ax, -az);
+    initialPitch = atan2(ax, (-az > 0 ? 1 : -1) * sqrt(ay*ay + az*az));
 
     cosRoll = cosf(initialRoll);
     sinRoll = sinf(initialRoll);
@@ -78,17 +76,10 @@ void ekf_estimator::init(float ax, float ay, float az, float mx, float my, float
     q0 = cosRoll * cosPitch * cosHeading + sinRoll * sinPitch * sinHeading;
     q1 = sinRoll * cosPitch * cosHeading - cosRoll * sinPitch * sinHeading;
     q2 = cosRoll * sinPitch * cosHeading + sinRoll * cosPitch * sinHeading;
-    q3 = cosRoll * cosPitch * sinHeading - sinRoll * sinPitch * cosHeading;
-	
-	quaternion_to_euler(0, q0, q1,q2,q3, &roll, &pitch, &yaw);
-	pitch=-pitch;
-	
-	init_quaternion_by_euler(roll,pitch,yaw,&q0,&q1,&q2,&q3);
+    q3 = cosRoll * cosPitch * sinHeading - sinRoll * sinPitch * cosHeading;		
 	
 	//generate All Matrix init value 
-	init_ekf_matrix(Be,P,X,Q,R);
-	
-	
+	init_ekf_matrix(Be,P,X,Q,R);	
 
 	//Set X init value
 	INS_SetState(0,0,0,0,0,0,q0,q1,q2,q3,0,0,0,X);
