@@ -4,7 +4,7 @@
 #include <time.h>
 #include <Protocol/RFData.h>
 
-extern bool log_ready;
+extern bool log_ready();
 
 int sdcard_speed_test();
 int format_sdcard();

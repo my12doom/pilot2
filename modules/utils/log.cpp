@@ -19,10 +19,15 @@ FIL *file = NULL;
 FRESULT res;
 FATFS fs;
 uint32_t lost1 = 0;		// buffer full
+bool storage_ready = true;
+bool buffer_locked = false;
 
 __attribute__((section("dma"))) FIFO<16384> buffer;
 int last_log_flush_time = -999999;
-bool log_ready = false;
+bool log_ready()
+{
+	return storage_ready && last_log_flush_time > systimer->gettime() + 2000000;
+}
 
 extern "C"
 {
@@ -46,9 +51,9 @@ int log_init()
 	res = disk_initialize(0) == RES_OK ? FR_OK : FR_DISK_ERR;
 	res = f_mount(&fs, "", 0);
 	res = f_open(&f, "test.bin", FA_CREATE_ALWAYS | FA_WRITE | FA_READ);
-	log_ready = res == FR_OK;
+	storage_ready = res == FR_OK;
 	f_close(&f);
-	LOGE("%s\r\n", log_ready ? "OK" : "FAIL");
+	LOGE("%s\r\n", storage_ready ? "OK" : "FAIL");
 	return 0;
 }
 
@@ -58,13 +63,13 @@ int write_to_disk(void *data, int size)
 
 	// fatfs
 	{
-		if (file == NULL && log_ready)
+		if (file == NULL && storage_ready)
 		{
 			static FIL f;
 			file = &f;
 			char filename[20];
 			int done  = 0;
-			while(log_ready)
+			while(storage_ready)
 			{
 				sprintf(filename, "%04d.dat", done ++);
 				FRESULT res = f_open(file, filename, FA_CREATE_NEW | FA_WRITE | FA_READ);
@@ -78,13 +83,13 @@ int write_to_disk(void *data, int size)
 			}
 		}
 
-		if (log_ready && file)
+		if (storage_ready && file)
 		{
 			unsigned int done;
 			if (f_write(file, data, size, &done) != FR_OK || done !=size)
 			{
 				LOGE("\r\nSDCARD ERROR\r\n");
-				log_ready = false;
+				storage_ready = false;
 			}
 			if (systimer->gettime() - last_log_flush_time > 1000000)
 			{
@@ -125,7 +130,14 @@ int log_flush()
 
 int log(const void *data, int size)
 {
+	if (buffer_locked)
+		return -1;
+
+	buffer_locked = true;
+
 	int res = buffer.put(data, size);
+
+	buffer_locked = false;
 	
 	if (res < 0)
 		lost1++;
@@ -135,9 +147,15 @@ int log(const void *data, int size)
 
 int log2(const void *packet, uint16_t tag, uint16_t size)
 {
+	if (buffer_locked)
+		return -1;
+
+	buffer_locked = true;
+
 	if (buffer.available() < size+8+4) 
 	{
 		lost1++;
+		buffer_locked = false;
 		return -1;
 	}
 	
@@ -149,6 +167,8 @@ int log2(const void *packet, uint16_t tag, uint16_t size)
 	buffer.put(&tag, 2);
 	buffer.put(&size, 2);
 	buffer.put(packet, size);
+
+	buffer_locked = false;
 
 	return 0;
 }

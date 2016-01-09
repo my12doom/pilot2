@@ -162,7 +162,7 @@ int mag_calibration::do_calibration()
 	}
 
 	// do logging!
-	if (log_ready)
+	if (log_ready())
 	for(int i=0; i<count; i++)
 	{
 		mag_collecting_data d = 
@@ -177,7 +177,7 @@ int mag_calibration::do_calibration()
 		{
 			res = log(&d, TAG_MAG_COLLECTING_DATA, timestamp);
 		}
-		while(res != 0 && log_ready);
+		while(res != 0 && log_ready());
 	}
 
 	stage = stage_calibrating;

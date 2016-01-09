@@ -509,7 +509,7 @@ int yet_another_pilot::output()
 // called by main loop, only copy logs to a memory buffer, should be very fast
 int yet_another_pilot::save_logs()
 {
-	if (!log_ready)
+	if (!log_ready())
 		return 0;
 
 	// send/store debug data
@@ -2593,7 +2593,7 @@ int yet_another_pilot::light_words()
 
 		int64_t systime = systimer->gettime();
 		int time_mod_1500 = (systime%1500000)/1000;
-		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220 && log_ready))
+		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220 && log_ready()))
 		{
 			if (rgb && mag_calibration_state == 0)
 				rgb->write(color[0], color[1], color[2]);
@@ -2672,7 +2672,7 @@ void yet_another_pilot::mag_calibrating_worker()
 
 	// assume blocking async worker won't do any harm
 	int64_t timestamp = systimer->gettime();
-	while (log_ready && log(&d, TAG_MAG_CALIBRATION_DATA, timestamp) != 0)
+	while (log_ready() && log(&d, TAG_MAG_CALIBRATION_DATA, timestamp) != 0)
 		LOGE("writing log failed");// retry
 
 	// ends
@@ -2766,9 +2766,9 @@ void yet_another_pilot::main_loop(void)
 
 	SAFE_ON(state_led);
 
-	if (log_ready)
+	if (log_ready())
 	{		
-		// flash one of the LED(A4) at 10hz
+		// flash SD LED at 10hz
 		int t = int(systimer->gettime() % 100000);
 		if (t < 50000)
 		{
