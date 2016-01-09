@@ -20,7 +20,7 @@ FRESULT res;
 FATFS fs;
 uint32_t lost1 = 0;		// buffer full
 bool storage_ready = true;
-bool buffer_locked = false;
+volatile bool buffer_locked = false;
 
 __attribute__((section("dma"))) FIFO<16384> buffer;
 int last_log_flush_time = -999999;
