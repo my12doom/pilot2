@@ -1952,9 +1952,9 @@ int yet_another_pilot::crash_detector()
 		gforce_variance = gforce_sum2 / gforce_count - gforce_avg * gforce_avg;
 	}
 	
-	if (gforce > 2.75f)
+	if (gforce > 3.75f)
 	{
-		TRACE("high G force (%.2f) detected\n", gforce);
+		LOGE("high G force (%.2f) detected\n", gforce);
 		collision_detected = systimer->gettime();
 	}
 
@@ -1978,7 +1978,7 @@ int yet_another_pilot::crash_detector()
 	else
 		tilt_us = 0;
 
-	if ((collision_detected > 0 && systimer->gettime() - collision_detected < 100000) && (landing_requested || prot & CRASH_COLLISION_IMMEDIATE)) 
+	if ((collision_detected > 0 && systimer->gettime() - collision_detected < 10000) && (landing_requested)) 
 	{
 		LOGE("landing impact detected(%s)\n", (collision_detected > 0 && systimer->gettime() - collision_detected < 5000000) ? "collision" : "tilt");
 
