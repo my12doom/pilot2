@@ -71,6 +71,10 @@ protected:
 
 	int add_data(float *newdata);
 
+	// sencond calibration algorithm, pure least squares fitting
+	int calibration2();
+
+
 	float data[MAX_DATA_COUNT*3];
 	int count;
 	mag_calibration_stage stage;

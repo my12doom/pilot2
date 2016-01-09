@@ -5,6 +5,7 @@
 #include <utils/log.h>
 #include <math.h>
 #include <HAL/resources.h>
+#include <math/matrix.h>
 
 static inline float fmax(float a, float b)
 {
@@ -185,6 +186,8 @@ int mag_calibration::do_calibration()
 	fitter.calculate(data, count);
 	fitter.get_result(result.bias);
 
+	bool used_2nd_algorithm = false;
+retry:
 	// statistics
 	result.residual_average = 0;
 	result.residual_min = 1e+9;
@@ -229,11 +232,74 @@ int mag_calibration::do_calibration()
 		}
 	}
 
+	// try 2nd algorithm if gauss-newton failed
+	if (!used_2nd_algorithm && calibration_error_code != 0)
+	{
+		used_2nd_algorithm = true;
+		calibration2();
+		goto retry;
+	}
+
 	stage = stage_data_calibrated;
 	
 	return calibration_error_code;
 }
 
+int mag_calibration::calibration2()
+{
+	LOGE("using mag calibration algorithm 2\n");
+
+	float m1[36] = {0};
+	float m2[6] = {0};
+	for(int i=0; i<count; i++)
+	{
+		// Ht * H
+		float x = data[3*i+0];
+		float y = data[3*i+1];
+		float z = data[3*i+2];
+		float x2 = x*x;
+
+		float v_tmp[6] = {x, y, z, -y*y, -z*z, 1};
+		for(int j=0; j<6; j++)
+			for(int k=0; k<6; k++)
+				m1[j*6+k] += v_tmp[j] * v_tmp[k];
+
+		// y
+		m2[0] += x2*x;
+		m2[1] += x2*y;
+		m2[2] += x2*z;
+		m2[3] += -y*y*x2;
+		m2[4] += -z*z*x2;
+		m2[5] += x2;
+	}
+
+	matrix HtH(6, 6, m1);
+	matrix Hty(6, 1, m2);
+
+	matrix X = HtH.inversef() * Hty;
+
+	float x0 = X[0] / 2;
+	float y0 = X[1] / (2*X[3]);
+	float z0 = X[2] / (2*X[4]);
+
+	float A = X[5] + x0*x0 + X[3]*y0*y0 + X[4] * z0*z0;
+	float B = A/X[3];
+	float C = A/X[4];
+
+	float a = sqrt(A);
+	float b = sqrt(B);
+	float c = sqrt(C);
+
+	result.bias[0] = -x0;
+	result.bias[1] = -y0;
+	result.bias[2] = -z0;
+
+	result.scale[0] = 1 / a;
+	result.scale[1] = 1 / b;
+	result.scale[2] = 1 / c;
+
+	return 0;
+}
 
 // get calibration result
 // return value:
