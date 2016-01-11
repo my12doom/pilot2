@@ -610,7 +610,7 @@ int UartUbloxBinaryGPS::read(devices::gps_data *data)
 				local_data.latitude = pvt->lat * (1E-7);		// latitude in degree
 				local_data.speed = sqrt((float)pvt->velocity[0] * pvt->velocity[0] + pvt->velocity[1] * pvt->velocity[1]) / 1000.0f;			// unit: meter/s
 				local_data.altitude = pvt->height/1000.0f;					// meter
-				local_data.direction = atan2((float)pvt->velocity[0], (float)pvt->velocity[1]) * 180 / PI + 180;			// Track angle in degrees True, 0-360 degree, 0: north, 90: east, 180: south, 270: west, 359:almost north
+				local_data.direction = atan2((float)pvt->velocity[1], (float)pvt->velocity[0]) * 180 / PI + 180;			// Track angle in degrees True, 0-360 degree, 0: north, 90: east, 180: south, 270: west, 359:almost north
 				local_data.DOP[0] = pvt->PDOP;				// DOP[3]: PDOP, HDOP, VOP, unit base: 0.01
 // 				local_data.DOP[1] = info.HDOP*100;				// DOP[3]: PDOP, HDOP, VOP, unit base: 0.01
 // 				local_data.DOP[2] = info.VDOP*100;				// DOP[3]: PDOP, HDOP, VOP, unit base: 0.01
