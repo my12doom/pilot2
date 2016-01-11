@@ -509,7 +509,7 @@ int yet_another_pilot::output()
 // called by main loop, only copy logs to a memory buffer, should be very fast
 int yet_another_pilot::save_logs()
 {
-	if (!log_ready())
+	if (!storage_ready)
 		return 0;
 
 	// send/store debug data

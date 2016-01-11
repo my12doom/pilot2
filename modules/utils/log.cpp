@@ -26,7 +26,7 @@ __attribute__((section("dma"))) FIFO<16384> buffer;
 int last_log_flush_time = -999999;
 bool log_ready()
 {
-	return storage_ready && last_log_flush_time > systimer->gettime() + 2000000;
+	return storage_ready && last_log_flush_time > systimer->gettime() - 2000000;
 }
 
 extern "C"
