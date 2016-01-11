@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <HAL/Interface/ISystimer.h>
+#include <protocol/common.h>
+#include <utils/log.h>
+#include <time.h>
 
 #pragma pack(1)
 
@@ -282,6 +285,13 @@ ubx_packet* UartUbloxGPS::read_ubx_packet()
 			// 2byte B562, 4byte payload header, 2 byte CRC
 			uart->peak(data, 6);
 			int size = (int)data[5] << 8 | data[4];
+			
+			// fix: large buffer blockage
+			if (size > 500)
+			{
+				uart->read(data, 6);
+				continue;
+			}
 
 			if (uart->available() < size + 8)
 				return NULL;
@@ -488,6 +498,8 @@ int UartUbloxBinaryGPS::init(HAL::IUART *uart, int baudrate)
 	if (detect_and_config(uart, baudrate) < 0)
 		return -1;
 
+	packt_mask = 0;
+
 	// config messages
 
 	// GPGGA
@@ -512,8 +524,20 @@ int UartUbloxBinaryGPS::init(HAL::IUART *uart, int baudrate)
 	if (enable_message(0xf0, 0x08, false) < 0)
 		return -2;
 
-	// UBX-POSLLH
-	if (enable_message(0x01, 0x02, true) < 0)
+	// UBX-PVT
+	if (enable_message(0x01, 0x07) < 0)
+		return -2;
+
+	// UBX-DOP
+	if (enable_message(0x01, 0x04) < 0)
+		return -2;
+
+	// NAV-POSLLH
+	if (enable_message(0x01, 0x02, false) < 0)
+		return -2;
+
+	// UBX-SAT
+	if (enable_message(0x01, 0x35, false) < 0)
 		return -2;
 
 	return 0;
@@ -521,11 +545,186 @@ int UartUbloxBinaryGPS::init(HAL::IUART *uart, int baudrate)
 
 int UartUbloxBinaryGPS::read(devices::gps_data *data)
 {
-	ubx_packet *p = read_ubx_packet();
+	ubx_packet *p = NULL;
 
-	if (p)
+	int t2 = systimer->gettime();
+
+	while(true)
 	{
-		printf("packet:%2x, %2x, CRC(%s)\n", p->cls, p->id, p->crc_ok ? "OK" : "FAIL");
+		int64_t t = systimer->gettime();
+		p = read_ubx_packet();
+		t = systimer->gettime() - t;
+
+		if (!p)
+			break;
+
+// 		printf("packet:%2x, %2x, CRC(%s)\n", p->cls, p->id, p->crc_ok ? "OK" : "FAIL");
+
+		if (p->crc_ok)
+		{
+			// UBX-PVT(Position, Velocity, Time)
+			// time, fix type & flag
+			// pos LLH, velocity ned
+			// speed and heading over ground
+			// PDOP, sv used
+			if (p->cls == 0x1 && p->id == 0x7)
+			{
+				typedef struct PVT_struct
+				{
+					uint32_t tow;
+					uint16_t year;
+					uint8_t month;
+					uint8_t day;
+					uint8_t hour;
+					uint8_t min;
+					uint8_t sec;
+					uint8_t valid;
+					uint32_t time_accuracy;
+					int32_t nano;
+					uint8_t fix;
+					uint8_t flags;
+					uint8_t reserved1;
+					uint8_t sv_used;
+					int32_t lon;
+					int32_t lat;
+					int32_t height;
+					int32_t hMSL;
+					uint32_t horizontal_accuracy;
+					uint32_t vertical_accuracy;
+					int32_t velocity[4];	// [north, east, down, ground]
+					int32_t heading;
+					uint32_t velocity_accuracy;
+					uint32_t heading_accuracy;
+					uint16_t PDOP;
+					uint8_t reserved2[6];
+					int32_t heading_vehicle;
+					uint8_t reserved3[4];
+				} PVT;
+
+				if (p->payload_size < sizeof(PVT))
+					continue;
+
+				PVT * pvt = (PVT *) p->payload;
+
+				local_data.longitude = pvt->lon * (1E-7);		// longitude in degree
+				local_data.latitude = pvt->lat * (1E-7);		// latitude in degree
+				local_data.speed = sqrt((float)pvt->velocity[0] * pvt->velocity[0] + pvt->velocity[1] * pvt->velocity[1]) / 1000.0f;			// unit: meter/s
+				local_data.altitude = pvt->height/1000.0f;					// meter
+				local_data.direction = atan2((float)pvt->velocity[0], (float)pvt->velocity[1]) * 180 / PI + 180;			// Track angle in degrees True, 0-360 degree, 0: north, 90: east, 180: south, 270: west, 359:almost north
+				local_data.DOP[0] = pvt->PDOP;				// DOP[3]: PDOP, HDOP, VOP, unit base: 0.01
+// 				local_data.DOP[1] = info.HDOP*100;				// DOP[3]: PDOP, HDOP, VOP, unit base: 0.01
+// 				local_data.DOP[2] = info.VDOP*100;				// DOP[3]: PDOP, HDOP, VOP, unit base: 0.01
+				local_data.satelite_in_view = pvt->sv_used;
+				local_data.satelite_in_use = pvt->sv_used;
+				local_data.sig = pvt->fix>=3 ? 1 : 0;						// GPS quality indicator (0 = Invalid; 1 = Fix; 2 = Differential, 3 = Sensitive)
+				local_data.fix = pvt->fix;						// Operating mode, used for navigation (1 = Fix not available; 2 = 2D; 3 = 3D)
+				local_data.declination = 0;// Magnetic variation in 0.01 degrees (Easterly var. subtracts from true course)
+
+				log2(p->payload, TAG_UBX_NAV_PVT_DATA, p->payload_size);
+
+				struct tm _tm;	
+				_tm.tm_sec = pvt->sec;
+				_tm.tm_min = pvt->min;
+				_tm.tm_hour = pvt->hour;
+				_tm.tm_mday = pvt->day;
+				_tm.tm_mon = pvt->month;
+				_tm.tm_year = pvt->year - 1900;	
+
+				local_data.timestamp = mktime(&_tm);
+
+
+				packt_mask |= nav_pvt;
+			}
+
+			// UBX-DOP
+			else if (p->cls == 0x1 && p->id == 0x4)
+			{
+				typedef struct DOP_struct
+				{
+					uint32_t tow;
+					uint16_t GDOP;
+					uint16_t PDOP;
+					uint16_t TDOP;
+					uint16_t VDOP;
+					uint16_t HDOP;
+					uint16_t NDOP;
+					uint16_t EDOP;
+				} DOP;
+
+				if (p->payload_size < sizeof(DOP))
+					continue;
+
+				DOP * dop = (DOP *)p->payload;
+
+				local_data.DOP[0] = dop->PDOP;
+				local_data.DOP[1] = dop->HDOP;
+				local_data.DOP[2] = dop->VDOP;
+
+				packt_mask |= nav_dop;
+			}
+
+			// UBX-SAT
+			// sat visible
+			else if (p->cls == 0x1 && p->id == 0x35)
+			{
+				typedef struct SAT_struct
+				{
+					uint8_t gnss_id;
+					uint8_t sv_id;
+					uint8_t cno;
+					int8_t elev;
+					int16_t azim;
+					int16_t residual;
+					uint32_t flags;
+				} SAT;
+
+				typedef struct SAT_header_struct
+				{
+					uint32_t tow;
+					uint8_t version;
+					uint8_t num_sat_visible;
+					uint8_t resv[2];
+					SAT sats[20];
+				} SAT_header;
+
+				SAT_header *sat = (SAT_header*) p->payload;
+
+				/*
+				printf("num SAT:%d\n", sat->num_sat_visible);
+				int visible = 0;
+				for(int i=0; i<sat->num_sat_visible; i++)
+				{
+					printf("sv:%d, CNO:%d, flag:%x\n", sat->sats[i].sv_id, sat->sats[i].cno, sat->sats[i].flags & 7);
+
+					if ((sat->sats[i].flags & 7) >= 3)
+						visible++;
+				}
+
+				printf("total visible: %d\n", visible);
+				*/
+				packt_mask |= nav_sat;
+			}
+
+			else
+			{
+				TRACE("unexpected UBX packet %02X,%02X\n", p->cls, p->id);
+			}
+		}
+	}
+
+// 	t2 = systimer->gettime() - t2;
+// 	printf("t2 cost:%d\n", int(t2));
+
+	// have we collected pvt and dop packets?
+	if (packt_mask & (nav_pvt | nav_dop) == (nav_pvt | nav_dop))
+	{
+		*data = local_data;
+
+		TRACE("UBX data: t=%f, mask=%02x\n", systimer->gettime()/1000000.0f, packt_mask);
+		log2(&local_data, TAG_UBX_0_DATA, sizeof(local_data));
+		packt_mask = 0;
+
+		return 0;
 	}
 
 	return 1;

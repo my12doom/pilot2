@@ -20,7 +20,7 @@ namespace sensors
 		UartUbloxGPS();
 		~UartUbloxGPS();
 
-		int init(HAL::IUART *uart, int baudrate){this->uart = uart; current_baudrate = baudrate;}
+		void init(HAL::IUART *uart, int baudrate){this->uart = uart; current_baudrate = baudrate;}
 
 	protected:
 
@@ -94,5 +94,16 @@ namespace sensors
 		int init(HAL::IUART *uart, int baudrate);
 		virtual int read(devices::gps_data *data);
 		virtual bool healthy(){return true;}
+
+	protected:
+		enum ubx_nav_packets
+		{
+			nav_pvt = 1,
+			nav_dop = 2,
+			nav_sat = 4,
+		};
+
+		uint32_t packt_mask;
+		devices::gps_data local_data;
 	};
 }

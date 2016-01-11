@@ -3,7 +3,7 @@
 #include "stm32F4xx_usart.h"
 
 #define TX_BUFFER_SIZE 200
-#define RX_BUFFER_SIZE 200
+#define RX_BUFFER_SIZE 1024
 
 namespace STM32F4
 {
