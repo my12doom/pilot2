@@ -8,18 +8,17 @@
 namespace sensors
 {
 
-UartUbloxNMEAGPS::UartUbloxNMEAGPS()
-:UartNMEAGPS()
+UartUbloxGPS::UartUbloxGPS()
 {
 	current_baudrate = 0;
 }
 
-UartUbloxNMEAGPS::~UartUbloxNMEAGPS()
+UartUbloxGPS::~UartUbloxGPS()
 {
 
 }
 
-int UartUbloxNMEAGPS::wait_ack(int cls, int id, int timeout)
+int UartUbloxGPS::wait_ack(int cls, int id, int timeout)
 {
 	int64_t timeout_tick = timeout>=0 ? (systimer->gettime() + timeout) : 0x7fffffffffffffff;
 	ubx_packet *pkt;
@@ -37,7 +36,7 @@ int UartUbloxNMEAGPS::wait_ack(int cls, int id, int timeout)
 	return -1;
 }
 
-int UartUbloxNMEAGPS::enable_message(uint8_t cls, uint8_t id, bool enable/* = true*/, int timeout /* = 100000 */)
+int UartUbloxGPS::enable_message(uint8_t cls, uint8_t id, bool enable/* = true*/, int timeout /* = 100000 */)
 {
 	char payload[] = {cls, id, 0,enable?1:0,0,0,0,0};
 	send_ubx_packet(0x6, 0x1, payload, 8);
@@ -65,7 +64,7 @@ int UartUbloxNMEAGPS::enable_message(uint8_t cls, uint8_t id, bool enable/* = tr
 	return -1;	
 }
 
-int UartUbloxNMEAGPS::trig_ubx_packet(int timeout)
+int UartUbloxGPS::trig_ubx_packet(int timeout)
 {
 	char payload[] = {0xf0, 0x00, 0, 1,0,0,0,0};
 
@@ -90,7 +89,7 @@ int UartUbloxNMEAGPS::trig_ubx_packet(int timeout)
 	return -1;	
 }
 
-int UartUbloxNMEAGPS::set_baudrate(int baudrate)
+int UartUbloxGPS::set_baudrate(int baudrate)
 {
 	if (detect_baudrate()<0)
 		return -2;
@@ -118,7 +117,7 @@ int UartUbloxNMEAGPS::set_baudrate(int baudrate)
 	return detect_baudrate();
 }
 
-int UartUbloxNMEAGPS::open_as(int baudrate)
+int UartUbloxGPS::open_as(int baudrate)
 {
 	if (uart->flush() < 0)
 		return -1;
@@ -137,7 +136,7 @@ int UartUbloxNMEAGPS::open_as(int baudrate)
 	return 0;
 }
 
-int UartUbloxNMEAGPS::detect_baudrate()
+int UartUbloxGPS::detect_baudrate()
 {
 	int baudtable[] = {9600, 115200};
 
@@ -164,7 +163,7 @@ int UartUbloxNMEAGPS::detect_baudrate()
 	return -1;	
 }
 
-int UartUbloxNMEAGPS::send_ubx_packet(uint8_t cls, uint8_t id, void *payload, uint16_t payload_size)
+int UartUbloxGPS::send_ubx_packet(uint8_t cls, uint8_t id, void *payload, uint16_t payload_size)
 {
 	// 	uint8_t * data = new uint8_t[payload_size+8];
 	uint8_t header[6];
@@ -197,7 +196,7 @@ int UartUbloxNMEAGPS::send_ubx_packet(uint8_t cls, uint8_t id, void *payload, ui
 	return 0;
 }
 
-ubx_packet* UartUbloxNMEAGPS::read_ubx_packet(int timeout)
+ubx_packet* UartUbloxGPS::read_ubx_packet(int timeout)
 {
 	if (uart->available() < 2)
 		return NULL;
@@ -261,7 +260,7 @@ ubx_packet* UartUbloxNMEAGPS::read_ubx_packet(int timeout)
 	return 0;
 }
 
-ubx_packet* UartUbloxNMEAGPS::read_ubx_packet()
+ubx_packet* UartUbloxGPS::read_ubx_packet()
 {
 	if (uart->available() <= 2)
 		return NULL;
@@ -288,10 +287,10 @@ ubx_packet* UartUbloxNMEAGPS::read_ubx_packet()
 				return NULL;
 
 			ubx_packet * pkt = &_packet;
-			pkt->payload_size = size;
 			uart->read(data, 2);	// B562
 			uart->read(&pkt->cls, 1);
 			uart->read(&pkt->id, 1);
+			uart->read(&pkt->payload_size, 2);
 			uart->read(pkt->payload, size);
 			uart->read(&pkt->crc, 2);
 
@@ -318,12 +317,8 @@ ubx_packet* UartUbloxNMEAGPS::read_ubx_packet()
 	return NULL;
 }
 
-int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
+int UartUbloxGPS::detect_and_config(HAL::IUART *uart, int baudrate)
 {
-	UartNMEAGPS::init(uart, baudrate);
-	current_baudrate = baudrate;
-
-	//
 	int64_t t = systimer->gettime();
 	systimer->delayms(400);
 	int real_baudrate;
@@ -333,25 +328,7 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 		return -1;
 	}
 
-	// GPGGA
-	if (enable_message(0xf0, 0x00) < 0)
-		return -2;
-	// GPGSA
-	if (enable_message(0xf0, 0x02) < 0)
-		return -2;
-	// GPGSV
-	if (enable_message(0xf0, 0x03) < 0)
-		return -2;
-	// GPRMC
-	if (enable_message(0xf0, 0x04) < 0)
-		return -2;
-	// GPVTG
-	if (enable_message(0xf0, 0x05) < 0)
-		return -2;
-	// GPZDA
-	if (enable_message(0xf0, 0x08) < 0)
-		return -2;
-	
+
 	// NMEA config
 	struct
 	{
@@ -434,7 +411,7 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 	send_ubx_packet(0x6, 0x24, &nav_cfg, size);
 	if (wait_ack(0x6, 0x24) != 0)
 		return -3;
-	
+
 	// rate config
 	uint16_t rate_config[3] = {100, 1, 0};
 	send_ubx_packet(0x6, 0x8, rate_config, 6);
@@ -448,15 +425,55 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 		return -4;
 
 	t = systimer->gettime() - t;
-	
+
 	printf("ublox GPS initialized in %d us, baudrate set to %d.\n", int(t), real_baudrate);
+
+	return 0;
+}
+
+
+int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
+{
+	UartNMEAGPS::init(uart, baudrate);
+	UartUbloxGPS::init(uart, baudrate);
+
+	if (detect_and_config(uart, baudrate) < 0)
+		return -1;
+
+	// config messages
+
+	// GPGGA
+	if (enable_message(0xf0, 0x00, true) < 0)
+		return -2;
+	// GPGLL
+	if (enable_message(0xf0, 0x01, true) < 0)
+		return -2;
+	// GPGSA
+	if (enable_message(0xf0, 0x02, true) < 0)
+		return -2;
+	// GPGSV
+	if (enable_message(0xf0, 0x03, true) < 0)
+		return -2;
+	// GPRMC
+	if (enable_message(0xf0, 0x04, true) < 0)
+		return -2;
+	// GPVTG
+	if (enable_message(0xf0, 0x05, true) < 0)
+		return -2;
+	// GPZDA
+	if (enable_message(0xf0, 0x08, true) < 0)
+		return -2;
+
+	// UBX-POSLLH
+	if (enable_message(0x01, 0x02, false) < 0)
+		return -2;
+
 	return 0;
 }
 
 UartUbloxBinaryGPS::UartUbloxBinaryGPS()
-:UartUbloxNMEAGPS()
+:UartUbloxGPS()
 {
-	state = wait_for_ubx_header;
 }
 
 UartUbloxBinaryGPS::~UartUbloxBinaryGPS()
@@ -464,9 +481,54 @@ UartUbloxBinaryGPS::~UartUbloxBinaryGPS()
 
 }
 
-int init(HAL::IUART *uart, int baudrate)
+int UartUbloxBinaryGPS::init(HAL::IUART *uart, int baudrate)
 {
-	return -1;
+	UartUbloxGPS::init(uart, baudrate);
+
+	if (detect_and_config(uart, baudrate) < 0)
+		return -1;
+
+	// config messages
+
+	// GPGGA
+	if (enable_message(0xf0, 0x00, false) < 0)
+		return -2;
+	// GPGLL
+	if (enable_message(0xf0, 0x01, false) < 0)
+		return -2;
+	// GPGSA
+	if (enable_message(0xf0, 0x02, false) < 0)
+		return -2;
+	// GPGSV
+	if (enable_message(0xf0, 0x03, false) < 0)
+		return -2;
+	// GPRMC
+	if (enable_message(0xf0, 0x04, false) < 0)
+		return -2;
+	// GPVTG
+	if (enable_message(0xf0, 0x05, false) < 0)
+		return -2;
+	// GPZDA
+	if (enable_message(0xf0, 0x08, false) < 0)
+		return -2;
+
+	// UBX-POSLLH
+	if (enable_message(0x01, 0x02, true) < 0)
+		return -2;
+
+	return 0;
+}
+
+int UartUbloxBinaryGPS::read(devices::gps_data *data)
+{
+	ubx_packet *p = read_ubx_packet();
+
+	if (p)
+	{
+		printf("packet:%2x, %2x, CRC(%s)\n", p->cls, p->id, p->crc_ok ? "OK" : "FAIL");
+	}
+
+	return 1;
 }
 
 }

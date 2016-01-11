@@ -14,13 +14,13 @@ namespace sensors
 		bool crc_ok;
 	} ubx_packet;
 
-	class UartUbloxNMEAGPS : public UartNMEAGPS
+	class UartUbloxGPS
 	{
 	public:
-		UartUbloxNMEAGPS();
-		~UartUbloxNMEAGPS();
+		UartUbloxGPS();
+		~UartUbloxGPS();
 
-		int init(HAL::IUART *uart, int baudrate);
+		int init(HAL::IUART *uart, int baudrate){this->uart = uart; current_baudrate = baudrate;}
 
 	protected:
 
@@ -69,27 +69,30 @@ namespace sensors
 		// helper function that switch baudrate and flush all uart buffers
 		int open_as(int baudrate);
 
+		// detect and config GNSS settings
+		// return negative value on error.
+		int detect_and_config(HAL::IUART *uart, int baudrate);
+
 		uint8_t payload_buffer[512];
 		ubx_packet _packet;
 		int current_baudrate;
+		HAL::IUART *uart;
 	};
 
-	enum receiver_state
+	class UartUbloxNMEAGPS : public UartUbloxGPS, public UartNMEAGPS
 	{
-		wait_for_ubx_header,
-		wait_for_packet_header,
-		wait_for_content,
+	public:
+		int init(HAL::IUART *uart, int baudrate);
 	};
 
-	class UartUbloxBinaryGPS : public UartUbloxNMEAGPS
+	class UartUbloxBinaryGPS : public UartUbloxGPS, public devices::IGPS
 	{
 	public:
 		UartUbloxBinaryGPS();
 		~UartUbloxBinaryGPS();
 
 		int init(HAL::IUART *uart, int baudrate);
-
-	protected:
-		receiver_state state;
+		virtual int read(devices::gps_data *data);
+		virtual bool healthy(){return true;}
 	};
 }
