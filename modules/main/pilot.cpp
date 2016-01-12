@@ -1500,7 +1500,7 @@ int yet_another_pilot::set_mode(copter_mode newmode)
 		LOGE("FAILED entering %d mode\n", newmode);
 	}
 
-	return 0;
+	return error;
 }
 
 int yet_another_pilot::arm(bool arm /*= true*/)
@@ -1697,15 +1697,12 @@ int yet_another_pilot::handle_mode_switching()
 copter_mode yet_another_pilot::mode_from_stick()
 {
 	static copter_mode stick_mode = althold;
-	if (!rc_fail)
-	{
-		if (rc[5] < -0.6f)
-			stick_mode = basic;
-		else if (rc[5] > 0.6f)
-			stick_mode = poshold;
-		else if (rc[5] > -0.5f && rc[5] < 0.5f)
- 			stick_mode = althold;
-	}
+	if (rc[5] < -0.6f)
+		stick_mode = basic;
+	else if (rc[5] > 0.6f)
+		stick_mode = poshold;
+	else if (rc[5] > -0.5f && rc[5] < 0.5f)
+		stick_mode = althold;
 
 	return stick_mode;
 }
@@ -2373,7 +2370,11 @@ int yet_another_pilot::read_rc()
 			if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
 			{
 				LOGE("rc fail, RTL\n");
-				set_mode(RTL);
+				if (set_mode(RTL) < 0)
+				{
+					LOGE("RTL failed, landing\n");
+					islanding = true;
+				}
 			}
 			rc_fail_tick = new_rc_fail_tick;
 		}

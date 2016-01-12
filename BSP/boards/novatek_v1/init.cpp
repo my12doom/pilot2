@@ -352,6 +352,10 @@ int bsp_init_all()
 
 		param("rP3", 1.2f)=1.2f;
 		param("rI3", 0.15f)=0.15f;
+		
+		// tilt angle
+		param("rngR", PI / 8)= PI / 8;
+		param("rngP", PI / 8)= PI / 8;
 
 		// frame
 		param("mat", 1)=1;
