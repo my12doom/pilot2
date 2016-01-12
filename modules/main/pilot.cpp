@@ -2349,6 +2349,8 @@ int yet_another_pilot::read_rc()
 				TRACE("%.2f,", rc_mobile[i]);
 			}
 			rc_fail = forced_mobile_controll > 0.5f ? 2 : 1;
+
+			rc[5] = 1;	// use "poshold" mode
 		}
 		else
 		{
@@ -2356,6 +2358,8 @@ int yet_another_pilot::read_rc()
 			rc[1] = 0;
 			rc[2] = 0.5;
 			rc[3] = 0;
+			rc[5] = 1;	// use "poshold" mode
+
 			rc_fail = -1;
 
 			float new_rc_fail_tick = rc_fail_tick + interval;
@@ -2410,8 +2414,9 @@ int yet_another_pilot::lowpower_handling()
 	float low_voltage2 = 10.2f;
 #else
 	float ref_voltage = batt.get_internal_voltage();
-	float low_voltage1 = 11.0f;
-	float low_voltage2 = 10.8f;
+	float delta = fmax(0, alt_estimator.state[0] - takeoff_ground_altitude) * 0.002f;
+	float low_voltage1 = 11.0f + delta;
+	float low_voltage2 = 10.8f + delta;
 #endif
 
 	if (ref_voltage > 6 && ref_voltage < low_voltage2)
