@@ -1842,8 +1842,15 @@ int yet_another_pilot::check_stick()
 				
 				if (armed)
 				{
-					disarm();
-					LOGE("stick disarm!\n");
+					if (airborne)
+					{
+						LOGE("airborne, stick disarm denied!\n");
+					}
+					else
+					{
+						disarm();
+						LOGE("stick disarm!\n");
+					}
 				}
 				else
 				{
