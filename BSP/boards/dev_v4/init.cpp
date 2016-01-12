@@ -80,10 +80,10 @@ void init_uart()
 {
 	f4uart1.set_baudrate(115200);
 	f4uart2.set_baudrate(115200);
-	//f4uart3.set_baudrate(115200);
+	f4uart3.set_baudrate(115200);
 	manager.register_UART("UART1",&f4uart1);
 	manager.register_UART("UART2",&f4uart2);
-	//manager.register_UART("UART3",&f4uart3);
+	manager.register_UART("Wifi",&f4uart3);
 }
 
 
@@ -168,7 +168,7 @@ int init_RC()
 
 int init_GPS()
 {
-	static sensors::UartUbloxNMEAGPS gps;
+	static sensors::UartUbloxBinaryGPS gps;
 	if (gps.init(&f4uart1, 115200) == 0)	
 		manager.register_GPS(&gps);
 	
@@ -370,8 +370,11 @@ int bsp_init_all()
 
 		// frame
 		param("mat", 1)=1;
-		param("ekf", 0)=0;
-		param("time", 3000)=3000;
+		param("ekf", 1)=1;
+		param("time", 3000)=5000;
+		
+		// test
+		param("limV", 50) = 50;
 	}
 	
 	return 0;

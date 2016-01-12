@@ -155,7 +155,7 @@ int init_RC()
 
 int init_GPS()
 {
-	static sensors::UartUbloxNMEAGPS gps;
+	static sensors::UartUbloxBinaryGPS gps;
 	if (gps.init(&f4uart4, 115200) == 0)	
 		manager.register_GPS(&gps);
 	
