@@ -54,7 +54,7 @@ pos_controller::pos_controller()
 	low_speed_tick = 0;
 #ifdef WIN32
 	f = fopen("Z:\\log.csv", "wb");
-	fprintf(f, "time,v,tv,p,sp\r\n");
+	fprintf(f, "time,v,tv,p,sp,roll_target,pitch_target\r\n");
 	tick = GetTickCount();
 
 	float v = atan2(1, G_in_ms2);
@@ -164,8 +164,8 @@ int pos_controller::update_state_machine(float dt)
 			if (low_speed_tick > 0.3f)		// speed low enough for a while ( 0.3s currently)
 			{
 				// update new setpoint
-				setpoint[0] = pos[0] + velocity[0] / pos2rate_P * 1.5f;
-				setpoint[1] = pos[1] + velocity[1] / pos2rate_P * 1.5f;
+				setpoint[0] = pos[0] + velocity[0] / pos2rate_P;
+				setpoint[1] = pos[1] + velocity[1] / pos2rate_P;
 
 				LOGE("braking done, new setpoint to %.2f, %.2f\n", setpoint[0], setpoint[1]);
 
@@ -182,6 +182,21 @@ int pos_controller::update_state_machine(float dt)
 			}
 		}
 		break;
+	}
+
+	if (next_state != state)
+	{
+		// reset tick
+		low_speed_tick = 0;
+		release_stick_tick = 0;
+
+		// reset pid and feed forward
+		memset(pid, 0, sizeof(pid));
+		pid[0][2] = NAN;
+		pid[1][2] = NAN;
+		last_target_velocity[0] = NAN;
+		ff[0] = 0;
+		ff[1] = 0;
 	}
 
 	state = next_state;
@@ -210,7 +225,7 @@ int pos_controller::update_controller(float dt)
 	{
 		rate_to_accel(dt);
 
-		accel_to_lean_angles();
+		accel_to_lean_angles(dt);
 	}
 	else if (state == direct)
 	{
@@ -224,7 +239,7 @@ int pos_controller::update_controller(float dt)
 	}
 
 #ifdef WIN32
-	fprintf(f, "%.3f,%f,%f,%f,%f\r\n", (GetTickCount()-tick)/1000.0f, velocity[0],target_velocity[0], pid[0][0], pid[0][1]);
+	fprintf(f, "%.3f,%f,%f,%f,%f,%.2f,%.2f\r\n", (GetTickCount()-tick)/1000.0f, velocity[0],target_velocity[0], pid[0][0], pid[0][1], target_euler[0] * 180 / PI, target_euler[1] * 180 / PI);
 	fflush(f);
 #endif
 
@@ -425,19 +440,30 @@ int pos_controller::rate_to_accel(float dt)
 }
 
 
-int pos_controller::accel_to_lean_angles()
+int pos_controller::accel_to_lean_angles(float dt)
 {
 	// rotate from north-east to forward-right axis
 	float accel_forward = cos_yaw * target_accel[0] + sin_yaw * target_accel[1];
 	float accel_right = -sin_yaw * target_accel[0] + cos_yaw * target_accel[1];
 	
 	// accel to lean angle
-	target_euler[1] = atan2(-accel_forward, G_in_ms2);
-	target_euler[0] = atan2(accel_right*cos(eulers[1]), G_in_ms2);		// maybe target_pitch not needed?
+	float new_euler_pitch  = atan2(-accel_forward, G_in_ms2);
+	float new_euler_roll = atan2(accel_right*cos(eulers[1]), G_in_ms2);		// maybe target_pitch not needed?
 
 	// TODO: handle angle limitation correctly
-	target_euler[0] = limit(target_euler[0], -quadcopter_range[0], quadcopter_range[0]);
-	target_euler[1] = limit(target_euler[1], -quadcopter_range[1], quadcopter_range[1]);
+	new_euler_roll = limit(new_euler_roll, -quadcopter_range[0], quadcopter_range[0]);
+	new_euler_pitch = limit(new_euler_pitch, -quadcopter_range[1], quadcopter_range[1]);
+
+	// max rotation speed: 100 degree/s
+	float delta_roll = new_euler_roll - target_euler[0];
+	float delta_pitch = new_euler_pitch - target_euler[1];
+
+	float max_delta = dt * 100 * PI / 180;
+	delta_roll = limit(delta_roll, -max_delta, max_delta);
+	delta_pitch = limit(delta_pitch, -max_delta, max_delta);
+
+	target_euler[0] += delta_roll;
+	target_euler[1] += delta_pitch;
 
 	return 0;
 }

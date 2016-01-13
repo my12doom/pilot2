@@ -56,7 +56,7 @@ public:
 	int move_desire_pos(float dt);
 	int pos_to_rate(float dt);
 	int rate_to_accel(float dt);
-	int accel_to_lean_angles();
+	int accel_to_lean_angles(float dt);
 	int lean_angle_to_accel(float *angles, float *accels);
 	int update_state_machine(float dt);
 
