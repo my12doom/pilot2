@@ -32,8 +32,8 @@ public:
 
 enum poshold_state
 {
-	loiter,
-	direct,
+	pos,
+	override,
 	braking,
 };
 
@@ -58,7 +58,6 @@ public:
 	int rate_to_accel(float dt);
 	int accel_to_lean_angles();
 	int lean_angle_to_accel(float *angles, float *accels);
-	int update_state_machine(float dt);
 
 	// states
 	float setpoint[2];						// [north, east]
@@ -79,14 +78,12 @@ public:
 	float sin_yaw;
 	float cos_yaw;
 	float min_braking_speed;
-// 	float release_stick_timer;
+	float release_stick_timer;
 
 #ifdef WIN32
 	FILE * f;
 	unsigned int tick;
 #endif
 	poshold_state state;
-	float low_speed_tick;
-	float release_stick_tick;
-	float pilot_stick[2];
+	float pilot_angle[2];
 };

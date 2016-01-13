@@ -46,32 +46,20 @@ int flight_mode_poshold::loop(float dt)
 	bool after_unlock_action = yap.airborne || yap.rc[2] > 0.55f;
 	if (after_unlock_action)	// airborne or armed and throttle up
 	{
-		// 10hz pos controller rate
-		static int64_t last_pos_controll_time = 0;
-		float pos_control_dt = (systimer->gettime() - last_pos_controll_time) / 1000000.0f;
-		if (pos_control_dt > 0.1f)
+		if (dt < 1.0f)
 		{
-			last_pos_controll_time = systimer->gettime();
-			if (pos_control_dt < 1.0f)
-			{
-				float ne_pos[2];
-				float ne_velocity[2];
-				yap.get_pos_velocity_ned(ne_pos, ne_velocity);
-				float desired_velocity[2] = {yap.rc[1] * 5, yap.rc[0] * 5};
-				if (abs(desired_velocity[0]) < 0.4f)
-					desired_velocity[0] = 0;
-				if (abs(desired_velocity[1]) < 0.4f)
-					desired_velocity[1] = 0;
+			float ne_pos[2];
+			float ne_velocity[2];
+			yap.get_pos_velocity_ned(ne_pos, ne_velocity);
 
-				float euler_target[3] = {NAN, NAN, NAN};
-				yap.pos_control.provide_attitue_position(euler, ne_pos, ne_velocity);
-				yap.pos_control.set_desired_velocity(desired_velocity);
-				yap.pos_control.update_controller(pos_control_dt);
-				yap.pos_control.get_target_angles(euler_target);
+			float euler_target[3] = {NAN, NAN, NAN};
+			yap.pos_control.provide_attitue_position(euler, ne_pos, ne_velocity);
+			yap.pos_control.set_desired_stick(yap.rc);
+			yap.pos_control.update_controller(dt);
+			yap.pos_control.get_target_angles(euler_target);
 
-				euler_target[2] = NAN;
-				yap.attitude_controll.set_euler_target(euler_target);
-			}
+			euler_target[2] = NAN;
+			yap.attitude_controll.set_euler_target(euler_target);
 		}
 
 		// yaw

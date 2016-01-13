@@ -1745,7 +1745,6 @@ int yet_another_pilot::start_taking_off()
 
 	LOGE("\nauto take off \n");
 	arm();
-	check_stick();	// to set submode and reset all controller
 	alt_controller.set_altitude_target(alt_controller.get_altitude_state()-2.0f);
 	LOGE("\narmed!\n");
 	//1s=1000000us		
@@ -1755,16 +1754,13 @@ int yet_another_pilot::start_taking_off()
 	return 0;
 }
 
-int yet_another_pilot::check_stick()
+int yet_another_pilot::check_stick_action()
 {
 	if (critical_errors)
 	{
 		disarm();
 		return -1;
 	}
-
-	// submode switch
-	handle_mode_switching();
 
 	// flashlight toggle:
 	// flips mode switch twice in 1 seconds
@@ -2082,7 +2078,6 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	{
 		LOGE("mobile arm\n");
 		arm();
-		check_stick();	// to set submode and reset all controller
 		alt_controller.set_altitude_target(alt_controller.get_altitude_state()-2.0f);
 
 		const char *armed = "arm,ok\n";
@@ -2716,7 +2711,8 @@ void yet_another_pilot::main_loop(void)
 	}
 	
 	// RC modes and RC fail detection, or alternative RC source
-	check_stick();
+	handle_mode_switching();
+	check_stick_action();
 	handle_takeoff();
 	handle_wifi_controll(manager.getUART("Wifi"));
 	handle_events();

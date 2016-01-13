@@ -225,7 +225,7 @@ int init_flow()
 	
 	if (px4flow.healthy())
 	{
-		LOGE("found PX4FLOW on I2C(PC13,PC14)\n");
+		LOGE("found Optical Flow on I2C(PC13,PC14)\n");
 		static F4GPIO SCL(GPIOC, GPIO_Pin_13);
 		static F4GPIO SDA(GPIOC, GPIO_Pin_14);
 		static I2C_SW i2c(&SCL, &SDA);

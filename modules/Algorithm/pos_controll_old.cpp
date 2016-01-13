@@ -18,8 +18,8 @@ static float pos2rate_P = 1.0f;
 // "parameters/constants"
 static param quadcopter_range[3] = 
 {
-	param("rngR", PI / 8),			// roll
-	param("rngP", PI / 8),			// pitch
+	param("rngR", PI / 5),			// roll
+	param("rngP", PI / 5),			// pitch
 	param("rngY", PI / 8),			// yaw
 };
 
@@ -50,8 +50,7 @@ static float sqrt2(float in)
 
 pos_controller::pos_controller()
 {
-	release_stick_tick = 0;
-	low_speed_tick = 0;
+	release_stick_timer = 0;
 #ifdef WIN32
 	f = fopen("Z:\\log.csv", "wb");
 	fprintf(f, "time,v,tv,p,sp\r\n");
@@ -71,11 +70,7 @@ int pos_controller::reset()
 {
 	set_setpoint(pos);
 
-	target_euler[0] = eulers[0];
-	target_euler[1] = eulers[1];
-
-	state = direct;
-	low_speed_tick = 0;
+	state = braking;
 
 	return 0;
 }
@@ -88,140 +83,61 @@ int pos_controller::set_desired_velocity(float *desired_velocity)
 	desired_velocity_earth[0] = cos_yaw * desired_velocity[0] - sin_yaw * desired_velocity[1];
 	desired_velocity_earth[1] = sin_yaw * desired_velocity[0] + cos_yaw * desired_velocity[1];
 
-	pilot_stick[0] = NAN;
-	pilot_stick[1] = NAN;
+	pilot_angle[0] = NAN;
+	pilot_angle[1] = NAN;
 
 	return 0;
 }
 
 int pos_controller::set_desired_stick(float *stick)
 {
-	float desired_velocity[2] = {stick[1] * max_speed, stick[0] * max_speed};
+	float desired_velocity[2] = {stick[1] * 5, stick[0] * 5};
 	if (fabs(desired_velocity[0]) < 0.4f)
 		desired_velocity[0] = 0;
 	if (fabs(desired_velocity[1]) < 0.4f)
 		desired_velocity[1] = 0;
 
-	if (state == loiter)
-	{
-		// copied from set_desired_velocity()
-		desired_velocity_earth[0] = cos_yaw * desired_velocity[0] - sin_yaw * desired_velocity[1];
-		desired_velocity_earth[1] = sin_yaw * desired_velocity[0] + cos_yaw * desired_velocity[1];
-	}
+	set_desired_velocity(desired_velocity);
 
-	pilot_stick[0] = stick[0];
-	pilot_stick[1] = stick[1];
-
-	return 0;
-}
-
-int pos_controller::update_state_machine(float dt)
-{
-	poshold_state next_state = state;
-
-	// a pair of Schmidt values used
-	float threshold = 30.0f/500;
-	if (state == loiter)
-		threshold *= 1.5f;
-	bool released = (isnan(pilot_stick[0]) || isnan(pilot_stick[1])) || (fabs(pilot_stick[0]) < threshold && fabs(pilot_stick[1]) < threshold);
-
-	switch(state)
-	{
-	case direct:
-		{
-			// user released stick for a while(0.2s currently)
-			if (released)
-			{
-				release_stick_tick += dt;
-				if (release_stick_tick > 0.2f)
-				{
-					LOGE("braking start\n");
-					next_state = braking;
-				}
-			}
-			else
-			{
-				release_stick_tick = 0;
-			}
-		}
-		break;
-
-	case braking:
-		{
-			if (!released)		// if user moved stick again
-			{
-				LOGE("abort braking, direct\n");
-				next_state = direct;
-			}
-
-			float speed = sqrt(velocity[0]*velocity[0] + velocity[1] * velocity[1]);
-
-			if (speed < 1.0f)
-				low_speed_tick += dt;
-			else
-				low_speed_tick = 0;
-
-			if (low_speed_tick > 0.3f)		// speed low enough for a while ( 0.3s currently)
-			{
-				// update new setpoint
-				setpoint[0] = pos[0] + velocity[0] / pos2rate_P * 1.5f;
-				setpoint[1] = pos[1] + velocity[1] / pos2rate_P * 1.5f;
-
-				LOGE("braking done, new setpoint to %.2f, %.2f\n", setpoint[0], setpoint[1]);
-
-				next_state = loiter;
-			}
-		}
-		break;
-
-	case loiter:
-		{
-			if (!released)		// the user moved stick ?
-			{
-				next_state = direct;
-			}
-		}
-		break;
-	}
-
-	state = next_state;
+	pilot_angle[0] = stick[0] * quadcopter_range[0];
+	pilot_angle[1] = -stick[1] * quadcopter_range[0];	// pitch stick and coordinate are reversed
 
 	return 0;
 }
 
 int pos_controller::update_controller(float dt)
 {
-	update_state_machine(dt);
-
-	if (state == loiter)
-	{
-		move_desire_pos(dt);
-
-		pos_to_rate(dt);
-	}
-
-	else if (state == braking)
-	{
-		target_velocity[0] = 0;
-		target_velocity[1] = 0;
-	}
-
-	if (state == loiter || state == braking)
-	{
-		rate_to_accel(dt);
-
-		accel_to_lean_angles();
-	}
-	else if (state == direct)
-	{
-		target_euler[0] = pilot_stick[0] * quadcopter_range[0];
-		target_euler[1] = -pilot_stick[1] * quadcopter_range[1];
-	}
+	// if user released stick, or stick moving toward set point.
+	// apply a extra braking until velocity decreased to a acceptable value, for at most 1 second.
+	bool stick_released = fabs(desired_velocity_earth[0]) < 0.01f && fabs(desired_velocity_earth[1]) < 0.01f;
+	if (stick_released)
+		release_stick_timer += dt;
 	else
+		release_stick_timer = 0;
+
+	min_braking_speed = 1.0f * 1.0f;
+	float delta[2] = {setpoint[0] - pos[0], setpoint[1] - pos[1]};
+
+	if  (	(velocity[0]*velocity[0] + velocity[1]*velocity[1] > min_braking_speed) &&					// speed fast enough(1m/s)?
+			(
+			  (stick_released && release_stick_timer < 1.0f)											// released stick? less than 1 second?
+			  || (delta[0]*desired_velocity_earth[0] + delta[1]*desired_velocity_earth[1] < 0)			// moving toward set point?
+			)
+		)
 	{
-		LOGE("pos_controll: invalid state, switching to direct\n");
-		state = direct;
+		// braking is based on a 0.05hz low pass filter that move set point toward current position
+		float alpha = dt / (dt + 1.0f/(2*PI * 0.05f));
+		setpoint[0] = alpha * pos[0] + (1-alpha) * setpoint[0];
+		setpoint[1] = alpha * pos[1] + (1-alpha) * setpoint[1];
 	}
+
+	move_desire_pos(dt);
+
+	pos_to_rate(dt);
+
+	rate_to_accel(dt);
+
+	accel_to_lean_angles();
 
 #ifdef WIN32
 	fprintf(f, "%.3f,%f,%f,%f,%f\r\n", (GetTickCount()-tick)/1000.0f, velocity[0],target_velocity[0], pid[0][0], pid[0][1]);
@@ -280,7 +196,6 @@ int pos_controller::set_setpoint(float *pos, bool reset /*= true*/)
 	setpoint[1] = pos[1];
 
 	// TODO : do other checking and initializing
-	state = loiter;
 
 	return 0;
 }
@@ -433,11 +348,11 @@ int pos_controller::accel_to_lean_angles()
 	
 	// accel to lean angle
 	target_euler[1] = atan2(-accel_forward, G_in_ms2);
-	target_euler[0] = atan2(accel_right*cos(eulers[1]), G_in_ms2);		// maybe target_pitch not needed?
+	target_euler[0] = atan2(accel_right/**cos(eulers[1])*/, G_in_ms2);		// maybe target_pitch not needed?
 
 	// TODO: handle angle limitation correctly
-	target_euler[0] = limit(target_euler[0], -quadcopter_range[0], quadcopter_range[0]);
-	target_euler[1] = limit(target_euler[1], -quadcopter_range[1], quadcopter_range[1]);
+	target_euler[0] = limit(target_euler[0], -PI/7, PI/7);
+	target_euler[1] = limit(target_euler[1], -PI/7, PI/7);
 
 	return 0;
 }

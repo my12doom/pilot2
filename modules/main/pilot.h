@@ -178,7 +178,7 @@ public:
 	int lowpower_handling();
 	int crash_detector();
 	int land_detector();
-	int check_stick();
+	int check_stick_action();
 	int disarm();
 	int arm(bool arm = true);
 	int set_mode(copter_mode newmode);
