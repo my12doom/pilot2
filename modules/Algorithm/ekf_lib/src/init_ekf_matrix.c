@@ -44,8 +44,8 @@ void init_ekf_matrix(float Be[3], float P[169], float X[13], float Q[81],
   static const float b_v[9] = { 1.0E-17, 1.0E-17, 1.0E-17,/* 3.5E-2, 3.5E-2*/7E-2,7E-2, 0.5,
     8.0E-6, 8.0E-6, 8.0E-6 };
 /*This is for gps mode */
-  static const float c_v[8] = { 1E20, 1E20, 3.5E-3, 1E-2, 1E-2, 0.5,
-    0.5, 0.5 };
+  static const float c_v[8] = { 1E20, 1E20, 3.5E-3, 1E-2, 1E-2, 0.05,
+    0.05, 0.05 };
 /*This is for optical flow not trust postion ,give flow speed more weight*/
 //  static const float c_v[8] = { 1E20, 1E20, 3.5E-3, 1E-3, 1E-3, 0.005,
 //    0.005, 0.005 };
