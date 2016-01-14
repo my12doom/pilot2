@@ -894,6 +894,14 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\..\modules\Algorithm\pos_controll_old.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\modules\Algorithm\pos_controll_old.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\..\modules\Algorithm\pos_estimator.cpp"
 						>
 					</File>

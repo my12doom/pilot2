@@ -1,4 +1,4 @@
-#include "pos_controll.h"
+#include "pos_controll_old.h"
 #include <string.h>
 #include <math.h>
 #include <float.h>
@@ -48,7 +48,7 @@ static float sqrt2(float in)
 	return o*sqrt(fabs(in));
 }
 
-pos_controller::pos_controller()
+pos_controller_old::pos_controller_old()
 {
 	release_stick_timer = 0;
 #ifdef WIN32
@@ -61,12 +61,12 @@ pos_controller::pos_controller()
 #endif
 }
 
-pos_controller::~pos_controller()
+pos_controller_old::~pos_controller_old()
 {
 
 }
 
-int pos_controller::reset()
+int pos_controller_old::reset()
 {
 	set_setpoint(pos);
 
@@ -75,7 +75,7 @@ int pos_controller::reset()
 	return 0;
 }
 
-int pos_controller::set_desired_velocity(float *desired_velocity)
+int pos_controller_old::set_desired_velocity(float *desired_velocity)
 {
 	memcpy(this->desired_velocity, desired_velocity, sizeof(this->desired_velocity));
 
@@ -89,7 +89,7 @@ int pos_controller::set_desired_velocity(float *desired_velocity)
 	return 0;
 }
 
-int pos_controller::set_desired_stick(float *stick)
+int pos_controller_old::set_desired_stick(float *stick)
 {
 	float desired_velocity[2] = {stick[1] * 5, stick[0] * 5};
 	if (fabs(desired_velocity[0]) < 0.4f)
@@ -105,7 +105,7 @@ int pos_controller::set_desired_stick(float *stick)
 	return 0;
 }
 
-int pos_controller::update_controller(float dt)
+int pos_controller_old::update_controller(float dt)
 {
 	// if user released stick, or stick moving toward set point.
 	// apply a extra braking until velocity decreased to a acceptable value, for at most 1 second.
@@ -147,14 +147,14 @@ int pos_controller::update_controller(float dt)
 	return 0;
 }
 
-int pos_controller::get_target_angles(float *target_angles)
+int pos_controller_old::get_target_angles(float *target_angles)
 {
 	memcpy(target_angles, this->target_euler, sizeof(this->target_euler));
 
 	return 0;
 }
 
-int pos_controller::set_setpoint(float *pos, bool reset /*= true*/)
+int pos_controller_old::set_setpoint(float *pos, bool reset /*= true*/)
 {
 	float distance_ne[2] = {setpoint[0] - pos[0], setpoint[1] - pos[1]};
 	float distance = sqrt(distance_ne[0]*distance_ne[0] + distance_ne[1] * distance_ne[1]);
@@ -200,7 +200,7 @@ int pos_controller::set_setpoint(float *pos, bool reset /*= true*/)
 	return 0;
 }
 
-int pos_controller::provide_attitue_position(float *eulers, float *pos, float *velocity)
+int pos_controller_old::provide_attitue_position(float *eulers, float *pos, float *velocity)
 {
 	memcpy(this->eulers, eulers, sizeof(this->eulers));
 	memcpy(this->pos, pos, sizeof(this->pos));
@@ -212,7 +212,7 @@ int pos_controller::provide_attitue_position(float *eulers, float *pos, float *v
 	return 0;
 }
 
-int pos_controller::move_desire_pos(float dt)
+int pos_controller_old::move_desire_pos(float dt)
 {
 	// move
 	float new_setpoint[2] = 
@@ -235,7 +235,7 @@ int pos_controller::move_desire_pos(float dt)
 	return 0;
 }
 
-int pos_controller::pos_to_rate(float dt)
+int pos_controller_old::pos_to_rate(float dt)
 {
 	float error[2] = {setpoint[0] - pos[0], setpoint[1] - pos[1]};
 // 	error[0] = sqrt2(error[0]);
@@ -294,7 +294,7 @@ int pos_controller::pos_to_rate(float dt)
 	return 0;
 }
 
-int pos_controller::rate_to_accel(float dt)
+int pos_controller_old::rate_to_accel(float dt)
 {
 	if (!isnan(last_target_velocity[0]))
 	{
@@ -340,7 +340,7 @@ int pos_controller::rate_to_accel(float dt)
 }
 
 
-int pos_controller::accel_to_lean_angles()
+int pos_controller_old::accel_to_lean_angles()
 {
 	// rotate from north-east to forward-right axis
 	float accel_forward = cos_yaw * target_accel[0] + sin_yaw * target_accel[1];
