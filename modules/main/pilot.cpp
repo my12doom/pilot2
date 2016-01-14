@@ -166,6 +166,7 @@ yet_another_pilot::yet_another_pilot()
 	event_count = 0;
 	home_set = false;
 	rc_fail_tick = 0;
+	pos_control = &pos_control_hybird;
 
 	for(int i=0; i<3; i++)
 	{
@@ -667,33 +668,33 @@ int yet_another_pilot::save_logs()
 
 	log(&quad3, TAG_QUADCOPTER_DATA3, systime);
 
-	// pos controller data1
-	pos_controller_data pc = 
-	{
-		pos_control.setpoint[0],
-		pos_control.setpoint[1],
-		pos_control.pos[0],
-		pos_control.pos[1],
-		pos_control.target_velocity[0]*1000,
-		pos_control.target_velocity[1]*1000,
-		pos_control.velocity[0]*1000,
-		pos_control.velocity[1]*1000,
-	};
-	log(&pc, TAG_POS_CONTROLLER_DATA1, systime);
-
-
-	// pos controller data2
-	pos_controller_data2 pc2 = 
-	{
-		pos_control.target_accel[0]*1000,
-		pos_control.target_accel[1]*1000,
-		{
-			{pos_control.pid[0][0]*100, pos_control.pid[0][1]*100, pos_control.pid[0][2]*100,},
-			{pos_control.pid[1][0]*100, pos_control.pid[1][1]*100, pos_control.pid[1][2]*100,},
-		}
-	};
-
-	log(&pc2, TAG_POS_CONTROLLER_DATA2, systime);
+// 	// pos controller data1
+// 	pos_controller_data pc = 
+// 	{
+// 		pos_control->setpoint[0],
+// 		pos_control->setpoint[1],
+// 		pos_control->pos[0],
+// 		pos_control->pos[1],
+// 		pos_control->target_velocity[0]*1000,
+// 		pos_control->target_velocity[1]*1000,
+// 		pos_control->velocity[0]*1000,
+// 		pos_control->velocity[1]*1000,
+// 	};
+// 	log(&pc, TAG_POS_CONTROLLER_DATA1, systime);
+// 
+// 
+// 	// pos controller data2
+// 	pos_controller_data2 pc2 = 
+// 	{
+// 		pos_control->target_accel[0]*1000,
+// 		pos_control->target_accel[1]*1000,
+// 		{
+// 			{pos_control->pid[0][0]*100, pos_control->pid[0][1]*100, pos_control->pid[0][2]*100,},
+// 			{pos_control->pid[1][0]*100, pos_control->pid[1][1]*100, pos_control->pid[1][2]*100,},
+// 		}
+// 	};
+// 
+// 	log(&pc2, TAG_POS_CONTROLLER_DATA2, systime);
 
 	if (last_gps_tick > systimer->gettime() - 2000000)
 	{

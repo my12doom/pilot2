@@ -70,8 +70,6 @@ int pos_controller_old::reset()
 {
 	set_setpoint(pos);
 
-	state = braking;
-
 	return 0;
 }
 

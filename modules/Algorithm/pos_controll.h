@@ -2,14 +2,7 @@
 #include "Ipos_controll.h"
 #include <stdio.h>
 
-enum poshold_state
-{
-	loiter,
-	direct,
-	braking,
-};
-
-class pos_controller : pos_controller_base
+class pos_controller : public pos_controller_base
 {
 public:
 	pos_controller();
@@ -57,6 +50,13 @@ public:
 	FILE * f;
 	unsigned int tick;
 #endif
+
+	enum poshold_state
+	{
+		loiter,
+		direct,
+		braking,
+	};
 	poshold_state state;
 	float low_speed_tick;
 	float release_stick_tick;

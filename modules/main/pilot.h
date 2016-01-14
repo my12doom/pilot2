@@ -10,6 +10,7 @@
 #include <Algorithm/altitude_controller.h>
 #include <Algorithm/pos_estimator.h>
 #include <Algorithm/pos_controll.h>
+#include <Algorithm/pos_controll_old.h>
 #include <Algorithm/of_controller.h>
 #include <Algorithm/of_controller2.h>
 #include <Algorithm/mag_calibration.h>
@@ -95,7 +96,9 @@ public:
 	int64_t last_tick;// = 0;
 	int64_t last_gps_tick;// = 0;
 	pos_estimator estimator;
-	pos_controller pos_control;
+	pos_controller_base *pos_control;
+	pos_controller pos_control_hybird;
+	pos_controller_old pos_control_loiter;
 	attitude_controller attitude_controll;
 	altitude_estimator alt_estimator;
 	altitude_estimator2 alt_estimator2;

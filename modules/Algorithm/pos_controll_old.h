@@ -2,14 +2,7 @@
 #include "Ipos_controll.h"
 #include <stdio.h>
 
-enum poshold_state
-{
-	pos,
-	override,
-	braking,
-};
-
-class pos_controller_old : pos_controller_base
+class pos_controller_old : public pos_controller_base
 {
 public:
 	pos_controller_old();
@@ -56,6 +49,5 @@ public:
 	FILE * f;
 	unsigned int tick;
 #endif
-	poshold_state state;
 	float pilot_angle[2];
 };

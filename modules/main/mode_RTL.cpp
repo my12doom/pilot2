@@ -32,10 +32,10 @@ int flight_mode_RTL::setup()
 	float desired_velocity[2] = {0, 0};
 	float euler_target[3];
 
-	yap.pos_control.provide_attitue_position(euler, ne_pos, ne_velocity);
-	yap.pos_control.set_desired_velocity(desired_velocity);
-	yap.pos_control.get_target_angles(euler_target);
-	yap.pos_control.reset();
+	yap.pos_control->provide_attitue_position(euler, ne_pos, ne_velocity);
+	yap.pos_control->set_desired_velocity(desired_velocity);
+	yap.pos_control->get_target_angles(euler_target);
+	yap.pos_control->reset();
 	euler_target[2] = NAN;
 	yap.attitude_controll.set_euler_target(euler_target);
 
@@ -85,8 +85,8 @@ int flight_mode_RTL::loop(float dt)
 	float ne_velocity[2];
 	float desired_velocity[2] = {0,0};
 	yap.get_pos_velocity_ned(ne_pos, ne_velocity);
-	yap.pos_control.provide_attitue_position(euler, ne_pos, ne_velocity);
-	yap.pos_control.set_desired_velocity(desired_velocity);
+	yap.pos_control->provide_attitue_position(euler, ne_pos, ne_velocity);
+	yap.pos_control->set_desired_velocity(desired_velocity);
 
 	// bearing
 	float bearing_north = home_pos_ne[0] - ne_pos[0];
@@ -102,7 +102,7 @@ int flight_mode_RTL::loop(float dt)
 		{
 			// hold position and altitude
 			yap.alt_controller.update(dt, 0);
-			yap.pos_control.set_setpoint(start_pos_ne, false);
+			yap.pos_control->set_setpoint(start_pos_ne, false);
 
 			// spin slowly ( default 45 degree/s) toward bearing
 			float yaw_delta = radian_sub(bearing, euler[2]);
@@ -135,7 +135,7 @@ int flight_mode_RTL::loop(float dt)
 	case rise:
 		{
 			// hold position and yaw
-			yap.pos_control.set_setpoint(start_pos_ne, false);
+			yap.pos_control->set_setpoint(start_pos_ne, false);
 			float euler_sp[3] = {NAN, NAN, bearing};
 			yap.attitude_controll.set_euler_target(euler_sp);
 
@@ -171,7 +171,7 @@ int flight_mode_RTL::loop(float dt)
 // 			yap.attitude_controll.set_euler_target(euler_sp);
 
 			// move toward home
-			yap.pos_control.set_setpoint(home_pos_ne, false);
+			yap.pos_control->set_setpoint(home_pos_ne, false);
 
 			// have we reached home?
 			if (stage == move)
@@ -207,7 +207,7 @@ int flight_mode_RTL::loop(float dt)
 	case down:
 		{
 			// hold position
-			yap.pos_control.set_setpoint(home_pos_ne, false);
+			yap.pos_control->set_setpoint(home_pos_ne, false);
 
 			// go down, using default alt controlling and islanding=true
 			yap.islanding = true;
@@ -218,8 +218,8 @@ int flight_mode_RTL::loop(float dt)
 
 	// position
 	float euler_target[3] = {NAN, NAN, NAN};
-	yap.pos_control.update_controller(dt);
-	yap.pos_control.get_target_angles(euler_target);
+	yap.pos_control->update_controller(dt);
+	yap.pos_control->get_target_angles(euler_target);
 	euler_target[2] = NAN;
 
 	// attitude
@@ -239,8 +239,8 @@ int flight_mode_RTL::loop(float dt)
 	s.pos[0] = ne_pos[0];
 	s.pos[1] = ne_pos[1];
 
-	s.pos_setpoint[0] = yap.pos_control.setpoint[0];
-	s.pos_setpoint[1] = yap.pos_control.setpoint[1];
+	s.pos_setpoint[0] = yap.pos_control_hybird.setpoint[0];
+	s.pos_setpoint[1] = yap.pos_control_hybird.setpoint[1];
 	
 	s.baro_setpoint = yap.alt_controller.baro_target;
 	s.sonar_setpoint = yap.alt_controller.m_sonar_target;

@@ -22,10 +22,10 @@ int flight_mode_poshold::setup()
 	float desired_velocity[2] = {0, 0};
 	float euler_target[3];
 
-	yap.pos_control.provide_attitue_position(euler, ne_pos, ne_velocity);
-	yap.pos_control.set_desired_velocity(desired_velocity);
-	yap.pos_control.get_target_angles(euler_target);
-	yap.pos_control.reset();
+	yap.pos_control->provide_attitue_position(euler, ne_pos, ne_velocity);
+	yap.pos_control->set_desired_velocity(desired_velocity);
+	yap.pos_control->get_target_angles(euler_target);
+	yap.pos_control->reset();
 	euler_target[2] = NAN;
 	yap.attitude_controll.set_euler_target(euler_target);
 
@@ -53,10 +53,10 @@ int flight_mode_poshold::loop(float dt)
 			yap.get_pos_velocity_ned(ne_pos, ne_velocity);
 
 			float euler_target[3] = {NAN, NAN, NAN};
-			yap.pos_control.provide_attitue_position(euler, ne_pos, ne_velocity);
-			yap.pos_control.set_desired_stick(yap.rc);
-			yap.pos_control.update_controller(dt);
-			yap.pos_control.get_target_angles(euler_target);
+			yap.pos_control->provide_attitue_position(euler, ne_pos, ne_velocity);
+			yap.pos_control->set_desired_stick(yap.rc);
+			yap.pos_control->update_controller(dt);
+			yap.pos_control->get_target_angles(euler_target);
 
 			euler_target[2] = NAN;
 			yap.attitude_controll.set_euler_target(euler_target);
