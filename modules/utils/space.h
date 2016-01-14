@@ -8,3 +8,4 @@ int space_write(const void *key, int keysize, const void *data, int num_to_write
 int space_delete(const void *key, int keysize);
 int space_resort();
 int space_available();
+int space_enum(void *key, int *keysize, void *data, int *data_size, int start = -1);

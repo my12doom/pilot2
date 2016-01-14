@@ -6,6 +6,15 @@
 #define PARAM_ENDL "\0\0\0\0"
 
 int all_param_count = -1;
+void init_all_param_count()
+{
+	static bool c = true;
+	if (c)
+	{
+		c = false;
+		all_param_count = -1;
+	}
+}
 struct
 {
 	char fourcc[4];
@@ -28,6 +37,7 @@ param::param()
 void param::init(const char *fourcc, float default_value)
 {
 	// TODO : locks
+	init_all_param_count();
 	if (all_param_count<0)
 		init_all();
 
@@ -37,6 +47,7 @@ void param::init(const char *fourcc, float default_value)
 		{
 			pv = &all_params[i].v;
 			pos = i;
+			
 			return;
 		}
 	}
@@ -75,6 +86,39 @@ void param::init_all()
 {
 	space_init();
 	all_param_count = 0;
+
+	int handle = -1;
+	do
+	{
+		char key[16] = {0};
+		char data[16] = {0};
+		int keysize = 0;
+		int datasize = 0;
+
+		handle = space_enum(key, &keysize, data, &keysize, handle);
+
+		// check duplicated value
+		bool duplicated = false;
+		for(int i=0; i<all_param_count; i++)
+		{
+			if (strncmp(key, all_params[i].fourcc, 4) == 0)
+			{
+				duplicated = true;
+				break;
+			}
+		}
+
+		if (duplicated)
+			continue;
+
+		pos = all_param_count;
+		pv = &all_params[all_param_count].v;
+		memset(all_params[all_param_count].fourcc, 0, 4);
+		strncpy(all_params[all_param_count].fourcc, key, keysize);
+		all_params[all_param_count].v = *(float*)data;
+		all_param_count++;
+	}
+	while(handle > 0);
 }
 
 float *param::find_param(const char *fourcc)

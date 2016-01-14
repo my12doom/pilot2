@@ -221,6 +221,31 @@ int space_read(const void *key, int keysize, void *data, int num_to_read, int *n
 	return -1;
 }
 
+
+int space_enum(void *key, int *keysize, void *data, int *data_size, int start/* = -1*/)
+{	
+	int pos = find_previous_entry(start == -1 ? write_pointer : start);
+
+	while (pos>0)		// >0 instead of >=0, the meta data is not returned
+	{
+		entry_header header;
+		space_virtual_read(pos, &header, sizeof(header));
+
+		if (header.delete_tag == fresh_value)
+		{
+			*keysize = space_virtual_read(pos + sizeof(header), key, header.key_size);
+			*data_size = space_virtual_read(pos + sizeof(header) + (header.key_size+3)/4*4, data, header.data_size);
+
+			return pos - sizeof(entry_footer);
+		}
+
+		pos = find_previous_entry(pos - sizeof(entry_footer));
+	}
+
+	return 0;
+}
+
+
 int space_delete(const void *key, int keysize)
 {
 	int pos = find_previous_entry(write_pointer);
