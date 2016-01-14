@@ -2362,25 +2362,33 @@ int yet_another_pilot::read_rc()
 
 			rc_fail = -1;
 
-			float new_rc_fail_tick = rc_fail_tick + interval;
-			if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
-			{
-				LOGE("rc fail, RTL\n");
-				if (set_mode(RTL) < 0)
-				{
-					LOGE("RTL failed, landing\n");
-					islanding = true;
-				}
-			}
-			rc_fail_tick = new_rc_fail_tick;
 		}
 	}
 	else
 	{
 		rc_fail = 0;
+	}
+
+	// total RC failure handling
+	if (rc_fail < 0)
+	{
+		float new_rc_fail_tick = rc_fail_tick + interval;
+		if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
+		{
+			LOGE("rc fail, RTL\n");
+			if (set_mode(RTL) < 0)
+			{
+				LOGE("RTL failed, landing\n");
+				islanding = true;
+			}
+		}
+		rc_fail_tick = new_rc_fail_tick;
+	}
+	else
+	{
 		rc_fail_tick = 0;
 	}
-	
+
 	// send RC fail event
 	static int last_rc_fail = 0;
 	if (rc_fail != last_rc_fail)
