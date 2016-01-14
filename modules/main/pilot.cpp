@@ -1527,7 +1527,13 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 			LOGE("arm failed: EKF not ready\n");
 			return -1;
 		}
-	}
+
+		// emergency switch
+		if (rc[4] > -0.8f)
+		{
+			LOGE("arm failed: emergency switch\n");
+			return -1;
+		}
 
 	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controll.reset();
