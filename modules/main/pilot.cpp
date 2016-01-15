@@ -2193,7 +2193,10 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	else if (strstr(line, "mag_cal_state") == line)
 	{
 		mag_calibration_stage stage = mag_calibrator.get_stage();
-		sprintf(out, "mag_cal_state,%d,%d\n", mag_calibration_state ? (stage+1) : 0, last_mag_calibration_result);
+		int stage_res = mag_calibration_state ? (stage+1) : 0;
+		if (stage_res == 6)
+			stage_res = 0;
+		sprintf(out, "mag_cal_state,%d,%d\n", stage_res, last_mag_calibration_result);
 		uart->write(out, strlen(out));
 	}
 
