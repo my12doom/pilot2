@@ -1534,6 +1534,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 			LOGE("arm failed: emergency switch\n");
 			return -1;
 		}
+	}
 
 	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controll.reset();
@@ -2356,6 +2357,7 @@ int yet_another_pilot::read_rc()
 			}
 			rc_fail = forced_mobile_controll > 0.5f ? 2 : 1;
 
+			rc[4] = -1;	// "emergency switch"
 			rc[5] = 1;	// use "poshold" mode
 		}
 		else
