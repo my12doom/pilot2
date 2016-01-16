@@ -1797,7 +1797,9 @@ int yet_another_pilot::check_stick_action()
 	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
 	if (g_pwm_input_update[4] > systimer->gettime() - 500000)
 	{		
-		static float last_ch4 = 0;
+		static float last_ch4 = NAN;
+		if (isnan(last_ch4))
+			last_ch4 = rc[4];
 		if (fabs(rc[4]-last_ch4) > 0.20f)
 		{
 			disarm();
