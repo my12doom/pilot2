@@ -164,8 +164,8 @@ int pos_controller::update_state_machine(float dt)
 			if (low_speed_tick > 0.3f)		// speed low enough for a while ( 0.3s currently)
 			{
 				// update new setpoint
-				setpoint[0] = pos[0] + velocity[0] / pos2rate_P;
-				setpoint[1] = pos[1] + velocity[1] / pos2rate_P;
+				setpoint[0] = pos[0] + velocity[0] / pos2rate_P * 0.25f;
+				setpoint[1] = pos[1] + velocity[1] / pos2rate_P * 0.25f;
 
 				LOGE("braking done, new setpoint to %.2f, %.2f\n", setpoint[0], setpoint[1]);
 
