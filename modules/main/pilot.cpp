@@ -1785,7 +1785,7 @@ int yet_another_pilot::check_stick_action()
 			ch5_flip_count = 1;
 		last_ch5_flip_time = systimer->gettime();
 
-		if (ch5_flip_count ==2 && flashlight)
+		if (ch5_flip_count & 2 && flashlight)
 		{
 			LOGE("toggle flashlight\n");
 			flashlight->toggle();
@@ -1795,9 +1795,9 @@ int yet_another_pilot::check_stick_action()
 
 	// emergency switch
 	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
+	static float last_ch4 = NAN;
 	if (g_pwm_input_update[4] > systimer->gettime() - 500000)
 	{		
-		static float last_ch4 = NAN;
 		if (isnan(last_ch4))
 			last_ch4 = rc[4];
 		if (fabs(rc[4]-last_ch4) > 0.20f)
@@ -1823,6 +1823,10 @@ int yet_another_pilot::check_stick_action()
 					reset_mag_cal();
 			}
 		}
+	}
+	else
+	{
+		last_ch4 = NAN;
 	}
 
 	// arm action check: RC first four channel active, throttle minimum, elevator stick down, rudder max or min, aileron max or min, for 0.5second
