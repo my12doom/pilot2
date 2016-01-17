@@ -109,6 +109,24 @@ void sensors::SBusIN::read_uart()
 
 		if (last_frame.endbyte == 0x0b)
 			last_packet_time = systimer->gettime();
+
+		rc_static[0][0] = min(rc_static[0][0], last_frame.ch0);
+		rc_static[0][1] = min(rc_static[0][1], last_frame.ch1);
+		rc_static[0][2] = min(rc_static[0][2], last_frame.ch2);
+		rc_static[0][3] = min(rc_static[0][3], last_frame.ch3);
+		rc_static[0][4] = min(rc_static[0][4], last_frame.ch4);
+		rc_static[0][5] = min(rc_static[0][5], last_frame.ch5);
+		rc_static[0][6] = min(rc_static[0][6], last_frame.ch6);
+		rc_static[0][7] = min(rc_static[0][7], last_frame.ch7);
+
+		rc_static[1][0] = max(rc_static[1][0], last_frame.ch0);
+		rc_static[1][1] = max(rc_static[1][1], last_frame.ch1);
+		rc_static[1][2] = max(rc_static[1][2], last_frame.ch2);
+		rc_static[1][3] = max(rc_static[1][3], last_frame.ch3);
+		rc_static[1][4] = max(rc_static[1][4], last_frame.ch4);
+		rc_static[1][5] = max(rc_static[1][5], last_frame.ch5);
+		rc_static[1][6] = max(rc_static[1][6], last_frame.ch6);
+		rc_static[1][7] = max(rc_static[1][7], last_frame.ch7);
 	}
 }
 
