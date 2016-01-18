@@ -220,10 +220,13 @@ int check_sdcard()
 	// erase
 	erase_rom(&uart);
 
-	// flash
+	// flash, skipping the first 4 bytes for failsafe.
+	// run_rom() will fail if the first 4 bytes failed and enter bootloader mode.
 	f_lseek(&f, 0);
-	left = file_rom_size;
-	uint32_t pos = ApplicationAddress;
+	uint32_t first4bytes = 0;
+	f_read(&f, &first4bytes, 4, &got);
+	left = file_rom_size-4;
+	uint32_t pos = ApplicationAddress+4;
 	FLASH_Unlock();
 	led.write(0,0,0);
 	while (left>0)
@@ -243,6 +246,7 @@ int check_sdcard()
 		int i = left / sizeof(tmp) / 10;
 		led.write(color[i%5][0], color[i%5][1], color[i%5][2]);
 	}
+	FLASH_ProgramWord(ApplicationAddress, first4bytes);
 	FLASH_Lock();
 
 	// save
@@ -366,9 +370,9 @@ void run_rom()
     }
 	
 	// reset system if booting application failed
-	uart.write("failed, rebooting\n", 18);
-	systimer->delayms(200);
-	NVIC_SystemReset();
+	//uart.write("failed, rebooting\n", 18);
+	//systimer->delayms(200);
+	//NVIC_SystemReset();
 }
 
 
