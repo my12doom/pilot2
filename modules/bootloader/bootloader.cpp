@@ -40,8 +40,9 @@ public:
 	ymodem_rec(HAL::IUART*uart):ymodem_receiver(uart)
 	{
 		pos = 0;
+		first4bytes = 0xffffffff;
 	}
-	~ymodem_rec(){}
+	~ymodem_rec(){}	
 	virtual int on_event(void *data, int datasize, ymodem_event event)
 	{
 		//printf("event:%d, %d byte\n", event, datasize);
@@ -49,6 +50,13 @@ public:
 		{
 			for(int i=0; i<datasize/4*4; i+=4)
 			{
+				// skip the first 4 bytes
+				if (pos+i == 0)
+				{
+					first4bytes = *(uint32_t*)((uint8_t*)data+i);
+					continue;
+				}
+				
 				FLASH_ProgramWord(ApplicationAddress+pos+i, *(uint32_t*)((uint8_t*)data+i));
 				FLASH_WaitForLastOperation();
 			}
@@ -57,7 +65,16 @@ public:
 		}
 		return 0;
 	}
+	void finish()
+	{
+		if (first4bytes != 0xffffffff)
+		{
+			FLASH_ProgramWord(ApplicationAddress, first4bytes);
+			FLASH_WaitForLastOperation();
+		}			
+	}
 	int pos;
+	uint32_t first4bytes;
 };
 
 // parameter
@@ -74,6 +91,7 @@ void receive_rom(HAL::IUART *uart)
 	{
 		tmp = rec.run();
 	}while(tmp != ymodem_state_error && tmp != ymodem_transition_ended);
+	rec.finish();
 	FLASH_Lock();
 }
 
