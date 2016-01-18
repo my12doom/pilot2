@@ -14,7 +14,7 @@
 
 // BSP
 using namespace STM32F4;
-F4UART uart1(USART1);
+F4UART uart(UART4);
 dev_v2::RGBLED led;
 
 // constants
@@ -218,7 +218,7 @@ int check_sdcard()
 
 
 	// erase
-	erase_rom(&uart1);
+	erase_rom(&uart);
 
 	// flash
 	f_lseek(&f, 0);
@@ -334,11 +334,11 @@ int main()
 	if (memcmp(bkp, "hello", 6))
 		run_rom();
 	
-	//uart1.set_baudrate(115200);
-	F4UART vcp(USART1);
+	uart.set_baudrate(57600);
+	F4VCP vcp;
 	while(1)
 	{
-		handle_uart(uart1);
+		handle_uart(uart);
 		handle_uart(vcp);
 	}
 }
@@ -350,7 +350,7 @@ void run_rom()
     if (((*(vu32*)ApplicationAddress) & 0x2FFE0000 ) == 0x20000000)
     { 
         // TODO: close all BSP
-		uart1.destroy();
+		uart.destroy();
 		SysTick->CTRL  &= ~SysTick_CTRL_ENABLE_Msk;                    // Disable SysTick
 		
 		FLASH_Lock();
@@ -366,7 +366,7 @@ void run_rom()
     }
 	
 	// reset system if booting application failed
-	uart1.write("failed, rebooting\n", 18);
+	uart.write("failed, rebooting\n", 18);
 	systimer->delayms(200);
 	NVIC_SystemReset();
 }

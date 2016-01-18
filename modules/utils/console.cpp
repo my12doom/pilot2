@@ -381,6 +381,18 @@ extern "C" int parse_command_line(const char *line, char *out)
 		rom_size.save();
 	}
 
+	else if (strstr(line, "bootloader") == line)
+	{
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
+		PWR_BackupAccessCmd(ENABLE);
+
+		void * bkp = (void*)0x40024000;
+		memcpy(bkp, "hello", 6);
+
+		reset_system();
+	}
+
 	else if (strstr(line, "accel_cal_state") == line)
 	{
 		if (!yap.acc_cal_requested)
