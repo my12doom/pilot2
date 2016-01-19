@@ -383,9 +383,12 @@ extern "C" int parse_command_line(const char *line, char *out)
 
 	else if (strstr(line, "bootloader") == line)
 	{
+		RCC->APB1RSTR &= ~RCC_APB1RSTR_PWRRST; 		// clear RCC_APB1RSTR_PWRRST
 		RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
 		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
 		PWR_BackupAccessCmd(ENABLE);
+		RCC_RTCCLKConfig(RCC_RTCCLKSource_HSE_Div4);
+		RCC_RTCCLKCmd(ENABLE);
 
 		void * bkp = (void*)0x40024000;
 		memcpy(bkp, "hello", 6);

@@ -351,17 +351,16 @@ int main()
 	check_sdcard();
 	led.write(0,0,0);
 
-	//if (check_rom_crc())
-	void * bkp = (void*)0x40024000;
+	void * bkp = (void*)0x40002850;
 	if (memcmp(bkp, "hello", 6))
 		run_rom();
 	
 	uart.set_baudrate(57600);
-	F4VCP vcp;
+	//F4VCP vcp;
 	while(1)
 	{
 		handle_uart(uart);
-		handle_uart(vcp);
+		//handle_uart(vcp);
 	}
 }
 
@@ -380,6 +379,8 @@ void run_rom()
         /* Jump to user application */
         FunVoidType JumpToApplication = (FunVoidType) *(vu32*) (ApplicationAddress + 4);
 
+		// clear bootloader flag
+		*(uint32_t *)0x40002850 = 0;
         /* Initialize user application's Stack Pointer */
         //__MSR_MSP(*(vu32*) ApplicationAddress);
 		__set_MSP(*(vu32*) ApplicationAddress);
