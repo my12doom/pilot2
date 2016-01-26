@@ -2347,7 +2347,7 @@ int yet_another_pilot::read_rc()
 	
 	// check rf fail
 	// rc no signel for 0.5 seconds, or -10% or less throttle
-	bool rf_fail = false;
+	bool rf_fail = rcin->state() == RCIN_Fail;
 	for(int i=0; i<4; i++)
 		if (g_pwm_input_update[i] < systimer->gettime() - 500000)
 			rf_fail = true;

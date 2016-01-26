@@ -132,6 +132,17 @@ int sensors::SBusIN::reset_statistics()
 	return 0;
 }
 
+HAL::RCIN_State sensors::SBusIN::state()
+{
+	if (systimer->gettime() > last_packet_time + 500000)
+		return HAL::RCIN_Fail;
+
+	if (last_frame.flag & 0x8)
+		return HAL::RCIN_Fail;
+
+	return HAL::RCIN_Normal;
+}
+
 void sensors::SBusIN::read_uart()
 {
 	// search startbytes

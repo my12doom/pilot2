@@ -34,6 +34,8 @@ namespace sensors
 		virtual int get_statistics_data(int16_t *min_out, int16_t *max_out, int start_channel, int max_count);
 		virtual int reset_statistics();
 
+		virtual HAL::RCIN_State state();
+
 	protected:
 		void read_uart();
 		HAL::IUART *port;
