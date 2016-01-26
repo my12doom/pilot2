@@ -115,6 +115,7 @@ void erase_rom(HAL::IUART *uart)
 	led.write(1,1,1);
 	uint32_t pages[] =
 	{
+#ifndef STM32F446RC		
 		FLASH_Sector_2,
 		FLASH_Sector_3,
 		FLASH_Sector_4,
@@ -123,6 +124,10 @@ void erase_rom(HAL::IUART *uart)
 		FLASH_Sector_7,
 		FLASH_Sector_8,
 		FLASH_Sector_9,
+#else
+		FLASH_Sector_4,
+		FLASH_Sector_5,
+#endif
 	};
 	
 	FLASH_Unlock();
@@ -348,7 +353,7 @@ int main()
 	PWR_BackupAccessCmd(ENABLE);
 
 	//RDP();
-	check_sdcard();
+	//check_sdcard();
 	led.write(0,0,0);
 
 	void * bkp = (void*)0x40002850;

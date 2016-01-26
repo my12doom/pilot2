@@ -29,4 +29,12 @@ namespace STM32F4
 		~BootloaderStorage(){};
 		virtual int erase(int address);
 	};
+	
+	class RCStorage:public F4Storage
+	{
+	public:
+		RCStorage();
+		~RCStorage(){};
+		virtual int erase(int address);
+	};
 }

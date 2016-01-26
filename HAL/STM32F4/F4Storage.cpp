@@ -71,12 +71,26 @@ namespace STM32F4
 		res = FLASH_EraseSector(FLASH_Sector_1, VoltageRange_3);
 		return res;
 	}
-	
+
+	RCStorage::RCStorage()
+	:F4Storage(0x4000, 0x8000, 0x08008000)
+	{
+	}
+	int RCStorage::erase(int address)
+	{
+		// erase all...
+		FLASH_Status res = FLASH_EraseSector(address >= start_address + page__size ? FLASH_Sector_3 : FLASH_Sector_2, VoltageRange_1);
+	}
 }
 
 HAL::IStorage *get_default_storage()
 {
+#ifdef STM32F446RC
+	static STM32F4::RCStorage theDefaultStorage;
+#else
 	static STM32F4::F4Storage theDefaultStorage;
+#endif
+	
 	return &theDefaultStorage;
 }
 
