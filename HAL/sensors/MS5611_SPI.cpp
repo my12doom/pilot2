@@ -213,6 +213,14 @@ bool MS5611_SPI::check_crc(uint16_t *n_prom)
 	uint8_t n_bit;
 
 	n_rem = 0x00;
+	
+	bool all_zero = true;
+	for(int i=0; i<8; i++)
+		if (n_prom[i] != 0)
+			all_zero = false;
+	
+	if (all_zero)
+		return false;
 
 	/* save the read crc */
 	crc_read = n_prom[7];
