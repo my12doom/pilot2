@@ -311,8 +311,8 @@ int bsp_init_all()
 	//init_external_compass();
 	init_asyncworker();
 	init_led();
-	init_flow();
 	init_GPS();
+	init_flow();
 	
 	// parameter config
 	param bsp_parameter("BSP", 1);
