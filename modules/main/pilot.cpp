@@ -1788,7 +1788,8 @@ int yet_another_pilot::check_stick_action()
 		if (ch5_flip_count & 2 && flashlight)
 		{
 			LOGE("toggle flashlight\n");
-			flashlight->toggle();
+			if (flashlight)
+				flashlight->toggle();
 		}
 
 	}
@@ -2341,7 +2342,7 @@ int yet_another_pilot::read_rc()
 		rc[i] = ppm2rc(g_pwm_input[i], rc_setting[i][0], rc_setting[i][1], rc_setting[i][2], rc_setting[i][3] > 0);
 		TRACE("%.2f,", rc[i]);
 	}
-
+	
 	rc[2] = (rc[2]+1)/2;
 	
 	// check rf fail

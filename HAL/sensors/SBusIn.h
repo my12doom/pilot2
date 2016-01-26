@@ -3,28 +3,13 @@
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
 
-typedef struct struct_sbus_frame
+typedef struct struct_sbus_data
 {
 	uint8_t startbyte;
-	unsigned ch0:11;
-	unsigned ch1:11;
-	unsigned ch2:11;
-	unsigned ch3:11;
-	unsigned ch4:11;
-	unsigned ch5:11;
-	unsigned ch6:11;
-	unsigned ch7:11;
-	unsigned ch8:11;
-	unsigned ch9:11;
-	unsigned ch10:11;
-	unsigned ch11:11;
-	unsigned ch12:11;
-	unsigned ch13:11;
-	unsigned ch14:11;
-	unsigned ch15:11;
+	int16_t data[16];
 	uint8_t flag;
 	uint8_t endbyte;
-} sbus_frame;
+} sbus_data;
 
 namespace sensors
 {
@@ -53,7 +38,7 @@ namespace sensors
 		void read_uart();
 		HAL::IUART *port;
 		int64_t last_packet_time;
-		sbus_frame last_frame;
+		sbus_data last_frame;
 		int16_t rc_static[2][8];
 	};
 }

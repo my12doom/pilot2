@@ -195,7 +195,7 @@ int MPU6000::init()
 	
 	systimer->delayms(10);
 
-	if (who_am_i != 0x68)
+	if (who_am_i != 0x68 && who_am_i != 0x71)
 		return -1;
 	
 	m_healthy = true;
