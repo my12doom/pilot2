@@ -244,18 +244,6 @@ int bsp_init_all()
 	param bsp_parameter("BSP", 1);
 	if (bsp_parameter)
 	{
-		// remote
-		for(int i=0; i<6; i++)
-		{
-			char tmp[5]="rcx1";
-			tmp[2] = i + '0';
-			param center(tmp, 1500);
-			center = 1500;
-		}
-		param("rc51", 2000) = 2000;
-		param("rc52", 3000) = 3000;
-		param("rc53", 1) = 1;
-
 		// ESC
 		param("tmax", 1900) = 1900;
 		param("tmin", 1100) = 1100;
@@ -279,12 +267,7 @@ int bsp_init_all()
 		param("rP3", 1.2f)=1.2f;
 		param("rI3", 0.15f)=0.15f;
 		
-		// tilt angle
-		param("rngR", PI / 8)= PI / 8;
-		param("rngP", PI / 8)= PI / 8;
-
 		// frame
-		param("mat", 1)=1;
 		param("ekf", 0)=1;
 		param("time", 3000)=5000;
 	}
