@@ -14,7 +14,7 @@
         <TargetCommonOption>
           <Device>STM32F405RG</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32F4xx_DFP.1.0.8</PackID>
+          <PackID>Keil.STM32F4xx_DFP.2.6.0</PackID>
           <PackURL>http://www.keil.com/pack</PackURL>
           <Cpu>IROM(0x08000000,0x100000) IRAM(0x20000000,0x20000) IRAM2(0x10000000,0x10000) CPUTYPE("Cortex-M4") FPU2 CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -349,8 +349,8 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>4</Optim>
-            <oTime>1</oTime>
+            <Optim>1</Optim>
+            <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
             <Strict>0</Strict>
@@ -848,6 +848,21 @@
               <FileName>PCA963x.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\sensors\PCA963x.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>SBusIn.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\SBusIn.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>EBusIn.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\EBusIn.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>EBusIn.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\HAL\sensors\EBusIn.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -1426,7 +1441,7 @@
               <RVCTZI>0</RVCTZI>
               <RVCTOtherData>0</RVCTOtherData>
               <ModuleSelection>0</ModuleSelection>
-              <IncludeInBuild>1</IncludeInBuild>
+              <IncludeInBuild>0</IncludeInBuild>
               <AlwaysBuild>2</AlwaysBuild>
               <GenerateAssemblyFile>2</GenerateAssemblyFile>
               <AssembleAssemblyFile>2</AssembleAssemblyFile>
@@ -1678,6 +1693,46 @@
               <FileName>ned2body.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\modules\Algorithm\ekf_lib\src\ned2body.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>BSP_minidrone</GroupName>
+          <Files>
+            <File>
+              <FileName>AsyncWorker.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\minidrone_v1\AsyncWorker.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>AsyncWorker.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\BSP\boards\minidrone_v1\AsyncWorker.h</FilePath>
+            </File>
+            <File>
+              <FileName>init.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\minidrone_v1\init.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RCOUT.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\minidrone_v1\RCOUT.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RCOUT.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\BSP\boards\minidrone_v1\RCOUT.h</FilePath>
+            </File>
+            <File>
+              <FileName>RGBLED.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\minidrone_v1\RGBLED.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RGBLED.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\BSP\boards\minidrone_v1\RGBLED.h</FilePath>
             </File>
           </Files>
         </Group>
