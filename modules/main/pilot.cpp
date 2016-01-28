@@ -917,9 +917,12 @@ int yet_another_pilot::read_imu_and_filter()
 	}
 	if (healthy_gyro_count == 0)
 		critical_errors |= error_gyro;
-	gyro.V.x /= healthy_gyro_count;
-	gyro.V.y /= healthy_gyro_count;
-	gyro.V.z /= healthy_gyro_count;
+	else
+	{
+		gyro.V.x /= healthy_gyro_count;
+		gyro.V.y /= healthy_gyro_count;
+		gyro.V.z /= healthy_gyro_count;
+	}
 
 	// read accelerometers
 	int healthy_acc_count = 0;
@@ -939,9 +942,12 @@ int yet_another_pilot::read_imu_and_filter()
 	}
 	if (healthy_acc_count == 0)
 		critical_errors |= error_accelerometer;
-	acc.V.x /= healthy_acc_count;
-	acc.V.y /= healthy_acc_count;
-	acc.V.z /= healthy_acc_count;
+	else
+	{
+		acc.V.x /= healthy_acc_count;
+		acc.V.y /= healthy_acc_count;
+		acc.V.z /= healthy_acc_count;
+	}
 	
 	// read magnetometer and barometer since we don't have lock support and it is connected to same SPI bus with gyro and acceleromter
 	if (!imu_data_lock)
@@ -964,9 +970,12 @@ int yet_another_pilot::read_imu_and_filter()
 		}
 		if (healthy_mag_count == 0)
 			critical_errors |= error_magnet;
-		mag.V.x /= healthy_mag_count;
-		mag.V.y /= healthy_mag_count;
-		mag.V.z /= healthy_mag_count;
+		else
+		{
+			mag.V.x /= healthy_mag_count;
+			mag.V.y /= healthy_mag_count;
+			mag.V.z /= healthy_mag_count;
+		}
 
 		if (vcp && (usb_data_publish & data_publish_imu))
 		{
@@ -1401,7 +1410,7 @@ int yet_another_pilot::sensor_calibration()
 	{
 		read_imu_and_filter();
 		read_sensors();
-		if (critical_errors & (error_baro | error_gyro | error_magnet | error_accelerometer))
+		if ((critical_errors & (~int(ignore_error))) & (error_baro | error_gyro | error_magnet | error_accelerometer))
 			return -2;
 		if (detect_gyro.new_data(gyro_reading))
 			return -1;
@@ -1771,7 +1780,7 @@ int yet_another_pilot::start_taking_off()
 
 int yet_another_pilot::check_stick_action()
 {
-	if (critical_errors)
+	if (critical_errors & (~int(ignore_error)) )
 	{
 		disarm();
 		return -1;
@@ -2545,7 +2554,7 @@ int yet_another_pilot::stupid_joystick()
 int yet_another_pilot::light_words()
 {
 	// critical errors
-	if (critical_errors != 0)
+	if (critical_errors & (~int(ignore_error)) != 0)
 	{
 		static int last_critical_errors = 0;
 		if (last_critical_errors != critical_errors)
