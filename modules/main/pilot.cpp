@@ -20,8 +20,8 @@ using namespace devices;
 using namespace math;
 
 // constants
-#define THROTTLE_STOP (max((int)(isnan(pwm_override_min)? (rc_setting[2][0]-20):pwm_override_min),1000))
-#define THROTTLE_MAX (min((int)(isnan(pwm_override_max)? (rc_setting[2][2]-20) : pwm_override_max),2000))
+#define THROTTLE_STOP ((int)(isnan(pwm_override_min)? max(rc_setting[2][0]-20,1000):pwm_override_min))
+#define THROTTLE_MAX ((int)(isnan(pwm_override_max)? min(rc_setting[2][2]-20,2000) : pwm_override_max))
 #define SAFE_ON(x) if(x) (x)->on()
 #define SAFE_OFF(x) if(x) (x)->off()
 #define MAX_MOTOR_COUNT 8
@@ -43,6 +43,8 @@ static param quadcopter_auto_landing_rate_fast("flrt", 1.5f);		// absolute value
 static param quadcopter_auto_landing_rate_final("lrat", 0.5f);		// absolute value of final approach speed in meter/s
 static param max_altitude("limV", 100);
 static param max_distance("limH", 100);
+static param ignore_error("err",0);
+
 static param quadcopter_trim[3] = 
 {
 	param("trmR", 0 * PI / 18),				// roll
