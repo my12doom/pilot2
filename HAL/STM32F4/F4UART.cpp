@@ -108,18 +108,33 @@ namespace STM32F4
 			RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
 			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
 			//Set Uart4 bind to GPIOD pin5|pin6
-			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+//			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+//			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+//			GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+//			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+//			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+//			GPIO_Init(GPIOD, &GPIO_InitStructure);
+//			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+//			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+//			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+//			GPIO_Init(GPIOD, &GPIO_InitStructure);
+//			GPIO_PinAFConfig(GPIOD, GPIO_PinSource5, GPIO_AF_USART2);
+//			GPIO_PinAFConfig(GPIOD, GPIO_PinSource6, GPIO_AF_USART2);
+			
+			//Set Uart4 bind to GPIOA pin2|pin3
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
 			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 			GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-			GPIO_Init(GPIOD, &GPIO_InitStructure);
-			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+			GPIO_Init(GPIOA, &GPIO_InitStructure);
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
 			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-			GPIO_Init(GPIOD, &GPIO_InitStructure);
-			GPIO_PinAFConfig(GPIOD, GPIO_PinSource5, GPIO_AF_USART2);
-			GPIO_PinAFConfig(GPIOD, GPIO_PinSource6, GPIO_AF_USART2);
+			GPIO_Init(GPIOA, &GPIO_InitStructure);
+			GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2);
+			GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2);
+
 			// NVIC config
 			NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
