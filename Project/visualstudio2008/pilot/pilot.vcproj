@@ -514,6 +514,14 @@
 					Name="Device"
 					>
 					<File
+						RelativePath="..\..\..\HAL\sensors\ads1115.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\HAL\sensors\ads1115.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\..\HAL\sensors\HMC5983SPI.cpp"
 						>
 					</File>

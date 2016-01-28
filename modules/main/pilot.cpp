@@ -888,16 +888,6 @@ int yet_another_pilot::read_sensors()
 	}
 	avg_count ++;
 
-	// voltage and current sensors	
-	float alpha = interval / (interval + 1.0f/(2*PI * 2.0f));		// 2hz low pass filter
-	if (manager.getBatteryVoltage("BatteryVoltage"))
-		voltage = voltage * (1-alpha) + alpha * manager.getBatteryVoltage("BatteryVoltage")->read();
-	if (manager.getBatteryVoltage("BatteryCurrent"))
-		current = current * (1-alpha) + alpha * manager.getBatteryVoltage("BatteryCurrent")->read();	
-	
-	mah_consumed += fabs(current) * interval / 3.6f;	// 3.6 mah = 1As
-
-
 	return 0;
 }
 
@@ -1120,6 +1110,21 @@ int yet_another_pilot::read_imu_and_filter()
 						gyro.V.x * 18000 / PI, gyro.V.y * 18000 / PI, gyro.V.z * 18000 / PI,};
 
 	//log2(data, 5, sizeof(data));
+
+	// voltage and current sensors	
+	float alpha = interval / (interval + 1.0f/(2*PI * 2.0f));		// 2hz low pass filter
+	if (manager.getBatteryVoltage("BatteryVoltage"))
+		voltage = voltage * (1-alpha) + alpha * manager.getBatteryVoltage("BatteryVoltage")->read();
+	else
+		voltage = NAN;
+	if (manager.getBatteryVoltage("BatteryCurrent"))
+		current = current * (1-alpha) + alpha * manager.getBatteryVoltage("BatteryCurrent")->read();	
+	else
+		current = NAN;
+
+	mah_consumed += fabs(current) * interval / 3.6f;	// 3.6 mah = 1As
+
+
 
 	return 0;
 }
@@ -2434,7 +2439,7 @@ int yet_another_pilot::read_rc()
 
 int yet_another_pilot::lowpower_handling()
 {
-	if (interval > 0.1f)
+	if (interval > 0.1f || isnan(voltage) || isnan(current))
 		return -1;
 	
 	static float lowpower1 = 0;

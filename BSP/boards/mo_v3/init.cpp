@@ -17,6 +17,7 @@
 #include <HAL/sensors/MPU6000.h>
 #include <HAL/sensors/HMC5983SPI.h>
 #include <HAL/sensors/MS5611_SPI.h>
+#include <HAL/sensors/ADS1115.h>
 
 extern "C" const char bsp_name[] = "mo_v3";
 
@@ -171,24 +172,58 @@ int init_asyncworker()
 	return 0;
 }
 
+class ADS1115BatterySensor :public IBatteryVoltage
+{
+public:
+	ADS1115BatterySensor(ADS1115 *ads, ads1115_channel channel, ads1115_speed speed, float offset, float scale)
+	{
+		this->offset = offset;
+		this->scale = scale;
+		this->ads = ads;
+		ads->new_work(speed, channel, gain_4V, &data); 
+		data = 0;
+		n = 0;
+	}
+	~ADS1115BatterySensor(){}
+	virtual float read()
+	{
+		if (n++ % 10 == 0)
+			ads->go_on();
+		
+		return ( data * 4.096 / 32767 + offset) * scale;
+	}
+
+protected:
+	int n;
+	ADS1115 *ads;
+	int16_t data;
+	float offset;
+	float scale;
+};
+
 void init_BatteryMonitor()
 {
-	static F4ADC ref25(ADC1,ADC_Channel_4);
-	static F4ADC f4adc1_Ch8(ADC1,ADC_Channel_8);	
-	static F4ADC f4adc1_Ch2(ADC1,ADC_Channel_2);
-	static F4ADC vcc5v_half_adc(ADC1,ADC_Channel_3);
+	F4GPIO SCL(GPIOB, GPIO_Pin_14);
+	F4GPIO SDA(GPIOB, GPIO_Pin_15);
+	I2C_SW i2c(&SCL, &SDA);
+	ADS1115 ads;
 	
-	static ADCBatteryVoltage battery_voltage(&f4adc1_Ch2, 3.3f/4095*(150.0f+51.0f)/51.0f, &ref25, 2.495f/3.3f*4095);
-	static ADCBatteryVoltage vcc5v(&vcc5v_half_adc, 3.3f*2/4095, &ref25, 2.495f/3.3f*4095);
-	static ADCBatteryVoltage vcc5v_half(&vcc5v_half_adc, 3.3f/4095, &ref25, 2.495f/3.3f*4095);
-	static ADCBatteryVoltage current_ad(&f4adc1_Ch8, 3.3f/4095);
-	static differential_monitor battery_current(&vcc5v_half, &current_ad, 1/0.066f);
-	static ADCReference vcc(&ref25, 2.495f, 4095);
-
-	manager.register_BatteryVoltage("BatteryVoltage",&battery_voltage);
-	manager.register_BatteryVoltage("BatteryCurrent", &battery_current);
-	manager.register_BatteryVoltage("5V", &vcc5v);
-	manager.register_BatteryVoltage("vcc", &vcc);
+	if (ads.init(&i2c, 0x90) == 0)
+	{
+		printf("ads1115 found\n");
+		static F4GPIO SCL(GPIOB, GPIO_Pin_14);
+		static F4GPIO SDA(GPIOB, GPIO_Pin_15);
+		static I2C_SW i2c(&SCL, &SDA);
+		static ADS1115 ads;
+		ads.init(&i2c, 0x90);
+		
+		static ADS1115BatterySensor voltage(&ads, channnel_AIN0, speed_860sps, 0, 11);
+		static ADS1115BatterySensor current(&ads, channnel_AIN1, speed_860sps, 0, 1.0f/0.001f*1000.0f/110000.0f);
+		
+		manager.register_BatteryVoltage("BatteryVoltage",&voltage);
+		manager.register_BatteryVoltage("BatteryCurrent", &current);
+		
+	};	
 }
 
 int init_flow()
@@ -244,11 +279,6 @@ int bsp_init_all()
 	param bsp_parameter("BSP", 1);
 	if (bsp_parameter)
 	{
-		// ESC
-		param("tmax", 1900) = 1900;
-		param("tmin", 1100) = 1100;
-		param("idle", 1100) = 1240;
-
 		// alt hold
 		param("accP", 0.12) = 0.12;
 		param("accI", 0.24) = 0.24;
@@ -270,7 +300,7 @@ int bsp_init_all()
 		// frame
 		param("ekf", 0)=1;
 		param("time", 3000)=5000;
-	}
+	}	
 	
 	return 0;
 }
