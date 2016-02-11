@@ -530,6 +530,14 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\..\HAL\sensors\IST8307A.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\HAL\sensors\IST8307A.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\..\HAL\sensors\MPU6000.cpp"
 						>
 					</File>
