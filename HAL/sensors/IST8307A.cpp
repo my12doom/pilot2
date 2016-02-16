@@ -203,9 +203,9 @@ int IST8307A::read(devices::mag_data *out)
 	}
 	
 	
-	out->x = last_data[axis[0]] * 0.03f * negtive[0];		// to milli-gauss (1mGauss = 0.1 uT, sensitivity = 3.3 LSB/uT = 33LSB/mGauss)
-	out->y = last_data[axis[1]] * 0.03f * negtive[1];
-	out->z = last_data[axis[2]] * 0.03f * negtive[2];
+	out->x = last_data[axis[0]] * 3.00f * negtive[0];		// to milli-gauss (1mGauss = 0.1 uT, sensitivity = 3.3 LSB/uT = 0.33LSB/mGauss)
+	out->y = last_data[axis[1]] * 3.00f * negtive[1];
+	out->z = last_data[axis[2]] * 3.00f * negtive[2];
 	out->temperature = NAN;
 	
 	return 0;
