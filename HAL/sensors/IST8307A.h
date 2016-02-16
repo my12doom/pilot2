@@ -17,7 +17,6 @@ namespace sensors
 
 		// data[0 ~ 7] :
 		// accel_x, accel_y, accel_z, raw_temperature, gyro_x, gyro_y, gyro_z
-		int read(short *data);
 		int read_reg(uint8_t reg, void *out, int count);
 		int write_reg_core(uint8_t reg, uint8_t data);
 		int write_reg(uint8_t reg, uint8_t data);
@@ -32,5 +31,7 @@ namespace sensors
 		int axis[3];
 		int negtive[3];
 		bool m_healthy;
+		short last_data[3];
+		float cross_axis_matrix[3][3];
 	};
 }
