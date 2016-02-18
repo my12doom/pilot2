@@ -31,7 +31,7 @@ namespace sensors
 		int axis[3];
 		int negtive[3];
 		bool m_healthy;
-		short last_data[3];
+		float last_data[3];
 		float cross_axis_matrix[3][3];
 	};
 }

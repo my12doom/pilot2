@@ -182,6 +182,8 @@ int IST8307A::read(devices::mag_data *out)
 	uint8_t stat = 0;
 	read_reg(IST8307_REG_STAT1, &stat, 1);
 
+	int v = 0;
+
 	if (stat == 1)
 	{
 		// data ready, read it and start new one
@@ -193,13 +195,11 @@ int IST8307A::read(devices::mag_data *out)
 		// cross axis correction
 		for(int i=0; i<3; i++)
 			last_data[i] = data[0] * cross_axis_matrix[i][0] + data[1] * cross_axis_matrix[i][1] + data[2] * cross_axis_matrix[i][2];
-
-		// copy
-		printf("data = %d,%d,%d\n", last_data[0], last_data[1], last_data[2]);
 	}
 	else
 	{
-		// no data, return last data
+		// no new data, return last data
+		v = 1;
 	}
 	
 	
@@ -208,7 +208,7 @@ int IST8307A::read(devices::mag_data *out)
 	out->z = last_data[axis[2]] * 3.00f * negtive[2];
 	out->temperature = NAN;
 	
-	return 0;
+	return v;
 }
 
 int IST8307A::axis_config(int x, int y, int z, int negtivex, int negtivey, int negtivez)

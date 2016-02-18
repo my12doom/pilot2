@@ -726,53 +726,7 @@ int yet_another_pilot::save_logs()
 }
 
 int yet_another_pilot::read_sensors()
-{
-	if (manager.get_flow_count())
-	{
-		sensors::IFlow *flow = manager.get_flow(0);
-
-		if (flow->read_flow(&frame) < 0)
-			sonar_distance = NAN;
-		else
-		{
-			static int last_frame_count = 0;
-			if (last_frame_count != frame.frame_count && vcp && (usb_data_publish & data_publish_flow))
-			{
-				last_frame_count = frame.frame_count;
-
-				if (usb_data_publish & data_publish_binary)
-				{
-					usb_flow_data data = 
-					{
-						systimer->gettime(),
-						frame.pixel_flow_x_sum,
-						frame.pixel_flow_y_sum,
-						frame.ground_distance,
-					};
-
-					send_package(&data, sizeof(data), data_publish_flow, vcp);
-				}
-				else
-				{
-					char tmp[100];
-					sprintf(tmp, "flow:%.3f,%d,%d,%f\n", systimer->gettime()/1000000.0f, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.ground_distance/1000.0f);
-					vcp->write(tmp, strlen(tmp));
-				}
-			}
-
-			sonar_distance = frame.ground_distance / 1000.0f;
-			if (sonar_distance <= SONAR_MIN || sonar_distance >= SONAR_MAX)
-				sonar_distance = NAN;
-			
-			//float flowx = frame.pixel_flow_x_sum - body_rate.array[0] * 18000/PI * 0.006f;
-			//float floay = frame.pixel_flow_y_sum - body_rate.array[1] * 18000/PI * 0.006f;
-
-			//frame.gyro_x_rate = flowx;
-			//frame.gyro_y_rate = floay;
-		}
-	}
-
-	
+{	
 	if (range_finder)
 	{
 		range_finder->trigger();
@@ -950,8 +904,12 @@ int yet_another_pilot::read_imu_and_filter()
 	}
 	
 	// read magnetometer and barometer since we don't have lock support and it is connected to same SPI bus with gyro and acceleromter
-	if (!imu_data_lock)
+	// at lower rate (50hz)
+	static int64_t last_mag_read = 0;
+	if (!imu_data_lock && systimer->gettime() - last_mag_read > 20000)
 	{
+		last_mag_read = systimer->gettime();
+
 		// read magnetometers
 		int healthy_mag_count = 0;
 		for(int i=0; i<manager.get_magnetometer_count(); i++)
@@ -1098,6 +1056,56 @@ int yet_another_pilot::read_imu_and_filter()
 	{
 		for(int i=0; i<3; i++)
 			accel_lpf2p[i].apply(acc.array[i]);
+	}
+
+
+	// read optical flow @ 100hz
+	static int64_t last_flow_reading = 0;
+	if (manager.get_flow_count() && systimer->gettime() - last_flow_reading > 10000)
+	{
+		last_flow_reading = systimer->gettime();
+
+		sensors::IFlow *flow = manager.get_flow(0);
+
+		if (flow->read_flow(&frame) < 0)
+			sonar_distance = NAN;
+		else
+		{
+			static int last_frame_count = 0;
+			if (last_frame_count != frame.frame_count && vcp && (usb_data_publish & data_publish_flow))
+			{
+				last_frame_count = frame.frame_count;
+
+				if (usb_data_publish & data_publish_binary)
+				{
+					usb_flow_data data = 
+					{
+						systimer->gettime(),
+						frame.pixel_flow_x_sum,
+						frame.pixel_flow_y_sum,
+						frame.ground_distance,
+					};
+
+					send_package(&data, sizeof(data), data_publish_flow, vcp);
+				}
+				else
+				{
+					char tmp[100];
+					sprintf(tmp, "flow:%.3f,%d,%d,%f\n", systimer->gettime()/1000000.0f, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.ground_distance/1000.0f);
+					vcp->write(tmp, strlen(tmp));
+				}
+			}
+
+			sonar_distance = frame.ground_distance / 1000.0f;
+			if (sonar_distance <= SONAR_MIN || sonar_distance >= SONAR_MAX)
+				sonar_distance = NAN;
+
+			//float flowx = frame.pixel_flow_x_sum - body_rate.array[0] * 18000/PI * 0.006f;
+			//float floay = frame.pixel_flow_y_sum - body_rate.array[1] * 18000/PI * 0.006f;
+
+			//frame.gyro_x_rate = flowx;
+			//frame.gyro_y_rate = floay;
+		}
 	}
 	
 	
@@ -2554,7 +2562,8 @@ int yet_another_pilot::stupid_joystick()
 int yet_another_pilot::light_words()
 {
 	// critical errors
-	if (critical_errors & (~int(ignore_error)) != 0)
+	int a = ~int(ignore_error);
+	if (critical_errors & (~int(ignore_error)))
 	{
 		static int last_critical_errors = 0;
 		if (last_critical_errors != critical_errors)
