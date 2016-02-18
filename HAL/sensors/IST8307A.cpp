@@ -122,6 +122,7 @@ IST8307A::IST8307A()
 int IST8307A::init(HAL::II2C *i2c)
 {
 	this->i2c = i2c;
+	i2c->set_speed(20);
 	m_healthy = false;
 	uint8_t tmp = 0;
 	memset(last_data, 0, sizeof(last_data));
