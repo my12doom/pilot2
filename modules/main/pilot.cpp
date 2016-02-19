@@ -906,9 +906,11 @@ int yet_another_pilot::read_imu_and_filter()
 	// read magnetometer and barometer since we don't have lock support and it is connected to same SPI bus with gyro and acceleromter
 	// at lower rate (50hz)
 	static int64_t last_mag_read = 0;
+	bool got_mag = false;
 	if (!imu_data_lock && systimer->gettime() - last_mag_read > 20000)
 	{
 		last_mag_read = systimer->gettime();
+		got_mag = true;
 
 		// read magnetometers
 		int healthy_mag_count = 0;
@@ -1040,7 +1042,7 @@ int yet_another_pilot::read_imu_and_filter()
 	}
 	
 	// copy mag
-	if (!imu_data_lock)
+	if (!imu_data_lock && got_mag)
 		this->mag = mag;
 
 	// apply a 40hz 2nd order LPF to accelerometer readings
