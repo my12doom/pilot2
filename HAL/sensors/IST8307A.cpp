@@ -195,7 +195,7 @@ int IST8307A::read(devices::mag_data *out)
 
 		// cross axis correction
 		for(int i=0; i<3; i++)
-			last_data[i] = data[0] * cross_axis_matrix[i][0] + data[1] * cross_axis_matrix[i][1] + data[2] * cross_axis_matrix[i][2];
+			last_data[i] = data[0] * cross_axis_matrix[0][i] + data[1] * cross_axis_matrix[1][i] + data[2] * cross_axis_matrix[2][i];
 	}
 	else
 	{
