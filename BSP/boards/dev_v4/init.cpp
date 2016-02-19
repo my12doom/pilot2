@@ -14,6 +14,7 @@
 #include <utils/param.h>
 #include "RGBLED.h"
 #include <HAL\STM32F4\F4UART.h>
+#include <HAL/sensors/IST8307A.h>
 
 extern "C" const char bsp_name[] = "v4";
 
@@ -147,6 +148,41 @@ int init_external_compass()
 		hmc5983.axis_config(0, 2, 1, +1, +1, +1);
 
 		manager.register_magnetometer(&hmc5983);
+			}
+
+	return 0;	
+}
+
+int init_external_compass2()
+{
+	F4GPIO SCL(GPIOC, GPIO_Pin_13);
+	F4GPIO SDA(GPIOC, GPIO_Pin_14);
+	I2C_SW i2c(&SCL, &SDA);
+	
+	sensors::IST8307A hmc5983;
+	if (hmc5983.init(&i2c) == 0)
+	{
+		LOGE("found IST8307A on I2C(PC13,PC14)\n");
+		static F4GPIO SCL(GPIOC, GPIO_Pin_13);
+		static F4GPIO SDA(GPIOC, GPIO_Pin_14);
+		static I2C_SW i2c(&SCL, &SDA);
+		static sensors::IST8307A hmc5983;
+		hmc5983.init(&i2c);
+		hmc5983.axis_config(1, 0, 2, -1, +1, -1);
+
+		manager.register_magnetometer(&hmc5983);
+		
+		while(0)
+		{
+			devices::mag_data data;			
+			if (hmc5983.read(&data) == 0)
+			{
+			
+			printf("%.1f, %.1f, %.1f\n", data.x, data.y, data.z);
+			
+			systimer->delayms(0);
+			}
+		}
 	}
 
 	return 0;	
@@ -323,11 +359,11 @@ int bsp_init_all()
 	init_RC();
 	init_sensors();
 	init_9150();
-	//init_external_compass();
 	init_asyncworker();
 	init_led();
 	init_flow();
 	init_GPS();	
+	//init_external_compass();
 	
 	// parameter config
 	param bsp_parameter("BSP", 1);

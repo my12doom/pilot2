@@ -1029,8 +1029,9 @@ int yet_another_pilot::read_imu_and_filter()
 		-(temperature_delta * gyro_temp_k.array[2] + gyro_temp_a.array[2]),
 	};
 	accel_uncalibrated = acc;
-	mag_uncalibrated = mag;
 	gyro_uncalibrated = gyro_reading;
+	if (got_mag)
+		mag_uncalibrated = mag;
 	
 	for(int i=0; i<3; i++)
 	{
@@ -1043,7 +1044,9 @@ int yet_another_pilot::read_imu_and_filter()
 	
 	// copy mag
 	if (!imu_data_lock && got_mag)
+	{
 		this->mag = mag;
+	}
 
 	// apply a 40hz 2nd order LPF to accelerometer readings
 	// stop overwriting target data if imu data lock acquired
