@@ -153,39 +153,27 @@ int init_external_compass()
 	return 0;	
 }
 
+static F4GPIO SCL2(GPIOC, GPIO_Pin_13);
+static F4GPIO SDA2(GPIOC, GPIO_Pin_14);
+static I2C_SW i2c2(&SCL2, &SDA2);
+static sensors::IST8307A ist2;
 int init_external_compass2()
 {
-	F4GPIO SCL(GPIOC, GPIO_Pin_13);
-	F4GPIO SDA(GPIOC, GPIO_Pin_14);
-	I2C_SW i2c(&SCL, &SDA);
-	
-	sensors::IST8307A hmc5983;
-	if (hmc5983.init(&i2c) == 0)
+	F4GPIO SCL1(GPIOC, GPIO_Pin_13);
+	F4GPIO SDA1(GPIOC, GPIO_Pin_14);
+	I2C_SW i2c1(&SCL1, &SDA1);
+
+	sensors::IST8307A ist;
+	if (ist.init(&i2c1) == 0)
 	{
 		LOGE("found IST8307A on I2C(PC13,PC14)\n");
-		static F4GPIO SCL(GPIOC, GPIO_Pin_13);
-		static F4GPIO SDA(GPIOC, GPIO_Pin_14);
-		static I2C_SW i2c(&SCL, &SDA);
-		static sensors::IST8307A hmc5983;
-		hmc5983.init(&i2c);
-		hmc5983.axis_config(1, 0, 2, -1, +1, -1);
+		ist2.init(&i2c2);
+		ist2.axis_config(1, 0, 2, -1, +1, -1);
 
-		manager.register_magnetometer(&hmc5983);
-		
-		while(0)
-		{
-			devices::mag_data data;			
-			if (hmc5983.read(&data) == 0)
-			{
-			
-			printf("%.1f, %.1f, %.1f\n", data.x, data.y, data.z);
-			
-			systimer->delayms(0);
-			}
-		}
+		manager.register_magnetometer(&ist2);		
 	}
 
-	return 0;	
+	return 0;
 }
 
 int init_RC()
