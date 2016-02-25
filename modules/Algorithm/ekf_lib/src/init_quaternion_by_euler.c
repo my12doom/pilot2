@@ -6,6 +6,7 @@
  */
 
 /* Include files */
+#include <math.h>
 #include "rt_nonfinite.h"
 #include "INSSetMagNorth.h"
 #include "INS_Correction.h"
@@ -37,6 +38,7 @@
 void init_quaternion_by_euler(float roll, float pitch, float yaw, float *q0,
   float *q1, float *q2, float *q3)
 {
+  float sq;
   roll = roll * 3.14159274F / 180.0F;
   pitch = pitch * 3.14159274F / 180.0F;
   yaw = yaw * 3.14159274F / 180.0F;
@@ -54,7 +56,7 @@ void init_quaternion_by_euler(float roll, float pitch, float yaw, float *q0,
     (real32_T)sin(roll / 2.0F);
 
   // normalise
-  float sq = 1.0f/sqrt(*q0**q0 + *q1**q1 + *q2**q2 + *q3**q3);
+  sq = 1.0f/sqrt(*q0**q0 + *q1**q1 + *q2**q2 + *q3**q3);
 	
   *q0 *= sq;
   *q1 *= sq;

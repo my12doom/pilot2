@@ -1,7 +1,5 @@
 #include "ekf_estimator.h"
 #include <string.h>
-#include <Protocol/common.h>
-#include <HAL/Interface/Interfaces.h>
 #include <Algorithm/ekf_lib/inc/init_ekf_matrix.h>
 #include <Algorithm/ekf_lib/inc/INS_SetState.h>
 #include <Algorithm/ekf_lib/inc/LinearFG.h>
