@@ -12,6 +12,7 @@
 #include <utils/log.h>
 #include <utils/console.h>
 #include <utils/gauss_newton.h>
+#include <protocol/crc32.h>
 
 #include <FileSystem/ff.h>
 
@@ -2075,6 +2076,15 @@ int yet_another_pilot::handle_cli(IUART *uart)
 	return 0;
 }
 
+uint32_t __attribute__((weak)) get_chip_id_crc32()
+{
+	const void *stm32_id_address = (const void*)0x1FFFF7E8;
+	char data[12];
+	memcpy(data, stm32_id_address, 12);
+
+	return crc32(0, data, 12);
+}
+
 int yet_another_pilot::handle_wifi_controll(IUART *uart)
 {
 	if (!uart)
@@ -2143,7 +2153,14 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		sprintf(out, "hello,yap(%s)(bsp %s)\n", version_name, bsp_name);
 		uart->write(out, strlen(out));
 	}
-	
+
+	else if (strstr(line, "chip_id") == line)
+	{
+		char out[200];
+		sprintf(out, "chip_id,%08X\n", get_chip_id_crc32());
+		uart->write(out, strlen(out));
+	}
+
 	else if (strstr(line, "takeoff") == line)
 	{
 		const char *tak = "takeoff,ok\n";
@@ -2160,6 +2177,13 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		islanding = true;
 	}
 	
+	else if (strstr(line, "RTL_get") == line)
+	{
+		char tmp[50];
+		sprintf(tmp, "RTL,%d\n", flight_mode == RTL ? 1 : 0);
+		uart->write(tmp, strlen(tmp));
+	}
+
 	else if (strstr(line, "RTL") == line)
 	{
 		LOGE("mobile RTL\n");
@@ -2192,7 +2216,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		}
 		float distance = sqrt(pos[0] * pos[0] + pos[1] * pos[1]);
 		float v = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
-		float battery = (batt.get_internal_voltage() - 10.6f)/(12.6f-10.6f);
+		float battery = (batt.get_internal_voltage() - 10.6f)/(12.4f-10.6f);
 		battery = limit(battery, 0, 1);
 
 		sprintf(out, 
@@ -2200,12 +2224,15 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			"%.1f,%.2f,"			// horizontal distance, horizontal velocity, 
 			"%.1f,%.1f,%.1f,"	// attitude: roll, pitch, yaw
 			"%s,%s,"			// airborne, sonar actived
-			"%.2f,%.1f\n",			// battery, 
+			"%.2f,%.1f,",			// battery, 
+			"%d,%d\n",			// RLT, flashlight states
 			gps.latitude, gps.longitude, pos_ready ? "true" : "false", alt_estimator.state[0], alt_estimator.state[1],
 			distance, v,
 			euler[0] * 180 / PI, euler[1] * 180 / PI, euler[2] * 180 / PI,
 			airborne ? "true" : "false", alt_controller.sonar_actived() ? "true" : "false",
-			battery, batt.get_internal_voltage());
+			battery, batt.get_internal_voltage(),
+			flight_mode == RTL ? 1 : 0, flashlight ? (flashlight->get() ? 1 : 0) : 0
+			);
 			
 		uart->write(out, strlen(out));
 	}
@@ -2271,6 +2298,17 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		uart->write("acc_cal,ok\n", 3);
 	}
 
+
+	else if (strstr(line, "flashlight_get") == line)
+	{
+		char tmp[50];
+		if (!flashlight)
+			strcpy(tmp, "flashlight_get,0\n");
+		else
+			sprintf(tmp, "flashlight_get,%d\n", flashlight->get() ? 1 : 0);
+		uart->write(tmp, strlen(tmp));
+	}
+
 	else if (strstr(line, "flashlight") == line)
 	{
 		const char * comma = strstr(line, ",");
@@ -2288,7 +2326,6 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		
 		uart->write("flashlight\n", 11);
 	}
-
 	else if (strstr(line, "set,") == line)
 	{
 		const char * comma = strstr(line+4, ",");
