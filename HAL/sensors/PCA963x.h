@@ -25,6 +25,7 @@ namespace devices
 		virtual void on();
 		virtual void off();
 		virtual void toggle();
+		virtual bool get(){return false;}
 		
 		// IRGBLED
 		virtual int write(float R, float G, float B);

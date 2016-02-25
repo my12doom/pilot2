@@ -12,6 +12,7 @@
 #include <utils/log.h>
 #include <utils/console.h>
 #include <utils/gauss_newton.h>
+#include <protocol/crc32.h>
 
 #include <FileSystem/ff.h>
 
@@ -726,53 +727,7 @@ int yet_another_pilot::save_logs()
 }
 
 int yet_another_pilot::read_sensors()
-{
-	if (manager.get_flow_count())
-	{
-		sensors::IFlow *flow = manager.get_flow(0);
-
-		if (flow->read_flow(&frame) < 0)
-			sonar_distance = NAN;
-		else
-		{
-			static int last_frame_count = 0;
-			if (last_frame_count != frame.frame_count && vcp && (usb_data_publish & data_publish_flow))
-			{
-				last_frame_count = frame.frame_count;
-
-				if (usb_data_publish & data_publish_binary)
-				{
-					usb_flow_data data = 
-					{
-						systimer->gettime(),
-						frame.pixel_flow_x_sum,
-						frame.pixel_flow_y_sum,
-						frame.ground_distance,
-					};
-
-					send_package(&data, sizeof(data), data_publish_flow, vcp);
-				}
-				else
-				{
-					char tmp[100];
-					sprintf(tmp, "flow:%.3f,%d,%d,%f\n", systimer->gettime()/1000000.0f, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.ground_distance/1000.0f);
-					vcp->write(tmp, strlen(tmp));
-				}
-			}
-
-			sonar_distance = frame.ground_distance / 1000.0f;
-			if (sonar_distance <= SONAR_MIN || sonar_distance >= SONAR_MAX)
-				sonar_distance = NAN;
-			
-			//float flowx = frame.pixel_flow_x_sum - body_rate.array[0] * 18000/PI * 0.006f;
-			//float floay = frame.pixel_flow_y_sum - body_rate.array[1] * 18000/PI * 0.006f;
-
-			//frame.gyro_x_rate = flowx;
-			//frame.gyro_y_rate = floay;
-		}
-	}
-
-	
+{	
 	if (range_finder)
 	{
 		range_finder->trigger();
@@ -950,8 +905,14 @@ int yet_another_pilot::read_imu_and_filter()
 	}
 	
 	// read magnetometer and barometer since we don't have lock support and it is connected to same SPI bus with gyro and acceleromter
-	if (!imu_data_lock)
+	// at lower rate (50hz)
+	static int64_t last_mag_read = 0;
+	bool got_mag = false;
+	if (!imu_data_lock && systimer->gettime() - last_mag_read > 20000)
 	{
+		last_mag_read = systimer->gettime();
+		got_mag = true;
+
 		// read magnetometers
 		int healthy_mag_count = 0;
 		for(int i=0; i<manager.get_magnetometer_count(); i++)
@@ -1069,8 +1030,9 @@ int yet_another_pilot::read_imu_and_filter()
 		-(temperature_delta * gyro_temp_k.array[2] + gyro_temp_a.array[2]),
 	};
 	accel_uncalibrated = acc;
-	mag_uncalibrated = mag;
 	gyro_uncalibrated = gyro_reading;
+	if (got_mag)
+		mag_uncalibrated = mag;
 	
 	for(int i=0; i<3; i++)
 	{
@@ -1082,8 +1044,10 @@ int yet_another_pilot::read_imu_and_filter()
 	}
 	
 	// copy mag
-	if (!imu_data_lock)
+	if (!imu_data_lock && got_mag)
+	{
 		this->mag = mag;
+	}
 
 	// apply a 40hz 2nd order LPF to accelerometer readings
 	// stop overwriting target data if imu data lock acquired
@@ -1098,6 +1062,56 @@ int yet_another_pilot::read_imu_and_filter()
 	{
 		for(int i=0; i<3; i++)
 			accel_lpf2p[i].apply(acc.array[i]);
+	}
+
+
+	// read optical flow @ 100hz
+	static int64_t last_flow_reading = 0;
+	if (manager.get_flow_count() && systimer->gettime() - last_flow_reading > 10000)
+	{
+		last_flow_reading = systimer->gettime();
+
+		sensors::IFlow *flow = manager.get_flow(0);
+
+		if (flow->read_flow(&frame) < 0)
+			sonar_distance = NAN;
+		else
+		{
+			static int last_frame_count = 0;
+			if (last_frame_count != frame.frame_count && vcp && (usb_data_publish & data_publish_flow))
+			{
+				last_frame_count = frame.frame_count;
+
+				if (usb_data_publish & data_publish_binary)
+				{
+					usb_flow_data data = 
+					{
+						systimer->gettime(),
+						frame.pixel_flow_x_sum,
+						frame.pixel_flow_y_sum,
+						frame.ground_distance,
+					};
+
+					send_package(&data, sizeof(data), data_publish_flow, vcp);
+				}
+				else
+				{
+					char tmp[100];
+					sprintf(tmp, "flow:%.3f,%d,%d,%f\n", systimer->gettime()/1000000.0f, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.ground_distance/1000.0f);
+					vcp->write(tmp, strlen(tmp));
+				}
+			}
+
+			sonar_distance = frame.ground_distance / 1000.0f;
+			if (sonar_distance <= SONAR_MIN || sonar_distance >= SONAR_MAX)
+				sonar_distance = NAN;
+
+			//float flowx = frame.pixel_flow_x_sum - body_rate.array[0] * 18000/PI * 0.006f;
+			//float floay = frame.pixel_flow_y_sum - body_rate.array[1] * 18000/PI * 0.006f;
+
+			//frame.gyro_x_rate = flowx;
+			//frame.gyro_y_rate = floay;
+		}
 	}
 	
 	
@@ -2062,6 +2076,15 @@ int yet_another_pilot::handle_cli(IUART *uart)
 	return 0;
 }
 
+uint32_t __attribute__((weak)) get_chip_id_crc32()
+{
+	const void *stm32_id_address = (const void*)0x1FFFF7E8;
+	char data[12];
+	memcpy(data, stm32_id_address, 12);
+
+	return crc32(0, data, 12);
+}
+
 int yet_another_pilot::handle_wifi_controll(IUART *uart)
 {
 	if (!uart)
@@ -2130,7 +2153,14 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		sprintf(out, "hello,yap(%s)(bsp %s)\n", version_name, bsp_name);
 		uart->write(out, strlen(out));
 	}
-	
+
+	else if (strstr(line, "chip_id") == line)
+	{
+		char out[200];
+		sprintf(out, "chip_id,%08X\n", get_chip_id_crc32());
+		uart->write(out, strlen(out));
+	}
+
 	else if (strstr(line, "takeoff") == line)
 	{
 		const char *tak = "takeoff,ok\n";
@@ -2147,6 +2177,13 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		islanding = true;
 	}
 	
+	else if (strstr(line, "RTL_get") == line)
+	{
+		char tmp[50];
+		sprintf(tmp, "RTL,%d\n", flight_mode == RTL ? 1 : 0);
+		uart->write(tmp, strlen(tmp));
+	}
+
 	else if (strstr(line, "RTL") == line)
 	{
 		LOGE("mobile RTL\n");
@@ -2179,7 +2216,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		}
 		float distance = sqrt(pos[0] * pos[0] + pos[1] * pos[1]);
 		float v = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
-		float battery = (batt.get_internal_voltage() - 10.6f)/(12.6f-10.6f);
+		float battery = (batt.get_internal_voltage() - 10.6f)/(12.4f-10.6f);
 		battery = limit(battery, 0, 1);
 
 		sprintf(out, 
@@ -2187,14 +2224,21 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			"%.1f,%.2f,"			// horizontal distance, horizontal velocity, 
 			"%.1f,%.1f,%.1f,"	// attitude: roll, pitch, yaw
 			"%s,%s,"			// airborne, sonar actived
-			"%.2f,%.1f\n",			// battery, 
-			gps.latitude, gps.longitude, pos_ready ? "true" : "false", alt_estimator.state[0], alt_estimator.state[1],
+			"%.2f,%.1f,",			// battery, 
+			gps.latitude, gps.longitude, pos_ready ? "1" : "0", alt_estimator.state[0]-takeoff_ground_altitude, alt_estimator.state[1],
 			distance, v,
 			euler[0] * 180 / PI, euler[1] * 180 / PI, euler[2] * 180 / PI,
-			airborne ? "true" : "false", alt_controller.sonar_actived() ? "true" : "false",
-			battery, batt.get_internal_voltage());
-			
+			airborne ? "1" : "0", alt_controller.sonar_actived() ? "1" : "0",
+			battery, batt.get_internal_voltage()
+			);
+
 		uart->write(out, strlen(out));
+		sprintf(out, 
+			"%d,%d\n",			// RLT, flashlight states
+			flight_mode == RTL ? 1 : 0, flashlight ? (flashlight->get() ? 1 : 0) : 0
+			);
+		uart->write(out, strlen(out));
+			
 	}
 
 	else if (strstr(line, "param") == line)
@@ -2258,6 +2302,17 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		uart->write("acc_cal,ok\n", 3);
 	}
 
+
+	else if (strstr(line, "flashlight_get") == line)
+	{
+		char tmp[50];
+		if (!flashlight)
+			strcpy(tmp, "flashlight_get,0\n");
+		else
+			sprintf(tmp, "flashlight_get,%d\n", flashlight->get() ? 1 : 0);
+		uart->write(tmp, strlen(tmp));
+	}
+
 	else if (strstr(line, "flashlight") == line)
 	{
 		const char * comma = strstr(line, ",");
@@ -2275,7 +2330,6 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		
 		uart->write("flashlight\n", 11);
 	}
-
 	else if (strstr(line, "set,") == line)
 	{
 		const char * comma = strstr(line+4, ",");
@@ -2554,7 +2608,8 @@ int yet_another_pilot::stupid_joystick()
 int yet_another_pilot::light_words()
 {
 	// critical errors
-	if (critical_errors & (~int(ignore_error)) != 0)
+	int a = ~int(ignore_error);
+	if (critical_errors & (~int(ignore_error)))
 	{
 		static int last_critical_errors = 0;
 		if (last_critical_errors != critical_errors)
