@@ -2225,7 +2225,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			"%.1f,%.1f,%.1f,"	// attitude: roll, pitch, yaw
 			"%s,%s,"			// airborne, sonar actived
 			"%.2f,%.1f,",			// battery, 
-			gps.latitude, gps.longitude, pos_ready ? "1" : "0", alt_estimator.state[0], alt_estimator.state[1],
+			gps.latitude, gps.longitude, pos_ready ? "1" : "0", alt_estimator.state[0]-takeoff_ground_altitude, alt_estimator.state[1],
 			distance, v,
 			euler[0] * 180 / PI, euler[1] * 180 / PI, euler[2] * 180 / PI,
 			airborne ? "1" : "0", alt_controller.sonar_actived() ? "1" : "0",
