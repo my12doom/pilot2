@@ -2225,16 +2225,20 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			"%.1f,%.1f,%.1f,"	// attitude: roll, pitch, yaw
 			"%s,%s,"			// airborne, sonar actived
 			"%.2f,%.1f,",			// battery, 
-			"%d,%d\n",			// RLT, flashlight states
-			gps.latitude, gps.longitude, pos_ready ? "true" : "false", alt_estimator.state[0], alt_estimator.state[1],
+			gps.latitude, gps.longitude, pos_ready ? "1" : "0", alt_estimator.state[0], alt_estimator.state[1],
 			distance, v,
 			euler[0] * 180 / PI, euler[1] * 180 / PI, euler[2] * 180 / PI,
-			airborne ? "true" : "false", alt_controller.sonar_actived() ? "true" : "false",
-			battery, batt.get_internal_voltage(),
+			airborne ? "1" : "0", alt_controller.sonar_actived() ? "1" : "0",
+			battery, batt.get_internal_voltage()
+			);
+
+		uart->write(out, strlen(out));
+		sprintf(out, 
+			"%d,%d\n",			// RLT, flashlight states
 			flight_mode == RTL ? 1 : 0, flashlight ? (flashlight->get() ? 1 : 0) : 0
 			);
-			
 		uart->write(out, strlen(out));
+			
 	}
 
 	else if (strstr(line, "param") == line)
