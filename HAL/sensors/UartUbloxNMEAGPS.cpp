@@ -621,6 +621,10 @@ int UartUbloxBinaryGPS::read(devices::gps_data *data)
 				local_data.sig = pvt->fix>=3 ? 1 : 0;						// GPS quality indicator (0 = Invalid; 1 = Fix; 2 = Differential, 3 = Sensitive)
 				local_data.fix = pvt->fix;						// Operating mode, used for navigation (1 = Fix not available; 2 = 2D; 3 = 3D)
 				local_data.declination = 0;// Magnetic variation in 0.01 degrees (Easterly var. subtracts from true course)
+				local_data.position_accuracy_horizontal = pvt->horizontal_accuracy / 1000.0f;
+				local_data.position_accuracy_vertical = pvt->vertical_accuracy / 1000.0f;
+				local_data.velocity_accuracy_horizontal = pvt->velocity_accuracy / 1000.0f;
+				local_data.velocity_accuracy_vertical = NAN;	// NAN: not available / undefined;
 
 				log2(p->payload, TAG_UBX_NAV_PVT_DATA, p->payload_size);
 
