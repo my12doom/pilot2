@@ -253,6 +253,9 @@ int mag_calibration::calibration2()
 	float m2[6] = {0};
 	for(int i=0; i<count; i++)
 	{
+		// formula:
+		// p[0]x + p[1]y + p[2]z - p[3]y^2 - p[4]z^2 + p[5] = x^2
+
 		// Ht * H
 		float x = data[3*i+0];
 		float y = data[3*i+1];
@@ -264,7 +267,7 @@ int mag_calibration::calibration2()
 			for(int k=0; k<6; k++)
 				m1[j*6+k] += v_tmp[j] * v_tmp[k];
 
-		// y
+		// Ht * y
 		m2[0] += x2*x;
 		m2[1] += x2*y;
 		m2[2] += x2*z;
