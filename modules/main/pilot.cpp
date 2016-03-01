@@ -1216,6 +1216,17 @@ int yet_another_pilot::calculate_state()
 		v_flow_body[0] = wy * frame.ground_distance/1000.0f * 1.15f;//black magic
 		v_flow_body[1] = -wx * frame.ground_distance/1000.0f * 1.15f;
 		v_flow_body[2] = 0;
+
+		if (yap.frame.qual < 100)
+		{
+			v_flow_body[0] = v_flow_body[1] = 0;
+			ekf_est.set_mesurement_R(1E20,1E20);
+		}
+		else
+		{
+			ekf_est.set_mesurement_R(1E20, 1E-2);
+		}
+
 		
 		ekf_est.tf_body2ned(v_flow_body,v_flow_ned);
 		
@@ -2216,7 +2227,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		}
 		float distance = sqrt(pos[0] * pos[0] + pos[1] * pos[1]);
 		float v = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
-		float battery = (batt.get_internal_voltage() - 10.6f)/(12.4f-10.6f);
+		float battery = (batt.get_internal_voltage() - 10.7f)/(12.4f-10.7f);
 		battery = limit(battery, 0, 1);
 
 		sprintf(out, 

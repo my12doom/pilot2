@@ -1195,6 +1195,7 @@
 					</File>
 					<File
 						RelativePath="..\..\..\BSP\boards\byd\AsyncWorker.h"
+						FileType="0"
 						>
 					</File>
 					<File
@@ -1207,6 +1208,7 @@
 					</File>
 					<File
 						RelativePath="..\..\..\BSP\boards\byd\RCOUT.h"
+						FileType="0"
 						>
 					</File>
 					<File
@@ -1215,6 +1217,7 @@
 					</File>
 					<File
 						RelativePath="..\..\..\BSP\boards\byd\RGBLED.h"
+						FileType="0"
 						>
 					</File>
 				</Filter>

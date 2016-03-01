@@ -50,7 +50,8 @@ typedef struct{
 
 class ekf_estimator
 {
-private:
+// private:
+public:
 	bool ekf_is_init;
 	float gyro_bias[3];//store gyro zero bias
 	float Be[3],P[169],X[13],Q[81],R[64];
@@ -58,7 +59,6 @@ private:
 	float ekf_loopcount;
 	float que_window[3][50];
 	
-public:
 
 
 	EKF_Result ekf_result;
