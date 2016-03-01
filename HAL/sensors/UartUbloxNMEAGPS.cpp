@@ -629,7 +629,7 @@ int UartUbloxBinaryGPS::read(devices::gps_data *data)
 				_tm.tm_min = pvt->min;
 				_tm.tm_hour = pvt->hour;
 				_tm.tm_mday = pvt->day;
-				_tm.tm_mon = pvt->month;
+				_tm.tm_mon = pvt->month - 1;
 				_tm.tm_year = pvt->year - 1900;	
 
 				local_data.timestamp = mktime(&_tm);
