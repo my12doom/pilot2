@@ -1220,7 +1220,7 @@ int yet_another_pilot::calculate_state()
 		if (yap.frame.qual < 100)
 		{
 			v_flow_body[0] = v_flow_body[1] = 0;
-			ekf_est.set_mesurement_R(1E20,1E20);
+			ekf_est.set_mesurement_R(1E20,1E-2);
 		}
 		else
 		{
@@ -2191,7 +2191,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	else if (strstr(line, "RTL_get") == line)
 	{
 		char tmp[50];
-		sprintf(tmp, "RTL,%d\n", flight_mode == RTL ? 1 : 0);
+		sprintf(tmp, "RTL_get,%d\n", flight_mode == RTL ? 1 : 0);
 		uart->write(tmp, strlen(tmp));
 	}
 
