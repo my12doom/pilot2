@@ -17,6 +17,10 @@ namespace devices
 		uint8_t declination; 			// Magnetic variation in 0.01 degrees (Easterly var. subtracts from true course)
 		unsigned sig				: 4;// GPS quality indicator (0 = Invalid; 1 = Fix; 2 = Differential, 3 = Sensitive)
 		unsigned fix				: 4;// Operating mode, used for navigation (1 = Fix not available; 2 = 2D; 3 = 3D)
+		float position_accuracy_horizontal;	// unit: variance in meter
+		float position_accuracy_vertical;
+		float velocity_accuracy_horizontal;	// unit: variance in meter/s
+		float velocity_accuracy_vertical;
 	} gps_data;
 
 	typedef struct

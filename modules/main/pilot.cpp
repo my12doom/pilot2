@@ -766,6 +766,8 @@ int yet_another_pilot::read_sensors()
 			this->gps = data;
 			new_gps_data = (res == 0);
 			last_gps_tick = systimer->gettime();
+
+			log2(&data, TAG_EXTRA_GPS_DATA, sizeof(data));
 		}
 	}
 	if (manager.get_GPS_count() == 0)
