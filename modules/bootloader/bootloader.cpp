@@ -6,6 +6,7 @@
 #include <utils/ymodem.h>
 #include <utils/param.h>
 #include <utils/space.h>
+#include <utils/RIJNDAEL.h>
 #include <stdio.h>
 #include <Protocol/crc32.h>
 #include <string.h>
@@ -19,6 +20,7 @@ dev_v2::RGBLED led;
 
 // constants
 const uint32_t ApplicationAddress = 0x8008000;
+const unsigned char aes_key[32] = {0x85, 0xA3, 0x6C, 0x69, 0x76, 0x6C, 0x61, 0x76, 0xA3, 0x85};
 float color[5][3] = 
 {
 	{1,0,0},
@@ -27,6 +29,7 @@ float color[5][3] =
 	{0.2,0,1},
 	{0.2,1,0},
 };
+AESCryptor aes;
 
 extern "C" int log_printf(const char*format, ...)
 {
@@ -180,6 +183,7 @@ extern "C" DWORD get_fattime()
 {
 	return 0;
 }
+		uint32_t rom_in_file_crc = 0;
 
 int check_sdcard()
 {
@@ -213,15 +217,53 @@ int check_sdcard()
 		return -3;
 	}
 	
-	if (crc == crc32(0, (uint8_t*)ApplicationAddress, file_rom_size))
+	// read first 4 bytes and check encrpted tag
+	bool encrypted = false;
+	unsigned char encrypted_tag[4] = {0x85, 0xA3, 0xA3, 0x85};
+	unsigned char normal_first4bytes[4] = {0xC0, 0x41, 0x01, 0x20};
+	char tmp[1024];
+	f_lseek(&f, 0);
+	uint32_t first4bytes = 0;
+	f_read(&f, &first4bytes, 4, &got);
+	if (memcmp(encrypted_tag, &first4bytes, 4) == 0 && ((file_rom_size-4)%1024)== 0)
 	{
-		f_close(&f);
-		return -5;
+		encrypted = true;
+		memcpy(&first4bytes, normal_first4bytes, 4);
+	}
+	
+	// check ROM CRC
+	if (encrypted)
+	{
+		// the last block of 1024 bytes is reserved and currently used for encryption.
+		f_lseek(&f, file_rom_size-1024);
+		if (f_read(&f, tmp, sizeof(tmp), &got) != FR_OK)
+		{
+			f_close(&f);
+			return -4;
+		}
+		
+		for(int i=0; i<got; i+=16)
+			aes.decrypt((unsigned char*)tmp+i, (unsigned char*)tmp+i);
+
+		// check rom crc
+		memcpy(&rom_in_file_crc, tmp, 4);
+		if (rom_in_file_crc == crc32(0, (uint8_t*)ApplicationAddress+4, file_rom_size-1024-4))
+		{
+			f_close(&f);
+			return -5;
+		}
+	}
+	else
+	{
+		if (crc == crc32(0, (uint8_t*)ApplicationAddress, file_rom_size))
+		{
+			f_close(&f);
+			return -5;
+		}
 	}
 
 	// calculate CRC from content
 	uint32_t crc_calculated = 0;
-	char tmp[1024];
 	int left = file_rom_size;
 	f_lseek(&f, 0);
 	while (left>0)
@@ -239,25 +281,35 @@ int check_sdcard()
 	if (crc != crc_calculated)
 		return -5;
 
-
 	// erase
 	erase_rom(&uart);
 
 	// flash, skipping the first 4 bytes for failsafe.
 	// run_rom() will fail if the first 4 bytes failed and enter bootloader mode.
-	f_lseek(&f, 0);
-	uint32_t first4bytes = 0;
-	f_read(&f, &first4bytes, 4, &got);
+	// normal first 4 bytes is 0xC0, 0x41, 0x01, 0x20
+	// encrypted rom's first 4 bytes is 0x85, 0xA3, 0xA3, 0x85, and size should be N*1024+4
 	left = file_rom_size-4;
+	f_lseek(&f, 4);
 	uint32_t pos = ApplicationAddress+4;
 	FLASH_Unlock();
 	led.write(0,0,0);
 	while (left>0)
 	{
+		memset(tmp, 0, sizeof(tmp));
 		if (f_read(&f, tmp, left>sizeof(tmp)?sizeof(tmp):left, &got) != FR_OK)
 		{
 			f_close(&f);
 			return -6;
+		}
+		
+		if (encrypted)
+		{
+			// last block is reserved, and currently only for ROM CRC.
+			if (left == got)
+				break;
+			
+			for(int i=0; i<got; i+=16)
+				aes.decrypt((unsigned char*)tmp+i, (unsigned char*)tmp+i);
 		}
 
 		left -= got;
@@ -352,8 +404,9 @@ int main()
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
 	PWR_BackupAccessCmd(ENABLE);
 
-	//RDP();
-	//check_sdcard();
+	aes.set_key(aes_key, 256);
+	RDP();
+	check_sdcard();
 	led.write(0,0,0);
 
 	void * bkp = (void*)0x40002850;

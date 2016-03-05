@@ -349,7 +349,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>2</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -521,6 +521,11 @@
               <FileName>F4VCP.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4VCP.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RIJNDAEL.CPP</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\utils\RIJNDAEL.CPP</FilePath>
             </File>
           </Files>
         </Group>
