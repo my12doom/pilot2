@@ -228,7 +228,6 @@ int check_sdcard()
 	if (memcmp(encrypted_tag, &first4bytes, 4) == 0 && ((file_rom_size-4)%1024)== 0)
 	{
 		encrypted = true;
-		memcpy(&first4bytes, normal_first4bytes, 4);
 	}
 	
 	// check ROM CRC
@@ -247,6 +246,7 @@ int check_sdcard()
 
 		// check rom crc
 		memcpy(&rom_in_file_crc, tmp, 4);
+		memcpy(&first4bytes, tmp+4, 4);
 		if (rom_in_file_crc == crc32(0, (uint8_t*)ApplicationAddress+4, file_rom_size-1024-4))
 		{
 			f_close(&f);

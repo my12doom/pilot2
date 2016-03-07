@@ -50,12 +50,13 @@ int gen_bin(const char *filename, const char*filename_out, bool encrypt = false)
 	{
 		// do the encrypting and write a encrypted tag
 		unsigned char encrypted_tag[4] = {0x85, 0xA3, 0xA3, 0x85};
-		memcpy(data, encrypted_tag, 4);
 
 		rom_size = (rom_size-4+1023)/1024*1024+1024+4;
 		int block_count = (rom_size-4)/16;
 		uint32_t crc_rom = crc32(0, data+4, rom_size-4-1024);
 		memcpy(data+rom_size-1024, &crc_rom, 4);
+		memcpy(data+rom_size-1024+4, data, 4);
+		memcpy(data, encrypted_tag, 4);
 
 		for(int i=0; i<block_count; i++)
 			aes.encrypt((unsigned char*)data+4+i*16, (unsigned char*)data+4+i*16);
