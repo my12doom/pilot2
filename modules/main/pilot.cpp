@@ -671,33 +671,33 @@ int yet_another_pilot::save_logs()
 
 	log(&quad3, TAG_QUADCOPTER_DATA3, systime);
 
-// 	// pos controller data1
-// 	pos_controller_data pc = 
-// 	{
-// 		pos_control->setpoint[0],
-// 		pos_control->setpoint[1],
-// 		pos_control->pos[0],
-// 		pos_control->pos[1],
-// 		pos_control->target_velocity[0]*1000,
-// 		pos_control->target_velocity[1]*1000,
-// 		pos_control->velocity[0]*1000,
-// 		pos_control->velocity[1]*1000,
-// 	};
-// 	log(&pc, TAG_POS_CONTROLLER_DATA1, systime);
-// 
-// 
-// 	// pos controller data2
-// 	pos_controller_data2 pc2 = 
-// 	{
-// 		pos_control->target_accel[0]*1000,
-// 		pos_control->target_accel[1]*1000,
-// 		{
-// 			{pos_control->pid[0][0]*100, pos_control->pid[0][1]*100, pos_control->pid[0][2]*100,},
-// 			{pos_control->pid[1][0]*100, pos_control->pid[1][1]*100, pos_control->pid[1][2]*100,},
-// 		}
-// 	};
-// 
-// 	log(&pc2, TAG_POS_CONTROLLER_DATA2, systime);
+	// pos controller data1
+	pos_controller_data pc = 
+	{
+		pos_control_hybird.setpoint[0],
+		pos_control_hybird.setpoint[1],
+		pos_control_hybird.pos[0],
+		pos_control_hybird.pos[1],
+		pos_control_hybird.target_velocity[0]*1000,
+		pos_control_hybird.target_velocity[1]*1000,
+		pos_control_hybird.velocity[0]*1000,
+		pos_control_hybird.velocity[1]*1000,
+	};
+	log(&pc, TAG_POS_CONTROLLER_DATA1, systime);
+
+
+	// pos controller data2
+	pos_controller_data2 pc2 = 
+	{
+		pos_control_hybird.target_accel[0]*1000,
+		pos_control_hybird.target_accel[1]*1000,
+		{
+			{pos_control_hybird.pid[0][0]*100, pos_control_hybird.pid[0][1]*100, pos_control_hybird.pid[0][2]*100,},
+			{pos_control_hybird.pid[1][0]*100, pos_control_hybird.pid[1][1]*100, pos_control_hybird.pid[1][2]*100,},
+		}
+	};
+
+	log(&pc2, TAG_POS_CONTROLLER_DATA2, systime);
 
 	if (last_gps_tick > systimer->gettime() - 2000000)
 	{
@@ -1204,7 +1204,8 @@ int yet_another_pilot::calculate_state()
 		ekf_mesurement.Pos_GPS_y=estimator.get_raw_meter().longtitude;
 		ekf_mesurement.Vel_GPS_x=ground_speed_north;
 		ekf_mesurement.Vel_GPS_y=ground_speed_east;
-		ekf_est.set_mesurement_R(1.0E-3,0.08);
+//		ekf_est.set_mesurement_R(1.0E-3,0.08);
+		ekf_est.set_mesurement_R(0.001f*gps.position_accuracy_horizontal * gps.position_accuracy_horizontal, 0.01f*gps.velocity_accuracy_horizontal * gps.velocity_accuracy_horizontal);
 	}
 	else
 	{	
@@ -2124,7 +2125,16 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			
 		}
 	}
-	
+	else if (strcmp(line, "@\n") == 0 || strcmp(line, "@\r\n") == 0)
+	{
+		rc_mobile[0] = 0;
+		rc_mobile[1] = 0;
+		rc_mobile[2] = 0.5;
+		rc_mobile[3] = 0;
+
+		mobile_last_update = systimer->gettime();
+	}
+
 	else if (strstr(line, keyword) == (line+len-strlen(keyword)))
 	{
 		if (sscanf(line, "%f,%f,%f,%f", &rc_mobile[0], &rc_mobile[1], &rc_mobile[2], &rc_mobile[3] ) == 4)
