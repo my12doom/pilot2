@@ -5,7 +5,9 @@
 #include <stdarg.h>
 #include <math.h>
 
+#ifndef WIN32
 #define assert(...)
+#endif
 
 static void matrix_error(const char*msg)
 {

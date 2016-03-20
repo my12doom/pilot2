@@ -5,6 +5,7 @@
 #include <Algorithm/ekf_estimator.h>
 #include <Algorithm/ahrs.h>
 #include <HAL/Interface/IGPS.h>
+#include <algorithm/pos_estimator2.h>
 
 #define PI 3.1415926
 
@@ -56,6 +57,7 @@ int main(int argc, char* argv[])
 	double speed_east = 0;
 
 	ekf_estimator ekf_est;
+	pos_estimator2 pos2;
 
 	while (fread(&time, 1, 8, in) == 8)
 	{
@@ -211,6 +213,7 @@ int main(int argc, char* argv[])
 				}
 
 				ekf_est.update(ekf_u,ekf_mesurement, dt);
+				pos2.update(quad5.q, acc, gps_extra, quad2.altitude_baro_raw/100.0f, dt);
 			}
 
 
@@ -229,6 +232,8 @@ int main(int argc, char* argv[])
 				fprintf(out, "FMT, 9, 23, COVAR_OFF_EKF, IhIhhhh, TimeMS,q0,q1,q2,q3,PN,PE\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_ON, IhIh, TimeMS,RollOn,PitchOn,YawOn\r\n");
 				fprintf(out, "FMT, 9, 23, POSITION, IhIhhhhhhh, TimeMS,N_GPS,E_GPS,N_EKF,E_EKF,VE_EKF,VE_RAW,POS_ACC,VEL_ACC,HDOP\r\n");
+				fprintf(out, "FMT, 9, 23, ALT, Ihhhhhhh, TimeMS,BARO,ALT_EKF,ALT_ON, ALT_OFF2, abiasx, abiasy, abiasz\r\n");
+				fprintf(out, "FMT, 9, 23, IMU, Ihhhhhh, TimeMS,ACCX,ACCY,ACCZ,GYROX,GYROY,GYROZ\r\n");
 			}
 
 
@@ -242,9 +247,11 @@ int main(int argc, char* argv[])
 				fprintf(out, "ATT_OFF_EKF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.ekf_result.roll * 180 / PI, ekf_est.ekf_result.pitch * 180 / PI, ekf_est.ekf_result.yaw * 180 / PI, 0, 0);
 
 				fprintf(out, "COVAR_OFF_EKF, %d, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.P[6*14], ekf_est.P[7*14], ekf_est.P[8*14], ekf_est.P[9*14], sqrt(ekf_est.P[0*14]), sqrt(ekf_est.P[4*14]), 0, 0);
+				fprintf(out, "IMU, %d, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), acc[0], acc[1], acc[2], gyro[0], gyro[1], gyro[2]);
 				if(ekf_est.ekf_is_ready())
 				{
 					fprintf(out, "POSITION, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), lat_meter, lon_meter, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_y, speed_east, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps.DOP[1]/100.0f, 0, 0);
+					fprintf(out, "ALT, %d, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), quad2.altitude_baro_raw/100.0f, ekf_est.ekf_result.Pos_z, quad2.altitude_kalman/100.0f, pos2.x[2], pos2.x[6], pos2.x[7], pos2.x[8]);
 				}
 			}
 
