@@ -198,7 +198,8 @@ int main(int argc, char* argv[])
 					ekf_mesurement.Pos_GPS_y=lon_meter;
 					ekf_mesurement.Vel_GPS_x=speed_north;
 					ekf_mesurement.Vel_GPS_y=speed_east;
-					ekf_est.set_mesurement_R(0.001 * gps_extra.position_accuracy_horizontal * gps_extra.position_accuracy_horizontal, 0.01 * gps_extra.velocity_accuracy_horizontal * gps_extra.velocity_accuracy_horizontal);
+					ekf_est.set_mesurement_R(0.0005 * gps_extra.position_accuracy_horizontal * gps_extra.position_accuracy_horizontal, 0.02 * gps_extra.velocity_accuracy_horizontal * gps_extra.velocity_accuracy_horizontal);
+// 					ekf_est.set_mesurement_R(0.001 * gps_extra.position_accuracy_horizontal * gps_extra.position_accuracy_horizontal, 0.01 * gps_extra.velocity_accuracy_horizontal * gps_extra.velocity_accuracy_horizontal);
 // 					ekf_est.set_mesurement_R(1e-3,8e-2);
 				}
 				else
@@ -229,6 +230,7 @@ int main(int argc, char* argv[])
 				fprintf(out, "FMT, 9, 23, COVAR_OFF_EKF, IhIhhhh, TimeMS,q0,q1,q2,q3,PN,PE\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_ON, IhIh, TimeMS,RollOn,PitchOn,YawOn\r\n");
 				fprintf(out, "FMT, 9, 23, POSITION, IhIhhhhhhh, TimeMS,N_GPS,E_GPS,N_EKF,E_EKF,VE_EKF,VE_RAW,POS_ACC,VEL_ACC,HDOP\r\n");
+				fprintf(out, "FMT, 9, 23, LatLon, IhIhhh, TimeMS,Lat,Lon,RPOS,RVEL\r\n");
 			}
 
 
@@ -242,10 +244,12 @@ int main(int argc, char* argv[])
 				fprintf(out, "ATT_OFF_EKF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.ekf_result.roll * 180 / PI, ekf_est.ekf_result.pitch * 180 / PI, ekf_est.ekf_result.yaw * 180 / PI, 0, 0);
 
 				fprintf(out, "COVAR_OFF_EKF, %d, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.P[6*14], ekf_est.P[7*14], ekf_est.P[8*14], ekf_est.P[9*14], sqrt(ekf_est.P[0*14]), sqrt(ekf_est.P[4*14]), 0, 0);
-				if(ekf_est.ekf_is_ready())
+				if(ekf_est.ekf_is_ready() && home_set)
 				{
 					fprintf(out, "POSITION, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), lat_meter, lon_meter, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_y, speed_east, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps.DOP[1]/100.0f, 0, 0);
 				}
+				if (home_set)
+				fprintf(out, "LatLon, %d, %f, %f, %f, %f\r\n", int(time/1000), gps_extra.latitude, gps_extra.longitude, 0.0005 * gps_extra.position_accuracy_horizontal * gps_extra.position_accuracy_horizontal, 0.02 * gps_extra.velocity_accuracy_horizontal * gps_extra.velocity_accuracy_horizontal);
 			}
 
 		}
