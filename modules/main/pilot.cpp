@@ -1205,7 +1205,7 @@ int yet_another_pilot::calculate_state()
 		ekf_mesurement.Vel_GPS_x=ground_speed_north;
 		ekf_mesurement.Vel_GPS_y=ground_speed_east;
 //		ekf_est.set_mesurement_R(1.0E-3,0.08);
-		ekf_est.set_mesurement_R(0.001f*gps.position_accuracy_horizontal * gps.position_accuracy_horizontal, 0.01f*gps.velocity_accuracy_horizontal * gps.velocity_accuracy_horizontal);
+		ekf_est.set_mesurement_R(0.0005f*gps.position_accuracy_horizontal * gps.position_accuracy_horizontal, 0.02f*gps.velocity_accuracy_horizontal * gps.velocity_accuracy_horizontal);
 	}
 	else
 	{	

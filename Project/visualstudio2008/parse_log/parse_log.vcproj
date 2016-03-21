@@ -115,10 +115,11 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="../../../modules"
+				AdditionalIncludeDirectories="../../../modules;../../../modules/Algorithm/EKF_lib/inc;../../../"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
+				EnableEnhancedInstructionSet="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -174,6 +175,22 @@
 			>
 			<File
 				RelativePath=".\main.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\math\matrix.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\math\matrix.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\Algorithm\pos_estimator2.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\Algorithm\pos_estimator2.h"
 				>
 			</File>
 		</Filter>
@@ -254,10 +271,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\modules\Algorithm\ekf_lib\src\LinearizeH.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\modules\Algorithm\ekf_lib\src\mrdivide.c"
 				>
 			</File>
 			<File

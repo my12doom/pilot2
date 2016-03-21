@@ -12,7 +12,7 @@ static param max_speed("maxH", 5.0f);
 static float max_speed_ff = 2.0f;
 static bool use_desired_feed_forward = false;
 static float feed_forward_factor = 1;
-static float rate2accel[4] = {1.5f, 0.5f, 0.2f, 2.0f};
+static float rate2accel[4] = {1.0f, 0.5f, 0.0f, 2.0f};
 static float pos2rate_P = 1.0f;
 
 // "parameters/constants"
@@ -192,6 +192,8 @@ int pos_controller::update_state_machine(float dt)
 
 		// reset pid and feed forward
 		memset(pid, 0, sizeof(pid));
+		pid[0][0] = NAN;
+		pid[1][0] = NAN;
 		pid[0][2] = NAN;
 		pid[1][2] = NAN;
 		last_target_velocity[0] = NAN;
@@ -262,6 +264,8 @@ int pos_controller::set_setpoint(float *pos, bool reset /*= true*/)
 	if (reset || distance > max_speed)
 	{
 		memset(pid, 0, sizeof(pid));
+		pid[0][0] = NAN;
+		pid[1][0] = NAN;
 		pid[0][2] = NAN;
 		pid[1][2] = NAN;
 		last_target_velocity[0] = NAN;
@@ -396,15 +400,16 @@ int pos_controller::pos_to_rate(float dt)
 
 int pos_controller::rate_to_accel(float dt)
 {
+	float alpha5 = dt / (dt + 1.0f/(2*PI * 5.5f));
+	float alpha2 = dt / (dt + 1.0f/(2*PI * 5.5f));
+
 	if (!isnan(last_target_velocity[0]))
 	{
-		float alpha = dt / (dt + 1.0f/(2*PI * 5.5f));
-
 		float ff0 = (target_velocity[0] - last_target_velocity[0]) / dt;
 		float ff1 = (target_velocity[1] - last_target_velocity[1]) / dt;
 
-		ff[0] = ff[0] * (1-alpha) + ff0 * alpha;
-		ff[1] = ff[1] * (1-alpha) + ff1 * alpha;
+		ff[0] = ff[0] * (1-alpha5) + ff0 * alpha5;
+		ff[1] = ff[1] * (1-alpha5) + ff1 * alpha5;
 	}
 	last_target_velocity[0] = target_velocity[0];
 	last_target_velocity[1] = target_velocity[1];
@@ -415,6 +420,13 @@ int pos_controller::rate_to_accel(float dt)
 	for(int axis=0; axis<2; axis++)
 	{
 		float p = target_velocity[axis] - velocity[axis];
+
+		// apply a 5hz LPF to P
+		if (isnan(pid[axis][0]))
+			pid[axis][0] = p;
+		else
+			p = alpha2 * p + (1-alpha2) * pid[axis][0];
+
 		float d = (p - pid[axis][0]) / dt;
 
 		pid[axis][2] = isnan(pid[axis][2]) ? 0 : (pid[0][2] * (1-alpha30) + d * alpha30);
@@ -423,7 +435,7 @@ int pos_controller::rate_to_accel(float dt)
 		// update I only if we did not hit accel/angle limit or throttle limit or I term will reduce
 		if (true)
 		{
-			pid[axis][1] += pow((double)fabs(p), 0.3) * (p>0?1:-1) * dt;
+			pid[axis][1] += pow((double)fabs(p), 1) * (p>0?1:-1) * dt;
 			pid[axis][1] = limit(pid[axis][1], -rate2accel[3], rate2accel[3]);
 		}
 

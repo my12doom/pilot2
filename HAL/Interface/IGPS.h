@@ -21,6 +21,7 @@ namespace devices
 		float position_accuracy_vertical;
 		float velocity_accuracy_horizontal;	// unit: variance in meter/s
 		float velocity_accuracy_vertical;
+		float climb_rate;					// unit: meter/s
 	} gps_data;
 
 	typedef struct
