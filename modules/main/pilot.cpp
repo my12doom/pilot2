@@ -439,10 +439,8 @@ int yet_another_pilot::output()
 		
 		// handle saturation caused by roll and pitch alone
 		float roll_pitch_factor = 1.0f;
-		min_roll_pitch = 1.0f;
-		max_roll_pitch = 0.0f;
 		if (max_roll_pitch - min_roll_pitch > 1.0f)
-			roll_pitch_factor = limit(roll_pitch_factor, 0.5f, 1.0f/(max_roll_pitch - min_roll_pitch));
+			roll_pitch_factor = limit(1.0f/(max_roll_pitch - min_roll_pitch), 0.5f, 1);
 		for(int i=0; i<motor_count; i++)
 		{
 			motor_output[i] = 0;
@@ -460,34 +458,43 @@ int yet_another_pilot::output()
 		for(int i=0; i<motor_count; i++)
 			motor_output[i] += throttle;
 		
-		// try ouput max possible yaw command
-		float yaw_factor = 1.0f;
+		// add yaw
+		float min_motor = 1;
+		float max_motor = 0;
 		for(int i=0; i<motor_count; i++)
 		{
-			float yaw_power = quadcopter_mixing_matrix[matrix][i][2] * pid_result[2] * QUADCOPTER_THROTTLE_RESERVE;
-			
-			if (yaw_power < 0)
-			{
-				yaw_factor = fmin(yaw_factor, fmax(0, motor_output[i]) / -yaw_power);
-			}
-			else
-			{
-				yaw_factor = fmin(yaw_factor, fmax(0, 1-motor_output[i]) / yaw_power);
-			}	
-			
+			motor_output[i] += quadcopter_mixing_matrix[matrix][i][2] * pid_result[2] * QUADCOPTER_THROTTLE_RESERVE;
+
+			min_motor = fmin(motor_output[i], min_motor);
+			max_motor = fmax(motor_output[i], max_motor);
 		}
-		yaw_factor = 1.0f;
-		//printf("\rf=%.3f(%.2f,%.2f,%.2f,%.2f, r=%.2f, t=%.2f)       ", yaw_factor, motor_output[0], motor_output[1], motor_output[2], motor_output[3], pid_result[2], throttle);
-		for(int i=0; i<motor_count; i++)
+
+		// check and handle saturation
+		// reduce scale at the center of throttle.
+		float motor_factor = (1-throttle) / (max_motor - throttle);
+		motor_factor = fmin(motor_factor, throttle / (throttle - min_motor));
+		motor_factor = limit(motor_factor, 0.33f, 1.0f);
+		if (min_motor < 0 || max_motor > 1)
 		{
-			motor_output[i] += quadcopter_mixing_matrix[matrix][i][2] * yaw_factor * pid_result[2] * QUADCOPTER_THROTTLE_RESERVE;
-			g_ppm_output[i] = limit(THROTTLE_IDLE + motor_output[i]*(THROTTLE_MAX-THROTTLE_IDLE), THROTTLE_IDLE, THROTTLE_MAX);
+			for(int i=0; i<motor_count; i++)
+				motor_output[i] = (motor_output[i] - throttle) * motor_factor + throttle;
 		}
-		
-		// statics
+		else
+		{
+			motor_factor = 1.0f;
+		}
+
+		// log
+		float tbl[8] = {roll_pitch_factor, motor_factor, min_throttle, max_throttle, throttle, pid_result[0], pid_result[1], pid_result[2]};
+		log2(tbl, TAG_MOTOR_MIXER, sizeof(tbl));
+
+		// final output and statics
 		throttle_real = 0;
 		for(int i=0; i<motor_count; i++)
+		{
 			throttle_real += motor_output[i];
+			g_ppm_output[i] = limit(THROTTLE_IDLE + motor_output[i]*(THROTTLE_MAX-THROTTLE_IDLE), THROTTLE_IDLE, THROTTLE_MAX);
+		}
 		throttle_real /= motor_count;
 		
 		// placebo motor saturation detector.
@@ -2967,7 +2974,7 @@ int yet_another_pilot::setup(void)
 	STOP_ALL_MOTORS();
 	
 	estimator.set_gps_latency(0);
-	attitude_controll.set_quaternion_mode(use_EKF > 0.5f);
+	attitude_controll.set_quaternion_mode(true);
 	SAFE_ON(flashlight);
 
 
