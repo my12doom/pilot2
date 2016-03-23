@@ -458,19 +458,34 @@ int yet_another_pilot::output()
 		for(int i=0; i<motor_count; i++)
 			motor_output[i] += throttle;
 		
-		// add yaw
+		// try adding yaw
 		float min_motor = 1;
 		float max_motor = 0;
 		for(int i=0; i<motor_count; i++)
 		{
-			motor_output[i] += quadcopter_mixing_matrix[matrix][i][2] * pid_result[2] * QUADCOPTER_THROTTLE_RESERVE;
+			float v = motor_output[i] + quadcopter_mixing_matrix[matrix][i][2] * pid_result[2] * QUADCOPTER_THROTTLE_RESERVE;
+
+			min_motor = fmin(v, min_motor);
+			max_motor = fmax(v, max_motor);
+		}
+
+		// check and handle saturation, reduce and add yaw, then calculate motor factor again.
+		float yaw_factor = (1-throttle) / (max_motor - throttle);
+		yaw_factor = fmin(yaw_factor, throttle / (throttle - min_motor));
+		yaw_factor = limit(yaw_factor, 0.33f, 1.0f);
+		if (min_motor > 0 || max_motor < 1)
+			yaw_factor = 1.0f;
+		min_motor = 1;
+		max_motor = 0;
+		for(int i=0; i<motor_count; i++)
+		{
+			motor_output[i] += quadcopter_mixing_matrix[matrix][i][2] * pid_result[2] * yaw_factor * QUADCOPTER_THROTTLE_RESERVE;
 
 			min_motor = fmin(motor_output[i], min_motor);
 			max_motor = fmax(motor_output[i], max_motor);
 		}
 
-		// check and handle saturation
-		// reduce scale at the center of throttle.
+		// handle remaining saturation: reduce scale at the center of throttle.
 		float motor_factor = (1-throttle) / (max_motor - throttle);
 		motor_factor = fmin(motor_factor, throttle / (throttle - min_motor));
 		motor_factor = limit(motor_factor, 0.33f, 1.0f);
@@ -485,7 +500,7 @@ int yet_another_pilot::output()
 		}
 
 		// log
-		float tbl[8] = {roll_pitch_factor, motor_factor, min_throttle, max_throttle, throttle, pid_result[0], pid_result[1], pid_result[2]};
+		float tbl[9] = {roll_pitch_factor, yaw_factor, motor_factor, min_throttle, max_throttle, throttle, pid_result[0], pid_result[1], pid_result[2]};
 		log2(tbl, TAG_MOTOR_MIXER, sizeof(tbl));
 
 		// final output and statics

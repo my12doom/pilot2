@@ -27,7 +27,7 @@ static param pid_factor2[3][4] = 			// pid_factor2[roll,pitch,yaw][p,i,d,i_limit
 };
 
 static param QUADCOPTER_ACRO_YAW_RATE("raty", PI);
-static param QUADCOPTER_MAX_YAW_OFFSET("offy", PI/4);
+static param QUADCOPTER_MAX_YAW_OFFSET("offy", PI/8);
 
 attitude_controller::attitude_controller()
 {
