@@ -368,8 +368,8 @@ void remove_down_component(float &bx, float &by, float &bz)			// remove earth fr
 
 	// transform back to body frame
 	bx = NED2BODY[0][0] * x + NED2BODY[0][1] * y; // + NED2BODY[0][2] * 0;
-	by = NED2BODY[1][0] * x + NED2BODY[1][1] * y; // + NED2BODY[0][2] * 0;
-	bz = NED2BODY[2][0] * x + NED2BODY[2][1] * y; // + NED2BODY[0][2] * 0;
+	by = NED2BODY[1][0] * x + NED2BODY[1][1] * y; // + NED2BODY[1][2] * 0;
+	bz = NED2BODY[2][0] * x + NED2BODY[2][1] * y; // + NED2BODY[2][2] * 0;
 }
 
 

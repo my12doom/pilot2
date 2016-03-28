@@ -47,4 +47,8 @@ static uint32_t __USADA8(uint32_t op1, uint32_t op2, uint32_t op3)
 
 	return op3+abs((int)d1[0]-d2[0])+abs((int)d1[0]-d2[0])+abs((int)d1[0]-d2[0])+abs((int)d1[0]-d2[0]);
 }
+#else
+#define __INLINE inline
+#define __ASM asm
+#include "core_cm4_simd.h"
 #endif

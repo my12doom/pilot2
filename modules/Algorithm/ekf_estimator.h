@@ -86,4 +86,12 @@ public:
 	
 
 
+	// X[0-2] : pos
+	// X[3-5] : velocity
+	// X[6-9] : quaternion
+	// X[10-12] : gyro bias
+
+	// Z[0-2] : pos 3D
+	// Z[3-4] : vel 2D
+	// Z[5-7] : body mag without ned z
 };

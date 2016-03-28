@@ -208,11 +208,6 @@ int ekf_estimator::update(EKF_U u,EKF_Mesurement mesurement,const float dT)
 		//Transfer quaternion to euler angle
 		quaternion_to_euler(1/*is radian:1 OR is Angle:0*/,X[6],X[7],X[8],X[9],&ekf_result.roll,&ekf_result.pitch,&ekf_result.yaw);
 		
-		// X[0-2] : pos
-		// X[3-5] : velocity
-		// X[6-9] : quaternion
-		// X[10-12] : gyro bias
-		
 	}
 	//check ekf if is ready to arm
 	ekf_is_ready();
