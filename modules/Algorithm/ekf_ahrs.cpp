@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <Protocol/common.h>
+#include <math/quaternion.h>
 
 ekf_ahrs::ekf_ahrs()
 {
@@ -96,7 +97,8 @@ int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
 
 	matrix Q = matrix::diag(7, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8);
 
-	matrix R = matrix::diag(still ? 9 : 6, 10.0, 10.8, 10.8, 10.8, 10.8, 10.8, 1e-6, 1e-6, 1e-6);
+	matrix R = still ? matrix::diag(9, 0.1, 0.1, 0.1, 1.0, 1.0, 1.0, 1e-2, 1e-2, 1e-2) 
+		: matrix::diag(6, 1e+3, 1e+3, 1e+3, 10.8, 10.8, 10.8);
 
 	float dt2 = dt/2;
 	matrix F(7,7,
@@ -213,14 +215,10 @@ void ekf_ahrs::remove_mag_ned_z(float *mag_body, float *q)
 	mag_body[2] = NED2BODY[2][0] * x + NED2BODY[2][1] * y; // + NED2BODY[2][2] * 0;
 }
 
-extern "C" void quaternion_to_euler(signed char is_radian, float q0, float q1, float q2,
-									float q3, float *roll, float *pitch, float *yaw);
-
-
 int ekf_ahrs::get_euler(float *euler)
 {
 
-	quaternion_to_euler(1, x[0], x[1], x[2], x[3], euler, euler+1, euler+2);
+	Quaternion2RPY(&x[0], euler);
 
 	return 0;
 }
@@ -275,7 +273,7 @@ int test_ekf_ahrs()
 			{
 				matrix &x = imu.x;
 				float roll, pitch, yaw;
-				quaternion_to_euler(0, x[0], x[1], x[2], x[3], &roll, &pitch, &yaw);
+				Quaternion2RPY(&x[0], &roll);
 
 				float roll_raw = atan2(-a[1], -a[2]) * 180 / 3.14159;
 				float pitch_raw = atan2(a[0], (-a[2] > 0 ? 1 : -1) * sqrt(a[1]*a[1] + a[2]*a[2])) * 180 / 3.14159;
