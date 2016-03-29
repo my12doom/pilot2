@@ -6,6 +6,7 @@
 #include <Algorithm/ahrs.h>
 #include <HAL/Interface/IGPS.h>
 #include <algorithm/pos_estimator2.h>
+#include <algorithm/ekf_ahrs.h>
 
 #define PI 3.1415926
 
@@ -58,6 +59,7 @@ int main(int argc, char* argv[])
 
 	ekf_estimator ekf_est;
 	pos_estimator2 pos2;
+	ekf_ahrs ahrs;
 
 	while (fread(&time, 1, 8, in) == 8)
 	{
@@ -133,6 +135,8 @@ int main(int argc, char* argv[])
 			float pitch_cf = -asinf(2.f * (q1*q3 - q0*q2));
 			float roll_cf = atan2f(2.f * (q2*q3 + q0*q1), q0*q0 - q1*q1 - q2*q2 + q3*q3);;
 			float yaw_cf = atan2f(2.f * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);		//! Yaw, 0 = north, PI/-PI = south, PI/2 = east, -PI/2 = west
+			float roll_raw = atan2(-acc[1], -acc[2]) * 180 / 3.14159;
+			float pitch_raw = atan2(acc[0], (-acc[2] > 0 ? 1 : -1) * sqrt(acc[1]*acc[1] + acc[2]*acc[2])) * 180 / 3.14159;
 
 
 			if (!imu_valid && sensor_valid)
@@ -167,6 +171,8 @@ int main(int argc, char* argv[])
 					0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, dt,
 					acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
 
+				// experimental EKF
+				ahrs.update(acc, gyro, mag, dt);
 
 				// EKF
 				EKF_U ekf_u;
@@ -215,6 +221,16 @@ int main(int argc, char* argv[])
 
 				ekf_est.update(ekf_u,ekf_mesurement, dt);
 				pos2.update(quad5.q, acc, gps_extra, quad2.altitude_baro_raw/100.0f, dt);
+
+				if (time > 12000000)
+				{
+
+					float P[7];
+					for(int p=0; p<7; p++)
+						P[p] = ahrs.P[p*8];
+
+					printf("");
+				}
 			}
 
 
@@ -239,12 +255,21 @@ int main(int argc, char* argv[])
 				fprintf(out, "FMT, 9, 23, IMU, Ihhhhhh, TimeMS,ACCX,ACCY,ACCZ,GYROX,GYROY,GYROZ\r\n");
 				fprintf(out, "FMT, 9, 23, POS2, Ihhhhhhhhhhhh, TimeMS,POSN,POSE,POSD,VELN,VELE,VELD, abiasx, abiasy, abiasz, vbiasx, vbiasy, vbiasz\r\n");
 				fprintf(out, "FMT, 9, 23, ACC_NED, Ihhh, TimeMS,ACC_N, ACC_E, ACC_D\r\n");
+				fprintf(out, "FMT, 9, 23, AHRS_SEKF, Ihhh, TimeMS,ahrs_roll, ahrs_pitch, ahrs_yaw, ahrs_gyro_bias[0], ahrs_gyro_bias[1], ahrs_gyro_bias[2]\r\n");
+				fprintf(out, "FMT, 9, 23, ATT_RAW, Ihhh, TimeMS, roll_raw, pitch_raw, yaw_raw\r\n");
+				fprintf(out, "FMT, 9, 23, P, Ihhhhhhh, TimeMS, p[0], p[1], p[2], p[3], p[4], p[5], p[6]\r\n");
 			}
 
 
 			static int att_id = 0;
 			if (att_id++ % 10 == 0 && imu_valid && sensor_valid && gps_valid)
 			{
+				float euler_sekf[3];
+				ahrs.get_euler(euler_sekf);
+				fprintf(out, "AHRS_SEKF, %d, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), euler_sekf[0] * 180 / PI, euler_sekf[1] * 180 / PI, euler_sekf[2] * 180 / PI, -ahrs.x[4] * 180 / PI, -ahrs.x[5] * 180 / PI, -ahrs.x[6] * 180 / PI, 0, 0);
+				fprintf(out, "ATT_RAW, %d, %f, %f, %f\r\n", int(time/1000), roll_raw, pitch_raw, 0);
+				fprintf(out, "P, %d, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), ahrs.P[0*8], ahrs.P[1*8], ahrs.P[2*8], ahrs.P[3*8], ahrs.P[4*8], ahrs.P[5*8], ahrs.P[6*8]);
+
 				ekf_est.ekf_result.roll;
 				fprintf(out, "ATT_ON, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), quad.angle_pos[0]/100.0f, quad.angle_pos[1]/100.0f, quad.angle_pos[2]/100.0f, 0, 0);
 				fprintf(out, "ATT_OFF_CF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), euler[0] * 180 / PI, euler[1] * 180 / PI, euler[2] * 180 / PI, 0, 0);
@@ -252,7 +277,7 @@ int main(int argc, char* argv[])
 				fprintf(out, "ATT_OFF_EKF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.ekf_result.roll * 180 / PI, ekf_est.ekf_result.pitch * 180 / PI, ekf_est.ekf_result.yaw * 180 / PI, 0, 0);
 
 				fprintf(out, "COVAR_OFF_EKF, %d, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.P[6*14], ekf_est.P[7*14], ekf_est.P[8*14], ekf_est.P[9*14], sqrt(ekf_est.P[0*14]), sqrt(ekf_est.P[4*14]), 0, 0);
-				fprintf(out, "IMU, %d, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), acc[0], acc[1], acc[2], gyro[0], gyro[1], gyro[2]);
+				fprintf(out, "IMU, %d, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), acc[0], acc[1], acc[2], gyro[0]*180/PI, gyro[1]*180/PI, gyro[2]*180/PI);
 				if(ekf_est.ekf_is_ready())
 				{
 					fprintf(out, "POSITION, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), lat_meter, lon_meter, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_y, speed_east, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps.DOP[1]/100.0f, 0, 0);
