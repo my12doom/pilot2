@@ -8,12 +8,13 @@
 ekf_ahrs::ekf_ahrs()
 {
 	x = matrix(7, 1, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-	P = matrix::diag(7, 100.0, 100.0, 100.0, 100.0, 1e-1, 1e-1, 1e-1 );
+	P = matrix::diag(7, 100.0, 100.0, 100.0, 100.0, 1e+1, 1e+1, 1e+1 );
 
 	motion_acc.set_threshold(0.2);
 	motion_gyro.set_threshold(5*PI/180);
 
 	still = false;
+	inited = false;
 }
 
 ekf_ahrs::~ekf_ahrs()
@@ -87,6 +88,9 @@ matrix ekf_ahrs::f(matrix &x, float gx, float gy, float gz, float dt)
 
 int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
 {
+	if (!inited)
+		init(a, g, mag);
+
 	// motion detection
 	vector va = {a[0], a[1], a[2]};
 	vector vg = {g[0], g[1], g[2]};
@@ -94,11 +98,12 @@ int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
 	motion_gyro.new_data(vg);
 
 	still = motion_acc.get_average(NULL) > 100 && motion_gyro.get_average(NULL) > 100;
+	still = false;
 
-	matrix Q = matrix::diag(7, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8, 1e-8);
+	matrix Q = matrix::diag(7, 1e-8, 1e-8, 1e-8, 1e-8, 1e-18, 1e-18, 1e-18);
 
-	matrix R = still ? matrix::diag(9, 0.1, 0.1, 0.1, 1.0, 1.0, 1.0, 1e-2, 1e-2, 1e-2) 
-		: matrix::diag(6, 1e+3, 1e+3, 1e+3, 10.8, 10.8, 10.8);
+	matrix R = still ? matrix::diag(9, 1e-3, 1e-3, 1e-3, 1e-2, 1e-2, 1e-2, 1e-4, 1e-4, 1e-4) 
+		: matrix::diag(6, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1);
 
 	float dt2 = dt/2;
 	matrix F(7,7,
@@ -153,6 +158,16 @@ int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
 	x = x1 + K*(zk - h(x1));
 	P = (matrix(P1.m) - K*H) * P1;
 
+	// too high gyro bias detection
+	// modern gyros won't have more than 5 degree/s total bias
+	if (x[4] * x[4] + x[5] * x[5] + x[6] * x[6] > (15*15*PI*PI/180/180))
+	{
+		P[4*8] += dt;
+		P[5*8] += dt;
+		P[6*8] += dt;
+		P[7*8] += dt;
+	}
+
 
 	// renorm
 	float sqq = 1.0f/sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2] + x[3] * x[3]);
@@ -172,6 +187,37 @@ int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
 
 	return 0;
 }
+
+int ekf_ahrs::init(float a[3], float g[3], float m[3])
+{
+	inited = true;
+
+	float roll = atan2(-a[1], -a[2]) * 180 / 3.14159;
+	float pitch = atan2(a[0], (-a[2] > 0 ? 1 : -1) * sqrt(a[1]*a[1] + a[2]*a[2])) * 180 / 3.14159;
+
+	float cosRoll = cosf(roll);
+	float sinRoll = sinf(roll);
+	float cosPitch = cosf(pitch);
+	float sinPitch = sinf(pitch);
+
+	float magX = m[0] * cosPitch + m[1] * sinRoll * sinPitch + m[2] * cosRoll * sinPitch;
+	float magY = m[1] * cosRoll - m[2] * sinRoll;
+	float initialHdg = atan2f(-magY, magX);
+	float cosHeading = cosf(initialHdg * 0.5f);
+	float sinHeading = sinf(initialHdg * 0.5f);
+
+	x[0] = cosRoll * cosPitch * cosHeading + sinRoll * sinPitch * sinHeading;
+	x[1] = sinRoll * cosPitch * cosHeading - cosRoll * sinPitch * sinHeading;
+	x[2] = cosRoll * sinPitch * cosHeading + sinRoll * cosPitch * sinHeading;
+	x[3] = cosRoll * cosPitch * sinHeading - sinRoll * sinPitch * cosHeading;
+
+	x[4] = g[0];
+	x[5] = g[1];
+	x[6] = g[2];
+
+	return 0;
+}
+
 
 void ekf_ahrs::remove_mag_ned_z(float *mag_body, float *q)
 {
