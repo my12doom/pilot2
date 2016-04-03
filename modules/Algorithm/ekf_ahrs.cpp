@@ -98,7 +98,7 @@ int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
 	motion_gyro.new_data(vg);
 
 	still = motion_acc.get_average(NULL) > 100 && motion_gyro.get_average(NULL) > 100;
-	still = false;
+// 	still = false;
 
 	matrix Q = matrix::diag(7, 1e-8, 1e-8, 1e-8, 1e-8, 1e-18, 1e-18, 1e-18);
 

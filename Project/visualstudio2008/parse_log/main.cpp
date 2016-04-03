@@ -7,6 +7,7 @@
 #include <HAL/Interface/IGPS.h>
 #include <algorithm/pos_estimator2.h>
 #include <algorithm/ekf_ahrs.h>
+#include <Windows.h>
 
 #define PI 3.1415926
 
@@ -138,6 +139,14 @@ int main(int argc, char* argv[])
 			float roll_raw = atan2(-acc[1], -acc[2]) * 180 / 3.14159;
 			float pitch_raw = atan2(acc[0], (-acc[2] > 0 ? 1 : -1) * sqrt(acc[1]*acc[1] + acc[2]*acc[2])) * 180 / 3.14159;
 
+			//
+
+			if (time < 9500000)
+				continue;
+
+			if (time > 1150000)
+				gyro[0] += 1.5 * PI / 180;
+
 
 			if (!imu_valid && sensor_valid)
 			{
@@ -219,8 +228,8 @@ int main(int argc, char* argv[])
  					ekf_est.set_mesurement_R(1E20,5);
 				}
 
-				ekf_est.update(ekf_u,ekf_mesurement, dt);
-				pos2.update(quad5.q, acc, gps_extra, quad2.altitude_baro_raw/100.0f, dt);
+// 				ekf_est.update(ekf_u,ekf_mesurement, dt);
+// 				pos2.update(quad5.q, acc, gps_extra, quad2.altitude_baro_raw/100.0f, dt);
 
 				if (time > 12000000)
 				{
@@ -257,7 +266,7 @@ int main(int argc, char* argv[])
 				fprintf(out, "FMT, 9, 23, ACC_NED, Ihhh, TimeMS,ACC_N, ACC_E, ACC_D\r\n");
 				fprintf(out, "FMT, 9, 23, AHRS_SEKF, Ihhh, TimeMS,ahrs_roll, ahrs_pitch, ahrs_yaw, ahrs_gyro_bias[0], ahrs_gyro_bias[1], ahrs_gyro_bias[2]\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_RAW, Ihhh, TimeMS, roll_raw, pitch_raw, yaw_raw\r\n");
-				fprintf(out, "FMT, 9, 23, P, Ihhhhhhh, TimeMS, p[0], p[1], p[2], p[3], p[4], p[5], p[6]\r\n");
+				fprintf(out, "FMT, 9, 23, P, Ihhhhhhhhh, TimeMS, p[0], p[1], p[2], p[3], p[4], p[5], p[6], pmax, plen\r\n");
 			}
 
 
@@ -268,7 +277,18 @@ int main(int argc, char* argv[])
 				ahrs.get_euler(euler_sekf);
 				fprintf(out, "AHRS_SEKF, %d, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), euler_sekf[0] * 180 / PI, euler_sekf[1] * 180 / PI, euler_sekf[2] * 180 / PI, -ahrs.x[4] * 180 / PI, -ahrs.x[5] * 180 / PI, -ahrs.x[6] * 180 / PI, 0, 0);
 				fprintf(out, "ATT_RAW, %d, %f, %f, %f\r\n", int(time/1000), roll_raw, pitch_raw, 0);
-				fprintf(out, "P, %d, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), ahrs.P[0*8], ahrs.P[1*8], ahrs.P[2*8], ahrs.P[3*8], ahrs.P[4*8], ahrs.P[5*8], ahrs.P[6*8]);
+				float plen = 0;
+				float pmax = 0;
+				for(int i=0; i<ahrs.P.m; i++)
+				{
+					plen += ahrs.P[i*8];
+					pmax = max(pmax, ahrs.P[i*8]);
+				}
+				plen = sqrt(plen);
+				pmax = sqrt(pmax);
+
+
+				fprintf(out, "P, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), sqrt(ahrs.P[0*8]), sqrt(ahrs.P[1*8]), sqrt(ahrs.P[2*8]), sqrt(ahrs.P[3*8]), sqrt(ahrs.P[4*8]), sqrt(ahrs.P[5*8]), sqrt(ahrs.P[6*8]), pmax, plen);
 
 				ekf_est.ekf_result.roll;
 				fprintf(out, "ATT_ON, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), quad.angle_pos[0]/100.0f, quad.angle_pos[1]/100.0f, quad.angle_pos[2]/100.0f, 0, 0);
