@@ -870,6 +870,14 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\..\modules\Algorithm\flow.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\modules\Algorithm\flow.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\..\modules\Algorithm\mag_calibration.cpp"
 						>
 					</File>
@@ -931,6 +939,18 @@
 					</File>
 					<File
 						RelativePath="..\..\..\modules\Algorithm\pos_estimator.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\modules\Algorithm\pos_estimator2.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\modules\Algorithm\pos_estimator2.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\modules\Algorithm\simd.h"
 						>
 					</File>
 					<Filter
