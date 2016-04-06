@@ -22,6 +22,8 @@
 #define IST8307_REG_TUNING_REG      0x47    //Bandgap Tuning register
 #define IST8307_SLA                 0x18    //IST8307 Slave Address
 #define IST8307_ODR_MODE            0x01    //Force mode
+#define IST8307_REG_HW_AVE_REG      0x41    //Chip Test register
+#define IST8307_REG_LOW_PW_REG       0x42    //Chip Test register:0xc0
 
 /*---IST8307 cross-axis matrix Address-----------------danny-----*/
 #define IST8307_REG_XX_CROSS_L       0x9C   //cross axis xx low byte
@@ -138,6 +140,8 @@ int IST8307A::init(HAL::II2C *i2c)
 		return -1;
 	}
 		
+	FAIL_RETURN(write_reg(IST8307_REG_HW_AVE_REG, 0x24));
+	FAIL_RETURN(write_reg(IST8307_REG_LOW_PW_REG, 0xC0));
 	FAIL_RETURN(write_reg(IST8307_REG_CNTRL1, 0x0));
 	FAIL_RETURN(write_reg(IST8307_REG_TEST_REG, 0x01));
 	FAIL_RETURN(write_reg(IST8307_REG_SELECTION_REG, 0x00));
