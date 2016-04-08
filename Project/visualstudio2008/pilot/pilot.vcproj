@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="pil"
+	Name="pilot"
 	ProjectGUID="{6C77FD18-DEC5-4F8E-AA24-D0F103E361C8}"
 	RootNamespace="pilot"
 	TargetFrameworkVersion="196613"
