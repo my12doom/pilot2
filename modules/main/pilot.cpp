@@ -1302,7 +1302,10 @@ int yet_another_pilot::calculate_state()
 	{
 		float q[4];
 		memcpy(q, &q0, sizeof(q));
-		estimator2.update(q, accel.array, gps, a_raw_altitude, interval);
+		float acc[3] = {-accel.array[0], -accel.array[1], -accel.array[2]};
+		estimator2.update(q, acc, gps, a_raw_altitude, interval);
+		LOGE("using EKF 2.0f\n");
+		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
 	}
 
 	else
@@ -1324,8 +1327,6 @@ int yet_another_pilot::calculate_state()
 	TRACE("q cf:%.3f,%.3f,%.3f,%.3f, q ekf: %.3f,%.3f,%.3f,%.3f\n", q0, q1, q2, q3, ekf_est.ekf_result.q0, ekf_est.ekf_result.q1, ekf_est.ekf_result.q2, ekf_est.ekf_result.q3);
 
 	calculate_baro_altitude();
-
-	acc_ned[2] = acc_ned[2];
 
 	alt_estimator.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
 	alt_estimator.set_static_mode(!armed);
