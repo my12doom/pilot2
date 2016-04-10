@@ -371,6 +371,11 @@ int yet_another_pilot::run_controllers()
 		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + acc_ned[2]};
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
+	else if (use_EKF == 2.0f)
+	{
+		float alt_state[3] = {estimator2.x[2], estimator2.x[5], estimator2.acc_ned[2]};
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
 	else
 	{
 		float alt_state[3] = {alt_estimator.state[0], alt_estimator.state[1], alt_estimator.state[3] + acc_ned[2]};			
@@ -1325,10 +1330,14 @@ int yet_another_pilot::calculate_state()
 	alt_estimator.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
 	alt_estimator.set_static_mode(!armed);
 	alt_estimator.update(acc_ned[2], a_raw_altitude, interval);
-	bool tilt_ok = (euler[0] > -PI/6) && (euler[0] < PI/6) && (euler[1] > -PI/6) && (euler[1] < PI/6);
-	alt_estimator2.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
-	alt_estimator2.set_static_mode(!armed);
-	alt_estimator2.update(acc_ned[2], a_raw_altitude, tilt_ok ? sonar_distance : NAN, interval);
+
+	if (use_alt_estimator2>0.5f)
+	{
+		bool tilt_ok = (euler[0] > -PI/6) && (euler[0] < PI/6) && (euler[1] > -PI/6) && (euler[1] < PI/6);
+		alt_estimator2.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
+		alt_estimator2.set_static_mode(!armed);
+		alt_estimator2.update(acc_ned[2], a_raw_altitude, tilt_ok ? sonar_distance : NAN, interval);
+	}
 	estimator.update_accel(-acc_ned[0], -acc_ned[1], systimer->gettime());
 
 	if (new_gps_data)
@@ -1603,6 +1612,11 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	if (use_alt_estimator2 > 0.5f)
 	{	
 		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + acc_ned[2]};
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
+	else if (use_EKF == 2.0f)
+	{
+		float alt_state[3] = {estimator2.x[2], estimator2.x[5], estimator2.acc_ned[2]};
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
 	else

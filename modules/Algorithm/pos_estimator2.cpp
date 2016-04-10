@@ -116,6 +116,10 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	acc_ned[1] = r[3]* acc_body[0] + r[4] *acc_body[1] + r[5] * acc_body[2];
 	acc_ned[2] = r[6]* acc_body[0] + r[7] *acc_body[1] + r[8] * acc_body[2] + G_in_ms2;
 
+	acc_ned[0] += r[0]* x[6] + r[1] *x[7] + r[2] * x[8];
+	acc_ned[1] += r[3]* x[6] + r[4] *x[7] + r[5] * x[8];
+	acc_ned[2] += r[6]* x[6] + r[7] *x[7] + r[8] * x[8];
+
 	matrix F = matrix(12,12,
 		1.0,0.0,0.0, dt, 0.0, 0.0, dtsq_2*r[0], dtsq_2*r[1], dtsq_2*r[2], 0.0, 0.0, 0.0,
 		0.0,1.0,0.0, 0.0, dt, 0.0, dtsq_2*r[3], dtsq_2*r[4], dtsq_2*r[5], 0.0, 0.0, 0.0,
