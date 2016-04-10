@@ -16,9 +16,9 @@ public:
 	~pos_estimator2();
 
 	int reset();		// mainly for after GPS glitch handling
-	int update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt)
-		;
+	int update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt);
 	void set_gps_latency(int new_latency){latency = new_latency;}
+	bool healthy();
 
 	CircularQueue<matrix, 20> history_pos;
 	int64_t last_history_push;

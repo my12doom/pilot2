@@ -27,13 +27,13 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 {
 	history_pos.clear();
 	last_history_push = 0;
-
+	gps_ticker = 0;
 	use_gps = false;
 
 	P = matrix::diag(12, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0);
 	x = matrix(12,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 	Q = matrix::diag(12, 4e-3, 4e-3, 4e-6, 
-						1e-4, 1e-4, 1e-4, 
+						1e-4, 1e-4, 1e-6, 
 						1e-7, 1e-7, 1e-7, 
 						1e-7, 1e-7, 1e-7);
 
@@ -41,12 +41,18 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 	return 0;
 }
 
+bool pos_estimator2::healthy()
+{
+	return use_gps;
+}
+
+
 int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt)			// unit: meter/s
 {
 	// GPS switching
 	if (!use_gps)
 	{
-		if (gps.position_accuracy_horizontal < 5)
+		if (gps.fix == 3 && gps.position_accuracy_horizontal < 5)
 			gps_ticker += dt;
 		else
 			gps_ticker = 0;
@@ -165,7 +171,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			0.0,0.0,0.0, 1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0,
 			0.0,0.0,0.0, 0.0,1.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0
 			);
-		R = matrix::diag(3,0.6, 5.0, 5.0);
+		R = matrix::diag(3,60.0, 5.0, 5.0);
 	}
 
 

@@ -17,7 +17,7 @@
 #include <Algorithm/motion_detector.h>
 #include <Algorithm/battery_estimator.h>
 #include <Algorithm/ekf_estimator.h>
-
+#include <Algorithm/pos_estimator2.h>
 #include <math/LowPassFilter2p.h>
 
 #include "mode_basic.h"
@@ -96,6 +96,7 @@ public:
 	int64_t last_tick;// = 0;
 	int64_t last_gps_tick;// = 0;
 	pos_estimator estimator;
+	pos_estimator2 estimator2;
 	pos_controller_base *pos_control;
 	pos_controller pos_control_hybird;
 	pos_controller_old pos_control_loiter;
