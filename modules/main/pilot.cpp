@@ -500,7 +500,7 @@ int yet_another_pilot::output()
 			saturation = max_motor - 1.0f;
 		if (min_motor < 0)
 			saturation = fmax(saturation, -min_motor);
-		float yaw_factor = saturation > yaw_dv*0.33f ? 0.33f : ((yaw_dv-saturation)/yaw_dv);
+		float yaw_factor = (saturation > yaw_dv*0.33f) ? 0.33f : ((yaw_dv-saturation)/yaw_dv);
 		yaw_factor = limit(yaw_factor, 0.33f, 1.0f);
 		min_motor = 1;
 		max_motor = 0;
