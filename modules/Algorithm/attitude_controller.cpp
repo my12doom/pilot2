@@ -112,10 +112,6 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 		float new_error = fabs(radian_sub(new_target, euler[2]));
 		if (new_error < ((airborne&&!motor_state)?QUADCOPTER_MAX_YAW_OFFSET:(QUADCOPTER_MAX_YAW_OFFSET/5)) || new_error < old_error)	// decrease max allowed yaw offset if any motor saturated
 			euler_sp[2] = new_target;
-
-		float delta_angle = radian_sub(euler_sp[2], euler[2]);
-		delta_angle = limit(delta_angle, -QUADCOPTER_MAX_YAW_OFFSET, QUADCOPTER_MAX_YAW_OFFSET);
-		euler_sp[2] = radian_add(euler[2], delta_angle);
 	}
 
 	return 0;
@@ -125,6 +121,11 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 // dt: time interval
 int attitude_controller::update(float dt)
 {
+	// limit max yaw set point
+	float delta_angle = radian_sub(euler_sp[2], euler[2]);
+	delta_angle = limit(delta_angle, -QUADCOPTER_MAX_YAW_OFFSET, QUADCOPTER_MAX_YAW_OFFSET);
+	euler_sp[2] = radian_add(euler[2], delta_angle);
+
 	// outter loop, attitude -> body frame rate
 	if (use_quaternion)
 	{
