@@ -33,4 +33,7 @@ public:
 	matrix Q;
 	matrix R;
 	float acc_ned[3];
+
+	float gps_north;
+	float gps_east;
 };

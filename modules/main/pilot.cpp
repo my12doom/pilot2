@@ -470,11 +470,12 @@ int yet_another_pilot::output()
 		}
 
 		// check and handle saturation, reduce and add yaw, then calculate motor factor again.
-		float yaw_factor = (1-throttle) / (max_motor - throttle);
-		yaw_factor = fmin(yaw_factor, throttle / (throttle - min_motor));
+		float yaw_factor = 1.0f;
+		if (max_motor > 1)
+			yaw_factor = (1-throttle) / (max_motor - throttle);
+		if (min_motor < 0)
+			yaw_factor = fmin(yaw_factor, throttle / (throttle - min_motor));
 		yaw_factor = limit(yaw_factor, 0.33f, 1.0f);
-		if (min_motor > 0 || max_motor < 1)
-			yaw_factor = 1.0f;
 		min_motor = 1;
 		max_motor = 0;
 		for(int i=0; i<motor_count; i++)
@@ -744,6 +745,14 @@ int yet_another_pilot::save_logs()
 		min((systimer->gettime() - mobile_last_update)/1000, 65535),
 	};
 	log(&mobile, TAG_MOBILE_DATA, systime);
+
+	int16_t raw_imu_data[6];
+	while (raw_imu_buffer.count() > sizeof(raw_imu_data))
+	{
+		raw_imu_buffer.pop(raw_imu_data, sizeof(raw_imu_data));
+		log2(raw_imu_data, 5, sizeof(raw_imu_data));
+	}
+
 	
 	return 0;
 }
@@ -1065,7 +1074,7 @@ int yet_another_pilot::read_imu_and_filter()
 		mag.array[i] += mag_bias[i];
 		mag.array[i] *= mag_scale[i];
 		gyro_reading.array[i] += gyro_bias[i];
-	}
+	}	
 	
 	// copy mag
 	if (!imu_data_lock && got_mag)
@@ -1157,6 +1166,7 @@ int yet_another_pilot::read_imu_and_filter()
 						gyro.V.x * 18000 / PI, gyro.V.y * 18000 / PI, gyro.V.z * 18000 / PI,};
 
 	//log2(data, 5, sizeof(data));
+	raw_imu_buffer.put(data, sizeof(data));
 
 	// voltage and current sensors	
 	float alpha = interval / (interval + 1.0f/(2*PI * 2.0f));		// 2hz low pass filter

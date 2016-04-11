@@ -19,6 +19,7 @@
 #include <Algorithm/ekf_estimator.h>
 
 #include <math/LowPassFilter2p.h>
+#include <utils/fifo2.h>
 
 #include "mode_basic.h"
 #include "mode_althold.h"
@@ -150,6 +151,7 @@ public:
 	int events_args[10];
 	float home[2];
 	float home_set;
+	FIFO<2048> raw_imu_buffer;
 
 	// constructor
 	yet_another_pilot();

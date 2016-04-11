@@ -297,6 +297,27 @@ typedef struct
 	}data;
 } rf_data;
 
+
+typedef struct SAT_struct
+{
+	uint8_t gnss_id;
+	uint8_t sv_id;
+	uint8_t cno;
+	int8_t elev;
+	int16_t azim;
+	int16_t residual;
+	uint32_t flags;
+} SAT;
+
+typedef struct SAT_header_struct
+{
+	uint32_t tow;
+	uint8_t version;
+	uint8_t num_sat_visible;
+	uint8_t resv[2];
+	SAT sats[20];
+} SAT_header;
+
 #define TAG_SENSOR_DATA	0x12
 #define TAG_PPM_DATA	0x33
 #define TAG_CTRL_DATA	0x34
@@ -351,6 +372,7 @@ enum EXTENDED_DATA_TYPES
 	TAG_UBX_0_DATA = 21,
 	TAG_EXTRA_GPS_DATA = 22,
 	TAG_MOTOR_MIXER = 23,
+	TAG_UBX_SAT_DATA = 24,
 };
 
 #endif

@@ -102,6 +102,7 @@ void init_uart()
 #include <HAL/sensors/MPU6000.h>
 #include <HAL/sensors/HMC5983SPI.h>
 #include <HAL/sensors/MS5611_SPI.h>
+#include <HAL/sensors/IST8307A.h>
 F4SPI spi1;
 F4GPIO cs_mpu(GPIOA, GPIO_Pin_15);
 F4GPIO cs_ms5611(GPIOC, GPIO_Pin_2);
@@ -161,6 +162,35 @@ int init_external_compass()
 	}
 
 	return 0;	
+}
+
+static F4GPIO SCL2(GPIOC, GPIO_Pin_0);
+static F4GPIO SDA2(GPIOC, GPIO_Pin_1);
+static I2C_SW i2c2(&SCL2, &SDA2);
+static sensors::IST8307A ist2;
+int init_ist()
+{
+	if (manager.get_magnetometer_count())
+	{
+		LOGE("already have 1 magnetomter\n");
+		return -1;
+	}
+	
+	F4GPIO SCL1(GPIOC, GPIO_Pin_0);
+	F4GPIO SDA1(GPIOC, GPIO_Pin_1);
+	I2C_SW i2c1(&SCL1, &SDA1);
+
+	sensors::IST8307A ist;
+	if (ist.init(&i2c1) == 0)
+	{
+		LOGE("found IST8307A on I2C(PC13,PC14)\n");
+		ist2.init(&i2c2);
+		ist2.axis_config(1, 0, 2, -1, +1, -1);
+
+		manager.register_magnetometer(&ist2);
+	}
+
+	return 0;
 }
 
 int init_RC()
@@ -309,6 +339,7 @@ int bsp_init_all()
 	init_RC();
 	init_sensors();
 	//init_external_compass();
+	init_ist();
 	init_asyncworker();
 	init_led();
 	init_GPS();
@@ -341,12 +372,12 @@ int bsp_init_all()
 		param("altP", 1) = 1.5;
 
 		// PID
-		param("rP1", 0.2f)=0.45f;
-		param("rI1", 0.3f)=0.45f;
-		param("rD1", 0.005f)=0.01f;
-		param("rP2", 0.36f)=0.55f;
-		param("rI2", 0.4f)=0.55f;
-		param("rD2", 0.01f)=0.01f;
+		param("rP1", 0.2f)=0.60f;
+		param("rI1", 0.3f)=0.60f;
+		param("rD1", 0.005f)=0.020f;
+		param("rP2", 0.36f)=0.80f;
+		param("rI2", 0.4f)=0.80f;
+		param("rD2", 0.01f)=0.025f;
 		param("sP1", 4.5f)=4.5f;
 		param("sP2", 4.5f)=4.5f;
 
@@ -354,9 +385,9 @@ int bsp_init_all()
 		param("rI3", 0.15f)=0.15f;
 		
 		// tilt angle
-		param("rngR", PI / 8)= PI / 8;
-		param("rngP", PI / 8)= PI / 8;
-		param("offy", PI / 8)= PI / 8;
+		param("rngR", PI / 8)= PI / 5;
+		param("rngP", PI / 8)= PI / 5;
+		param("offy", PI / 8)= PI / 5;
 
 		// frame
 		param("mat", 1)=1;

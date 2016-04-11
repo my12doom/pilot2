@@ -144,6 +144,8 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 
 		float pos_north = (gps.latitude - home_lat) * latitude_to_meter;
 		float pos_east = (gps.longitude - home_lon) * longtitude_to_meter;
+		gps_north = pos_north;
+		gps_east = pos_east;
 		float yaw_gps = gps.direction * 2 * PI / 360.0f;
 		float vel_north = cos(yaw_gps) * gps.speed;
 		float vel_east = sin(yaw_gps) * gps.speed;

@@ -50,5 +50,11 @@ static uint32_t __USADA8(uint32_t op1, uint32_t op2, uint32_t op3)
 #else
 #define __INLINE inline
 #define __ASM asm
+#define __STATIC_INLINE inline
+#if __GNUC__ > 0
+#include "core_cmSimd.h"
+#else
 #include "core_cm4_simd.h"
+#endif
+
 #endif
