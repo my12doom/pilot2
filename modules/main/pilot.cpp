@@ -244,10 +244,15 @@ int yet_another_pilot::set_home_LLH(const float * new_home)
 
 bool yet_another_pilot::pos_estimator_ready()
 {
-	if (use_EKF > 0.5f)
+	if (use_EKF == 1.0f)
 	{
 		// TODO: use EKF estimator to determine healthy
 		return estimator.healthy();
+	}
+	else if (use_EKF == 2.0f)
+	{
+		return estimator2.healthy();
+
 	}
 	else
 	{
@@ -269,7 +274,7 @@ int yet_another_pilot::get_pos_velocity_ned(float *pos, float *velocity)
 	if (!pos_estimator_ready())
 		return -1;
 
-	if(use_EKF > 0.5f)
+	if(use_EKF == 1.0f)
 	{
 		if (pos)
 		{
@@ -281,6 +286,19 @@ int yet_another_pilot::get_pos_velocity_ned(float *pos, float *velocity)
 			velocity[0] = ekf_est.ekf_result.Vel_x;
 			velocity[1] = ekf_est.ekf_result.Vel_y;
 		}
+	}
+	else if (use_EKF == 2.0f)
+	{
+		if (pos)
+		{
+			pos[0]= estimator2.x[0];
+			pos[1]= estimator2.x[1];
+		}
+		if (velocity)
+		{
+			velocity[0] = estimator2.x[3];
+			velocity[1] = estimator2.x[4];
+		}		
 	}
 	else
 	{
@@ -346,11 +364,16 @@ int yet_another_pilot::default_alt_controlling()
 
 int yet_another_pilot::run_controllers()
 {
-	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	attitude_controll.provide_states(euler, use_EKF ==1.0f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 
 	if (use_alt_estimator2 > 0.5f)
 	{	
 		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + acc_ned[2]};
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
+	else if (use_EKF == 2.0f)
+	{
+		float alt_state[3] = {estimator2.x[2], estimator2.x[5], estimator2.acc_ned[2]};
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
 	else
@@ -1215,105 +1238,86 @@ int yet_another_pilot::calculate_state()
 	0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval,
 	acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
 //	
-	//EKF estimator update
-	EKF_U ekf_u;
-	EKF_Mesurement ekf_mesurement;
+
 	
-	ekf_u.accel_x=accel.array[0];
-	ekf_u.accel_y=accel.array[1];
-	ekf_u.accel_z=accel.array[2];
-	ekf_u.gyro_x=gyro_reading.array[0];
-	ekf_u.gyro_y=gyro_reading.array[1];
-	ekf_u.gyro_z=gyro_reading.array[2];
-	ekf_mesurement.Mag_x=mag.array[0];
-	ekf_mesurement.Mag_y=mag.array[1];
-	ekf_mesurement.Mag_z=mag.array[2];
 
-	ekf_mesurement.Pos_Baro_z=a_raw_altitude;
-	if(estimator.healthy())
+
+	if (use_EKF == 1.0f)
 	{
-		ekf_mesurement.Pos_GPS_x=estimator.get_raw_meter().latitude;
-		ekf_mesurement.Pos_GPS_y=estimator.get_raw_meter().longtitude;
-		ekf_mesurement.Vel_GPS_x=ground_speed_north;
-		ekf_mesurement.Vel_GPS_y=ground_speed_east;
-//		ekf_est.set_mesurement_R(1.0E-3,0.08);
-		ekf_est.set_mesurement_R(0.0005f*gps.position_accuracy_horizontal * gps.position_accuracy_horizontal, 0.02f*gps.velocity_accuracy_horizontal * gps.velocity_accuracy_horizontal);
-	}
-	else
-	{	
-		float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0028f;
-		float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0028f;
-
-		float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
-		float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
+		//EKF estimator update
+		EKF_U ekf_u;
+		EKF_Mesurement ekf_mesurement;
 		
-		float v_flow_body[3];
-		v_flow_body[0] = wy * frame.ground_distance/1000.0f * 1.15f;//black magic
-		v_flow_body[1] = -wx * frame.ground_distance/1000.0f * 1.15f;
-		v_flow_body[2] = 0;
+		ekf_u.accel_x=accel.array[0];
+		ekf_u.accel_y=accel.array[1];
+		ekf_u.accel_z=accel.array[2];
+		ekf_u.gyro_x=gyro_reading.array[0];
+		ekf_u.gyro_y=gyro_reading.array[1];
+		ekf_u.gyro_z=gyro_reading.array[2];
+		ekf_mesurement.Mag_x=mag.array[0];
+		ekf_mesurement.Mag_y=mag.array[1];
+		ekf_mesurement.Mag_z=mag.array[2];
 
-		if (yap.frame.qual < 100)
+		ekf_mesurement.Pos_Baro_z=a_raw_altitude;
+		if(estimator.healthy())
 		{
-			v_flow_body[0] = v_flow_body[1] = 0;
-			ekf_est.set_mesurement_R(1E20,1E-2);
+			ekf_mesurement.Pos_GPS_x=estimator.get_raw_meter().latitude;
+			ekf_mesurement.Pos_GPS_y=estimator.get_raw_meter().longtitude;
+			ekf_mesurement.Vel_GPS_x=ground_speed_north;
+			ekf_mesurement.Vel_GPS_y=ground_speed_east;
+			ekf_est.set_mesurement_R(0.0005f*gps.position_accuracy_horizontal * gps.position_accuracy_horizontal, 0.02f*gps.velocity_accuracy_horizontal * gps.velocity_accuracy_horizontal);
 		}
 		else
-		{
-			ekf_est.set_mesurement_R(1E20, 1E-2);
-		}
+		{	
+			float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0028f;
+			float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0028f;
 
+			float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
+			float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
+			
+			float v_flow_body[3];
+			v_flow_body[0] = wy * frame.ground_distance/1000.0f * 1.15f;//black magic
+			v_flow_body[1] = -wx * frame.ground_distance/1000.0f * 1.15f;
+			v_flow_body[2] = 0;
+
+			if (yap.frame.qual < 100)
+			{
+				v_flow_body[0] = v_flow_body[1] = 0;
+				ekf_est.set_mesurement_R(1E20,1E-2);
+			}
+			else
+			{
+				ekf_est.set_mesurement_R(1E20, 1E-2);
+			}
+
+			
+			ekf_est.tf_body2ned(v_flow_body,v_flow_ned);
+			
+			ekf_mesurement.Pos_GPS_x=0;
+			ekf_mesurement.Pos_GPS_y=0;
+			ekf_mesurement.Vel_GPS_x=v_flow_ned[0];
+			ekf_mesurement.Vel_GPS_y=v_flow_ned[1];
+		}		
 		
-		ekf_est.tf_body2ned(v_flow_body,v_flow_ned);
-		
-		ekf_mesurement.Pos_GPS_x=0;
-		ekf_mesurement.Pos_GPS_y=0;
-		ekf_mesurement.Vel_GPS_x=v_flow_ned[0];
-		ekf_mesurement.Vel_GPS_y=v_flow_ned[1];
-	}
-	
-	int64_t t = systimer->gettime();
-	if (use_EKF > 0.5f)
+		int64_t t = systimer->gettime();
 		ekf_est.update(ekf_u,ekf_mesurement,interval);
-	t = systimer->gettime() - t;
-// 	printf("%f,%d\r\n",interval, int(t));
+		t = systimer->gettime() - t;
 
-	//For debug
-	float ekf_buffer[6];
-	ekf_buffer[0]=ekf_est.ekf_result.roll*180/3.1415f;
-	ekf_buffer[1]=ekf_est.ekf_result.pitch*180/3.1415f;
-	ekf_buffer[2]=ekf_est.ekf_result.yaw*180/3.1415f;
-	ekf_buffer[3]=euler[0]*180/3.1415f;
-	ekf_buffer[4]=euler[1]*180/3.1415f;
-	ekf_buffer[5]=euler[2]*180/3.1415f;
-
-// 	printf("\r(ekf)roll:%.3f pitch:%.3f yaw:%.3f   (raw)roll:%.3f pitch:%.3f yaw:%.3f, P:%f,%f,%f,%f\n",ekf_buffer[0],ekf_buffer[1],ekf_buffer[2],ekf_buffer[3],ekf_buffer[4],ekf_buffer[5],
-// 		ekf_est.P[6*14], ekf_est.P[6*14], ekf_est.P[6*14], ekf_est.P[6*14]);
-
-// 	printf("%.3f:pos:%f,%f, vel:%f,%f\n", systimer->gettime() / 1000000.0f, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_x, ekf_est.ekf_result.Vel_y);
-
-//	float a_body[3] = {accel.array[0], accel.array[1], accel.array[2]};
-//	float a_ned[3];
-//	ekf_est.tf_ned2body(a_body, a_ned);
-
-// 	extern float a_in_f[3];
-// 	float yaw_cf = atan2f(NED2BODY[0][1], NED2BODY[0][0]);
-// 	printf("%.3f, %.2f, %.2f, %.2f, %.2f,%.2f, %.2f, %.2f\n", systimer->gettime()/1000000.0f, a_in_f[0], a_in_f[1], -acc_ned[0], -acc_ned[1], ekf_est.ekf_result.Vel_x, ekf_est.ekf_result.Vel_y, accel.array[2]);
-// 	float acc_data[6];	// [acc_N_ekf, acc_E_ekf, acc_N_cf, acc_E_cf, V_N_EKF, V_E,EKF];
-// 	acc_data[0] = a_in_f[0];
-// 	acc_data[1] = a_in_f[1];
-// 	acc_data[2] = ekf_est.ekf_result.Vel_x;
-// 	acc_data[3] = ekf_est.ekf_result.Vel_y;
-// 	acc_data[4] = -acc_ned[0];
-// 	acc_data[5] = -acc_ned[1];
-// 
-// 	log2(acc_data, TAG_ACC_DATA, sizeof(acc_data));
-
-	if (use_EKF > 0.5f)
-	{
+//	 	printf("%f,%d\r\n",interval, int(t));
 		euler[0] = radian_add(ekf_est.ekf_result.roll, quadcopter_trim[0]);
 		euler[1] = radian_add(ekf_est.ekf_result.pitch, quadcopter_trim[1]);
 		euler[2] = radian_add(ekf_est.ekf_result.yaw, quadcopter_trim[2]);
 	}
+	else if (use_EKF == 2.0f)
+	{
+		float q[4];
+		memcpy(q, &q0, sizeof(q));
+		float acc[3] = {-accel.array[0], -accel.array[1], -accel.array[2]};
+		estimator2.update(q, acc, gps, a_raw_altitude, interval);
+		LOGE("using EKF 2.0f\n");
+		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
+	}
+
 	else
 	{
 		euler[0] = radian_add(euler[0], quadcopter_trim[0]);
@@ -1334,15 +1338,17 @@ int yet_another_pilot::calculate_state()
 
 	calculate_baro_altitude();
 
-	acc_ned[2] = acc_ned[2];
-
 	alt_estimator.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
 	alt_estimator.set_static_mode(!armed);
 	alt_estimator.update(acc_ned[2], a_raw_altitude, interval);
-	bool tilt_ok = (euler[0] > -PI/6) && (euler[0] < PI/6) && (euler[1] > -PI/6) && (euler[1] < PI/6);
-	alt_estimator2.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
-	alt_estimator2.set_static_mode(!armed);
-	alt_estimator2.update(acc_ned[2], a_raw_altitude, tilt_ok ? sonar_distance : NAN, interval);
+
+	if (use_alt_estimator2>0.5f)
+	{
+		bool tilt_ok = (euler[0] > -PI/6) && (euler[0] < PI/6) && (euler[1] > -PI/6) && (euler[1] < PI/6);
+		alt_estimator2.set_land_effect(armed && (!airborne || (!isnan(sonar_distance) && sonar_distance < 0.5f)));
+		alt_estimator2.set_static_mode(!armed);
+		alt_estimator2.update(acc_ned[2], a_raw_altitude, tilt_ok ? sonar_distance : NAN, interval);
+	}
 	estimator.update_accel(-acc_ned[0], -acc_ned[1], systimer->gettime());
 
 	if (new_gps_data)
@@ -1598,7 +1604,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 			return -2;
 		}
 
-		if (use_EKF > 0.5f && !ekf_est.ekf_is_ready())
+		if (use_EKF == 1.0f && !ekf_est.ekf_is_ready())
 		{
 			LOGE("arm failed: EKF not ready\n");
 			return -1;
@@ -1612,11 +1618,16 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 		}
 	}
 
-	attitude_controll.provide_states(euler, use_EKF > 0.5f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	attitude_controll.provide_states(euler, use_EKF == 1.0f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controll.reset();
 	if (use_alt_estimator2 > 0.5f)
 	{	
 		float alt_state[3] = {alt_estimator2.x[0], alt_estimator2.x[1], alt_estimator2.x[2] + acc_ned[2]};
+		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
+	}
+	else if (use_EKF == 2.0f)
+	{
+		float alt_state[3] = {estimator2.x[2], estimator2.x[5], estimator2.acc_ned[2]};
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
 	else

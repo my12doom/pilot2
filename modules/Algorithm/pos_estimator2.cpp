@@ -27,13 +27,13 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 {
 	history_pos.clear();
 	last_history_push = 0;
-
+	gps_ticker = 0;
 	use_gps = false;
 
 	P = matrix::diag(12, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0);
 	x = matrix(12,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 	Q = matrix::diag(12, 4e-3, 4e-3, 4e-6, 
-						1e-4, 1e-4, 1e-4, 
+						1e-4, 1e-4, 1e-6, 
 						1e-7, 1e-7, 1e-7, 
 						1e-7, 1e-7, 1e-7);
 
@@ -41,12 +41,18 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 	return 0;
 }
 
+bool pos_estimator2::healthy()
+{
+	return use_gps;
+}
+
+
 int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt)			// unit: meter/s
 {
 	// GPS switching
 	if (!use_gps)
 	{
-		if (gps.position_accuracy_horizontal < 5)
+		if (gps.fix == 3 && gps.position_accuracy_horizontal < 5)
 			gps_ticker += dt;
 		else
 			gps_ticker = 0;
@@ -108,7 +114,11 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	float dtsq_2 = dt*dt/2;
 	acc_ned[0] = r[0]* acc_body[0] + r[1] *acc_body[1] + r[2] * acc_body[2];
 	acc_ned[1] = r[3]* acc_body[0] + r[4] *acc_body[1] + r[5] * acc_body[2];
-	acc_ned[2] = r[6]* acc_body[0] + r[7] *acc_body[1] + r[8] * acc_body[2] + G_in_ms2;
+	acc_ned[2] = -(r[6]* acc_body[0] + r[7] *acc_body[1] + r[8] * acc_body[2] + G_in_ms2);
+
+	acc_ned[0] += r[0]* x[6] + r[1] *x[7] + r[2] * x[8];
+	acc_ned[1] += r[3]* x[6] + r[4] *x[7] + r[5] * x[8];
+	acc_ned[2] += -(r[6]* x[6] + r[7] *x[7] + r[8] * x[8]);
 
 	matrix F = matrix(12,12,
 		1.0,0.0,0.0, dt, 0.0, 0.0, dtsq_2*r[0], dtsq_2*r[1], dtsq_2*r[2], 0.0, 0.0, 0.0,
@@ -167,7 +177,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			0.0,0.0,0.0, 1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0,
 			0.0,0.0,0.0, 0.0,1.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0
 			);
-		R = matrix::diag(3,0.6, 5.0, 5.0);
+		R = matrix::diag(3,60.0, 5.0, 5.0);
 	}
 
 
