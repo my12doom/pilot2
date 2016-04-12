@@ -493,11 +493,14 @@ int yet_another_pilot::output()
 		}
 
 		// check and handle saturation, reduce and add yaw, then calculate motor factor again.
-		float yaw_factor = 1.0f;
+		// assume all motors have same contribution to yaw torque.
+		float yaw_dv = fabs(quadcopter_mixing_matrix[matrix][0][2] * pid_result[2]) * QUADCOPTER_THROTTLE_RESERVE;
+		float saturation = 0.0f;
 		if (max_motor > 1)
-			yaw_factor = (1-throttle) / (max_motor - throttle);
+			saturation = max_motor - 1.0f;
 		if (min_motor < 0)
-			yaw_factor = fmin(yaw_factor, throttle / (throttle - min_motor));
+			saturation = fmax(saturation, -min_motor);
+		float yaw_factor = (saturation > yaw_dv*0.33f) ? 0.33f : ((yaw_dv-saturation)/yaw_dv);
 		yaw_factor = limit(yaw_factor, 0.33f, 1.0f);
 		min_motor = 1;
 		max_motor = 0;
