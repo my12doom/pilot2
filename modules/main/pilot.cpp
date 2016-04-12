@@ -1314,7 +1314,6 @@ int yet_another_pilot::calculate_state()
 		memcpy(q, &q0, sizeof(q));
 		float acc[3] = {-accel.array[0], -accel.array[1], -accel.array[2]};
 		estimator2.update(q, acc, gps, a_raw_altitude, interval);
-		LOGE("using EKF 2.0f\n");
 		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
 	}
 
