@@ -23,10 +23,10 @@ public:
 	CircularQueue<matrix, 20> history_pos;
 	int64_t last_history_push;
 	int latency;
-	bool use_gps;
 	double home_lat;
 	double home_lon;
-	float gps_ticker;
+	float ticker;
+	bool position_healthy;
 
 	matrix P;
 	matrix x; // {pos_ned[3], vel_ned[3], acc_bias_body[3], vel_bias_ned[3]}

@@ -5,13 +5,14 @@
 #include <stdint.h>
 
 #ifndef WIN32
+#define LOGE log_printf
 #else
 typedef unsigned char uint8_t;
+#define LOGE printf
 #endif
 
 #define QUADCOPTER_THROTTLE_RESERVE 0.15f
 #define PI 3.14159265f
-#define LOGE log_printf
 #define TRACE(...) 
 #define LOG_NRF 1
 #define LOG_SDCARD 2

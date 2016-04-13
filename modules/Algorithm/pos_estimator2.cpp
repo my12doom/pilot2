@@ -27,8 +27,8 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 {
 	history_pos.clear();
 	last_history_push = 0;
-	gps_ticker = 0;
-	use_gps = false;
+	ticker = 0;
+	position_healthy = false;
 
 	P = matrix::diag(12, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0);
 	x = matrix(12,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -43,49 +43,61 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 
 bool pos_estimator2::healthy()
 {
-	return use_gps;
+	if (!position_healthy)
+		return false;
+
+	// TODO: residual norm and covariance checking
+
+	return position_healthy;
 }
 
 
 int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt)			// unit: meter/s
 {
 	// GPS switching
-	if (!use_gps)
+	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 5) || (position_healthy && gps.position_accuracy_horizontal < 10);
+
+	// home
+	if (use_gps && isnan(home_lat))
 	{
-		if (gps.fix == 3 && gps.position_accuracy_horizontal < 5)
-			gps_ticker += dt;
-		else
-			gps_ticker = 0;
+		home_lat = gps.latitude;
+		home_lon = gps.longitude;
 
-		if (gps_ticker > 5)
+		LOGE("pos_estimator2: home set to %f , %f\n", home_lat, home_lon);
+	}
+
+	// update "position healthy" state, and reset position covariance if needed
+	if (!position_healthy && use_gps)
+	{
+		ticker += dt;
+
+		if (ticker > 3)
 		{
-			use_gps = true;
-			gps_ticker = 0;
+			position_healthy = true;
+			ticker = 0;
 
-			printf("pos_estimator2: using GPS\n");
-			if (isnan(home_lat))
-			{
-				home_lat = gps.latitude;
-				home_lon = gps.longitude;
-			}
+			LOGE("pos_estimator2: position healthy\n");
+			
+		}
+	}
+	else if (position_healthy && !use_gps)
+	{
+		ticker += dt;
+
+		if (ticker > 3)
+		{
+			position_healthy = false;
+			ticker = 0;
+
+			printf("pos_estimator2: position failed\n");
+
+			P[0] = 100;
+			P[P.m+1] = 100;
 		}
 	}
 	else
 	{
-
-		if (gps.position_accuracy_horizontal > 10)
-			gps_ticker += dt;
-		else
-			gps_ticker = 0;
-
-		if (gps_ticker > 3)
-		{
-			use_gps = false;
-			gps_ticker = 0;
-
-			printf("pos_estimator2: disabled GPS\n");
-		}
-
+		ticker = 0;
 	}
 
 	// prepare matrices
@@ -147,19 +159,22 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	matrix zk;
 	matrix H;
 
-	if (use_gps)
-	{
-		float latitude_to_meter = 40007000.0f/360;
-		float longtitude_to_meter = 40007000.0f/360*cos(gps.latitude * PI / 180);
+	float latitude_to_meter = 40007000.0f/360;
+	float longtitude_to_meter = 40007000.0f/360*cos(gps.latitude * PI / 180);
 
-		float pos_north = (gps.latitude - home_lat) * latitude_to_meter;
-		float pos_east = (gps.longitude - home_lon) * longtitude_to_meter;
+	float pos_north = (gps.latitude - home_lat) * latitude_to_meter;
+	float pos_east = (gps.longitude - home_lon) * longtitude_to_meter;
+	float yaw_gps = gps.direction * 2 * PI / 360.0f;
+	float vel_north = cos(yaw_gps) * gps.speed;
+	float vel_east = sin(yaw_gps) * gps.speed;
+	if (!isnan(home_lat))
+	{
 		gps_north = pos_north;
 		gps_east = pos_east;
-		float yaw_gps = gps.direction * 2 * PI / 360.0f;
-		float vel_north = cos(yaw_gps) * gps.speed;
-		float vel_east = sin(yaw_gps) * gps.speed;
+	}
 
+	if (use_gps)
+	{
 		zk = matrix(5,1,pos_north, pos_east, baro, vel_north, vel_east);
 		R = matrix::diag(5, 60.0, 60.0, 60.0, 5.0, 5.0);
 		H = matrix(5,12,
@@ -177,7 +192,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			0.0,0.0,0.0, 1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0,
 			0.0,0.0,0.0, 0.0,1.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0
 			);
-		R = matrix::diag(3,60.0, 5.0, 5.0);
+		R = matrix::diag(3,60.0, 600.0, 600.0);
 	}
 
 
