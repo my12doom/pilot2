@@ -48,7 +48,7 @@
 				CleanCommandLine="&quot;$(VISUALGDB_DIR)\VisualGDB.exe&quot; /clean &quot;$(ProjectPath)&quot; &quot;/solution:$(SolutionPath)&quot; &quot;/config:$(ConfigurationName)&quot; &quot;/platform:$(PlatformName)&quot;"
 				Output="$(ProjectDir)pilot-Release.vgdbsettings"
 				PreprocessorDefinitions="__VisualGDB_CFG_Release"
-				IncludeSearchPath="$(ProjectDir)\../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver;$(ProjectDir)\../../..;$(ProjectDir)\../../../modules;C:\Acantha\Project\visualstudio2008\pilot;c:\sysgcc\arm-eabi\arm-eabi\include\c++\4.8.2;c:\sysgcc\arm-eabi\arm-eabi\include\c++\4.8.2\arm-eabi\thumb\fpu\cortex_m4;c:\sysgcc\arm-eabi\arm-eabi\include\c++\4.8.2\backward;c:\sysgcc\arm-eabi\lib\gcc\arm-eabi\4.8.2\include;c:\sysgcc\arm-eabi\lib\gcc\arm-eabi\4.8.2\include-fixed;c:\sysgcc\arm-eabi\arm-eabi\sys-include;c:\sysgcc\arm-eabi\arm-eabi\include;$(ProjectDir)\../../../;$(ProjectDir)\../../../modules/"
+				IncludeSearchPath="$(ProjectDir)\../../..;C:\Acantha\Project\visualstudio2008\pilot;c:\sysgcc\arm-eabi\arm-eabi\include\c++\5.2.0;c:\sysgcc\arm-eabi\arm-eabi\include\c++\5.2.0\arm-eabi\thumb\fpu\cortex_m4;c:\sysgcc\arm-eabi\arm-eabi\include\c++\5.2.0\backward;c:\sysgcc\arm-eabi\lib\gcc\arm-eabi\5.2.0\include;c:\sysgcc\arm-eabi\lib\gcc\arm-eabi\5.2.0\include-fixed;c:\sysgcc\arm-eabi\arm-eabi\sys-include;c:\sysgcc\arm-eabi\arm-eabi\include;$(ProjectDir)\../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver;$(ProjectDir)\../../../;$(ProjectDir)\../../../modules/;$(ProjectDir)\../../../modules/Algorithm/ekf_lib/inc"
 				ForcedIncludes="$(ProjectDir)\gcc_Release.h;$(VISUALGDB_DIR)\gcc_compat.h;$(LOCALAPPDATA)\VisualGDB\EmbeddedBSPs\arm-eabi\com.sysprogs.arm.stm32\stm32_compat.h"
 				AssemblySearchPath=""
 				ForcedUsingAssemblies=""

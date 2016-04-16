@@ -76,7 +76,10 @@ int sbus_decode(uint8_t *frame_data, sbus_data *decoded_data)
 
 sensors::SBusIN::SBusIN()
 :last_packet_time(0)
+,first_read(true)
 {
+	memset(&last_frame, 0, sizeof(last_frame));
+	last_packet_time = -100000000;
 }
 
 // total channel count
@@ -145,6 +148,17 @@ HAL::RCIN_State sensors::SBusIN::state()
 
 void sensors::SBusIN::read_uart()
 {
+	// clear buffer for first reading
+	if (first_read)
+	{
+		first_read = false;
+		while(port->available() > 0)
+		{
+			uint8_t s = 0;
+			port->read(&s, 1);
+		}
+	}
+	
 	// search startbytes
 	while(port->available() > 0)
 	{

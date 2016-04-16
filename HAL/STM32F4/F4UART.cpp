@@ -55,6 +55,18 @@ namespace STM32F4
 			uart_table[3]->DMA1_Steam4_IRQHandler();
 	}
 
+	// UART6
+	extern "C" void USART6_IRQHandler(void)
+	{
+		if (uart_table[5])
+			uart_table[5]->USART6_IRQHandler();
+	}
+	extern "C" void DMA2_Stream6_IRQHandler()
+	{
+		if (uart_table[5])
+			uart_table[5]->DMA2_Steam6_IRQHandler();
+	}
+	
 	F4UART::F4UART(USART_TypeDef * USARTx):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),tx_dma_running(false),rx_dma_running(false),ongoing_rx_start(0),ongoing_rx_size(0)
 	{
 		
@@ -239,8 +251,42 @@ namespace STM32F4
 		}
 		else if(USART6 == USARTx )
 		{
-			RCC_APB1PeriphClockCmd(RCC_APB2Periph_USART6, ENABLE);
-			//RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART6, ENABLE);
+			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+			
+			//bind GPIOC pin6|pin7 to USART6
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+			GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+			GPIO_Init(GPIOC, &GPIO_InitStructure);
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+			GPIO_Init(GPIOC, &GPIO_InitStructure);
+			GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_USART6);
+			GPIO_PinAFConfig(GPIOC, GPIO_PinSource7, GPIO_AF_USART6);
+			// NVIC config
+			NVIC_InitStructure.NVIC_IRQChannel = USART6_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 4;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+			
+			USART_InitStructure.USART_BaudRate = 115200;
+			USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+			USART_InitStructure.USART_StopBits = USART_StopBits_1;
+			USART_InitStructure.USART_Parity = USART_Parity_No ;
+			USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+			USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+			USART_Init(USART6, &USART_InitStructure); 
+			USART_Cmd(USART6, ENABLE);
+			USART_ITConfig(USART6, USART_IT_RXNE, ENABLE);
+			
+			if (uart_table[5])
+				LOGE("overwriting UART4\n");
+			uart_table[5] = this;
 		}
 		else if(UART7 == USARTx )
 		{
@@ -338,6 +384,17 @@ namespace STM32F4
 		}
 		else if(USART6 == USARTx )
 		{
+			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+			tx_DMA_Channel=DMA_Channel_5;
+			DMA_Stream_IRQ=DMA2_Stream6_IRQn;
+			tx_DMAy_Streamx=DMA2_Stream6;
+			NVIC_InitTypeDef NVIC_InitStructure;
+			NVIC_InitStructure.NVIC_IRQChannel = DMA_Stream_IRQ;  
+			//ToDO: change the Priority by using multi-usart:
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 4;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
 		}
 		else if(UART7 == USARTx )
 		{
@@ -538,6 +595,31 @@ namespace STM32F4
 		if(USART_GetFlagStatus(USART1,USART_IT_RXNE)==SET || USART_GetFlagStatus(USART1,USART_IT_ORE_RX)==SET)
 		{
 			c = USART_ReceiveData(USART1);
+		}
+		
+		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
+		USART1->SR = (uint16_t)~0x20;
+		if (((end+1)%sizeof(rx_buffer) != start))
+		{
+			rx_buffer[end] = c;
+			end++;
+			end %= sizeof(rx_buffer);
+		}
+	}
+	//For usart6:
+	void F4UART::DMA2_Steam6_IRQHandler()
+	{	
+		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
+		DMA_ClearFlag(DMA2_Stream6, DMA_FLAG_TCIF5);
+		tx_dma_running = false;
+		dma_handle_tx_queue();
+	}
+	void F4UART::USART6_IRQHandler(void)
+	{
+		int c = -1;
+		if(USART_GetFlagStatus(USART6,USART_IT_RXNE)==SET || USART_GetFlagStatus(USART6,USART_IT_ORE_RX)==SET)
+		{
+			c = USART_ReceiveData(USART6);
 		}
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);

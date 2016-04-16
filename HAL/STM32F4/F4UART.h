@@ -33,7 +33,10 @@ namespace STM32F4
 		void UART4_IRQHandler(void);
 		void DMA1_Steam4_IRQHandler();
 		
-		void destroy();
+		void USART6_IRQHandler(void);
+		void DMA2_Steam6_IRQHandler();
+
+void destroy();
 
 	private:
 		USART_TypeDef * USARTx;

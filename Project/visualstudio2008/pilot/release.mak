@@ -6,7 +6,7 @@ BINARYDIR := Release
 
 #Additional flags
 PREPROCESSOR_MACROS := NDEBUG RELEASE STM32F40_41xxx USE_STDPERIPH_DRIVER
-INCLUDE_DIRS := ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver ../../../ ../../../modules/
+INCLUDE_DIRS := ../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver ../../../ ../../../modules/ ../../../modules/Algorithm/ekf_lib/inc
 LIBRARY_DIRS := 
 LIBRARY_NAMES := 
 ADDITIONAL_LINKER_INPUTS := 

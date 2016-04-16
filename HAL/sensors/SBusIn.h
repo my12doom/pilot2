@@ -42,5 +42,6 @@ namespace sensors
 		int64_t last_packet_time;
 		sbus_data last_frame;
 		int16_t rc_static[2][8];
+		bool first_read;
 	};
 }
