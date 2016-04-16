@@ -35,7 +35,7 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 	Q = matrix::diag(12, 4e-3, 4e-3, 4e-6, 
 						1e-4, 1e-4, 1e-6, 
 						1e-7, 1e-7, 1e-7, 
-						1e-7, 1e-7, 1e-7);
+						1e-7, 1e-7, 5e-7);
 
 	R = matrix::diag(6, 1.0, 1.0, 1.0, 1e-2, 1e-2, 1e+2);
 	return 0;
@@ -175,14 +175,15 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 
 	if (use_gps)
 	{
-		zk = matrix(5,1,pos_north, pos_east, baro, vel_north, vel_east);
-		R = matrix::diag(5, 60.0, 60.0, 60.0, 5.0, 5.0);
-		H = matrix(5,12,
+		zk = matrix(6,1,pos_north, pos_east, baro, vel_north, vel_east, gps.climb_rate);
+		R = matrix::diag(6, 60.0, 60.0, 60.0, 5.0, 5.0, 15.0);
+		H = matrix(6,12,
 			1.0, 0.0, 0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
 			0.0, 1.0, 0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
 			0.0, 0.0, 1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
 			0.0, 0.0, 0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0,
-			0.0, 0.0, 0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0);
+			0.0, 0.0, 0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0,
+			0.0, 0.0, 0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,1.0);
 	}
 	else
 	{
