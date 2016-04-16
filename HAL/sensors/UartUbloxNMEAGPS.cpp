@@ -398,7 +398,7 @@ int UartUbloxGPS::detect_and_config(HAL::IUART *uart, int baudrate)
 	} nav_cfg = 
 	{
 		0xffff,
-		8,
+		6,
 		3,
 		0,
 		10000,
@@ -537,7 +537,7 @@ int UartUbloxBinaryGPS::init(HAL::IUART *uart, int baudrate)
 		return -2;
 
 	// UBX-SAT
-	if (enable_message(0x01, 0x35, false) < 0)
+	if (enable_message(0x01, 0x35) < 0)
 		return -2;
 
 	return 0;
@@ -709,6 +709,10 @@ int UartUbloxBinaryGPS::read(devices::gps_data *data)
 
 				printf("total visible: %d\n", visible);
 				*/
+				log2(p->payload, TAG_UBX_SAT_DATA, p->payload_size);
+
+
+
 				packt_mask |= nav_sat;
 			}
 
