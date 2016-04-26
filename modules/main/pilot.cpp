@@ -511,14 +511,20 @@ int yet_another_pilot::output()
 			max_motor = fmax(motor_output[i], max_motor);
 		}
 
-		// handle remaining saturation: reduce scale at the center of throttle.
-		float motor_factor = (1-throttle) / (max_motor - throttle);
-		motor_factor = fmin(motor_factor, throttle / (throttle - min_motor));
-		motor_factor = limit(motor_factor, 0.33f, 1.0f);
-		if (min_motor < 0 || max_motor > 1)
+		// handle remaining saturation: push up negative motor if airborne, reduce saturation. 
+		float motor_factor = 1.0f;
+		
+		if (airborne && (min_motor < 0 || max_motor > 1))
 		{
+			motor_factor = limit(min_motor<0 ? (1.0f/max_motor) : 1.0f/(max_motor - min_motor), 0.1f, 1.0f);
+
 			for(int i=0; i<motor_count; i++)
-				motor_output[i] = (motor_output[i] - throttle) * motor_factor + throttle;
+			{
+				if (min_motor < 0)
+					motor_output[i] += -min_motor;
+
+				motor_output[i] *= motor_factor;
+			}
 		}
 		else
 		{
