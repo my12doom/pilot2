@@ -9,10 +9,12 @@
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 #include <HAL/sensors/Sonar.h>
 #include <HAL/sensors/PPMIN.h>
+#include <HAL/sensors/SBusIn.h>
 #include <HAL\Interface\ILED.h>
 #include <HAL/sensors/PX4Flow.h>
 #include <utils/param.h>
 #include "RGBLED.h"
+#include "TLC59208F.h"
 #include <HAL\STM32F4\F4UART.h>
 
 extern "C" const char bsp_name[] = "novatek_v1";
@@ -201,7 +203,7 @@ int init_RC()
 	rcin.init(&interrupt);
 	manager.register_RCIN(&rcin);
 
-	static dev_v2::RCOUT rcout;	
+	static dev_v2::RCOUT rcout;
 	manager.register_RCOUT(&rcout);
 	
 	return 0;
@@ -327,6 +329,17 @@ int init_VCP()
 	return 0;
 }
 
+int iTLC59208F()
+{	
+	static TLC59208F f;
+	uint8_t channel_map[8] = {0,1,2,0,1,2,-1,-1};
+	if (f.init(&i2c2, 0x40, channel_map) == 0)
+		manager.register_RGBLED("eye", &f);
+	
+	return 0;
+}
+
+
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
@@ -344,6 +357,7 @@ int bsp_init_all()
 	init_led();
 	init_GPS();
 	init_flow();
+	iTLC59208F();
 	
 	// parameter config
 	param bsp_parameter("BSP", 1);
@@ -387,11 +401,10 @@ int bsp_init_all()
 		// tilt angle
 		param("rngR", PI / 8)= PI / 5;
 		param("rngP", PI / 8)= PI / 5;
-		param("offy", PI / 8)= PI / 5;
 
 		// frame
 		param("mat", 1)=1;
-		param("ekf", 0)=1;
+		param("ekf", 0)=2;
 		param("time", 3000)=5000;
 	}
 	
