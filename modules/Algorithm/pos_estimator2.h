@@ -7,6 +7,7 @@
 #include <utils/fifo.h>
 #include <math/matrix.h>
 #include <HAL/Interface/IGPS.h>
+#include <HAL/Interface/IFlow.h>
 
 
 class pos_estimator2
@@ -36,4 +37,10 @@ public:
 
 	float gps_north;
 	float gps_east;
+
+	float gyro[3];
+	sensors::px4flow_frame frame;
+	float vx;
+	float vy;
+	float predict_flow[2];
 };

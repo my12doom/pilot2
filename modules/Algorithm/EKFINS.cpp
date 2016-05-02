@@ -2,6 +2,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 #ifdef WIN32
 #include <float.h>
@@ -32,16 +33,11 @@ int EKFINS::reset()		// mainly for after GPS glitch handling
 
 	P = matrix::diag(12, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0);
 	x = matrix(12,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-	Q = matrix::diag(12, 4e-3, 4e-3, 4e-6, 
-						1e-4, 1e-4, 1e-6, 
-						1e-7, 1e-7, 1e-7, 
-						1e-7, 1e-7, 1e-7);
 
-	R = matrix::diag(6, 1.0, 1.0, 1.0, 1e-2, 1e-2, 1e+2);
 	return 0;
 }
 
-bool EKFINS::healthy()
+int EKFINS::healthy()
 {
 	if (!position_healthy)
 		return false;
@@ -52,7 +48,7 @@ bool EKFINS::healthy()
 }
 
 
-int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, float baro, float dt)			// unit: meter/s
+int EKFINS::update( const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, float baro, float dt, bool armed, bool airborne)
 {
 	// GPS switching
 	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 5) || (position_healthy && gps.position_accuracy_horizontal < 10);
@@ -100,6 +96,14 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		ticker = 0;
 	}
 
+	// motion detection
+	vector va = {acc_body[0], acc_body[1], acc_body[2]};
+	vector vg = {gyro[0], gyro[1], gyro[2]};
+	motion_acc.new_data(va);
+	motion_gyro.new_data(vg);
+	bool still = motion_acc.get_average(NULL) > 100 && motion_gyro.get_average(NULL) > 100;
+
+
 	// prepare matrices
 	float q0q0 = x[0] * x[0];
 	float q0q1 = x[0] * x[1];
@@ -124,6 +128,9 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		q0q0 - q1q1 - q2q2 + q3q3,// 33
 	};
 	float dtsq_2 = dt*dt/2;
+	float dt2 = dt/2;
+	const float *g = gyro;
+
 	acc_ned[0] = r[0]* acc_body[0] + r[1] *acc_body[1] + r[2] * acc_body[2];
 	acc_ned[1] = r[3]* acc_body[0] + r[4] *acc_body[1] + r[5] * acc_body[2];
 	acc_ned[2] = -(r[6]* acc_body[0] + r[7] *acc_body[1] + r[8] * acc_body[2] + G_in_ms2);
@@ -132,21 +139,37 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 	acc_ned[1] += r[3]* x[6] + r[4] *x[7] + r[5] * x[8];
 	acc_ned[2] += -(r[6]* x[6] + r[7] *x[7] + r[8] * x[8]);
 
-	matrix F = matrix(12,12,
-		1.0,0.0,0.0, dt, 0.0, 0.0, dtsq_2*r[0], dtsq_2*r[1], dtsq_2*r[2], 0.0, 0.0, 0.0,
-		0.0,1.0,0.0, 0.0, dt, 0.0, dtsq_2*r[3], dtsq_2*r[4], dtsq_2*r[5], 0.0, 0.0, 0.0,
-		0.0,0.0,1.0, 0.0, 0.0, dt, -dtsq_2*r[6], -dtsq_2*r[7], -dtsq_2*r[8], 0.0, 0.0, 0.0,
-		0.0,0.0,0.0, 1.0,0.0,0.0, dt*r[0], dt*r[1], dt*r[2], 0.0, 0.0, 0.0,
-		0.0,0.0,0.0, 0.0,1.0,0.0, dt*r[3], dt*r[4], dt*r[5], 0.0, 0.0, 0.0,
-		0.0,0.0,0.0, 0.0,0.0,1.0, -dt*r[6], -dt*r[7], -dt*r[8], 0.0, 0.0, 0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0
+
+	// process function
+	matrix F = matrix(19,19,
+		1.0, dt2*-g[0], dt2*-g[1], dt2*-g[2], dt2*-x[1], dt2*-x[2], dt2*-x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		dt2*g[0], 1.0, dt2*g[2], dt2*-g[1], dt2*x[0], dt2*-x[3], dt2*x[2], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		dt2*g[1], dt2*-g[2], 1.0, dt2*g[0], dt2*x[3], dt2*x[0], dt2*-x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		dt2*g[2], dt2*g[1], dt2*-g[0], 1.0, dt2*-x[2], dt2*x[1], dt2*x[0], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, dt, 0.0, 0.0, dtsq_2*r[0], dtsq_2*r[1], dtsq_2*r[2], 0.0, 0.0, 0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0, dt, 0.0, dtsq_2*r[3], dtsq_2*r[4], dtsq_2*r[5], 0.0, 0.0, 0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0, 0.0, dt, -dtsq_2*r[6], -dtsq_2*r[7], -dtsq_2*r[8], 0.0, 0.0, 0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, dt*r[0], dt*r[1], dt*r[2], 0.0, 0.0, 0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, dt*r[3], dt*r[4], dt*r[5], 0.0, 0.0, 0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, -dt*r[6], -dt*r[7], -dt*r[8], 0.0, 0.0, 0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0,
+		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0
 		);
-	matrix Bu = matrix(12,1,
+	matrix Bu = matrix(19,1,
+		0.0,
+		0.0,
+		0.0,
+		0.0,
+		0.0,
+		0.0,
+		0.0,
 		dtsq_2 * (r[0]* acc_body[0] + r[1] *acc_body[1] + r[2] * acc_body[2]),
 		dtsq_2 * (r[3]* acc_body[0] + r[4] *acc_body[1] + r[5] * acc_body[2]),
 		-dtsq_2 * (r[6]* acc_body[0] + r[7] *acc_body[1] + r[8] * acc_body[2] + G_in_ms2),
@@ -156,9 +179,15 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		0.0,0.0,0.0,
 		0.0,0.0,0.0
 		);
-	matrix zk;
-	matrix H;
 
+	// reset observation helper variables
+	zk.n = 1;
+	zk.m = 0;
+	H.n = F.n;
+	H.m = 0;
+	R_count = 0;
+
+	// observation function and observation
 	float latitude_to_meter = 40007000.0f/360;
 	float longtitude_to_meter = 40007000.0f/360*cos(gps.latitude * PI / 180);
 
@@ -175,14 +204,16 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 
 	if (use_gps)
 	{
-		zk = matrix(5,1,pos_north, pos_east, baro, vel_north, vel_east);
-		R = matrix::diag(5, 60.0, 60.0, 60.0, 5.0, 5.0);
-		H = matrix(5,12,
+		zk = matrix(6,1,pos_north, pos_east, baro, vel_north, vel_east, gps.climb_rate);
+		H = matrix(6,12,
 			1.0, 0.0, 0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
 			0.0, 1.0, 0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
 			0.0, 0.0, 1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
 			0.0, 0.0, 0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0,
-			0.0, 0.0, 0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0);
+			0.0, 0.0, 0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0,
+			0.0, 0.0, 0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,1.0);
+
+		add_observation(60.0, pos_north, 1.0, 0.0, 0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 	}
 	else
 	{
@@ -192,9 +223,17 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 			0.0,0.0,0.0, 1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0,
 			0.0,0.0,0.0, 0.0,1.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0
 			);
-		R = matrix::diag(3,60.0, 600.0, 600.0);
 	}
 
+
+	// prediction and correction
+	float f1 = dt / 0.05f;		// 0.005: tuned dt.
+	float f2 = dt*dt / (0.05f*0.05f);
+	matrix Q = matrix::diag(19, 4e-3, 4e-3, 4e-6, 
+		1e-4, 1e-4, 1e-6, 
+		1e-7, 1e-7, 1e-7, 
+		1e-7, 1e-7, 5e-7);
+	matrix R = matrix::diag(R_count, R_diag);
 
 	matrix x1 = F * x + Bu;
 	matrix P1 = F * P * F.transpos() + Q;
@@ -208,4 +247,20 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 
 
 	return 0;
+}
+
+void EKFINS::add_observation(float dev, float zk, ...)	// ...: colomn of observation matrix
+{
+	R_diag[R_count++] = dev;
+
+	int dimension = H.n;
+	int start = dimension*H.m;
+
+	va_list vl;
+	va_start(vl,zk);
+	for(int i=0; i<dimension; i++)
+		H[start + i] = va_arg(vl,double);
+	va_end(vl);
+
+	H.m ++;
 }

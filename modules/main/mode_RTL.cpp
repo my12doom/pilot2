@@ -9,7 +9,7 @@ static param RTL_max_climbing_speed("rtlC", 3.0);	// RTL climbing speed
 static param RTL_altitude("rtlA", 15.0);			// RTL altitude
 static param RTL_decending_speed("rtlD", 2.0);		// RTL descending speed ( not yet implemented)
 static param RTL_moving_speed("rtlV", 5.0);			// RTL moving speed( not yet implemented)
-static param RTL_loiter_time("rltL", 10);			// RTL loiter at home time
+static param RTL_loiter_time("rltL", 2);			// RTL loiter at home time
 
 static param pid_factor_yaw("sP3", 8);
 static param pid_factor_alt("altP", 1);

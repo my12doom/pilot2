@@ -187,13 +187,24 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	}
 	else
 	{
-		zk = matrix(3,1,baro, 0.0, 0.0);
+		float pixel_compensated_x = frame.pixel_flow_x_sum - gyro[0] * 18000 / PI * 0.0028f;
+		float pixel_compensated_y = frame.pixel_flow_y_sum - gyro[1] * 18000 / PI * 0.0028f;
+
+		float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
+		float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
+
+		vx = wx * frame.ground_distance/1000.0f;
+		vy = wy * frame.ground_distance/1000.0f;
+
+
+		zk = matrix(3,1,baro, vy, vx);
 		H = matrix(3,12,
 			0.0,0.0,1.0, 0.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0,
-			0.0,0.0,0.0, 1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0,
-			0.0,0.0,0.0, 0.0,1.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0
+			0.0,0.0,0.0, r[0],r[3],r[6],  0.0,0.0,0.0,  0.0,0.0,0.0,
+			0.0,0.0,0.0, -r[1],-r[4],-r[7],  0.0,0.0,0.0,  0.0,0.0,0.0
 			);
-		R = matrix::diag(3,60.0, 600.0, 600.0);
+		R = matrix::diag(3,60.0, 50.0, 50.0);
+
 	}
 
 
@@ -203,6 +214,8 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	matrix K = P1 * H.transpos() * Sk.inversef();
 
 	float residual = (zk - H*x1)[0];
+	predict_flow[0] = (H*x1)[1];
+	predict_flow[1] = (H*x1)[2];
 
 	x = x1 + K*(zk - H*x1);
 	P = (matrix(P1.m) - K*H) * P1;
