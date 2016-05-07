@@ -14,6 +14,14 @@ namespace HAL
 		virtual int read_regs(uint8_t SlaveAddress, uint8_t startRegister, uint8_t*out, int count) = 0;
 		virtual int write_reg(uint8_t SlaveAddress, uint8_t Register, uint8_t data){return write_regs(SlaveAddress, Register, &data, 1);}
 		virtual int write_regs(uint8_t SlaveAddress, uint8_t startRegister, const uint8_t*data, int count) = 0;
+
+		// low level control
+		virtual int start()=0;		// return -1 if bus busy or any error.
+		virtual int stop()=0;			// return -1 on any error.
+		virtual int send_ack()=0;		// return -1 on any error.
+		virtual int send_nak()=0;		// return -1 on any error.
+		virtual int wait_ack()=0;		// return 0 on success, -1 on any error, 1 if a nak received.
+		virtual int txrx(uint8_t tx = 0xff)=0;	// send and receive a byte, to receive from slave, send 0xff.
 	};
 
 	class I2C_SW : public II2C
@@ -26,6 +34,14 @@ namespace HAL
 		virtual int set_speed(int speed);		// speed in hz
 		virtual int read_regs(uint8_t SlaveAddress, uint8_t startRegister, uint8_t*out, int count);
 		virtual int write_regs(uint8_t SlaveAddress, uint8_t startRegister, const uint8_t*data, int count);
+
+		// low level control
+		virtual int start();		// return -1 if bus busy or any error.
+		virtual int stop();			// return -1 on any error.
+		virtual int send_ack();		// return -1 on any error.
+		virtual int send_nak();		// return -1 on any error.
+		virtual int wait_ack();		// return 0 on success, -1 on any error, 1 if a nak received.
+		virtual int txrx(uint8_t tx/* = 0xff*/);	// send and receive a byte, to receive from slave, send 0xff.
 	
 	protected:
 		int m_speed_tick;
@@ -43,6 +59,8 @@ namespace HAL
 		uint8_t I2C_SCLHigh(void);
 		void I2C_SendByte(uint8_t Data);
 		uint8_t I2C_ReceiveByte(void);
+
+
 	};
 }
 

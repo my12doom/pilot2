@@ -263,5 +263,106 @@ uint8_t I2C_SW::I2C_ReceiveByte(void)
     return Data;
 }
 
+// low level control
+int I2C_SW::start()		// return -1 if bus busy or any error.
+{
+	SDA_HI;
+	I2C_SCLHigh();
+	I2C_Delay();
+	if (!SDA_STATE())
+		return -1;
+	SDA_LO;
+	I2C_Delay();
+	if (SDA_STATE())
+		return -1;
+	SDA_LO;
+	I2C_Delay();
+	return 0;
+}
+
+int I2C_SW::stop()			// return -1 on any error.
+{
+	SCL_LO;
+	I2C_Delay();
+	SDA_LO;
+	I2C_Delay();
+	I2C_SCLHigh();
+	I2C_Delay();
+	SDA_HI;
+	I2C_Delay();
+
+	return 0;
+}
+
+int I2C_SW::send_ack()		// return -1 on any error.
+{
+	SCL_LO;
+	I2C_Delay();
+	SDA_LO;
+	I2C_Delay();
+	I2C_SCLHigh();
+	I2C_Delay();
+	SCL_LO;
+	I2C_Delay();
+
+	return 0;
+}
+int I2C_SW::send_nak()		// return -1 on any error.
+{
+	SCL_LO;
+	I2C_Delay();
+	SDA_HI;
+	I2C_Delay();
+	I2C_SCLHigh();
+	I2C_Delay();
+	SCL_LO;
+	I2C_Delay();
+
+	return 0;
+}
+
+int I2C_SW::wait_ack()		// return 0 on success, -1 on any error, 1 if a nak received.
+{
+	SCL_LO;
+	I2C_Delay();
+	SDA_HI;
+	I2C_Delay();
+	I2C_SCLHigh();
+	I2C_Delay();
+	if (SDA_STATE()) {
+		SCL_LO;
+		return -1;
+	}
+	SCL_LO;
+	return 0;
+}
+
+int I2C_SW::txrx(uint8_t tx = 0xff)	// send and receive a byte, to receive from slave, send 0xff.
+{
+	uint8_t i = 8;
+	uint8_t rx = 0;
+
+	while (i--) {
+		SCL_LO;
+		I2C_Delay();
+		if (tx&0x80) {
+			SDA_HI;
+		}
+		else {
+			SDA_LO;
+		}
+		rx <<= 1;
+		rx |= SDA_STATE() ? 1 : 0;
+		tx <<= 1;
+		I2C_Delay();
+		I2C_SCLHigh();
+		I2C_Delay();
+	}
+	SCL_LO;
+
+	return rx;
+}
+
+
 
 }
