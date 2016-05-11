@@ -12,9 +12,11 @@ static double NAN = *( double* )pnan;
 
 pos_estimator2::pos_estimator2()
 {
+	flow_ticker = 0;
 	latency = 400000;
 	home_lat = NAN;
 	home_lon = NAN;
+	_state = 1;
 	reset();
 }
 
@@ -29,6 +31,7 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 	last_history_push = 0;
 	ticker = 0;
 	position_healthy = false;
+	flow_healthy = false;
 
 	P = matrix::diag(12, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0);
 	x = matrix(12,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -41,21 +44,55 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 	return 0;
 }
 
-bool pos_estimator2::healthy()
+int pos_estimator2::state()
 {
-	if (!position_healthy)
-		return false;
+// 	if (!position_healthy)
+// 		return 0;
 
 	// TODO: residual norm and covariance checking
+	if (!position_healthy && !flow_healthy)
+		return 0;
 
-	return position_healthy;
+	return _state;
 }
 
 
 int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt)			// unit: meter/s
 {
+	// flow switching
+	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133);
+	if (!flow_healthy && use_flow)
+	{
+		flow_ticker += dt;
+
+		if (flow_ticker > 3)
+		{
+			LOGE("pos_estimator2: using flow\n");
+			flow_healthy = true;
+		}
+	}
+	else if (flow_healthy && !use_flow)
+	{
+		flow_ticker += dt;
+
+		if (flow_ticker > 1)
+		{
+			LOGE("pos_estimator2: flow failed\n");
+			flow_healthy = false;
+		}
+	}
+	else
+	{
+		if (flow_ticker > 1)
+		{
+			printf("...\n");
+		}
+
+		flow_ticker = 0;
+	}
+
 	// GPS switching
-	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 5) || (position_healthy && gps.position_accuracy_horizontal < 10);
+	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 3.5) || (position_healthy && gps.position_accuracy_horizontal < 7);
 
 	// home
 	if (use_gps && isnan(home_lat))
@@ -69,7 +106,16 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	// update "position healthy" state, and reset position covariance if needed
 	if (!position_healthy && use_gps)
 	{
+		if (ticker == 0)
+		{
+			LOGE("pos_estimator2: GPS coming online, clearing position covariance\n");
+			P[0] = 100;
+			P[P.m+1] = 100;
+		}
+
 		ticker += dt;
+
+		_state = 2;
 
 		if (ticker > 3)
 		{
@@ -77,12 +123,15 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			ticker = 0;
 
 			LOGE("pos_estimator2: position healthy\n");
-			
+
+			_state = 3;
 		}
 	}
 	else if (position_healthy && !use_gps)
 	{
 		ticker += dt;
+
+		_state = 2;
 
 		if (ticker > 3)
 		{
@@ -91,8 +140,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 
 			printf("pos_estimator2: position failed\n");
 
-			P[0] = 100;
-			P[P.m+1] = 100;
+			_state = 1;
 		}
 	}
 	else
@@ -123,6 +171,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		2.f * (q2q3 + q0q1),	// 23
 		q0q0 - q1q1 - q2q2 + q3q3,// 33
 	};
+	float yaw = atan2f(r[3], r[0]);
 	float dtsq_2 = dt*dt/2;
 	acc_ned[0] = r[0]* acc_body[0] + r[1] *acc_body[1] + r[2] * acc_body[2];
 	acc_ned[1] = r[3]* acc_body[0] + r[4] *acc_body[1] + r[5] * acc_body[2];
@@ -197,11 +246,11 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		vy = wy * frame.ground_distance/1000.0f;
 
 
-		zk = matrix(3,1,baro, vy, vx);
+		zk = matrix(3,1,baro, vx, vy);
 		H = matrix(3,12,
 			0.0,0.0,1.0, 0.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0,
-			0.0,0.0,0.0, r[0],r[3],r[6],  0.0,0.0,0.0,  0.0,0.0,0.0,
-			0.0,0.0,0.0, -r[1],-r[4],-r[7],  0.0,0.0,0.0,  0.0,0.0,0.0
+			0.0,0.0,0.0, -r[1],-r[4],-r[7],  0.0,0.0,0.0,  0.0,0.0,0.0,
+			0.0,0.0,0.0, r[0],r[3],r[6],  0.0,0.0,0.0,  0.0,0.0,0.0				// strange flow coordinates
 			);
 		R = matrix::diag(3,60.0, 50.0, 50.0);
 
@@ -212,12 +261,20 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	matrix P1 = F * P * F.transpos() + Q;
 	matrix Sk = H * P1 * H.transpos() + R;
 	matrix K = P1 * H.transpos() * Sk.inversef();
+	matrix hx1 = H*x1;
 
-	float residual = (zk - H*x1)[0];
-	predict_flow[0] = (H*x1)[1];
-	predict_flow[1] = (H*x1)[2];
+	predict_flow[0] = hx1[1];
+	predict_flow[1] = hx1[2];
 
-	x = x1 + K*(zk - H*x1);
+	float cos_yaw = cos(yaw);
+	float sin_yaw = sin(yaw);
+	v_hbf[0] = cos_yaw * x[3] + sin_yaw * x[4];
+	v_hbf[1] = -sin_yaw * x[3] + cos_yaw * x[4];
+
+	// -->> vx ~= -v_hbf[1]
+	// -->> vy ~= v_hbf[0]
+
+	x = x1 + K*(zk - hx1);
 	P = (matrix(P1.m) - K*H) * P1;
 
 

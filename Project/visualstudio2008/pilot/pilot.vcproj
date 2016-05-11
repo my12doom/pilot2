@@ -813,6 +813,14 @@
 						RelativePath="..\..\..\modules\utils\vector.h"
 						>
 					</File>
+					<File
+						RelativePath="..\..\..\modules\utils\ymodem.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\modules\utils\ymodem.h"
+						>
+					</File>
 				</Filter>
 				<Filter
 					Name="algorithm"

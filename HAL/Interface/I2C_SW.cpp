@@ -337,7 +337,7 @@ int I2C_SW::wait_ack()		// return 0 on success, -1 on any error, 1 if a nak rece
 	return 0;
 }
 
-int I2C_SW::txrx(uint8_t tx = 0xff)	// send and receive a byte, to receive from slave, send 0xff.
+int I2C_SW::txrx(uint8_t tx /*= 0xff*/)	// send and receive a byte, to receive from slave, send 0xff.
 {
 	uint8_t i = 8;
 	uint8_t rx = 0;

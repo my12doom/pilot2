@@ -20,6 +20,7 @@
 #include <Algorithm/pos_estimator2.h>
 #include <math/LowPassFilter2p.h>
 #include <utils/fifo2.h>
+#include <utils/ymodem.h>
 
 #include "mode_basic.h"
 #include "mode_althold.h"
@@ -27,8 +28,36 @@
 #include "mode_poshold.h"
 #include "mode_RTL.h"
 
+
 class yet_another_pilot;
 extern yet_another_pilot yap;
+
+enum pos_estimator_state
+{
+	none = 0,
+	velocity_and_local = 1,	// optical flow or something
+	transiting = 2,			// transiting between different position data source, a "braking" or velocity controll is recommended since velocity is available.
+	fully_ready = 3,		// GPS
+};
+
+class ymodem_firmware_writter : public ymodem_receiver
+{
+public:
+	ymodem_firmware_writter(HAL::IUART *uart)
+	:ymodem_receiver(uart)
+	{
+		last_event = systimer->gettime();
+		firmware_size = 0;
+	}
+
+	~ymodem_firmware_writter()
+	{
+
+	}
+	virtual int on_event(void *data, int datasize, ymodem_event event);
+	int64_t last_event;
+	int firmware_size;
+};
 
 class yet_another_pilot
 {
@@ -153,6 +182,7 @@ public:
 	float home[2];
 	float home_set;
 	FIFO<2048> raw_imu_buffer;
+	bool firmware_loading;		// loading firmware from uart
 
 	// constructor
 	yet_another_pilot();
@@ -161,11 +191,11 @@ public:
 	// setup and loop functions
 	int setup();
 	void main_loop();
-	void sdcard_logging_loop();
+	void sdcard_loop();
 	void mag_calibrating_worker();
 	static void mag_calibrating_worker_entry(int parameter){((yet_another_pilot*)parameter)->mag_calibrating_worker();}
 	static void main_loop_entry(){yap.main_loop();}
-	static void sdcard_logging_loop_entry(){yap.sdcard_logging_loop();}
+	static void sdcard_loop_entry(){yap.sdcard_loop();}
 	static void imu_reading_entry(){yap.read_imu_and_filter();}
 	
 	// mag and accelerometer calibration
@@ -201,7 +231,7 @@ public:
 
 	copter_mode last_mode_from_switch;
 	bool last_airborne;
-	bool last_position_ready;
+	pos_estimator_state last_position_state;
 
 	// event handling
 	int new_event(int event, int arg);
@@ -228,7 +258,7 @@ public:
 	int get_home(float *home_pos);
 	int set_home(const float *new_home);
 	int set_home_LLH(const float *LLH);
-	bool pos_estimator_ready();
+	pos_estimator_state get_estimator_state();
 
 	
 //protected:

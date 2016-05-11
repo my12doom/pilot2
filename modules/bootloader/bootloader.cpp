@@ -15,7 +15,7 @@
 
 // BSP
 using namespace STM32F4;
-F4UART uart(UART4);
+F4UART uart(USART3);
 dev_v2::RGBLED led;
 
 // constants

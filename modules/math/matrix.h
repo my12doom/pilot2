@@ -1,6 +1,6 @@
 #pragma once
 
-#define MAX_DIMENSION 20
+#define MAX_DIMENSION 16
 #define MAX_MATRIX_ELEMENTS (MAX_DIMENSION*MAX_DIMENSION)
 
 

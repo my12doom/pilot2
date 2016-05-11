@@ -152,6 +152,8 @@ yet_another_pilot::yet_another_pilot()
 ,avg_count(0)
 ,loop_hz(0)
 ,islanding(false)
+,last_position_state(none)
+,firmware_loading(false)
 {
 	memset(g_pwm_input_update, 0, sizeof(g_pwm_input_update));
 	memset(g_ppm_output, 0, sizeof(g_ppm_output));
@@ -216,7 +218,7 @@ int yet_another_pilot::calculate_baro_altitude()
 
 int yet_another_pilot::set_home(const float *new_home)
 {
-	if (!new_home || !pos_estimator_ready())
+	if (!new_home || get_estimator_state() != fully_ready)
 		return -1;
 
 	memcpy(home, new_home, sizeof(new_home));
@@ -242,21 +244,21 @@ int yet_another_pilot::set_home_LLH(const float * new_home)
 	return set_home(ne);
 }
 
-bool yet_another_pilot::pos_estimator_ready()
+pos_estimator_state yet_another_pilot::get_estimator_state()
 {
 	if (use_EKF == 1.0f)
 	{
 		// TODO: use EKF estimator to determine healthy
-		return estimator.healthy();
+		return estimator.healthy() ? fully_ready : none;
 	}
 	else if (use_EKF == 2.0f)
 	{
-		return estimator2.healthy();
+		return (pos_estimator_state)estimator2.state();
 
 	}
 	else
 	{
-		return estimator.healthy();
+		return estimator.healthy() ? fully_ready : none;
 	}
 }
 
@@ -271,7 +273,7 @@ int yet_another_pilot::get_home(float * home_pos)
 
 int yet_another_pilot::get_pos_velocity_ned(float *pos, float *velocity)
 {
-	if (!pos_estimator_ready())
+	if (!get_estimator_state())
 		return -1;
 
 	if(use_EKF == 1.0f)
@@ -1321,6 +1323,10 @@ int yet_another_pilot::calculate_state()
 		float q[4];
 		memcpy(q, &q0, sizeof(q));
 		float acc[3] = {-accel.array[0], -accel.array[1], -accel.array[2]};
+
+		memcpy(estimator2.gyro, body_rate.array, sizeof(estimator2.gyro));
+		memcpy(&estimator2.frame, &frame, sizeof(frame));
+
 		estimator2.update(q, acc, gps, a_raw_altitude, interval);
 		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
 	}
@@ -1599,6 +1605,12 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 		return 0;
 	if (arm)
 	{
+		if (firmware_loading)
+		{
+			LOGE("arm failed: firmware_loading\n");
+			return -1;
+		}
+
 		if (mag_calibration_state)
 		{
 			LOGE("arm failed: calibrating magnetometer\n");
@@ -1652,11 +1664,11 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	throttle_result = 0;
 	airborne = false;
 	islanding = false;
-	last_position_ready = pos_estimator_ready();
+	last_position_state = get_estimator_state();
 	last_airborne = false;
 
 	// update home
-	if (pos_estimator_ready())
+	if (get_estimator_state() == fully_ready)
 	{
 		get_pos_velocity_ned(home, NULL);
 		set_home(home);
@@ -1749,8 +1761,8 @@ int yet_another_pilot::execute_mode_switching_from_stick()
 	if (!airborne && mode != basic)
 		mode = althold;
 
-	if (!pos_estimator_ready() && mode == poshold)
-		mode = optical_flow;
+	if (get_estimator_state() == none && mode == poshold)
+		mode = use_EKF == 2 ? althold : optical_flow;
 
 	return set_mode(mode);
 }
@@ -1772,13 +1784,13 @@ int yet_another_pilot::handle_mode_switching()
 	}
 
 	// position ready state changed?
-	if (pos_estimator_ready() != last_position_ready)
+	if (get_estimator_state() != last_position_state)
 	{
-		new_event(pos_estimator_ready() ? event_pos_ready : event_pos_bad, 0);
+		new_event(get_estimator_state() ? event_pos_ready : event_pos_bad, 0);
 
-		last_position_ready = pos_estimator_ready();
+		last_position_state = get_estimator_state();
 
-		LOGE("position estimator state changed: %s\n", last_position_ready ? "ready" : "failed");
+		LOGE("position estimator state changed: %s\n", last_position_state ? "ready" : "failed");
 
 		execute_mode_switching_from_stick();
 	}
@@ -1788,7 +1800,7 @@ int yet_another_pilot::handle_mode_switching()
 	{
 		last_airborne = true;
 
-		LOGE("airborne!\n", last_position_ready ? "ready" : "failed");
+		LOGE("airborne!\n", last_position_state ? "ready" : "failed");
 
 		execute_mode_switching_from_stick();
 	}
@@ -2151,7 +2163,7 @@ uint32_t __attribute__((weak)) get_chip_id_crc32()
 
 int yet_another_pilot::handle_wifi_controll(IUART *uart)
 {
-	if (!uart)
+	if (!uart || firmware_loading)
 		return -1;
 	
 	char line[1024];
@@ -2185,6 +2197,11 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		mobile_last_update = systimer->gettime();
 	}
 
+	else if (strcmp(line, "reset\n") == 0)
+	{
+		reset_system();
+	}
+
 	else if (strstr(line, keyword) == (line+len-strlen(keyword)))
 	{
 		if (sscanf(line, "%f,%f,%f,%f", &rc_mobile[0], &rc_mobile[1], &rc_mobile[2], &rc_mobile[3] ) == 4)
@@ -2209,6 +2226,21 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 
 		const char *armed = "arm,ok\n";
 		uart->write(armed, strlen(armed));
+	}
+
+	else if (strstr(line, "loadFW") == line)
+	{
+		char rtn[50];
+		if (armed)
+		{
+			strcpy(rtn, "loadFW,0\n");
+		}
+		else
+		{
+			strcpy(rtn, "loadFW,1\n");
+			firmware_loading = true;
+		}
+		uart->write(rtn, strlen(rtn));
 	}
 
 	else if (strstr(line, "disarm") == line)
@@ -2737,6 +2769,10 @@ int yet_another_pilot::light_words()
 		else
 			rgb->write(0,0,0);
 	}
+	else if (firmware_loading)
+	{
+		rgb->write(0,0,1);
+	}
 	else if (flight_mode == RTL)
 	{
 		// purple light for RTL
@@ -2755,11 +2791,17 @@ int yet_another_pilot::light_words()
 			color[2] = 1;
 		}
 
-		else if (pos_estimator_ready() && mode_from_stick() == poshold)
+		else if (get_estimator_state() == fully_ready && mode_from_stick() == poshold)
 		{
-			// green flash for poshold mode and pos estimator ready.
+			// green flash for poshold mode and pos estimator fully ready.
 			color[0] = 0;
 			color[1] = 1;
+			color[2] = 0;
+		}
+		else if ((get_estimator_state() == velocity_and_local || get_estimator_state() == transiting) && mode_from_stick() == poshold)
+		{
+			color[0] = 1;
+			color[1] = 0;
 			color[2] = 0;
 		}
 		else
@@ -2964,7 +3006,7 @@ void yet_another_pilot::main_loop(void)
 	imu_data_lock = false;
 
 	// update home once position ready
-	if (!home_set && pos_estimator_ready())
+	if (!home_set && get_estimator_state() == fully_ready)
 	{
 		get_pos_velocity_ned(home, NULL);
 		set_home(home);
@@ -2975,8 +3017,38 @@ void yet_another_pilot::main_loop(void)
 	TRACE("\r%d/%d", int(read_sensor_cost), round_running_time);
 }
 
+int ymodem_firmware_writter::on_event(void *data, int datasize, ymodem_event event)
+{
+	char tmp[1024];
+	switch (event)
+	{
+	case ymodem_file_header:
+		{
+			open_firmware();
+			char *ptr = (char*) data;
+			ptr += int(limit(strlen(ptr), 0, 100))+1;
+			firmware_size = atoi(ptr);
+		}
+		break;
+	case ymodem_file_data:
+		memcpy(tmp, data, datasize);
+		write_firmware(tmp, datasize);
+		break;
+	case ymodem_bad_packet:
+		break;
+	case ymodem_error:
 
-void yet_another_pilot::sdcard_logging_loop(void)
+	case ymodem_end_of_transition:
+	default:
+		close_and_check_firmware(firmware_size);
+	}
+
+	last_event = systimer->gettime();
+
+	return 0;
+}
+
+void yet_another_pilot::sdcard_loop(void)
 {
 	static int64_t tick = systimer->gettime();
 	int64_t t = systimer->gettime();
@@ -2994,6 +3066,30 @@ void yet_another_pilot::sdcard_logging_loop(void)
 
 	if (res == 0)
 		tick = t;
+
+
+	if (firmware_loading)
+	{
+		IUART *uart = manager.getUART("Wifi");
+		ymodem_firmware_writter w(uart);
+
+		// clear uart buffer
+		uart->flush();
+		char tmp[100];
+		int got = 1;
+		while(got > 0)
+			got = uart->read(tmp, sizeof(tmp));
+		
+
+		// go
+		int s = ymodem_wait_file_header;
+		do
+		{
+			s = w.run();
+		}while(s != ymodem_state_error && s != ymodem_transition_ended && w.last_event > systimer->gettime() - 10000000);
+
+		firmware_loading = false;
+	}
 }
 	
 int yet_another_pilot::setup(void)
@@ -3036,7 +3132,7 @@ int yet_another_pilot::setup(void)
 	manager.getTimer("mainloop")->set_period(cycle_time);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
 	manager.getTimer("log")->set_period(10000);
-	manager.getTimer("log")->set_callback(sdcard_logging_loop_entry);
+	manager.getTimer("log")->set_callback(sdcard_loop_entry);
 	manager.getTimer("imu")->set_period(1000);
 	manager.getTimer("imu")->set_callback(imu_reading_entry);
 	
@@ -3060,7 +3156,7 @@ int main()
 		log_flush();
 		i++;
 	}
-	while(0)
+	while(0 && manager.getRGBLED("eye"))
 	{
 		float t = systimer->gettime()/5000000.0f * 2 * PI;
 		float t2 = systimer->gettime()/15000000.0f * 2 * PI;
@@ -3069,7 +3165,7 @@ int main()
 		float g = t2*(sin(t+PI*2/3)/2+0.5f);
 		float b = t2*(sin(t+PI*4/3)/2+0.5f);
 		
-		manager.getRGBLED("rgb")->write(r,g,b);
+		manager.getRGBLED("eye")->write(0,0,1);
 	}
 	
 	yap.setup();

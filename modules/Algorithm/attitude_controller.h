@@ -46,6 +46,7 @@ public:
 	float body_rate_sp[3];
 	float euler[3];
 	float euler_sp[3];		// sp = set point
+	float last_set_euler_sp_time;
 	float quaternion[4];
 	float quaternion_sp[4];		// sp = set point
 	bool airborne;

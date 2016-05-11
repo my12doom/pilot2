@@ -3,7 +3,7 @@
 using namespace HAL;
 
 #define SAMPLEING_TIME 10000 // 10000us, 10ms
-#define FAIL_RET(x) if ((x)<0) return -1
+#define FAIL_RET(x) if ((x)<0) goto fail
 
 namespace sensors
 {
@@ -11,6 +11,11 @@ namespace sensors
 NX3A::NX3A()
 {
 	_healthy = false;
+	temperature = 0;
+	pressure = 0;
+	new_raw_temperature = 0;
+	last_temperature_time = 0;
+	last_pressure_time = 0;
 }
 
 NX3A::~NX3A()
@@ -48,6 +53,8 @@ int NX3A::init(HAL::II2C *i2c, uint8_t address)
 	p4=((int32_t)((int8_t)((buffer[0x03] & 0x0030) << 2))) << 18 | buffer[0x07] | (buffer[0x11] & 0xFF00) << 8;
 	p5=((int32_t)((int8_t)((buffer[0x03] & 0x00C0) << 0))) << 18 | buffer[0x08] | (buffer[0x11] & 0x00FF) << 16;
 	p8=((int32_t)((int16_t)(buffer[0x03] & 0x8000))) << 1 | buffer[0x0F];
+	
+	printf("t1,t2,t3,p1,p2,p3,p4,p5,p6,p7,p8=%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", t1,t2,t3,p1,p2,p3,p4,p5,p6,p7,p8);
 
 	for(int i=0; i<3; i++)
 		FAIL_RET(read_nvm(i+0x1b, &buffer[i]));
@@ -71,8 +78,11 @@ int NX3A::init(HAL::II2C *i2c, uint8_t address)
 	_healthy = true;
 
 	return true;
+fail:
+	return false;
 }
 
+			double zb, k1, k2;
 int NX3A::read(int *data)
 {
 	int rtn = 1;
@@ -80,8 +90,13 @@ int NX3A::read(int *data)
 
 	do
 	{
-		if (new_temperature == 0 && last_temperature_time == 0 && last_pressure_time == 0)
+		if (new_raw_temperature == 0 && last_temperature_time == 0 && last_pressure_time == 0)
 		{
+			if (wait_chip(0) < 0)
+			{
+				rtn = -1;
+				break;
+			}
 			if (write_command(0xA5, 0x07|(nvm14.OSR_Temp<<6)) < 0)
 			{
 				rtn = -1;
@@ -90,7 +105,7 @@ int NX3A::read(int *data)
 			last_temperature_time = systimer->gettime();
 		}
 		
-		if (systimer->gettime() - last_temperature_time >  SAMPLEING_TIME && new_temperature == 0)
+		if (systimer->gettime() - last_temperature_time >  SAMPLEING_TIME && new_raw_temperature == 0)
 		{
 			if (wait_chip(0) < 0)
 			{
@@ -98,7 +113,7 @@ int NX3A::read(int *data)
 				break;
 			}
 		
-			read_measurement_data(&new_temperature);
+			read_measurement_data(&new_raw_temperature);
 
 			if (write_command(0xA1, *(int16_t*)&nvm14) < 0)
 			{
@@ -121,19 +136,24 @@ int NX3A::read(int *data)
 			read_measurement_data(&new_pressure);
 
 			// apply calibration
-			if (new_temperature &0x8000)
-				new_temperature |= 0xffff0000;
-			double zb, k1, k2;
+			new_raw_temperature >>= 8;
+			if (new_raw_temperature &0x8000)
+				new_raw_temperature |= 0xffff0000;
+			
+			version = 0;
+			
 			if(version==0)
 			{
-				zb = t1 / 32768.0 * (new_temperature + t2) + 32768;
+				zb = t1 / 32768.0 * (new_raw_temperature + t2) + 32768;
 				new_temperature = zb * (1 + zb*t3 / 17179869184.0);
 			}
 			else if(version==1)
 			{
-				zb=t1/4096.0*(new_temperature+t2);
+				zb=t1/4096.0*(new_raw_temperature+t2);
 				new_temperature=zb*(1+zb*t3/536870912.0)+32768;
 			}
+			
+			printf("raw:%d,%d\n", new_raw_temperature, new_pressure);
 
 			zb = new_temperature/16.0 - p8 - 2048;
 			k1 = zb*(zb * (p6 / 281474976710656.0) + ( p4 / 137438953472.0)) + 1;
@@ -142,11 +162,11 @@ int NX3A::read(int *data)
 			new_pressure = zb * (1 + zb*(p3 / 281474976710656.0));
 
 			new_temperature -= Tshift;
-			temperature =(new_temperature/65536.0)*190-40;
+			temperature = ((new_temperature/65536.0)*190-40)*100;
 			new_pressure -=Bshift;
 			pressure =(((new_pressure)/16777216.0)*100+28.75)*1000/1.125;
 
-			new_temperature = 0;
+			new_raw_temperature = 0;
 			last_temperature_time = 0;
 			last_pressure_time = 0;
 			rtn = 0;
@@ -184,12 +204,15 @@ int NX3A::read_status()
 	FAIL_RET(i2c->wait_ack());
 	status=i2c->txrx();
 	FAIL_RET(i2c->send_nak());
-	FAIL_RET(i2c->stop());
+fail:
+	i2c->stop();
 
 	return status;
 }
 int NX3A::read_nvm(uint8_t nvm_address, uint16_t *out)
 {
+	uint8_t status;
+
 	FAIL_RET(i2c->start());
 	FAIL_RET(i2c->txrx(address));
 	FAIL_RET(i2c->wait_ack());
@@ -202,13 +225,14 @@ int NX3A::read_nvm(uint8_t nvm_address, uint16_t *out)
 	FAIL_RET(i2c->start());
 	FAIL_RET(i2c->txrx(address | 0x1));
 	FAIL_RET(i2c->wait_ack());
-	uint8_t status =i2c->txrx();
+	status =i2c->txrx();
 	FAIL_RET(i2c->send_ack());
-	out[0] =i2c->txrx();
+	out[0] = i2c->txrx() << 8;
 	FAIL_RET(i2c->send_ack());
-	out[1] =i2c->txrx();
+	out[0] |= i2c->txrx();
 	FAIL_RET(i2c->send_nak());
-	FAIL_RET(i2c->stop());
+fail:
+	i2c->stop();
 
 	return 0;
 }
@@ -224,18 +248,20 @@ int NX3A::write_command(uint8_t cmd, uint16_t cmd_data)
 	FAIL_RET(i2c->wait_ack());
 	i2c->txrx(cmd & 0xff);
 	FAIL_RET(i2c->wait_ack());
-	FAIL_RET(i2c->stop());
+fail:
+	i2c->stop();
 
 	return 0;
 }
 int NX3A::read_measurement_data(int32_t *out)
 {
+	uint8_t status;
 	FAIL_RET(i2c->start());
 
 	FAIL_RET(i2c->txrx(address | 0x1));
 	FAIL_RET(i2c->wait_ack());
 
-	uint8_t status =i2c->txrx();
+	status =i2c->txrx();
 	FAIL_RET(i2c->send_ack());
 
 	*out |= i2c->txrx();
@@ -248,7 +274,8 @@ int NX3A::read_measurement_data(int32_t *out)
 
 	*out |= i2c->txrx();
 	FAIL_RET(i2c->send_nak());
-	FAIL_RET(i2c->stop());
+fail:
+	i2c->stop();
 
 	if (*out & 0x800000)
 		*out |= 0xff000000;

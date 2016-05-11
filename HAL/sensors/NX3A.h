@@ -34,7 +34,8 @@ namespace sensors
 		uint8_t address;
 		int temperature;// = 0;
 		int pressure;// = 0;
-		int32_t new_temperature;// = 0;
+		int32_t new_raw_temperature;// = 0;
+		double new_temperature;// = 0;
 		int64_t last_temperature_time;// = 0;
 		int64_t last_pressure_time;// = 0;
 
@@ -49,7 +50,7 @@ namespace sensors
 
 		int id;
 		int version;
-		int t1,t2,t3,p1,p2,p3,p4,p5,p6,p7,p8;	// calibration coeff
+		int32_t t1,t2,t3,p1,p2,p3,p4,p5,p6,p7,p8;	// calibration coeff
 		int Bshift, Tshift;
 		NVM14_Define nvm14;
 		bool _healthy;

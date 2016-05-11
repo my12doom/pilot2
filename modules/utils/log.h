@@ -18,4 +18,8 @@ int log_flush();
 int log_set_time(time_t unix_time);				// set current time.
 
 
+int open_firmware();
+int write_firmware(const void*data, int count);
+int close_and_check_firmware(int trucancate_size);
+
 extern "C" int log_printf(const char*format, ...);

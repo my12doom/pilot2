@@ -3,6 +3,7 @@
 #include <Protocol/common.h>
 #include <utils/param.h>
 #include <math/quaternion.h>
+#include <HAL/Interface/ISysTimer.h>
 
 // parameters
 #define yaw_dead_band 0.08f
@@ -34,6 +35,7 @@ attitude_controller::attitude_controller()
 	euler_sp[0] = 0;
 	euler_sp[1] = 0;
 	euler_sp[2] = NAN;
+	last_set_euler_sp_time = 0;
 
 	reset();
 }
@@ -78,9 +80,24 @@ int attitude_controller::set_quaternion_target(const float *quaternion)
 
 int attitude_controller::set_euler_target(const float *euler)
 {
+	// smooth out minor high frequency changes from position controllers
+	float dt = limit((systimer->gettime() - last_set_euler_sp_time)/1000000.0f, 0, 1);
+	float hz = 10.0f;
+	float threshold = 2.0f * PI / 180;
+	bool go = false;
 	for(int i=0; i<3; i++)
-		if (!isnan(euler[i]))
-			euler_sp[i] = euler[i];		
+		if (!isnan(euler[i]) && (dt > 1.0f/hz || fabs(euler[i] - euler_sp[i]) > threshold))
+			go = true;
+
+	for(int i=0; i<3; i++)
+	{
+		if (!isnan(euler[i]) && go)
+		{
+			euler_sp[i] = euler[i];
+			last_set_euler_sp_time = systimer->gettime();
+		}
+	}
+
 
 	return 0;
 }

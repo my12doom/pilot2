@@ -243,3 +243,44 @@ int log_printf(const char*format, ...)
 	
 	return log2(buffer, TAG_TEXT_LOG, count);
 }
+
+FIL fw;
+
+int open_firmware()
+{
+	if (!storage_ready)
+		return -1;
+
+	res = f_open(&fw, "firmware.yap", FA_CREATE_ALWAYS | FA_WRITE | FA_READ);
+	if (res != FR_OK)
+		return -2;
+
+	return 0;
+}
+int write_firmware(const void*data, int count)
+{
+	UINT done = 0;
+	res = f_write(&fw, data, count, &done);
+
+	return (res == FR_OK && done == count) ? 0 : -1;
+}
+int close_and_check_firmware(int trucancate_size)
+{
+
+	if (trucancate_size <= 0)
+	{
+		res = f_close(&fw);
+		f_unlink("firmware.yap");
+		return 0;
+	}
+	else
+	{
+		f_lseek(&fw, trucancate_size);
+		f_truncate(&fw);
+		f_close((&fw));
+	}
+
+	// TODO: check firmware CRC
+
+	return res == FR_OK;
+}

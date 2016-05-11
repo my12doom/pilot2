@@ -19,7 +19,7 @@ public:
 	int reset();		// mainly for after GPS glitch handling
 	int update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt);
 	void set_gps_latency(int new_latency){latency = new_latency;}
-	bool healthy();
+	int state();
 
 	CircularQueue<matrix, 20> history_pos;
 	int64_t last_history_push;
@@ -43,4 +43,9 @@ public:
 	float vx;
 	float vy;
 	float predict_flow[2];
+	float v_hbf[2];
+
+	bool flow_healthy;
+	float flow_ticker;
+	int _state;	// 0: not ready, 1: flow, 2: transiting, 3:gps
 };

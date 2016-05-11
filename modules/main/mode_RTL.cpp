@@ -19,7 +19,7 @@ int flight_mode_RTL::setup()
 	yap.alt_controller.reset();
 
 	// is position estimator ready?
-	if (!yap.pos_estimator_ready())
+	if (yap.get_estimator_state() != fully_ready)
 	{
 		LOGE("RTL failed: position not ready\n");
 		return -1;
@@ -228,8 +228,10 @@ int flight_mode_RTL::loop(float dt)
 	// throttle;
 	yap.throttle_result = yap.alt_controller.get_result();
 
-	if (!yap.pos_estimator_ready())
+	if (yap.get_estimator_state() != fully_ready)
+	{
 		yap.new_event(event_pos_bad, 0);
+	}
 
 	// log
 	s.euler_setpoint[0] = yap.attitude_controll.euler_sp[0];

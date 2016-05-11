@@ -192,8 +192,8 @@ int altitude_controller::update(float dt, float user_rate)
 	//climb_rate_error = limit(climb_rate_error, -quadcopter_max_descend_rate, quadcopter_max_climb_rate);
 
 	// apply a 2Hz LPF to rate error
-	const float RC = 1.0f/(2*3.1415926 * 5.0f);
-	float alpha = dt / (dt + RC);
+	const float RC2 = 1.0f/(2*3.1415926 * 5.0f);
+	float alpha2 = dt / (dt + RC2);
 	// 5Hz LPF filter
 	const float RC5 = 1.0f/(2*3.1415926 * 5.0f);
 	float alpha5 = dt / (dt + RC5);
@@ -204,7 +204,7 @@ int altitude_controller::update(float dt, float user_rate)
 	// TODO: add feed forward
 	// reference: get_throttle_rate()
 
-	climb_rate_error_pid[0] = isnan(climb_rate_error_pid[0]) ? (climb_rate_error) : (climb_rate_error_pid[0] * (1-alpha) + alpha * climb_rate_error);
+	climb_rate_error_pid[0] = isnan(climb_rate_error_pid[0]) ? (climb_rate_error) : (climb_rate_error_pid[0] * (1-alpha2) + alpha2 * climb_rate_error);
 	target_accel = climb_rate_error_pid[0] * pid_quad_alt_rate[0];
 	target_accel = limit(target_accel,  m_airborne ? -quadcopter_max_acceleration : -2 * quadcopter_max_acceleration, quadcopter_max_acceleration);
 
@@ -217,7 +217,7 @@ int altitude_controller::update(float dt, float user_rate)
 	}
 	else
 	{
-		accel_error = accel_error_pid[0] * (1-alpha5) + alpha5 * accel_error;
+		accel_error = accel_error_pid[0] * (1-alpha2) + alpha2 * accel_error;
 	}
 
 	// core pid

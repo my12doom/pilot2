@@ -81,7 +81,7 @@
             <RunUserProg1>1</RunUserProg1>
             <RunUserProg2>1</RunUserProg2>
             <UserProg1Name>C:\Keil_v5\ARM\ARMCC\bin\fromelf.exe --bin -o ./Output/MainController/pilot.bin ./Output/MainController/Firmware.axf</UserProg1Name>
-            <UserProg2Name>BIn2Yap.exe output/MainController/pilot.bin</UserProg2Name>
+            <UserProg2Name>BIn2Yap.exe output/MainController/pilot.bin e</UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
             <nStopA1X>0</nStopA1X>
@@ -149,7 +149,7 @@
             <RestoreSysVw>1</RestoreSysVw>
           </Target>
           <RunDebugAfterBuild>0</RunDebugAfterBuild>
-          <TargetSelection>10</TargetSelection>
+          <TargetSelection>6</TargetSelection>
           <SimDlls>
             <CpuDll></CpuDll>
             <CpuDllArguments></CpuDllArguments>
@@ -163,7 +163,7 @@
             <PeripheralDll></PeripheralDll>
             <PeripheralDllArguments></PeripheralDllArguments>
             <InitializationFile></InitializationFile>
-            <Driver>SiLabs\SLAB_CM_Keil.dll</Driver>
+            <Driver>Segger\JL2CM3.dll</Driver>
           </TargetDlls>
         </DebugOption>
         <Utilities>
@@ -869,6 +869,16 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\sensors\IST8307A.cpp</FilePath>
             </File>
+            <File>
+              <FileName>ads1115.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\ads1115.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>NX3A.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\NX3A.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -963,6 +973,11 @@
               <FileName>SEGGER_RTT.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\modules\utils\SEGGER_RTT.c</FilePath>
+            </File>
+            <File>
+              <FileName>ymodem.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\utils\ymodem.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -1572,6 +1587,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\novatek_v1\RGBLED.cpp</FilePath>
             </File>
+            <File>
+              <FileName>TLC59208F.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\novatek_v1\TLC59208F.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1850,6 +1870,98 @@
               <FileName>RGBLED.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\BSP\boards\minidrone_v1\RGBLED.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>BSP_mo</GroupName>
+          <GroupOption>
+            <CommonProperty>
+              <UseCPPCompiler>0</UseCPPCompiler>
+              <RVCTCodeConst>0</RVCTCodeConst>
+              <RVCTZI>0</RVCTZI>
+              <RVCTOtherData>0</RVCTOtherData>
+              <ModuleSelection>0</ModuleSelection>
+              <IncludeInBuild>0</IncludeInBuild>
+              <AlwaysBuild>2</AlwaysBuild>
+              <GenerateAssemblyFile>2</GenerateAssemblyFile>
+              <AssembleAssemblyFile>2</AssembleAssemblyFile>
+              <PublicsOnly>2</PublicsOnly>
+              <StopOnExitCode>11</StopOnExitCode>
+              <CustomArgument></CustomArgument>
+              <IncludeLibraryModules></IncludeLibraryModules>
+              <ComprImg>1</ComprImg>
+            </CommonProperty>
+            <GroupArmAds>
+              <Cads>
+                <interw>2</interw>
+                <Optim>0</Optim>
+                <oTime>2</oTime>
+                <SplitLS>2</SplitLS>
+                <OneElfS>2</OneElfS>
+                <Strict>2</Strict>
+                <EnumInt>2</EnumInt>
+                <PlainCh>2</PlainCh>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <wLevel>2</wLevel>
+                <uThumb>2</uThumb>
+                <uSurpInc>2</uSurpInc>
+                <uC99>2</uC99>
+                <useXO>2</useXO>
+                <v6Lang>0</v6Lang>
+                <v6LangP>0</v6LangP>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Cads>
+              <Aads>
+                <interw>2</interw>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <thumb>2</thumb>
+                <SplitLS>2</SplitLS>
+                <SwStkChk>2</SwStkChk>
+                <NoWarn>2</NoWarn>
+                <uSurpInc>2</uSurpInc>
+                <useXO>2</useXO>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Aads>
+            </GroupArmAds>
+          </GroupOption>
+          <Files>
+            <File>
+              <FileName>AsyncWorker.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\mo_v3\AsyncWorker.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>init.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\mo_v3\init.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RCOUT.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\mo_v3\RCOUT.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>ESERx6.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\BSP\boards\mo_v3\ESERx6.c</FilePath>
+            </File>
+            <File>
+              <FileName>ESERx6_IIC.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\mo_v3\ESERx6_IIC.cpp</FilePath>
             </File>
           </Files>
         </Group>

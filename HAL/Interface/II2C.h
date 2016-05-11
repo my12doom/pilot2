@@ -41,7 +41,7 @@ namespace HAL
 		virtual int send_ack();		// return -1 on any error.
 		virtual int send_nak();		// return -1 on any error.
 		virtual int wait_ack();		// return 0 on success, -1 on any error, 1 if a nak received.
-		virtual int txrx(uint8_t tx/* = 0xff*/);	// send and receive a byte, to receive from slave, send 0xff.
+		virtual int txrx(uint8_t tx = 0xff);	// send and receive a byte, to receive from slave, send 0xff.
 	
 	protected:
 		int m_speed_tick;

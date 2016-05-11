@@ -12,7 +12,7 @@ static param max_speed("maxH", 5.0f);
 static float max_speed_ff = 2.0f;
 static bool use_desired_feed_forward = false;
 static float feed_forward_factor = 1;
-static float rate2accel[4] = {1.0f, 0.5f, 0.0f, 2.0f};
+static float rate2accel[4] = {1.2f, 0.5f, 0.0f, 2.0f};
 static float pos2rate_P = 1.0f;
 
 // "parameters/constants"
@@ -466,16 +466,18 @@ int pos_controller::accel_to_lean_angles(float dt)
 	new_euler_roll = limit(new_euler_roll, -quadcopter_range[0], quadcopter_range[0]);
 	new_euler_pitch = limit(new_euler_pitch, -quadcopter_range[1], quadcopter_range[1]);
 
-	// max rotation speed: 100 degree/s
+	// max rotation speed: 100 degree/s, then apply a 5hz LPF
 	float delta_roll = new_euler_roll - target_euler[0];
 	float delta_pitch = new_euler_pitch - target_euler[1];
 
 	float max_delta = dt * 100 * PI / 180;
-	delta_roll = limit(delta_roll, -max_delta, max_delta);
-	delta_pitch = limit(delta_pitch, -max_delta, max_delta);
+// 	delta_roll = limit(delta_roll, -max_delta, max_delta);
+// 	delta_pitch = limit(delta_pitch, -max_delta, max_delta);
 
-	target_euler[0] += delta_roll;
-	target_euler[1] += delta_pitch;
+	float alpha5 = dt / (dt + 1.0f/(2*PI * 12.0f));
+
+	target_euler[0] = (target_euler[0] + delta_roll) * alpha5 + (1-alpha5) * target_euler[0];
+	target_euler[1] = (target_euler[1] + delta_pitch) * alpha5 + (1-alpha5) * target_euler[1];
 
 	return 0;
 }

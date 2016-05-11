@@ -7,7 +7,7 @@ static param use_EKF("ekf", 0);		// use EKF estimator
 
 int flight_mode_poshold::setup()
 {
-	if (!yap.pos_estimator_ready())
+	if (!yap.get_estimator_state())
 	{
 		LOGE("poshold failed: position estimator not ready\n");
 		return -1;
@@ -48,6 +48,13 @@ int flight_mode_poshold::loop(float dt)
 	{
 		if (dt < 1.0f)
 		{
+			// hacks
+			if (yap.get_estimator_state() == transiting)
+			{
+				yap.pos_control_hybird.state = pos_controller::braking;
+				yap.pos_control_hybird.low_speed_tick = 0;
+			}
+
 			float ne_pos[2];
 			float ne_velocity[2];
 			yap.get_pos_velocity_ned(ne_pos, ne_velocity);
