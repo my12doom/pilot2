@@ -2172,7 +2172,10 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	if (byte_count <= 0)
 		return 0;
 	
-	line[byte_count] = 0;
+	line[byte_count-1] = 0;
+	if (line[byte_count-2] == '\r')
+		line[byte_count-2] = 0;
+
 	int len = strlen(line);
 	const char * keyword = ",stick\n";
 	const char * keyword2 = "stick,";
@@ -2437,12 +2440,13 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	}
 	else if (strstr(line, "set,") == line)
 	{
-		const char * comma = strstr(line+4, ",");
+		char * comma = (char*)strstr(line+4, ",");
 		if (!comma)
 		{
 			uart->write("set,,fail\n", 10);
 			return -1;
 		}
+		*comma = NULL;
 
 		char para_name[5] = {0};
 		strncpy(para_name, line+4, 4);
