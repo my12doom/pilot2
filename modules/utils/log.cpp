@@ -16,6 +16,7 @@ extern "C"
 }
 
 FIL *file = NULL;
+FIL yap_file;
 FRESULT res;
 FATFS fs;
 uint32_t lost1 = 0;		// buffer full
@@ -24,6 +25,7 @@ volatile bool buffer_locked = false;
 
 __attribute__((section("dma"))) FIFO<16384> buffer;
 int last_log_flush_time = -999999;
+int file_number = 0;
 bool log_ready()
 {
 	return storage_ready && last_log_flush_time > systimer->gettime() - 2000000;
@@ -47,13 +49,19 @@ int log_init()
 {
 	//format_sdcard();
 	LOGE("sdcard init...");
-	FIL f;
 	res = disk_initialize(0) == RES_OK ? FR_OK : FR_DISK_ERR;
 	res = f_mount(&fs, "", 0);
-	res = f_open(&f, "test.bin", FA_CREATE_ALWAYS | FA_WRITE | FA_READ);
+	res = f_open(&yap_file, "my12doom.yap", FA_OPEN_ALWAYS | FA_WRITE | FA_READ);
 	storage_ready = res == FR_OK;
-	f_close(&f);
 	LOGE("%s\r\n", storage_ready ? "OK" : "FAIL");
+	if (storage_ready)
+	{
+		UINT done = 0;
+		f_lseek(&yap_file, 0);
+		f_read(&yap_file, &file_number, 4, &done);
+		if (done != 4)
+			file_number = 0;
+	}
 	return 0;
 }
 
@@ -68,7 +76,7 @@ int write_to_disk(void *data, int size)
 			static FIL f;
 			file = &f;
 			char filename[20];
-			int done  = 0;
+			int done  = file_number;
 			while(storage_ready)
 			{
 				sprintf(filename, "%04d.dat", done ++);
@@ -78,6 +86,10 @@ int write_to_disk(void *data, int size)
 					f_close(file);
 					res = f_open(file, filename, FA_OPEN_EXISTING | FA_WRITE | FA_READ);
 					LOGE("opened %s for logging\n", filename);
+					f_lseek(&yap_file, 0);
+					UINT tmp;
+					f_write(&yap_file, &done, 4, &tmp);
+					f_sync(&yap_file);
 					break;
 				}
 			}
