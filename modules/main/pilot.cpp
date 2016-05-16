@@ -2500,6 +2500,29 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		}
 
 	}
+
+	else if (strstr(line, "enum,") == line)
+	{
+		int pos = atoi(line+5);
+
+		const char *fourcc = param::enum_params(pos);
+		char out[50];
+		if (fourcc)
+		{
+			param p(fourcc, 0);
+			
+			if (isnan(p))
+				sprintf(out, "enum,%s,NAN\n", fourcc);
+			else
+				sprintf(out, "enum,%s,%f\r\n", fourcc, (float)p);
+		}
+		else
+		{
+			strcpy(out, "enum,EOF\n");
+		}
+
+		uart->write(out, strlen(out));
+	}
 	
 	else
 	{
