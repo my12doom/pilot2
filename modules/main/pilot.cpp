@@ -45,6 +45,7 @@ static param quadcopter_auto_landing_rate_final("lrat", 0.5f);		// absolute valu
 static param max_altitude("limV", 100);
 static param max_distance("limH", 100);
 static param ignore_error("err",0);
+static param rookie_mode("rook",0);
 
 static param quadcopter_trim[3] = 
 {
@@ -1608,6 +1609,12 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 		if (firmware_loading)
 		{
 			LOGE("arm failed: firmware_loading\n");
+			return -1;
+		}
+
+		if (rookie_mode > 0 && get_estimator_state() != fully_ready)
+		{
+			LOGE("arm failed: rookie mode enabled and position estimator not ready\n");
 			return -1;
 		}
 
