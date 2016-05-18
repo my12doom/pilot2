@@ -10,6 +10,7 @@
 #include <math/matrix.h>
 #include <HAL/Interface/IGPS.h>
 #include <Algorithm/motion_detector.h>
+#include <HAL/Interface/IFlow.h>
 
 
 enum EKFINS_healthy
@@ -27,7 +28,7 @@ public:
 	~EKFINS();
 
 	int reset();		// mainly for after GPS glitch handling and mag calibration
-	int update(const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, float baro, float dt, bool armed, bool airborne);
+	int update(const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, sensors::px4flow_frame frame, float baro, float dt, bool armed, bool airborne);
 	void set_gps_latency(int new_latency){latency = new_latency;}
 	int healthy();
 	int warning();	
@@ -40,8 +41,10 @@ public:
 	int latency;
 	double home_lat;
 	double home_lon;
-	float ticker;
-	bool position_healthy;
+	float gps_ticker;
+	float flow_ticker;
+	bool gps_healthy;
+	bool flow_healthy;
 
 	matrix P;
 	matrix x; // {q[4], gyro_bias[3], pos_ned[3], vel_ned[3], acc_bias_body[3], vel_bias_ned[3]}, 19 states, no mag bias, since EKF won't track mag bias correctly.
@@ -53,6 +56,7 @@ public:
 	float acc_ned[3];
 	float gps_north;
 	float gps_east;
+	float last_valid_sonar;
 
 	motion_detector motion_acc;
 	motion_detector motion_gyro;

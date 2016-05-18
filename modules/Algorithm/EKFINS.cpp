@@ -28,30 +28,63 @@ int EKFINS::reset()		// mainly for after GPS glitch handling
 {
 	history_pos.clear();
 	last_history_push = 0;
-	ticker = 0;
-	position_healthy = false;
+	gps_ticker = 0;
+	gps_healthy = false;
+	flow_healthy = false;
 
-	P = matrix::diag(12, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0);
-	x = matrix(12,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+	P = matrix::diag(19, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0);
+	x = matrix(19,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
 	return 0;
 }
 
 int EKFINS::healthy()
 {
-	if (!position_healthy)
+	if (!gps_healthy)
 		return false;
 
 	// TODO: residual norm and covariance checking
 
-	return position_healthy;
+	return gps_healthy;
 }
 
 
-int EKFINS::update( const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, float baro, float dt, bool armed, bool airborne)
+int EKFINS::update( const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, sensors::px4flow_frame frame, float baro, float dt, bool armed, bool airborne)
 {
+	// flow switching
+	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133);
+	if (!flow_healthy && use_flow)
+	{
+		flow_ticker += dt;
+
+		if (flow_ticker > 3)
+		{
+			LOGE("pos_estimator2: using flow\n");
+			flow_healthy = true;
+		}
+	}
+	else if (flow_healthy && !use_flow)
+	{
+		flow_ticker += dt;
+
+		if (flow_ticker > 1)
+		{
+			LOGE("pos_estimator2: flow failed\n");
+			flow_healthy = false;
+		}
+	}
+	else
+	{
+		if (flow_ticker > 1)
+		{
+			printf("...\n");
+		}
+
+		flow_ticker = 0;
+	}
+
 	// GPS switching
-	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 5) || (position_healthy && gps.position_accuracy_horizontal < 10);
+	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 3.5) || (gps_healthy && gps.position_accuracy_horizontal < 7);
 
 	// home
 	if (use_gps && isnan(home_lat))
@@ -62,28 +95,34 @@ int EKFINS::update( const float gyro[3], const float acc_body[3], const float ma
 		LOGE("EKFINS: home set to %f , %f\n", home_lat, home_lon);
 	}
 
-	// update "position healthy" state, and reset position covariance if needed
-	if (!position_healthy && use_gps)
+	// update "GPS healthy" state, and reset position covariance if needed
+	if (!gps_healthy && use_gps)
 	{
-		ticker += dt;
+		gps_ticker += dt;
 
-		if (ticker > 3)
+		if (gps_ticker == 0)
 		{
-			position_healthy = true;
-			ticker = 0;
+			LOGE("EKFINS: GPS coming online, clearing position covariance\n");
+			P[(P.m+1)*7] = 100;
+			P[(P.m+1)*8] = 100;
+		}
+
+		if (gps_ticker > 3)
+		{
+			gps_healthy = true;
+			gps_ticker = 0;
 
 			LOGE("EKFINS: position healthy\n");
-			
 		}
 	}
-	else if (position_healthy && !use_gps)
+	else if (gps_healthy && !use_gps)
 	{
-		ticker += dt;
+		gps_ticker += dt;
 
-		if (ticker > 3)
+		if (gps_ticker > 3)
 		{
-			position_healthy = false;
-			ticker = 0;
+			gps_healthy = false;
+			gps_ticker = 0;
 
 			printf("EKFINS: position failed\n");
 
@@ -93,7 +132,7 @@ int EKFINS::update( const float gyro[3], const float acc_body[3], const float ma
 	}
 	else
 	{
-		ticker = 0;
+		gps_ticker = 0;
 	}
 
 	// motion detection
@@ -227,8 +266,8 @@ int EKFINS::update( const float gyro[3], const float acc_body[3], const float ma
 
 
 	// prediction and correction
-	float f1 = dt / 0.05f;		// 0.005: tuned dt.
-	float f2 = dt*dt / (0.05f*0.05f);
+	float f1 = dt / 0.005f;		// 0.005: tuned dt.
+	float f2 = dt*dt / (0.005f*0.005f);
 	matrix Q = matrix::diag(19, 4e-3, 4e-3, 4e-6, 
 		1e-4, 1e-4, 1e-6, 
 		1e-7, 1e-7, 1e-7, 
