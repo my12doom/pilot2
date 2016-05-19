@@ -184,6 +184,8 @@ public:
 	FIFO<2048> raw_imu_buffer;
 	bool firmware_loading;		// loading firmware from uart
 	bool mag_reset_requested;
+	motion_detector detect_acc;
+	motion_detector detect_gyro;
 
 	// constructor
 	yet_another_pilot();

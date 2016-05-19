@@ -1245,9 +1245,15 @@ int yet_another_pilot::calculate_state()
 
 	if (mag_reset_requested)
 	{
-		NonlinearSO3AHRSreset_mag(-mag.array[0], -mag.array[1], mag.array[2]);
+		detect_gyro.new_data(gyro_reading);
+		detect_acc.new_data(accel);
 
-		// TODO: reset other estimator
+		if (detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100)
+		{
+			mag_reset_requested = false;
+			NonlinearSO3AHRSreset_mag(-mag.array[0], -mag.array[1], mag.array[2]);
+			// TODO: reset other estimator
+		}
 	}
 
 	NonlinearSO3AHRSupdate(
@@ -1477,8 +1483,6 @@ int yet_another_pilot::sensor_calibration()
 	}
 
 	// static base value detection
-	motion_detector detect_acc;
-	motion_detector detect_gyro;
 	vector mag_avg = {0};
 	//vector accel_avg = {0};
 	//vector gyro_avg = {0};
@@ -2753,10 +2757,13 @@ int yet_another_pilot::stupid_joystick()
 }
 
 int yet_another_pilot::light_words()
-{
+{	
+	if (mag_calibration_state)
+	{
+		// do nothing ,let the worker do light words
+	}
 	// critical errors
-	int a = ~int(ignore_error);
-	if (critical_errors & (~int(ignore_error)))
+	else if (critical_errors & (~int(ignore_error)))
 	{
 		static int last_critical_errors = 0;
 		if (last_critical_errors != critical_errors)
@@ -2800,6 +2807,23 @@ int yet_another_pilot::light_words()
 		}
 	}
 
+	// stay still!
+	else if (mag_reset_requested)
+	{
+		float color[5][3] = 
+		{
+			{1,0,0},
+			{0,1,0},
+			{0,0,1},
+			{0.2,0,1},
+			{0.2,1,0},
+		};
+
+		int i = (systimer->gettime() / 150000) % 5;
+		rgb->write(color[i][0], color[i][01], color[i][2]);
+
+	}
+	
 	else if (lowpower)			// low voltage warning
 	{
 		// fast red flash (10hz)
@@ -2818,7 +2842,7 @@ int yet_another_pilot::light_words()
 
 	else if (!mag_ok)
 	{
-		rgb->write(systimer->gettime() % 1000000 < 500000 ? 1:0, 1, 0);
+		rgb->write(1,systimer->gettime() % 1000000 < 500000 ? 1:0, 0);
 	}
 
 	else if (flight_mode == RTL)
@@ -2888,7 +2912,6 @@ void yet_another_pilot::mag_calibrating_worker()
 	if (last_mag_calibration_result == 0)
 	{
 		LOGE("mag calibration success\n");
-		mag_reset_requested = true;
 		
 		for(int i=0; i<3; i++)
 		{
@@ -2898,6 +2921,10 @@ void yet_another_pilot::mag_calibrating_worker()
 			mag_scale[i].save();
 		}		
 		
+		detect_acc.reset();
+		detect_gyro.reset();
+		mag_reset_requested = true;
+
 		// flash RGB LED to indicate a successs
 		for(int i=0; i<10; i++)
 		{

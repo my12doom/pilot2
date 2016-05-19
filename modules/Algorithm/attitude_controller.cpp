@@ -29,6 +29,7 @@ static param pid_factor2[3][4] = 			// pid_factor2[roll,pitch,yaw][p,i,d,i_limit
 
 static param QUADCOPTER_ACRO_YAW_RATE("raty", PI);
 static param QUADCOPTER_MAX_YAW_OFFSET("offy", PI/8);
+static param slew_rate("slew", PI*2);
 
 attitude_controller::attitude_controller()
 {
@@ -114,8 +115,8 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 		if (isnan(stick[i]))
 			continue;
 
-		float limit_l = euler_sp[i] - 2*PI * dt;
-		float limit_r = euler_sp[i] + 2*PI * dt;
+		float limit_l = euler_sp[i] - slew_rate * dt;
+		float limit_r = euler_sp[i] + slew_rate * dt;
 		euler_sp[i] = stick[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
 		euler_sp[i] = limit(euler_sp[i], limit_l, limit_r);
 	}
