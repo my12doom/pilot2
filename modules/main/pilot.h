@@ -183,6 +183,7 @@ public:
 	float home_set;
 	FIFO<2048> raw_imu_buffer;
 	bool firmware_loading;		// loading firmware from uart
+	bool mag_reset_requested;
 
 	// constructor
 	yet_another_pilot();

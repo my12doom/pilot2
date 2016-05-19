@@ -1226,7 +1226,7 @@ int yet_another_pilot::calculate_state()
 		return -1;
 
 	float factor = 1.0f;
-	float factor_mag = 1.0f;
+	float factor_mag = 4.0f;
 
 	float acc_gps_bf[3] = {0};
 
@@ -1242,11 +1242,19 @@ int yet_another_pilot::calculate_state()
 		}
 	}
 
+
+	if (mag_reset_requested)
+	{
+		NonlinearSO3AHRSreset_mag(-mag.array[0], -mag.array[1], mag.array[2]);
+
+		// TODO: reset other estimator
+	}
+
 	NonlinearSO3AHRSupdate(
 	-accel.array[0], -accel.array[1], -accel.array[2], 
 	-mag.array[0], -mag.array[1], mag.array[2],
 	gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
-	0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval,
+	0.15f*factor, 0.0015f*factor, 0.15f*factor_mag, 0.0015f*factor_mag, interval,
 	acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
 //	
 
@@ -2807,6 +2815,12 @@ int yet_another_pilot::light_words()
 	{
 		rgb->write(0,0,1);
 	}
+
+	else if (!mag_ok)
+	{
+		rgb->write(systimer->gettime() % 1000000 < 500000 ? 1:0, 1, 0);
+	}
+
 	else if (flight_mode == RTL)
 	{
 		// purple light for RTL
@@ -2874,6 +2888,7 @@ void yet_another_pilot::mag_calibrating_worker()
 	if (last_mag_calibration_result == 0)
 	{
 		LOGE("mag calibration success\n");
+		mag_reset_requested = true;
 		
 		for(int i=0; i<3; i++)
 		{
@@ -2970,7 +2985,7 @@ void yet_another_pilot::main_loop(void)
 	//read_sensors();
 	read_sensors();
 	read_sensor_cost = systimer->gettime() - read_sensor_cost;
-	
+
 	// provide mag calibration with data
 	if (mag_calibration_state == 1)
 	{
