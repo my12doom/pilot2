@@ -122,33 +122,34 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	float g_force = sqrt(ax*ax + ay*ay + az*az) / G_in_ms2;
 	bool g_force_ok = g_force > 0.85f && g_force < 1.15f;
 
-
-	mag_ok = true;
-	float mag_length = sqrt(mx*mx + my*my + mz*mz);
 	if (has_mag)
 	{
-		// check for magnetic interference
-		float mag_diff = (mag_length / 500.0f);
-		mag_diff = fabs(mag_diff - 1.0f);
-		if ( mag_diff < mag_tolerate)
+
+		// check for magnetic interference		
+		// by mag field length and residual
+		float mag_length = sqrt(mx*mx + my*my + mz*mz);
+		float mag_times = mag_length > 500.0f ? (mag_length / 500.0f) : (500.0f/mag_length);
+		float mag_residual = sqrt(err_m[0] * err_m[0] + err_m[1] * err_m[1] + err_m[2] * err_m[2]);
+
+		bool mag_length_ok = mag_ok ? (mag_times < 3.0f) : (mag_times < 1.5f);
+		bool mag_residual_ok = mag_ok ? (mag_residual < 0.2f) : (mag_residual < 0.05f);
+
+		if (mag_ok && !(mag_residual_ok && mag_length_ok))
 		{
-			mag_tolerate = fmax(min_mag_tolerate, mag_diff);
-		}
-		else
-		{
+			int code =  (mag_length_ok ? 0: 1) + (mag_residual_ok ? 0 : 2);
+			static const char *codes[] = 
+			{
+				"none", "mag field", "mag residual", "both",
+			};
+			LOGE("AHRS_CF: mag interference %s\n", codes[code]);
 			mag_ok = false;
-			mag_tolerate += 0.05f * dt;
-			//TRACE("warning: possible magnetic interference");
 		}
-
+		else if (!mag_ok && mag_residual_ok && mag_length_ok)
+		{
+			LOGE("AHRS_CF: mag restored\n");
+			mag_ok = true;
+		}
 	}
-	else
-	{
-		// no initial mag data
-		mag_length = 0;
-	}
-
-	mag_ok = true;
 
 	// Make filter converge to initial solution faster
 	// This function assumes you are in static position.
@@ -159,7 +160,7 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	}
         	
 	//! If magnetometer measurement is available, use it.
-	if(mag_ok && !((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f))) {
+	if(has_mag && !((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f))) {
 		float hx, hy, hz, bx, bz;
 		float halfwx, halfwy, halfwz;
 	
@@ -184,15 +185,19 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
     	halfwx = bx * (0.5f - q2q2 - q3q3) + bz * (q1q3 - q0q2);
     	halfwy = bx * (q1q2 - q0q3) + bz * (q0q1 + q2q3);
     	halfwz = bx * (q0q2 + q1q3) + bz * (0.5f - q1q1 - q2q2);
+
     	// Error is sum of cross product between estimated direction and measured direction of field vectors
-    	halfexM = (my * halfwz - mz * halfwy);
-    	halfeyM = (mz * halfwx - mx * halfwz);
-    	halfezM = (mx * halfwy - my * halfwx);
+		// apply only if mag_ok
+		err_m[0] = (my * halfwz - mz * halfwy);
+		err_m[1] = (mz * halfwx - mx * halfwz);
+		err_m[2] = (mx * halfwy - my * halfwx);
 
-		err_m[0] = halfexM;
-		err_m[1] = halfeyM;
-		err_m[2] = halfezM;
-
+		if (mag_ok)
+		{
+    		halfexM = err_m[0];
+    		halfeyM = err_m[1];
+    		halfezM = err_m[2];
+		}
 	}
 
 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
@@ -363,6 +368,8 @@ void NonlinearSO3AHRSreset_mag(float mx, float my, float mz)
 	halfvx = q1q3 - q0q2;
 	halfvy = q0q1 + q2q3;
 	halfvz = q0q0 - 0.5f + q3q3;
+
+	mag_ok = true;
 }
 
 //---------------------------------------------------------------------------------------------------
