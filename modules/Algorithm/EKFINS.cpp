@@ -55,6 +55,7 @@ int EKFINS::reset()		// mainly for after GPS glitch handling
 	sonar_healthy = false;
 	mag_healthy = true;
 	inited = false;
+	still_inited = false;
 
 	P = matrix::diag(19,
 		100.0, 100.0, 100.0, 100.0,
@@ -199,7 +200,7 @@ int EKFINS::update_mode(const float gyro[3], const float acc_body[3], const floa
 	vector vg = {gyro[0], gyro[1], gyro[2]};
 	motion_acc.new_data(va);
 	motion_gyro.new_data(vg);
-	still = motion_acc.get_average(NULL) > 100 && motion_gyro.get_average(NULL) > 100;
+	still_inited = still = motion_acc.get_average(NULL) > 100 && motion_gyro.get_average(NULL) > 100;
 
 	return 0;
 }
@@ -277,29 +278,6 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0
 		);
 
-	F = matrix(19,19,
-		1.0, dt2*-g[0], dt2*-g[1], dt2*-g[2], dt2*-x[1], dt2*-x[2], dt2*-x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		dt2*g[0], 1.0, dt2*g[2], dt2*-g[1], dt2*x[0], dt2*-x[3], dt2*x[2], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		dt2*g[1], dt2*-g[2], 1.0, dt2*g[0], dt2*x[3], dt2*x[0], dt2*-x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		dt2*g[2], dt2*g[1], dt2*-g[0], 1.0, dt2*-x[2], dt2*x[1], dt2*x[0], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0
-		);
-
-
 	matrix Bu = matrix(19,1,
 		0.0,
 		0.0,
@@ -319,11 +297,27 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		);
 
 	// reset observation helper variables
+	predicted_observation.n = 1;
+	predicted_observation.m = 0;
 	zk.n = 1;
 	zk.m = 0;
 	H.n = F.n;
 	H.m = 0;
 	R_count = 0;
+
+	// prediction
+	float f1 = dt / 0.005f;		// 0.005: tuned dt.
+	float f2 = dt*dt / (0.005f*0.005f);
+	matrix Q = matrix::diag(19,
+		1e-8, 1e-8, 1e-8, 1e-8, 1e-12, 1e-12, 1e-12,
+		4e-3, 4e-3, 4e-6, 
+		1e-4, 1e-4, 1e-6, 
+		1e-7, 1e-7, 1e-7, 
+		1e-7, 1e-7, 5e-7);
+	Q *= f1;
+	matrix x1 = F * x + Bu;
+	matrix P1 = F * P * F.transpos() + Q;
+
 
 	// observation function and observation
 	float latitude_to_meter = 40007000.0f/360;
@@ -341,16 +335,22 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 	}
 
 
-	// acc and mag observation
-	// 		2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0, 0.0, 0.0,
-	// 			-2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0, 0.0, 0.0,
-	// 			-2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0, 0.0, 0.0,
-	// 			2*x[0], 2*x[1], -2*x[2], -2*x[3], 0.0, 0.0, 0.0,
-	// 			-2*x[3], 2*x[2], 2*x[1], -2*x[0], 0.0, 0.0, 0.0,
-	// 			2*x[2], 2*x[3], 2*x[0], 2*x[1], 0.0, 0.0, 0.0,
+// 	acc and mag observation jacobian
+// 			2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0, 0.0, 0.0,
+// 				-2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0, 0.0, 0.0,
+// 				-2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0, 0.0, 0.0,
+// 				2*x[0], 2*x[1], -2*x[2], -2*x[3], 0.0, 0.0, 0.0,
+// 				-2*x[3], 2*x[2], 2*x[1], -2*x[0], 0.0, 0.0, 0.0,
+// 				2*x[2], 2*x[3], 2*x[0], 2*x[1], 0.0, 0.0, 0.0,
+// 	-2.f * (x1[1]*x1[3] - x1[0]*x1[2]),						// 13			acc[0]
+// 		-2.f * (x1[2]*x1[3] + x1[0]*x1[1]),						// 23		acc[1]
+// 		-(x1[0]*x1[0] - x1[1]*x1[1] - x1[2]*x1[2] + x1[3]*x1[3]),	// 33		acc[2]
+// 		x[0]*x[0] + x[1]*x[1] - x[2]*x[2] - x[3]*x[3],		// 11		mag[0]
+// 		2.f * (x[1]*x[2] - x[0]*x[3]),						// 21		mag[1]
+// 		2.f * (x[1]*x[3] + x[0]*x[2]),						// 31		mag[2]
 
 	// baro
-// 	add_observation(60.0, baro, 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+	add_observation(60.0, baro, x1[9], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 
 
 	float mag_0z[3] = {mag[0], mag[1], mag[2]};
@@ -359,71 +359,60 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 	float a_len = 1.0/sqrt(acc_body[0]*acc_body[0] + acc_body[1]*acc_body[1] + acc_body[2]*acc_body[2]);
 
 	// GNSS: position and velocity, plus vertical velocity
-// 	if (use_gps)
-// 	{
-// 		add_observation(60.0, pos_north, 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-// 		add_observation(60.0, pos_east,  0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-// 		add_observation(5.0, vel_north, 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-// 		add_observation(5.0, vel_east,  0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-// 		add_observation(15.0, gps.climb_rate,  0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-// 	}
+	if (use_gps)
+	{
+		add_observation(60.0, pos_north, x1[7], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(60.0, pos_east,  x1[8], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(5.0, vel_north, x1[10], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(5.0, vel_east, x1[11],  0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(15.0, gps.climb_rate, x1[12], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+	}
 
 	// still motion, acc and gyro bias with very low noise.
 	if (still)
 	{
-		add_observation(1e-3, acc_body[0]*a_len, 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-3, acc_body[1]*a_len, -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-3, acc_body[2]*a_len, -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-4, -gyro[0], 0.0,0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-4, -gyro[1], 0.0,0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-4, -gyro[2], 0.0,0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-3, acc_body[0]*a_len, -r[6], 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-3, acc_body[1]*a_len, -r[7], -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-3, acc_body[2]*a_len, -r[8], -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-4, -gyro[0], x1[4], 0.0,0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-4, -gyro[1], x1[5], 0.0,0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-4, -gyro[2], x1[6], 0.0,0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 	}
 
 	// add a attitude observation if no assisting available(flow or GNSS)
-	if (/*!use_gps && !use_flow &&*/ !still)
+	if (!still_inited || (!use_gps && !use_flow && !still))
 	{
-		add_observation(1e-1, acc_body[0]*a_len, 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-1, acc_body[1]*a_len, -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-1, acc_body[2]*a_len, -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-1, acc_body[0]*a_len, -r[6], 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-1, acc_body[1]*a_len, -r[7], -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-1, acc_body[2]*a_len, -r[8], -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 	}
 
 	// mag
 	if (mag_healthy)
 	{
-		add_observation(1e-1, mag_0z[0]*m_len, 2*x[0], 2*x[1], -2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-1, mag_0z[1]*m_len, -2*x[3], 2*x[2], 2*x[1], -2*x[0], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-1, mag_0z[2]*m_len, 2*x[2], 2*x[3], 2*x[0], 2*x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-1, mag_0z[0]*m_len, r[0], 2*x[0], 2*x[1], -2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-1, mag_0z[1]*m_len, r[1], -2*x[3], 2*x[2], 2*x[1], -2*x[0], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-1, mag_0z[2]*m_len, r[2], 2*x[2], 2*x[3], 2*x[0], 2*x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 
 	}
 	else
 	{
-		add_observation(60.0, mag_0z[0]*m_len, 2*x[0], 2*x[1], -2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(60.0, mag_0z[1]*m_len, -2*x[3], 2*x[2], 2*x[1], -2*x[0], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(60.0, mag_0z[2]*m_len, 2*x[2], 2*x[3], 2*x[0], 2*x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(60.0, mag_0z[0]*m_len, r[0], 2*x[0], 2*x[1], -2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(60.0, mag_0z[1]*m_len, r[1], -2*x[3], 2*x[2], 2*x[1], -2*x[0], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(60.0, mag_0z[2]*m_len, r[2], 2*x[2], 2*x[3], 2*x[0], 2*x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 	}
 
-	// prediction and correction
-	float f1 = dt / 0.005f;		// 0.005: tuned dt.
-	float f2 = dt*dt / (0.005f*0.005f);
-	matrix Q = matrix::diag(19,
-		1e-8, 1e-8, 1e-8, 1e-8, 1e-12, 1e-12, 1e-12,
-		4e-3, 4e-3, 4e-6, 
-		1e-4, 1e-4, 1e-6, 
-		1e-7, 1e-7, 1e-7, 
-		1e-7, 1e-7, 5e-7);
-	Q *= f1;
+	// correction
 	matrix R = matrix::diag(R_count, R_diag);
 	matrix Hx = H * x;
 
-	matrix x1 = F * x/* + Bu*/;
-	matrix P1 = F * P * F.transpos() + Q;
 	matrix Sk = H * P1 * H.transpos() + R;
 	matrix K = P1 * H.transpos() * Sk.inversef();
 
-	matrix residual = (zk - H*x1);
+	matrix residual = (zk - predicted_observation);
 	matrix Kres = K*residual;
 
-	x = x1 + K*(zk - H*x1);
+	x = x1 + K*(zk - predicted_observation);
 	P = (matrix(P1.m) - K*H) * P1;
 
 	// renorm
@@ -444,16 +433,17 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 	return 0;
 }
 
-void EKFINS::add_observation(float dev, float z, ...)	// ...: colomn of observation matrix
+void EKFINS::add_observation(float variance, float observation, float predicted, ...)	// ...: colomn of observation matrix
 {
-	R_diag[R_count++] = dev;
-	zk[zk.m++] = z;
+	R_diag[R_count++] = variance;
+	zk[zk.m++] = observation;
+	predicted_observation[predicted_observation.m++] = predicted;
 
 	int dimension = H.n;
 	int start = dimension*H.m;
 
 	va_list vl;
-	va_start(vl,z);
+	va_start(vl,predicted);
 	for(int i=0; i<dimension; i++)
 		H[start + i] = va_arg(vl,double);
 	va_end(vl);

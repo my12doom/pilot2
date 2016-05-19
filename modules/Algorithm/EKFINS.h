@@ -35,7 +35,7 @@ public:
 	int healthy();
 	int warning();	
 //protected:
-	void add_observation(float dev, float zk, ...);	// ...: colomn of observation matrix
+	void add_observation(float variance, float observation, float predicted, ...);	// ...: row of observation matrix
 	int update_mode(const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, sensors::px4flow_frame frame, float baro, float dt, bool armed, bool airborne);
 	void remove_mag_ned_z(float *mag_body, float *q);
 	int init_attitude(const float a[3], const float gyro[3], const float mag[3]);
@@ -56,6 +56,7 @@ public:
 	float R_diag[20];
 	matrix H;
 	matrix zk;
+	matrix predicted_observation;
 
 	float acc_ned[3];
 	float gps_north;
@@ -66,6 +67,7 @@ public:
 	bool still;
 	bool mag_healthy;
 	bool inited;
+	bool still_inited;
 
 	motion_detector motion_acc;
 	motion_detector motion_gyro;
