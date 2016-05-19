@@ -1,6 +1,10 @@
 #pragma once
 
+#ifdef WIN32
+#define MAX_DIMENSION 20
+#else
 #define MAX_DIMENSION 16
+#endif
 #define MAX_MATRIX_ELEMENTS (MAX_DIMENSION*MAX_DIMENSION)
 
 
@@ -45,6 +49,7 @@ public:
 	void identity();
 	matrix transpos();
 	static matrix diag(int n, ...);
+	static matrix diag(int n, float data[]);
 
 private:
 	float det2x2();

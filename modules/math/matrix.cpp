@@ -394,3 +394,17 @@ matrix matrix::diag(int n, ...)
 	
 	return o;
 }
+
+matrix matrix::diag(int n, float data[])
+{
+	matrix o;
+	o.n = n;
+	o.m = n;
+
+	memset(o.data, 0, n*n*sizeof(float));
+
+	for(int i=0; i<n; i++)
+		o.data[i*(n+1)] = data[i];
+
+	return o;
+}
