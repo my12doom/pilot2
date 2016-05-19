@@ -48,12 +48,12 @@ public:
 
 	// sensor data
 	float rc[6];
-	px4flow_frame frame;
+	sensors::px4flow_frame frame;
 	gyro_data gdata;
 	accelerometer_data adata;
 	mag_data mdata;
 	baro_data bdata;
-	gps_data gpsdata;
+	devices::gps_data gpsdata;
 	bool new_baro_data;
 	bool new_gps_data;
 	float voltage;
