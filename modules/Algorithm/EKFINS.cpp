@@ -350,7 +350,7 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		add_observation(60.0, pos_east,  x1[8], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(5.0, vel_north, x1[10], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(5.0, vel_east, x1[11],  0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(15.0, gps.climb_rate, x1[12], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(15.0, gps.climb_rate, x1[12], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,1.0);
 	}
 
 	// still motion, acc and gyro bias with very low noise.
@@ -501,9 +501,9 @@ int EKFINS::init_attitude(const float a[3], const float g[3], const float m[3])
 	x[2] = cosRoll * sinPitch * cosHeading + sinRoll * cosPitch * sinHeading;
 	x[3] = cosRoll * cosPitch * sinHeading - sinRoll * sinPitch * cosHeading;
 
-	x[4] = g[0];
-	x[5] = g[1];
-	x[6] = g[2];
+	x[4] = -g[0];
+	x[5] = -g[1];
+	x[6] = -g[2];
 
 	for(int i=7; i<19; i++)
 		x[i] = 0;
