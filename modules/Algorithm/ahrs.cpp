@@ -25,7 +25,7 @@ static float q1q1, q1q2, q1q3;
 static float q2q2, q2q3;
 static float q3q3;
 static bool bFilterInit = false;
-static float ground_mag_length;
+static bool has_mag;
 static float mag_tolerate = 0.25f;
 #define min_mag_tolerate 0.25f
 
@@ -53,7 +53,7 @@ void NonlinearSO3AHRSinit(float ax, float ay, float az, float mx, float my, floa
     float cosRoll, sinRoll, cosPitch, sinPitch;
     float magX, magY;
     float initialHdg, cosHeading, sinHeading;
-	ground_mag_length = sqrt(mx*mx + my*my + mz*mz);
+	has_mag = mx!=0 || my !=0 || mz !=0;
 
 
 	gyro_bias[0] = -gx;
@@ -125,7 +125,7 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 
 	mag_ok = true;
 	float mag_length = sqrt(mx*mx + my*my + mz*mz);
-	if (ground_mag_length != 0)
+	if (has_mag)
 	{
 		// check for magnetic interference
 		float mag_diff = (mag_length / 500.0f);
@@ -163,6 +163,9 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 		float hx, hy, hz, bx, bz;
 		float halfwx, halfwy, halfwz;
 	
+    	// discard Z component in NED frame to avoid large attitude change due to magnet interference, especially during initialization.
+		remove_down_component(mx, my, mz);
+
 		// Normalise magnetometer measurement
 		// Will sqrt work better? PX4 system is powerful enough?
     	recipNorm = invSqrt(mx * mx + my * my + mz * mz);
@@ -181,11 +184,6 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
     	halfwx = bx * (0.5f - q2q2 - q3q3) + bz * (q1q3 - q0q2);
     	halfwy = bx * (q1q2 - q0q3) + bz * (q0q1 + q2q3);
     	halfwz = bx * (q0q2 + q1q3) + bz * (0.5f - q1q1 - q2q2);
-
-    	// discard Z component in NED frame to avoid large attitude change due to magnet interference, especially during initialization.
-    	remove_down_component(halfwx, halfwy, halfwz);
-    	remove_down_component(mx, my, mz);
-    
     	// Error is sum of cross product between estimated direction and measured direction of field vectors
     	halfexM = (my * halfwz - mz * halfwy);
     	halfeyM = (mz * halfwx - mx * halfwz);
@@ -328,6 +326,43 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 
 	//   	LOGE("accz=%f/%f, acc=%f,%f,%f, raw=%f,%f,%f\n", accz_NED, accelz, acc[0], acc[1], acc[2], BODY2NED[0][0], BODY2NED[0][1], BODY2NED[0][2]);
 	TRACE("\raccel fr:%f,%f,  ned:%f,%f,%f,", acc_horizontal[0], acc_horizontal[1], acc_ned[0], acc_ned[1], acc_ned[2]);
+}
+
+void NonlinearSO3AHRSreset_mag(float mx, float my, float mz)
+{
+	float cosRoll = cosf(euler[0] * 0.5f);
+	float sinRoll = sinf(euler[0] * 0.5f);
+
+	float cosPitch = cosf(euler[1] * 0.5f);
+	float sinPitch = sinf(euler[1] * 0.5f);
+
+	float magX = mx * cosPitch + my * sinRoll * sinPitch + mz * cosRoll * sinPitch;
+	float magY = my * cosRoll - mz * sinRoll;
+
+	float initialHdg = atan2f(-magY, magX);
+	float cosHeading = cosf(initialHdg*0.5f);
+	float sinHeading = sinf(initialHdg*0.5f);
+
+	q0 = cosRoll * cosPitch * cosHeading + sinRoll * sinPitch * sinHeading;
+	q1 = sinRoll * cosPitch * cosHeading - cosRoll * sinPitch * sinHeading;
+	q2 = cosRoll * sinPitch * cosHeading + sinRoll * cosPitch * sinHeading;
+	q3 = cosRoll * cosPitch * sinHeading - sinRoll * sinPitch * cosHeading;
+
+	// auxillary variables to reduce number of repeated operations, for 1st pass
+	q0q0 = q0 * q0;
+	q0q1 = q0 * q1;
+	q0q2 = q0 * q2;
+	q0q3 = q0 * q3;
+	q1q1 = q1 * q1;
+	q1q2 = q1 * q2;
+	q1q3 = q1 * q3;
+	q2q2 = q2 * q2;
+	q2q3 = q2 * q3;
+	q3q3 = q3 * q3;
+
+	halfvx = q1q3 - q0q2;
+	halfvy = q0q1 + q2q3;
+	halfvz = q0q0 - 0.5f + q3q3;
 }
 
 //---------------------------------------------------------------------------------------------------
