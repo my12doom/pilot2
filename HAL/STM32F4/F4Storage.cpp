@@ -24,7 +24,7 @@ namespace STM32F4
 	}
 	int F4Storage::erase(int address)
 	{
-		FLASH_Status res = FLASH_EraseSector(address >= start_address + page__size ? FLASH_Sector_11 : FLASH_Sector_10, VoltageRange_3);
+		FLASH_Status res = FLASH_EraseSector(address >= page__size ? FLASH_Sector_11 : FLASH_Sector_10, VoltageRange_3);
 		return res;
 	}
 	int F4Storage::total_size()
