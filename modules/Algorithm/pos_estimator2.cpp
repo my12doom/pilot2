@@ -61,6 +61,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 {
 	// flow switching
 	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133);
+	last_sonar = frame.ground_distance > 0 ? frame.ground_distance/1000.0f : last_sonar;
 	if (!flow_healthy && use_flow)
 	{
 		flow_ticker += dt;
@@ -236,23 +237,38 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	}
 	else
 	{
-		float pixel_compensated_x = frame.pixel_flow_x_sum - gyro[0] * 18000 / PI * 0.0028f;
-		float pixel_compensated_y = frame.pixel_flow_y_sum - gyro[1] * 18000 / PI * 0.0028f;
+		float pixel_compensated_x = frame.pixel_flow_x_sum;
+		float pixel_compensated_y = frame.pixel_flow_y_sum;
+
+		bool saturation = fabs(gyro[0]) > 60 * PI / 180 || fabs(gyro[1]) > 60 * PI / 180;
+		
+		if (/*fabs(pixel_compensated_x) > 5 && */fabs(pixel_compensated_x) < 35 /*&& fabs(pixel_compensated_y)>5 */&& fabs(pixel_compensated_y)<35 && !saturation)
+		{
+			 pixel_compensated_x -= gyro[0] * 18000 / PI * 0.0028f;
+			 pixel_compensated_y -= gyro[1] * 18000 / PI * 0.0028f;
+		}
+		
 
 		float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
 		float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
 
-		vx = wx * frame.ground_distance/1000.0f;
-		vy = wy * frame.ground_distance/1000.0f;
+		vx = wx * last_sonar;
+		vy = wy * last_sonar;
 
+		if (!use_flow)
+			vx = vy = 0;
 
-		zk = matrix(3,1,baro, vx, vy);
-		H = matrix(3,12,
+		int count = use_flow ? 4 : 3;
+		count = 3;
+
+		zk = matrix(count,1,baro, vx, vy, last_sonar);
+		H = matrix(count,12,
 			0.0,0.0,1.0, 0.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0,
 			0.0,0.0,0.0, -r[1],-r[4],-r[7],  0.0,0.0,0.0,  0.0,0.0,0.0,
-			0.0,0.0,0.0, r[0],r[3],r[6],  0.0,0.0,0.0,  0.0,0.0,0.0				// strange flow coordinates
+			0.0,0.0,0.0, r[0],r[3],r[6],  0.0,0.0,0.0,  0.0,0.0,0.0,				// strange flow coordinates
+			0.0,0.0,1.0, 0.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0
 			);
-		R = matrix::diag(3,60.0, 50.0, 50.0);
+		R = matrix::diag(count,600.0, saturation?50.0 : 5.0, saturation ? 50.0 : 5.0, 16.0);
 
 	}
 

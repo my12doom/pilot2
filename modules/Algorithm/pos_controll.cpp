@@ -4,6 +4,7 @@
 #include <float.h>
 #include <Protocol/common.h>
 #include <utils/param.h>
+#include <utils/log.h>
 
 // constants
 // static float leash = 5.0f;
@@ -12,7 +13,7 @@ static param max_speed("maxH", 5.0f);
 static float max_speed_ff = 2.0f;
 static bool use_desired_feed_forward = false;
 static float feed_forward_factor = 1;
-static float rate2accel[4] = {1.2f, 0.5f, 0.0f, 2.0f};
+static float rate2accel[4] = {1.2f, 0.25f, 0.4f, 6.0f};
 static float pos2rate_P = 1.0f;
 
 // "parameters/constants"
@@ -191,7 +192,7 @@ int pos_controller::update_state_machine(float dt)
 		release_stick_tick = 0;
 
 		// reset pid and feed forward
-		memset(pid, 0, sizeof(pid));
+// 		memset(pid, 0, sizeof(pid));
 		pid[0][0] = NAN;
 		pid[1][0] = NAN;
 		pid[0][2] = NAN;
@@ -243,7 +244,12 @@ int pos_controller::update_controller(float dt)
 #ifdef WIN32
 	fprintf(f, "%.3f,%f,%f,%f,%f,%.2f,%.2f\r\n", (GetTickCount()-tick)/1000.0f, velocity[0],target_velocity[0], pid[0][0], pid[0][1], target_euler[0] * 180 / PI, target_euler[1] * 180 / PI);
 	fflush(f);
+#else
+	float logs[16] = {pos[0], pos[1], velocity[0], velocity[1], setpoint[0], setpoint[1], target_velocity[0], target_velocity[1], target_accel[0], target_accel[1], pid[0][0], pid[0][1], pid[0][2], pid[1][0], pid[1][1], pid[1][2]};
+	log2(logs, TAG_POSC_DATA, sizeof(logs));
+
 #endif
+
 
 	return 0;
 }
@@ -289,8 +295,8 @@ int pos_controller::set_setpoint(float *pos, bool reset /*= true*/)
 		}
 		else
 		{
-			pid[0][1] = 0;
-			pid[1][1] = 0;
+// 			pid[0][1] = 0;
+// 			pid[1][1] = 0;
 		}
 	}
 
@@ -433,7 +439,7 @@ int pos_controller::rate_to_accel(float dt)
 		pid[axis][0] = p;
 
 		// update I only if we did not hit accel/angle limit or throttle limit or I term will reduce
-		if (true)
+		if (true && state != braking)
 		{
 			pid[axis][1] += pow((double)fabs(p), 1) * (p>0?1:-1) * dt;
 			pid[axis][1] = limit(pid[axis][1], -rate2accel[3], rate2accel[3]);

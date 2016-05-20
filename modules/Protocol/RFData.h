@@ -374,6 +374,17 @@ enum EXTENDED_DATA_TYPES
 	TAG_MOTOR_MIXER = 23,
 	TAG_UBX_SAT_DATA = 24,
 	TAG_POS_ESTIMATOR2 = 25,
+	TAG_POSC_DATA = 26,
 };
+
+typedef struct _posc_ext_data
+{
+	float pos[2];
+	float velocity[2];
+	float setpoint[2];
+	float velocity_setpoint[2];
+	float accel_target[2];
+	float pid[2][3];
+}posc_ext_data;
 
 #endif

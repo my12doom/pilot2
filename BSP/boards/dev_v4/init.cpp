@@ -394,8 +394,8 @@ int bsp_init_all()
 
 		// frame
 		param("mat", 1)=1;
-		param("ekf", 1)=1;
-		param("time", 3000)=5000;
+		param("ekf", 1)=2;
+		param("time", 3000)=3000;
 		
 		// test
 		param("limV", 50) = 50;

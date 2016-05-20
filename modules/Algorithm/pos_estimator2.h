@@ -47,5 +47,6 @@ public:
 
 	bool flow_healthy;
 	float flow_ticker;
+	float last_sonar;
 	int _state;	// 0: not ready, 1: flow, 2: transiting, 3:gps
 };

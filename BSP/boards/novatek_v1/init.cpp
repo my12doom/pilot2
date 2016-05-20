@@ -405,7 +405,7 @@ int bsp_init_all()
 		// frame
 		param("mat", 1)=1;
 		param("ekf", 0)=2;
-		param("time", 3000)=5000;
+		param("time", 3000)=3000;
 	}
 	
 	return 0;

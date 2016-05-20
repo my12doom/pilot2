@@ -91,7 +91,7 @@ namespace STM32F4
 		TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 		TIM_DeInit(TIMx);
 		TIM_InternalClockConfig(TIMx);
-		TIM_TimeBaseStructure.TIM_Prescaler=167;//1Mhz 1us 65536
+		TIM_TimeBaseStructure.TIM_Prescaler=TIMx == TIM1 ? 167: 83;//1Mhz 1us 65536
 		TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
 		TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
 		TIM_TimeBaseStructure.TIM_Period=period;
