@@ -94,6 +94,7 @@ public:
 	bool new_gps_data;// = false;
 	int critical_errors;// = 0;
 	int cycle_counter;// = 0;
+	int imu_counter;
 	float ground_pressure;// = 0;
 	float ground_temperature;// = 0;
 	float rc[8];// = {0};			// ailerron : full left -1, elevator : full down -1, throttle: full down 0, rudder, full left -1

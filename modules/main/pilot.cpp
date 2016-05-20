@@ -155,6 +155,7 @@ yet_another_pilot::yet_another_pilot()
 ,islanding(false)
 ,last_position_state(none)
 ,firmware_loading(false)
+,imu_counter(0)
 {
 	memset(g_pwm_input_update, 0, sizeof(g_pwm_input_update));
 	memset(g_ppm_output, 0, sizeof(g_ppm_output));
@@ -1120,10 +1121,10 @@ int yet_another_pilot::read_imu_and_filter()
 	// stop overwriting target data if imu data lock acquired
 	if (!imu_data_lock)
 	{
-		float alpha = 0.001f / (0.001f + 1.0f/(2*PI * 20.0f));
+// 		float alpha = 0.001f / (0.001f + 1.0f/(2*PI * 20.0f));
 		for(int i=0; i<3; i++)
-//			this->accel.array[i] = accel_lpf2p[i].apply(acc.array[i]);
- 			this->accel.array[i] = acc.array[i]*alpha + this->accel.array[i] * (1-alpha);
+			this->accel.array[i] = accel_lpf2p[i].apply(acc.array[i]);
+//  			this->accel.array[i] = acc.array[i]*alpha + this->accel.array[i] * (1-alpha);
 	}
 	else
 	{
@@ -1213,9 +1214,7 @@ int yet_another_pilot::read_imu_and_filter()
 	else
 		current = NAN;
 
-	mah_consumed += fabs(current) * interval / 3.6f;	// 3.6 mah = 1As
-
-
+	imu_counter++;
 
 	return 0;
 }
@@ -1224,6 +1223,8 @@ int yet_another_pilot::calculate_state()
 {
 	if (interval <=0 || interval > 0.2f)
 		return -1;
+
+	mah_consumed += fabs(current) * interval / 3.6f;	// 3.6 mah = 1As
 
 	float factor = 1.0f;
 	float factor_mag = 1.0f;
@@ -2952,9 +2953,10 @@ void yet_another_pilot::main_loop(void)
 	if (systimer->gettime() - tic > 1000000)
 	{
 		tic = systimer->gettime();
-		LOGE("speed: %d(%d), systime:%.2f\r\n", cycle_counter, round_running_time, systimer->gettime()/1000000.0f);
+		LOGE("speed: %d(%d), systime:%.2f, imu:%dhz\r\n", cycle_counter, round_running_time, systimer->gettime()/1000000.0f, imu_counter);
 		loop_hz = cycle_counter;
 		cycle_counter = 0;
+		imu_counter = 0;
 	}
 	
 	// RC modes and RC fail detection, or alternative RC source
