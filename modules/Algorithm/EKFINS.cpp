@@ -334,21 +334,6 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		gps_east = pos_east;
 	}
 
-
-// 	acc and mag observation jacobian
-// 			2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0, 0.0, 0.0,
-// 				-2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0, 0.0, 0.0,
-// 				-2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0, 0.0, 0.0,
-// 				2*x[0], 2*x[1], -2*x[2], -2*x[3], 0.0, 0.0, 0.0,
-// 				-2*x[3], 2*x[2], 2*x[1], -2*x[0], 0.0, 0.0, 0.0,
-// 				2*x[2], 2*x[3], 2*x[0], 2*x[1], 0.0, 0.0, 0.0,
-// 	-2.f * (x1[1]*x1[3] - x1[0]*x1[2]),						// 13			acc[0]
-// 		-2.f * (x1[2]*x1[3] + x1[0]*x1[1]),						// 23		acc[1]
-// 		-(x1[0]*x1[0] - x1[1]*x1[1] - x1[2]*x1[2] + x1[3]*x1[3]),	// 33		acc[2]
-// 		x[0]*x[0] + x[1]*x[1] - x[2]*x[2] - x[3]*x[3],		// 11		mag[0]
-// 		2.f * (x[1]*x[2] - x[0]*x[3]),						// 21		mag[1]
-// 		2.f * (x[1]*x[3] + x[0]*x[2]),						// 31		mag[2]
-
 	// baro
 	add_observation(60.0, baro, x1[9], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 
@@ -365,7 +350,7 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		add_observation(60.0, pos_east,  x1[8], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(5.0, vel_north, x1[10], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(5.0, vel_east, x1[11],  0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(15.0, gps.climb_rate, x1[12], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(15.0, gps.climb_rate, x1[12], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,1.0);
 	}
 
 	// still motion, acc and gyro bias with very low noise.
@@ -382,9 +367,9 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 	// add a attitude observation if no assisting available(flow or GNSS)
 	if (!still_inited || (!use_gps && !use_flow && !still))
 	{
-		add_observation(1e-1, acc_body[0]*a_len, -r[6], 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-1, acc_body[1]*a_len, -r[7], -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-1, acc_body[2]*a_len, -r[8], -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-1, acc_body[0]*a_len, -r[6], 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-1, acc_body[1]*a_len, -r[7], -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-1, acc_body[2]*a_len, -r[8], -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 	}
 
 	// mag
@@ -516,9 +501,9 @@ int EKFINS::init_attitude(const float a[3], const float g[3], const float m[3])
 	x[2] = cosRoll * sinPitch * cosHeading + sinRoll * cosPitch * sinHeading;
 	x[3] = cosRoll * cosPitch * sinHeading - sinRoll * sinPitch * cosHeading;
 
-	x[4] = g[0];
-	x[5] = g[1];
-	x[6] = g[2];
+	x[4] = -g[0];
+	x[5] = -g[1];
+	x[6] = -g[2];
 
 	for(int i=7; i<19; i++)
 		x[i] = 0;

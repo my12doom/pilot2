@@ -1227,7 +1227,7 @@ int yet_another_pilot::calculate_state()
 	mah_consumed += fabs(current) * interval / 3.6f;	// 3.6 mah = 1As
 
 	float factor = 1.0f;
-	float factor_mag = 1.0f;
+	float factor_mag = 4.0f;
 
 	float acc_gps_bf[3] = {0};
 
@@ -1243,11 +1243,25 @@ int yet_another_pilot::calculate_state()
 		}
 	}
 
+
+	if (mag_reset_requested)
+	{
+		detect_gyro.new_data(gyro_reading);
+		detect_acc.new_data(accel);
+
+		if (detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100)
+		{
+			mag_reset_requested = false;
+			NonlinearSO3AHRSreset_mag(-mag.array[0], -mag.array[1], mag.array[2]);
+			// TODO: reset other estimator
+		}
+	}
+
 	NonlinearSO3AHRSupdate(
 	-accel.array[0], -accel.array[1], -accel.array[2], 
 	-mag.array[0], -mag.array[1], mag.array[2],
 	gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
-	0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, interval,
+	0.15f*factor, 0.0015f*factor, 0.15f*factor_mag, 0.0015f*factor_mag, interval,
 	acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
 //	
 
@@ -1470,8 +1484,6 @@ int yet_another_pilot::sensor_calibration()
 	}
 
 	// static base value detection
-	motion_detector detect_acc;
-	motion_detector detect_gyro;
 	vector mag_avg = {0};
 	//vector accel_avg = {0};
 	//vector gyro_avg = {0};
@@ -2746,10 +2758,13 @@ int yet_another_pilot::stupid_joystick()
 }
 
 int yet_another_pilot::light_words()
-{
+{	
+	if (mag_calibration_state)
+	{
+		// do nothing ,let the worker do light words
+	}
 	// critical errors
-	int a = ~int(ignore_error);
-	if (critical_errors & (~int(ignore_error)))
+	else if (critical_errors & (~int(ignore_error)))
 	{
 		static int last_critical_errors = 0;
 		if (last_critical_errors != critical_errors)
@@ -2793,6 +2808,23 @@ int yet_another_pilot::light_words()
 		}
 	}
 
+	// stay still!
+	else if (mag_reset_requested)
+	{
+		float color[5][3] = 
+		{
+			{1,0,0},
+			{0,1,0},
+			{0,0,1},
+			{0.2,0,1},
+			{0.2,1,0},
+		};
+
+		int i = (systimer->gettime() / 150000) % 5;
+		rgb->write(color[i][0], color[i][01], color[i][2]);
+
+	}
+	
 	else if (lowpower)			// low voltage warning
 	{
 		// fast red flash (10hz)
@@ -2808,6 +2840,12 @@ int yet_another_pilot::light_words()
 	{
 		rgb->write(0,0,1);
 	}
+
+	else if (!mag_ok)
+	{
+		rgb->write(1,systimer->gettime() % 1000000 < 500000 ? 1:0, 0);
+	}
+
 	else if (flight_mode == RTL)
 	{
 		// purple light for RTL
@@ -2884,6 +2922,10 @@ void yet_another_pilot::mag_calibrating_worker()
 			mag_scale[i].save();
 		}		
 		
+		detect_acc.reset();
+		detect_gyro.reset();
+		mag_reset_requested = true;
+
 		// flash RGB LED to indicate a successs
 		for(int i=0; i<10; i++)
 		{
@@ -2972,7 +3014,7 @@ void yet_another_pilot::main_loop(void)
 	//read_sensors();
 	read_sensors();
 	read_sensor_cost = systimer->gettime() - read_sensor_cost;
-	
+
 	// provide mag calibration with data
 	if (mag_calibration_state == 1)
 	{

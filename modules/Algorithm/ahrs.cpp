@@ -25,7 +25,7 @@ static float q1q1, q1q2, q1q3;
 static float q2q2, q2q3;
 static float q3q3;
 static bool bFilterInit = false;
-static float ground_mag_length;
+static bool has_mag;
 static float mag_tolerate = 0.25f;
 #define min_mag_tolerate 0.25f
 
@@ -53,7 +53,7 @@ void NonlinearSO3AHRSinit(float ax, float ay, float az, float mx, float my, floa
     float cosRoll, sinRoll, cosPitch, sinPitch;
     float magX, magY;
     float initialHdg, cosHeading, sinHeading;
-	ground_mag_length = sqrt(mx*mx + my*my + mz*mz);
+	has_mag = mx!=0 || my !=0 || mz !=0;
 
 
 	gyro_bias[0] = -gx;
@@ -122,33 +122,34 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	float g_force = sqrt(ax*ax + ay*ay + az*az) / G_in_ms2;
 	bool g_force_ok = g_force > 0.85f && g_force < 1.15f;
 
-
-	mag_ok = true;
-	float mag_length = sqrt(mx*mx + my*my + mz*mz);
-	if (ground_mag_length != 0)
+	if (has_mag)
 	{
-		// check for magnetic interference
-		float mag_diff = (mag_length / 500.0f);
-		mag_diff = fabs(mag_diff - 1.0f);
-		if ( mag_diff < mag_tolerate)
+
+		// check for magnetic interference		
+		// by mag field length and residual
+		float mag_length = sqrt(mx*mx + my*my + mz*mz);
+		float mag_times = mag_length > 500.0f ? (mag_length / 500.0f) : (500.0f/mag_length);
+		float mag_residual = sqrt(err_m[0] * err_m[0] + err_m[1] * err_m[1] + err_m[2] * err_m[2]);
+
+		bool mag_length_ok = mag_ok ? (mag_times < 3.0f) : (mag_times < 1.5f);
+		bool mag_residual_ok = mag_ok ? (mag_residual < 0.2f) : (mag_residual < 0.05f);
+
+		if (mag_ok && !(mag_residual_ok && mag_length_ok))
 		{
-			mag_tolerate = fmax(min_mag_tolerate, mag_diff);
-		}
-		else
-		{
+			int code =  (mag_length_ok ? 0: 1) + (mag_residual_ok ? 0 : 2);
+			static const char *codes[] = 
+			{
+				"none", "mag field", "mag residual", "both",
+			};
+			LOGE("AHRS_CF: mag interference %s\n", codes[code]);
 			mag_ok = false;
-			mag_tolerate += 0.05f * dt;
-			//TRACE("warning: possible magnetic interference");
 		}
-
+		else if (!mag_ok && mag_residual_ok && mag_length_ok)
+		{
+			LOGE("AHRS_CF: mag restored\n");
+			mag_ok = true;
+		}
 	}
-	else
-	{
-		// no initial mag data
-		mag_length = 0;
-	}
-
-	mag_ok = true;
 
 	// Make filter converge to initial solution faster
 	// This function assumes you are in static position.
@@ -159,10 +160,13 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 	}
         	
 	//! If magnetometer measurement is available, use it.
-	if(mag_ok && !((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f))) {
+	if(has_mag && !((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f))) {
 		float hx, hy, hz, bx, bz;
 		float halfwx, halfwy, halfwz;
 	
+    	// discard Z component in NED frame to avoid large attitude change due to magnet interference, especially during initialization.
+		remove_down_component(mx, my, mz);
+
 		// Normalise magnetometer measurement
 		// Will sqrt work better? PX4 system is powerful enough?
     	recipNorm = invSqrt(mx * mx + my * my + mz * mz);
@@ -182,19 +186,18 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
     	halfwy = bx * (q1q2 - q0q3) + bz * (q0q1 + q2q3);
     	halfwz = bx * (q0q2 + q1q3) + bz * (0.5f - q1q1 - q2q2);
 
-    	// discard Z component in NED frame to avoid large attitude change due to magnet interference, especially during initialization.
-    	remove_down_component(halfwx, halfwy, halfwz);
-    	remove_down_component(mx, my, mz);
-    
     	// Error is sum of cross product between estimated direction and measured direction of field vectors
-    	halfexM = (my * halfwz - mz * halfwy);
-    	halfeyM = (mz * halfwx - mx * halfwz);
-    	halfezM = (mx * halfwy - my * halfwx);
+		// apply only if mag_ok
+		err_m[0] = (my * halfwz - mz * halfwy);
+		err_m[1] = (mz * halfwx - mx * halfwz);
+		err_m[2] = (mx * halfwy - my * halfwx);
 
-		err_m[0] = halfexM;
-		err_m[1] = halfeyM;
-		err_m[2] = halfezM;
-
+		if (mag_ok)
+		{
+    		halfexM = err_m[0];
+    		halfeyM = err_m[1];
+    		halfezM = err_m[2];
+		}
 	}
 
 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
@@ -328,6 +331,45 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
 
 	//   	LOGE("accz=%f/%f, acc=%f,%f,%f, raw=%f,%f,%f\n", accz_NED, accelz, acc[0], acc[1], acc[2], BODY2NED[0][0], BODY2NED[0][1], BODY2NED[0][2]);
 	TRACE("\raccel fr:%f,%f,  ned:%f,%f,%f,", acc_horizontal[0], acc_horizontal[1], acc_ned[0], acc_ned[1], acc_ned[2]);
+}
+
+void NonlinearSO3AHRSreset_mag(float mx, float my, float mz)
+{
+	float cosRoll = cosf(euler[0] * 0.5f);
+	float sinRoll = sinf(euler[0] * 0.5f);
+
+	float cosPitch = cosf(euler[1] * 0.5f);
+	float sinPitch = sinf(euler[1] * 0.5f);
+
+	float magX = mx * cosPitch + my * sinRoll * sinPitch + mz * cosRoll * sinPitch;
+	float magY = my * cosRoll - mz * sinRoll;
+
+	float initialHdg = atan2f(-magY, magX);
+	float cosHeading = cosf(initialHdg*0.5f);
+	float sinHeading = sinf(initialHdg*0.5f);
+
+	q0 = cosRoll * cosPitch * cosHeading + sinRoll * sinPitch * sinHeading;
+	q1 = sinRoll * cosPitch * cosHeading - cosRoll * sinPitch * sinHeading;
+	q2 = cosRoll * sinPitch * cosHeading + sinRoll * cosPitch * sinHeading;
+	q3 = cosRoll * cosPitch * sinHeading - sinRoll * sinPitch * cosHeading;
+
+	// auxillary variables to reduce number of repeated operations, for 1st pass
+	q0q0 = q0 * q0;
+	q0q1 = q0 * q1;
+	q0q2 = q0 * q2;
+	q0q3 = q0 * q3;
+	q1q1 = q1 * q1;
+	q1q2 = q1 * q2;
+	q1q3 = q1 * q3;
+	q2q2 = q2 * q2;
+	q2q3 = q2 * q3;
+	q3q3 = q3 * q3;
+
+	halfvx = q1q3 - q0q2;
+	halfvy = q0q1 + q2q3;
+	halfvz = q0q0 - 0.5f + q3q3;
+
+	mag_ok = true;
 }
 
 //---------------------------------------------------------------------------------------------------
