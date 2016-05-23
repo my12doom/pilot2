@@ -48,8 +48,8 @@ int sbus_decode(uint8_t *frame_data, sbus_data *decoded_data)
 	if (frame_data[0] != 0x0f)
 		return -1;
 
-	if (frame_data[24] != 0x00 && frame_data[24] != 0x03 && frame_data[24] != 0x83 && frame_data[24] != 0x43 && frame_data[24] != 0xC3 && frame_data[24] != 0x23 && frame_data[24] != 0xA3 && frame_data[24] != 0x63 && frame_data[24] != 0xE3)
-		return -1;
+	//if (frame_data[24] != 0x00 && frame_data[24] != 0x03 && frame_data[24] != 0x83 && frame_data[24] != 0x43 && frame_data[24] != 0xC3 && frame_data[24] != 0x23 && frame_data[24] != 0xA3 && frame_data[24] != 0x63 && frame_data[24] != 0xE3)
+	//	return -1;
 
 	for (int channel = 0; channel < 16; channel++) {
 		unsigned value = 0;
@@ -70,6 +70,8 @@ int sbus_decode(uint8_t *frame_data, sbus_data *decoded_data)
 		/* convert 0-2048 values to 1000-2000 ppm encoding in a not too sloppy fashion */
 		decoded_data->data[channel] = 1000 + value * 1000 / 2048;
 	}
+
+	decoded_data->flag = frame_data[23];
 
 	return 0;
 }
@@ -137,6 +139,8 @@ int sensors::SBusIN::reset_statistics()
 
 HAL::RCIN_State sensors::SBusIN::state()
 {
+	read_uart();
+	
 	if (systimer->gettime() > last_packet_time + 500000)
 		return HAL::RCIN_Fail;
 
@@ -177,7 +181,7 @@ void sensors::SBusIN::read_uart()
 		port->read(tmp, sizeof(tmp));
 		if (sbus_decode(tmp, &last_frame) == 0)
 			last_packet_time = systimer->gettime();
-
+		
 		for(int i=0; i<8; i++)
 		{
 			rc_static[0][i] = min(rc_static[0][i], last_frame.data[i]);

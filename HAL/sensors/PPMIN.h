@@ -25,6 +25,7 @@ namespace sensors
 		// statistics functions is mainly for RC calibration purpose.
 		virtual int get_statistics_data(int16_t *min_out, int16_t *max_out, int start_channel, int max_count);
 		virtual int reset_statistics();
+		virtual HAL::RCIN_State state();
 
 	protected:
 		static void cb_entry(void *parameter, int flags);

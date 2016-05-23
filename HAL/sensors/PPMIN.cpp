@@ -66,6 +66,14 @@ int sensors::PPMIN::get_channel_count()
 	return ppm_channel_count;
 }
 
+HAL::RCIN_State sensors::PPMIN::state()
+{	
+	if (systimer->gettime() > rc_update[0] + 500000)
+		return HAL::RCIN_Fail;
+
+	return HAL::RCIN_Normal;
+}
+
 // return num channel written to out pointer
 int sensors::PPMIN::get_channel_data(int16_t *out, int start_channel, int max_count)
 {
