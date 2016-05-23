@@ -15,7 +15,6 @@
 
 // BSP
 using namespace STM32F4;
-F4UART uart(USART3);
 dev_v2::RGBLED led;
 
 // constants
@@ -153,15 +152,15 @@ void erase_rom(HAL::IUART *uart)
 		led.write(color[i%5][0], color[i%5][1], color[i%5][2]);
 		char tmp[30];
 		sprintf(tmp, "erasing sector %d...", i+1);
-		uart->write(tmp, strlen(tmp));
+		if(uart)uart->write(tmp, strlen(tmp));
 		if (FLASH_EraseSector(pages[i], VoltageRange_3) == FLASH_COMPLETE)
-			uart->write("OK\n", 3);
+			if (uart)uart->write("OK\n", 3);
 		else
-			uart->write("ERROR\n", 6);
+			if(uart)uart->write("ERROR\n", 6);
 		
 	}
 	led.write(0,0,0);
-	uart->write("DONE\n", 5);
+	if(uart)uart->write("DONE\n", 5);
 	FLASH_Lock();
 }
 
@@ -282,7 +281,7 @@ int check_sdcard()
 		return -5;
 
 	// erase
-	erase_rom(&uart);
+	erase_rom(NULL);
 
 	// flash, skipping the first 4 bytes for failsafe.
 	// run_rom() will fail if the first 4 bytes failed and enter bootloader mode.
@@ -413,11 +412,9 @@ int main()
 	if (memcmp(bkp, "hello", 6))
 		run_rom();
 	
-	uart.set_baudrate(57600);
 	//F4VCP vcp;
 	while(1)
 	{
-		handle_uart(uart);
 		//handle_uart(vcp);
 	}
 }
@@ -428,8 +425,7 @@ void run_rom()
 
     if (((*(vu32*)ApplicationAddress) & 0x2FFE0000 ) == 0x20000000)
     { 
-        // TODO: close all BSP
-		uart.destroy();
+        // TODO: close all BSP		
 		SysTick->CTRL  &= ~SysTick_CTRL_ENABLE_Msk;                    // Disable SysTick
 		
 		FLASH_Lock();
