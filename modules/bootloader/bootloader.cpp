@@ -13,6 +13,9 @@
 #include <stdint.h>
 #include "stm32f4xx_flash.h"
 
+extern "C" const char bootloader_name[]  __attribute__((at(0x08003F00))) = __DATE__ " " __TIME__;
+
+
 // BSP
 using namespace STM32F4;
 dev_v2::RGBLED led;
