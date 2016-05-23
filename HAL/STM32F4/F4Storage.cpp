@@ -78,8 +78,7 @@ namespace STM32F4
 	}
 	int RCStorage::erase(int address)
 	{
-		// erase all...
-		FLASH_Status res = FLASH_EraseSector(address >= start_address + page__size ? FLASH_Sector_3 : FLASH_Sector_2, VoltageRange_1);
+		FLASH_Status res = FLASH_EraseSector(address >= page__size ? FLASH_Sector_3 : FLASH_Sector_2, VoltageRange_1);
 	}
 }
 

@@ -11,11 +11,13 @@ Manager::Manager()
 	gps_count = 0;
 	led_num = 0;
 	rgbled_num = 0;
-	rcin = NULL;
+	rcin_count = 0;
 	rcout = NULL;
 	async_worker = NULL;
 	flow_count = 0;
 	device_count = 0;
+	rcin_count = 0;
+	last_valid_rcin = 0;
 }
 
 int  Manager::register_RGBLED(const char *name,devices::IRGBLED *pLED)
@@ -265,7 +267,10 @@ int Manager::get_flow_count()
 
 int Manager::register_RCIN(IRCIN* rcin)
 {
-	this->rcin = rcin;
+	if (rcin_count > sizeof(rcins) / sizeof(rcins[0]))
+		return -1;
+
+	this->rcins[rcin_count++] = rcin;
 	return 0;
 }
 
@@ -281,9 +286,27 @@ int Manager::register_asyncworker(IAsyncWorker* worker)
 	return 0;
 }
 
-IRCIN * Manager::get_RCIN()
+IRCIN * Manager::get_RCIN(int i)
 {
-	return rcin;
+	if (i == -1)
+	{
+		for(int i=0; i<rcin_count; i++)
+		{
+			if (rcins[i]->state() == RCIN_Normal)
+			{
+				last_valid_rcin = i;
+				return rcins[i];
+			}
+		}
+		return rcins[last_valid_rcin];
+	}
+
+	return rcins[i];
+}
+
+int Manager::get_RCIN_count()
+{
+	return rcin_count;
 }
 
 IRCOUT * Manager::get_RCOUT()

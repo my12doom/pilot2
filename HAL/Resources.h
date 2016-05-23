@@ -49,7 +49,9 @@ class Manager
 	
 	
 	private:
-		HAL::IRCIN *rcin;
+		HAL::IRCIN *rcins[2];
+		int rcin_count;
+		int last_valid_rcin;
 		HAL::IRCOUT *rcout;
 		LED_table led_table[LED_NUM];
 		int led_num;
@@ -91,6 +93,7 @@ class Manager
 		int get_barometer_count();
 		int get_GPS_count();
 		int get_device_count();
+		int get_RCIN_count();
 		
 		//register function:
 		int register_LED(const char *name,devices::ILED *pLED);
@@ -121,7 +124,7 @@ class Manager
 		devices::IMagnetometer * get_magnetometer(int index);
 		devices::IBarometer * get_barometer(int index);
 		devices::IGPS * get_GPS(int index);
-		HAL::IRCIN * get_RCIN();
+		HAL::IRCIN * get_RCIN(int i = -1);
 		HAL::IRCOUT * get_RCOUT();
 		HAL::IAsyncWorker *get_asyncworker();
 		sensors::IFlow *get_flow(int index);

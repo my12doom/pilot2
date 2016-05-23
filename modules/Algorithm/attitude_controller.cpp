@@ -27,6 +27,13 @@ static param pid_factor2[3][4] = 			// pid_factor2[roll,pitch,yaw][p,i,d,i_limit
 	{param("sP3", 8), param("sI3", 0), param("sD3", 0),param("sM3", PI/45)},
 };
 
+static param rate_trim[3] = 
+{
+	param("triR", 0),
+	param("triP", 0),
+	param("triY", 0),
+};
+
 static param QUADCOPTER_ACRO_YAW_RATE("raty", PI);
 static param QUADCOPTER_MAX_YAW_OFFSET("offy", PI/8);
 static param slew_rate("slew", PI*2);
@@ -209,7 +216,7 @@ int attitude_controller::reset()
 	memcpy(euler_sp, euler, sizeof(euler));
 	memcpy(body_rate_sp, body_rate_sp, sizeof(body_rate_sp));
 	for(int i=0; i<3; i++)
-		pid[i][1] = 0;
+		pid[i][1] = rate_trim[i];
 
 	return 0;
 }

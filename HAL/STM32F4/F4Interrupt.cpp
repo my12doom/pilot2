@@ -47,6 +47,17 @@ extern "C" void EXTI15_10_IRQHandler(void)
 	}
 	//LOGE("t=%d\n", int(systimer->gettime()-t));
 }
+extern "C" void EXTI0_IRQHandler(void)
+{
+	int64_t t = systimer->gettime();
+	if (EXTI_GetITStatus(EXTI_Line0) != RESET)
+	{
+		if (int_table[0])
+			int_table[0]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line0);
+	}
+
+}
 
 namespace STM32F4
 {	
