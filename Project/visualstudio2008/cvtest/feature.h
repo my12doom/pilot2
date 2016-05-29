@@ -18,3 +18,4 @@ typedef struct _xy
 
 feature_result find_feature(uint8_t *image, int width, int height, int stride, uint8_t *image_out);
 xy fit(uint8_t*image1, uint8_t*image2, int width, int height, int stride, int x, int y);
+xy fit2(uint8_t*image1, uint8_t*image2, int width, int height, int stride, int x, int y);

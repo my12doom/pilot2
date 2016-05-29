@@ -5,18 +5,18 @@
 
 int p[1024*500*4];
 int p2[1024*500*4];
+int step = 3;
 feature_result find_feature(uint8_t *image, int width, int height, int stride, uint8_t *image_out)
 {
 	feature_result o = {0};
 
 
-	memset(p, 0, width*height*4);
 	int global_max = -65535;
 	int global_min = 65535;
 
-	for(int y=1; y<height-1; y++)
+	for(int y=1; y<height-1; y+=step)
 	{
-		for(int x=1; x<width-1; x++)
+		for(int x=1; x<width-1; x+=step)
 		{
 // 			int dx1 = abs((int)image[y*stride+x] - image[y*stride+x-1]);
 // 			int dx2 = abs((int)image[y*stride+x] - image[y*stride+x+1]);
@@ -89,11 +89,11 @@ feature_result find_feature(uint8_t *image, int width, int height, int stride, u
 // 		}
 // 	}
 
-	int threshold = (global_max-global_min) /20 ;
+	int threshold = (global_max-global_min) /10;
 
-	for(int y=1; y<height-1; y++)
+	for(int y=1; y<height-1; y+=step)
 	{
-		for(int x=1; x<width-1; x++)
+		for(int x=1; x<width-1; x+=step)
 		{
 			if (p[y*width+x] > threshold && o.count < sizeof(o.v)/sizeof(o.v[0]))
 			{
@@ -161,6 +161,76 @@ xy fit(uint8_t*image1, uint8_t*image2, int width, int height, int stride, int x,
 			}
 		}
 	}
+
+	return o;
+}
+
+xy fit2(uint8_t*image1, uint8_t*image2, int width, int height, int stride, int x, int y)
+{
+	xy o = {0};
+	const int n = 3;
+	int range_x = 25;
+	int range_y = 25;
+
+	static bool init = false;
+	POINT search_table[(n*2+1)*(n*2+1)-1];
+	if (!init)
+	for(int i=0,y=-n; y<=n; y++)
+	{
+		for(int x=-n; x<=n; x++)
+		{
+			if ( x != 0 || y != 0)
+			{
+				search_table[i].x = x;
+				search_table[i++].y = y;
+			}
+		}
+	}
+
+	int cx1 = x-8;
+	int cy1 = y-8;
+
+	if (cx1<8 || cx1>=width-8 || cy1<8 || cy1>=height-8)
+		return o;
+
+
+	int last_sad = SAD16x16(image1+stride*(cy1)+cx1, image2+stride*cy1+cx1, stride);
+	int dx = 0;
+	int dy = 0;
+	while(true)
+	{
+		int min_sad = last_sad;
+		int delta[2] = {0};
+		for(int i=0; i<sizeof(search_table)/sizeof(search_table[0]); i++)
+		{
+			int sad = min_sad;
+			if (abs(dx+search_table[i].y) < range_x && abs(dy+search_table[i].y) < range_y)
+			{
+				int nx = dx+search_table[i].x + cx1;
+				int ny = dy+search_table[i].y + cy1;
+
+				if (nx>=8 && nx < width-8 && ny>=8 && ny<height-8)
+					sad = SAD16x16(image1+stride*(cy1)+cx1, image2+stride*ny+nx, stride);
+			}
+
+			if (sad < min_sad)
+			{
+				min_sad = sad;
+				delta[0] = search_table[i].x;
+				delta[1] = search_table[i].y;
+			}
+		}
+
+		if (min_sad >= last_sad)
+			break;
+
+		dx += delta[0];
+		dy += delta[1];
+		last_sad = min_sad;
+	}
+
+	o.x = dx;
+	o.y = dy;
 
 	return o;
 }
