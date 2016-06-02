@@ -214,9 +214,13 @@ int attitude_controller::update(float dt)
 int attitude_controller::reset()
 {
 	memcpy(euler_sp, euler, sizeof(euler));
-	memcpy(body_rate_sp, body_rate_sp, sizeof(body_rate_sp));
+	memcpy(body_rate_sp, body_rate, sizeof(body_rate_sp));
 	for(int i=0; i<3; i++)
+	{
 		pid[i][1] = rate_trim[i];
+		pid[i][0] = 0;
+		pid[i][2] = 0;
+	}
 
 	return 0;
 }
