@@ -10,6 +10,8 @@ static double NAN = *( double* )pnan;
 #define isnan _isnan
 #endif
 
+#define sonar_step_threshold 0.45f
+
 pos_estimator2::pos_estimator2()
 {
 	flow_ticker = 0;
@@ -30,17 +32,19 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 	history_pos.clear();
 	last_history_push = 0;
 	ticker = 0;
+	sonar_ticker = 0;
+	sonar_healthy = false;
 	position_healthy = false;
 	flow_healthy = false;
+	last_valid_sonar = 0;
 
-	P = matrix::diag(12, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0);
-	x = matrix(12,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-	Q = matrix::diag(12, 4e-3, 4e-3, 4e-6, 
-						1e-4, 1e-4, 1e-6, 
+	P = matrix::diag(13, 100.0, 100.0, 4.0, 100.0, 100.0, 4.0, 1.0, 1.0, 1.0, 100.0, 100.0, 100.0, 10.0);
+	x = matrix(13,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+	Q = matrix::diag(13, 4e-3, 4e-3, 4e-6, 
+						1e-3, 1e-3, 1e-3, 
 						1e-7, 1e-7, 1e-7, 
-						1e-7, 1e-7, 5e-7);
+						1e-7, 1e-7, 5e-7, 4e-6);
 
-	R = matrix::diag(6, 1.0, 1.0, 1.0, 1e-2, 1e-2, 1e+2);
 	return 0;
 }
 
@@ -61,12 +65,11 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 {
 	// flow switching
 	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133);
-	last_sonar = frame.ground_distance > 0 ? frame.ground_distance/1000.0f : last_sonar;
 	if (!flow_healthy && use_flow)
 	{
 		flow_ticker += dt;
 
-		if (flow_ticker > 3)
+		if (flow_ticker > 1)
 		{
 			LOGE("pos_estimator2: using flow\n");
 			flow_healthy = true;
@@ -92,8 +95,40 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		flow_ticker = 0;
 	}
 
+	// sonar switching
+	if (!sonar_healthy && frame.ground_distance > 0)
+	{
+		sonar_ticker += dt;
+
+		if (sonar_ticker > 1)
+		{
+			LOGE("pos_estimator2: using sonar\n");
+			sonar_healthy = true;
+			P[12*14] = 10.0;
+			x[12] = x.data[2] - frame.ground_distance/1000.0f*1.15f;
+		}
+	}
+
+	else if (sonar_healthy && frame.ground_distance <= 0)
+	{
+		sonar_ticker += dt;
+
+		if (sonar_ticker > 1)
+		{
+			LOGE("pos_estimator2: sonar disabled\n");
+			sonar_healthy = false;
+		}
+
+	}
+	else
+	{
+		sonar_ticker = 0;
+	}
+
+	// sonar step response
+
 	// GPS switching
-	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 3.5) || (position_healthy && gps.position_accuracy_horizontal < 7);
+	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 3.5f) || (position_healthy && gps.position_accuracy_horizontal < 7.0f);
 
 	// home
 	if (use_gps && isnan(home_lat))
@@ -182,21 +217,22 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	acc_ned[1] += r[3]* x[6] + r[4] *x[7] + r[5] * x[8];
 	acc_ned[2] += -(r[6]* x[6] + r[7] *x[7] + r[8] * x[8]);
 
-	matrix F = matrix(12,12,
-		1.0,0.0,0.0, dt, 0.0, 0.0, dtsq_2*r[0], dtsq_2*r[1], dtsq_2*r[2], 0.0, 0.0, 0.0,
-		0.0,1.0,0.0, 0.0, dt, 0.0, dtsq_2*r[3], dtsq_2*r[4], dtsq_2*r[5], 0.0, 0.0, 0.0,
-		0.0,0.0,1.0, 0.0, 0.0, dt, -dtsq_2*r[6], -dtsq_2*r[7], -dtsq_2*r[8], 0.0, 0.0, 0.0,
-		0.0,0.0,0.0, 1.0,0.0,0.0, dt*r[0], dt*r[1], dt*r[2], 0.0, 0.0, 0.0,
-		0.0,0.0,0.0, 0.0,1.0,0.0, dt*r[3], dt*r[4], dt*r[5], 0.0, 0.0, 0.0,
-		0.0,0.0,0.0, 0.0,0.0,1.0, -dt*r[6], -dt*r[7], -dt*r[8], 0.0, 0.0, 0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0,
-		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0
+	matrix F = matrix(13,13,
+		1.0,0.0,0.0, dt, 0.0, 0.0, dtsq_2*r[0], dtsq_2*r[1], dtsq_2*r[2], 0.0, 0.0, 0.0, 0.0,
+		0.0,1.0,0.0, 0.0, dt, 0.0, dtsq_2*r[3], dtsq_2*r[4], dtsq_2*r[5], 0.0, 0.0, 0.0, 0.0,
+		0.0,0.0,1.0, 0.0, 0.0, dt, -dtsq_2*r[6], -dtsq_2*r[7], -dtsq_2*r[8], 0.0, 0.0, 0.0, 0.0,
+		0.0,0.0,0.0, 1.0,0.0,0.0, dt*r[0], dt*r[1], dt*r[2], 0.0, 0.0, 0.0, 0.0,
+		0.0,0.0,0.0, 0.0,1.0,0.0, dt*r[3], dt*r[4], dt*r[5], 0.0, 0.0, 0.0, 0.0,
+		0.0,0.0,0.0, 0.0,0.0,1.0, -dt*r[6], -dt*r[7], -dt*r[8], 0.0, 0.0, 0.0, 0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0
 		);
-	matrix Bu = matrix(12,1,
+	matrix Bu = matrix(13,1,
 		dtsq_2 * (r[0]* acc_body[0] + r[1] *acc_body[1] + r[2] * acc_body[2]),
 		dtsq_2 * (r[3]* acc_body[0] + r[4] *acc_body[1] + r[5] * acc_body[2]),
 		-dtsq_2 * (r[6]* acc_body[0] + r[7] *acc_body[1] + r[8] * acc_body[2] + G_in_ms2),
@@ -204,8 +240,12 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		dt * (r[3]* acc_body[0] + r[4] *acc_body[1] + r[5] * acc_body[2]),
 		-dt * (r[6]* acc_body[0] + r[7] *acc_body[1] + r[8] * acc_body[2] + G_in_ms2),
 		0.0,0.0,0.0,
-		0.0,0.0,0.0
+		0.0,0.0,0.0, 0.0
 		);
+
+	matrix x1 = F * x + Bu;
+	matrix P1 = F * P * F.transpos() + Q;
+
 	matrix zk;
 	matrix H;
 
@@ -223,17 +263,28 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		gps_east = pos_east;
 	}
 
+	int R_count = 0;
+	float R_diag[13];
+
 	if (use_gps)
 	{
 		zk = matrix(6,1,pos_north, pos_east, baro, vel_north, vel_east, gps.climb_rate);
-		R = matrix::diag(6, 60.0, 60.0, 60.0, 5.0, 5.0, 15.0);
-		H = matrix(6,12,
-			1.0, 0.0, 0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-			0.0, 1.0, 0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-			0.0, 0.0, 1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
-			0.0, 0.0, 0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0,
-			0.0, 0.0, 0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0,
-			0.0, 0.0, 0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,1.0);
+// 		R = matrix::diag(6, 60.0, 60.0, 60.0, 5.0, 5.0, 15.0);
+		H = matrix(6,13,
+			1.0, 0.0, 0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,
+			0.0, 1.0, 0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,
+			0.0, 0.0, 1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,
+			0.0, 0.0, 0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,
+			0.0, 0.0, 0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,
+			0.0, 0.0, 0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0);
+
+		R_count = 6;
+		R_diag[0] = 60.0;
+		R_diag[1] = 60.0;
+		R_diag[2] = 60.0;
+		R_diag[3] = 5.0;
+		R_diag[4] = 5.0;
+		R_diag[5] = 555525.0;
 	}
 	else
 	{
@@ -252,29 +303,61 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
 		float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
 
-		vx = wx * last_sonar;
-		vy = wy * last_sonar;
+		vx = wx * last_valid_sonar;
+		vy = wy * last_valid_sonar;
 
 		if (!use_flow)
 			vx = vy = 0;
 
-		int count = use_flow ? 4 : 3;
-		count = 3;
 
-		zk = matrix(count,1,baro, vx, vy, last_sonar);
-		H = matrix(count,12,
-			0.0,0.0,1.0, 0.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0,
-			0.0,0.0,0.0, -r[1],-r[4],-r[7],  0.0,0.0,0.0,  0.0,0.0,0.0,
-			0.0,0.0,0.0, r[0],r[3],r[6],  0.0,0.0,0.0,  0.0,0.0,0.0,				// strange flow coordinates
-			0.0,0.0,1.0, 0.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0
+		zk = matrix(3,1,baro, vx, vy, last_valid_sonar);
+		H = use_flow ? 
+			matrix(3,13,
+			0.0,0.0,1.0, 0.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0,
+			0.0,0.0,0.0, -r[1],-r[4],0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0,
+			0.0,0.0,0.0, r[0],r[3],0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0				// strange flow coordinates
+			) :
+			matrix(3,13,
+			0.0,0.0,1.0, 0.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0,
+			0.0,0.0,0.0, 1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0,
+			0.0,0.0,0.0, 0.0,1.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0				// strange flow coordinates
 			);
-		R = matrix::diag(count,600.0, saturation?50.0 : 5.0, saturation ? 50.0 : 5.0, 16.0);
+// 		R = matrix::diag(count,600.0, saturation?50.0 : 5.0, saturation ? 50.0 : 5.0, 16.0);
 
+		R_count = 3;
+		R_diag[0] = 60.0f;
+		R_diag[1] = saturation?50.0 : 15.0;
+		R_diag[2] = saturation?50.0 : 15.0;
+		R_diag[3] = 16.0f;
 	}
 
+	if (sonar_healthy)
+	{
 
-	matrix x1 = F * x + Bu;
-	matrix P1 = F * P * F.transpos() + Q;
+		if (frame.ground_distance > 0)
+		{
+			float new_sonar = frame.ground_distance/1000.0f*1.15f;
+			float predicted_sonar = x1[2] - x1[12];
+
+			if (fabs(new_sonar-predicted_sonar) > sonar_step_threshold)
+			{
+				LOGE("sonar step response: %.2f->%.2f\n", predicted_sonar, new_sonar);
+				x[12] = x[2] - new_sonar;
+				x1[12] = x1[2] - new_sonar;
+			}
+			last_valid_sonar = new_sonar;
+
+		float sonar_h[13] = {0,0,1.0f, 0,0,0, 0,0,0, 0,0,0,-1.0f};
+		memcpy(H.data + H.m*H.n, sonar_h, H.n*4);
+		H.m++;
+		R_diag[R_count++] = 16.0f;
+		zk[zk.m++] = last_valid_sonar;
+		}
+	}
+
+	R = matrix::diag(R_count, R_diag);
+
+
 	matrix Sk = H * P1 * H.transpos() + R;
 	matrix K = P1 * H.transpos() * Sk.inversef();
 	matrix hx1 = H*x1;

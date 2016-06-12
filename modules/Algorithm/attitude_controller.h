@@ -52,6 +52,7 @@ public:
 	bool airborne;
 	uint32_t motor_state;
 	bool use_quaternion;
+	bool just_reseted;
 	
 	float pid[3][3];		// [roll, pitch, yaw] [p, i, d]
 	float result[3];

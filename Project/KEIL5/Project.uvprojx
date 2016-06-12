@@ -874,11 +874,6 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\sensors\ads1115.cpp</FilePath>
             </File>
-            <File>
-              <FileName>NX3A.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\sensors\NX3A.cpp</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -1952,16 +1947,6 @@
               <FileName>RCOUT.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\mo_v3\RCOUT.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>ESERx6.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\BSP\boards\mo_v3\ESERx6.c</FilePath>
-            </File>
-            <File>
-              <FileName>ESERx6_IIC.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\BSP\boards\mo_v3\ESERx6_IIC.cpp</FilePath>
             </File>
           </Files>
         </Group>

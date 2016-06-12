@@ -9,6 +9,7 @@
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 #include <HAL/sensors/Sonar.h>
 #include <HAL/sensors/SBusIn.h>
+#include <HAL/sensors/PPMIn.h>
 #include <HAL\Interface\ILED.h>
 #include <HAL/sensors/PX4Flow.h>
 #include <utils/param.h>
@@ -18,6 +19,7 @@
 #include <HAL/sensors/HMC5983SPI.h>
 #include <HAL/sensors/MS5611_SPI.h>
 #include <HAL/sensors/ADS1115.h>
+#include <bootloader/bootloader_bin.h>
 
 extern "C" const char bsp_name[] = "mo_v3";
 
@@ -76,7 +78,7 @@ void init_uart()
 {
 	f4uart1.set_baudrate(115200);
 	f4uart2.set_baudrate(115200);
-	f4uart3.set_baudrate(38400);
+	//f4uart3.set_baudrate(38400);
 	f4uart4.set_baudrate(57600);
 	manager.register_UART("UART1",&f4uart1);
 	manager.register_UART("UART2",&f4uart2);
@@ -145,9 +147,21 @@ int init_external_compass()
 
 int init_RC()
 {
-	static SBusIN rcin;
-	rcin.init(&f4uart3);
-	manager.register_RCIN(&rcin);
+	// SBUS
+	/*
+	static SBusIN sbus;
+	sbus.init(&f4uart3);
+	manager.register_RCIN(&sbus);
+	*/
+	
+	// PPM
+	
+	static F4Interrupt interrupt;
+	interrupt.init(GPIOB, GPIO_Pin_0, interrupt_rising);
+	static PPMIN ppm;
+	ppm.init(&interrupt);
+	manager.register_RCIN(&ppm);
+	
 
 	static dev_v2::RCOUT rcout;	
 	manager.register_RCOUT(&rcout);
@@ -298,9 +312,23 @@ int bsp_init_all()
 		param("rI3", 0.15f)=0.15f;
 		
 		// frame
-		param("ekf", 0)=1;
+		param("ekf", 0)=2;
 		param("time", 3000)=5000;
-	}	
+	}
+	
+	/*
+	HAL::IStorage * bl_storage = get_bootloader_storage();
+	
+	int64_t t = systimer->gettime();
+	bl_storage->erase(0);
+	int erase_time = systimer->gettime() - t;
+	
+	t = systimer->gettime();
+	bl_storage->write(0, bootloader_data, sizeof(bootloader_data));
+	int program_time = systimer->gettime() - t;
+	
+	printf("erase:%d, program:%d\n", erase_time, program_time);
+	*/
 	
 	return 0;
 }

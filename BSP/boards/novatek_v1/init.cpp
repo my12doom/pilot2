@@ -88,7 +88,7 @@ void init_uart()
 	f4uart4.set_baudrate(57600);
 	manager.register_UART("UART1",&f4uart1);
 	manager.register_UART("UART2",&f4uart2);
-	manager.register_UART("power",&f4uart3);	// power telmetry for stupid joystick
+	//manager.register_UART("power",&f4uart3);	// power telmetry for stupid joystick
 	manager.register_UART("Wifi",&f4uart4);
 	
 	while(0)
@@ -398,6 +398,8 @@ int bsp_init_all()
 		param("rP3", 1.2f)=1.2f;
 		param("rI3", 0.15f)=0.15f;
 		
+		param("triP", 0)=0.7;
+		
 		// tilt angle
 		param("rngR", PI / 8)= PI / 5;
 		param("rngP", PI / 8)= PI / 5;
@@ -405,7 +407,7 @@ int bsp_init_all()
 		// frame
 		param("mat", 1)=1;
 		param("ekf", 0)=2;
-		param("time", 3000)=3000;
+		param("time", 3000)=5000;
 	}
 	
 	return 0;

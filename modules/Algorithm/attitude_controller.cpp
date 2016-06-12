@@ -44,6 +44,7 @@ attitude_controller::attitude_controller()
 	euler_sp[1] = 0;
 	euler_sp[2] = NAN;
 	last_set_euler_sp_time = 0;
+	just_reseted = true;
 
 	reset();
 }
@@ -193,6 +194,8 @@ int attitude_controller::update(float dt)
 		static const float lpf_RC = 1.0f/(2*PI * 40.0f);
 		float alpha = dt / (dt + lpf_RC);
 		float derivative = (new_p - pid[i][0] )/dt;
+		if (just_reseted)
+			derivative = 0;
 		pid[i][2] = pid[i][2] * (1-alpha) + derivative * alpha;
 
 		// P
@@ -200,9 +203,11 @@ int attitude_controller::update(float dt)
 
 		// sum
 		result[i] = 0;
-		for(int j=0; j<3; j++)
+		for(int j=0; j<(airborne?3:2); j++)
 			result[i] += pid[i][j] * pid_factor[i][j];
 	}
+
+	just_reseted = false;
 	TRACE(", pid=%.2f, %.2f, %.2f\n", pid_result[0], pid_result[1], pid_result[2]);
 	
 	
@@ -221,6 +226,8 @@ int attitude_controller::reset()
 		pid[i][0] = 0;
 		pid[i][2] = 0;
 	}
+
+	just_reseted = true;
 
 	return 0;
 }

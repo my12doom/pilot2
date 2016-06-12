@@ -4,7 +4,7 @@
 #include <utils/param.h>
 #include <HAL/Interface/Interfaces.h>
 
-#define default_throttle_hover 0.35f
+param default_throttle_hover("hov", 0.35f);
 #define sonar_step_threshold 3.0f
 
 static param quadcopter_max_climb_rate("maxC",5);
@@ -43,7 +43,7 @@ static param pid_quad_accel[4] =		// P, I, D, IMAX
 };
 
 altitude_controller::altitude_controller()
-:throttle_hover(default_throttle_hover)
+:throttle_hover(0)
 ,baro_target(0)
 ,target_climb_rate(0)
 ,target_accel(0)
@@ -125,6 +125,9 @@ int altitude_controller::update(float dt, float user_rate)
 {
 	if (systimer->gettime() - last_update > 1000000)
 		reset();
+
+	if (throttle_hover <= 0.01f || isnan(throttle_hover))
+		throttle_hover = default_throttle_hover;
 
 	// sonar switching	
 	if (isnan(m_sonar) == isnan(m_sonar_target))				// reset ticker if sonar state didn't changed

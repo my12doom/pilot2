@@ -537,7 +537,7 @@ int UartUbloxBinaryGPS::init(HAL::IUART *uart, int baudrate)
 		return -2;
 
 	// UBX-SAT
-	if (enable_message(0x01, 0x35) < 0)
+	if (enable_message(0x01, 0x35, false) < 0)
 		return -2;
 
 	return 0;

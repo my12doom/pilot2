@@ -70,7 +70,7 @@ int main(void)
 {
 	/* Create an object that decodes the input video stream. */
 	CvCapture *input_video = cvCaptureFromFile(
-		"C:\\cvtest\\optical_flow_input.avi"
+		"optical_flow_input.avi"
 		);
 	if (input_video == NULL)
 	{

@@ -21,8 +21,8 @@ using namespace devices;
 using namespace math;
 
 // constants
-#define THROTTLE_STOP ((int)(isnan(pwm_override_min)? max(rc_setting[2][0]-20,1000):pwm_override_min))
-#define THROTTLE_MAX ((int)(isnan(pwm_override_max)? min(rc_setting[2][2]-20,2000) : pwm_override_max))
+#define THROTTLE_STOP ((int)(isnan((float)pwm_override_min)? max(rc_setting[2][0]-20,1000):pwm_override_min))
+#define THROTTLE_MAX ((int)(isnan((float)pwm_override_max)? min(rc_setting[2][2]-20,2000) : pwm_override_max))
 #define SAFE_ON(x) if(x) (x)->on()
 #define SAFE_OFF(x) if(x) (x)->off()
 #define MAX_MOTOR_COUNT 8
@@ -1197,7 +1197,7 @@ int yet_another_pilot::read_imu_and_filter()
 	}
 
 	// log unfiltered imu data
-	int16_t data[6] = {acc.V.x * 1000, acc.V.y * 1000, acc.V.z * 1000,
+	int16_t data[6] = {acc.V.x * 100, acc.V.y * 100, acc.V.z * 100,
 						gyro.V.x * 18000 / PI, gyro.V.y * 18000 / PI, gyro.V.z * 18000 / PI,};
 
 	//log2(data, 5, sizeof(data));
@@ -2205,9 +2205,11 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	{
 		if (sscanf(line+strlen(keyword2), "%f,%f,%f,%f", &rc_mobile[0], &rc_mobile[1], &rc_mobile[2], &rc_mobile[3] ) == 4)
 		{
-			mobile_last_update = systimer->gettime();
-			TRACE("stick:%f,%f,%f,%f\n", rc_mobile[0], rc_mobile[1], rc_mobile[2], rc_mobile[3]);
-			
+			if (fabs(rc_mobile[0])<=1 && fabs(rc_mobile[1]) <= 1 && (rc_mobile[2]>=0 && rc_mobile[2] <=1) && fabs(rc_mobile[3]) <= 1)
+			{
+				mobile_last_update = systimer->gettime();
+				TRACE("stick:%f,%f,%f,%f\n", rc_mobile[0], rc_mobile[1], rc_mobile[2], rc_mobile[3]);
+			}
 		}
 	}
 	else if (strcmp(line, "@\n") == 0 || strcmp(line, "@\r\n") == 0)
@@ -2758,7 +2760,10 @@ int yet_another_pilot::stupid_joystick()
 }
 
 int yet_another_pilot::light_words()
-{	
+{
+	if (!rgb)
+		return -1;
+	
 	if (mag_calibration_state)
 	{
 		// do nothing ,let the worker do light words
@@ -2821,7 +2826,7 @@ int yet_another_pilot::light_words()
 		};
 
 		int i = (systimer->gettime() / 150000) % 5;
-		rgb->write(color[i][0], color[i][01], color[i][2]);
+			rgb->write(color[i][0], color[i][01], color[i][2]);
 
 	}
 	

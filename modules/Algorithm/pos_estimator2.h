@@ -29,8 +29,12 @@ public:
 	float ticker;
 	bool position_healthy;
 
+	bool sonar_healthy;
+	float sonar_ticker;
+	float last_valid_sonar;
+
 	matrix P;
-	matrix x; // {pos_ned[3], vel_ned[3], acc_bias_body[3], vel_bias_ned[3]}
+	matrix x; // {pos_ned[3], vel_ned[3], acc_bias_body[3], vel_bias_ned[3], sonar_surface_height}
 	matrix Q;
 	matrix R;
 	float acc_ned[3];
@@ -47,6 +51,5 @@ public:
 
 	bool flow_healthy;
 	float flow_ticker;
-	float last_sonar;
 	int _state;	// 0: not ready, 1: flow, 2: transiting, 3:gps
 };
