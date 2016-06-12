@@ -7,7 +7,7 @@ public:
 	ekf_ahrs();
 	~ekf_ahrs();
 
-	int update(float a[3], float gyro[3], float mag[3], float dt);
+	int update(float a[3], float gyro[3], float mag[3], float dt, bool use_mag);
 	int get_euler(float *euler);
 
 	matrix h(matrix &x);

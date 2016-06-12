@@ -86,7 +86,7 @@ matrix ekf_ahrs::f(matrix &x, float gx, float gy, float gz, float dt)
 	return matrix(7,1,q0, q1, q2, q3, x[4], x[5], x[6]);
 }
 
-int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
+int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt, bool use_mag)
 {
 	if (!inited)
 		init(a, g, mag);
@@ -100,10 +100,10 @@ int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
 	still = motion_acc.get_average(NULL) > 100 && motion_gyro.get_average(NULL) > 100;
 // 	still = false;
 
-	matrix Q = matrix::diag(7, 1e-8, 1e-8, 1e-8, 1e-8, 1e-18, 1e-18, 1e-18);
+	matrix Q = matrix::diag(7, 1e-8, 1e-8, 1e-8, 1e-8, 1e-12, 1e-12, 1e-12);
 
 	matrix R = still ? matrix::diag(9, 1e-3, 1e-3, 1e-3, 1e-2, 1e-2, 1e-2, 1e-4, 1e-4, 1e-4) 
-		: matrix::diag(6, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1);
+		: (use_mag ? matrix::diag(6, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1, 1e-1) : matrix::diag(6, 1e-1, 1e-1, 1e-1, 1e+5, 1e+5, 1e+5));
 
 	float dt2 = dt/2;
 	matrix F(7,7,
@@ -140,7 +140,7 @@ int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
 
 
 	matrix x2 = F * x;
-	matrix x1 = f(x, g[0], g[1], g[2], dt);
+	matrix x1 = x2;
 	matrix predicted_zk = h(x1);
 	matrix P1 = F * P * F.transpos() + Q;
 	matrix Sk = H * P1 * H.transpos() + R;
@@ -160,13 +160,13 @@ int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt)
 
 	// too high gyro bias detection
 	// modern gyros won't have more than 5 degree/s total bias
-	if (x[4] * x[4] + x[5] * x[5] + x[6] * x[6] > (15*15*PI*PI/180/180))
-	{
-		P[4*8] += dt;
-		P[5*8] += dt;
-		P[6*8] += dt;
-		P[7*8] += dt;
-	}
+// 	if (x[4] * x[4] + x[5] * x[5] + x[6] * x[6] > (15*15*PI*PI/180/180))
+// 	{
+// 		P[4*8] += dt;
+// 		P[5*8] += dt;
+// 		P[6*8] += dt;
+// 		P[7*8] += dt;
+// 	}
 
 
 	// renorm
@@ -312,7 +312,7 @@ int test_ekf_ahrs()
 					g[1] += -120*PI/180;
 			}
 
-			imu.update(a, g, m, dt);
+			imu.update(a, g, m, dt, true);
 
 			static int n = 0;
 			if (f && /*i == 0 &&*/ n++ %25 == 0)
@@ -341,7 +341,7 @@ int test_ekf_ahrs()
 		float a[3] = {-1,-1,-1};
 		float g[3] = {0.002, 0.003, 0.004};
 		float m[3] = {-1,0,0};
-		imu.update(a, g, m, dt);
+		imu.update(a, g, m, dt, true);
 
 
 		matrix &x = imu.x;
