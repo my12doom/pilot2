@@ -9,7 +9,11 @@
 // constants
 // static float leash = 5.0f;
 static float linear_distance = 5.0f;
+#ifndef WIN32
 static param max_speed("maxH", 5.0f);
+#else
+static float max_speed = 5.0f;
+#endif
 static float max_speed_ff = 2.0f;
 static bool use_desired_feed_forward = false;
 static float feed_forward_factor = 1;
@@ -17,12 +21,16 @@ static float rate2accel[4] = {1.2f, 0.25f, 0.4f, 6.0f};
 static float pos2rate_P = 1.0f;
 
 // "parameters/constants"
+#ifndef WIN32
 static param quadcopter_range[3] = 
 {
 	param("rngR", PI / 8),			// roll
 	param("rngP", PI / 8),			// pitch
 	param("rngY", PI / 8),			// yaw
 };
+#else
+static float quadcopter_range[3] = {PI/4, PI/4, PI/4};
+#endif
 
 // win32 helper
 #ifdef WIN32
