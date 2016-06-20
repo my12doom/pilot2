@@ -18,6 +18,8 @@ pos_estimator2::pos_estimator2()
 	latency = 400000;
 	home_lat = NAN;
 	home_lon = NAN;
+	gps_north = 0;
+	gps_east = 0;
 	_state = 1;
 	reset();
 }
@@ -40,8 +42,8 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 
 	P = matrix::diag(13, 100.0, 100.0, 4.0, 100.0, 100.0, 4.0, 1.0, 1.0, 1.0, 100.0, 100.0, 100.0, 10.0);
 	x = matrix(13,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-	Q = matrix::diag(13, 4e-3, 4e-3, 4e-6, 
-						1e-3, 1e-3, 1e-3, 
+	Q = matrix::diag(13, 4e-6, 4e-6, 4e-6, 
+						5e-6, 5e-6, 5e-6, 
 						1e-7, 1e-7, 1e-7, 
 						1e-7, 1e-7, 5e-7, 4e-6);
 
@@ -61,8 +63,12 @@ int pos_estimator2::state()
 }
 
 
-int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt)			// unit: meter/s
+int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt, bool armed)			// unit: meter/s
 {
+	Q(3,3) = armed ? 5e-4 : 1e-3;
+	Q(4,4) = armed ? 5e-4 : 1e-3;
+	Q(5,5) = armed ? 1e-6 : 1e-3;
+
 	// flow switching
 	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133);
 	if (!flow_healthy && use_flow)
@@ -279,12 +285,19 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			0.0, 0.0, 0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0);
 
 		R_count = 6;
-		R_diag[0] = 60.0;
-		R_diag[1] = 60.0;
+		R_diag[0] = 25.0;
+		R_diag[1] = 25.0;
 		R_diag[2] = 60.0;
 		R_diag[3] = 5.0;
 		R_diag[4] = 5.0;
-		R_diag[5] = 555525.0;
+		R_diag[5] = 65.0;
+
+
+		if (gps.DOP[1] > 200)
+		{
+			printf("gps glitch\n");
+		}
+
 	}
 	else
 	{
@@ -347,11 +360,11 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			}
 			last_valid_sonar = new_sonar;
 
-		float sonar_h[13] = {0,0,1.0f, 0,0,0, 0,0,0, 0,0,0,-1.0f};
-		memcpy(H.data + H.m*H.n, sonar_h, H.n*4);
-		H.m++;
-		R_diag[R_count++] = 16.0f;
-		zk[zk.m++] = last_valid_sonar;
+			float sonar_h[13] = {0,0,1.0f, 0,0,0, 0,0,0, 0,0,0,-1.0f};
+			memcpy(H.data + H.m*H.n, sonar_h, H.n*4);
+			H.m++;
+			R_diag[R_count++] = 16.0f;
+			zk[zk.m++] = last_valid_sonar;
 		}
 	}
 
