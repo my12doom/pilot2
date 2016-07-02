@@ -2101,12 +2101,12 @@ void yet_another_pilot::handle_takeoff()
 int64_t land_detect_us = 0;
 int yet_another_pilot::land_detector()
 {
-	land_possible = throttle_result < 0.2f && fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f);
+	land_possible = throttle_result < 0.2f && fabs(alt_controller.m_baro_states[1]) < (quadcopter_max_descend_rate/4.0f);
 
-	if ((rc[2] < 0.1f || (islanding && throttle_result < 0.2f))					// landing and low throttle output, or just throttle stick down
-		&& fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f)	// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
-		&& (!alt_controller.used() || (alt_controller.target_climb_rate < 0 && alt_estimator.state[1] > alt_controller.target_climb_rate))	// alt controller not running or can't reach target descending rate
-// 		&& fabs(alt_estimator.state[2] + alt_estimator.state[3]) < 0.5f			// low acceleration
+	if (((rc[2] < 0.1f && flight_mode != RTL) || (islanding && throttle_result < 0.2f))					// landing and low throttle output, or just throttle stick down
+		&& fabs(alt_controller.m_baro_states[1]) < (quadcopter_max_descend_rate/4.0f)	// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
+		&& (!alt_controller.used() || (alt_controller.target_climb_rate < 0 && (alt_controller.m_baro_states[1] > alt_controller.target_climb_rate + quadcopter_max_descend_rate/2)))	// alt controller not running or can't reach target descending rate
+// 		&& fabs(alt_controller.m_baro_states[2]) < 0.5f			// low acceleration
 	)
 	{
 		land_detect_us = land_detect_us == 0 ? systimer->gettime() : land_detect_us;
