@@ -423,6 +423,66 @@ int yet_another_pilot::run_controllers()
 	return 0;
 }
 
+int yet_another_pilot::handle_acrobatic()
+{
+	// TODO: numbers
+	switch(acrobatic)
+	{
+	case acrobatic_flip_rising:
+		acrobatic_timer += interval;
+		alt_controller.set_climbrate_override(limit(2.0+acrobatic_timer*10, 2.0, 5.0f));
+
+		// move to rotating phase.
+		if (acrobatic_timer > 0.5f || alt_controller.m_baro_states[1] > 2.0f)
+		{
+			acrobatic = acrobatic_flip_rotating;
+			acrobatic_timer = 0;
+			acrobatic_number = 0;
+			alt_controller.set_climbrate_override(NAN);
+
+			LOGE("flipping acrobatic: rising done.\n");
+		}
+		break;
+
+	case acrobatic_flip_rotating:
+		{
+			acrobatic_timer += interval;
+			acrobatic_number += body_rate.array[0] * interval;
+
+			float brs[3] = {4*PI, 0, 0};	// brs: body rate setpoint
+			attitude_controll.set_body_rate_override(brs);
+
+			if (acrobatic_timer > 1.0f ||  fabs(acrobatic_number) > PI*3/2)
+			{
+				acrobatic = acrobatic_none;
+				float brs_nan[3] = {NAN, NAN, NAN};
+				attitude_controll.set_body_rate_override(brs_nan);
+				LOGE("flipping acrobatic: rotating done.\n");
+			}
+		}
+		break;
+	}
+
+	return 0;
+}
+
+int yet_another_pilot::start_acrobatic(acrobatic_moves move)
+{
+	if (acrobatic != acrobatic_none || !armed || !airborne)
+		return -1;
+
+	if (move == acrobatic_move_flip)
+	{
+		acrobatic = acrobatic_flip_rising;
+		acrobatic_timer = 0;
+		acrobatic_number = 0;
+
+		LOGE("start flipping acrobatic\n");
+	}
+
+	return 0;
+}
+
 float min_throttle;
 float max_throttle;
 
@@ -3055,7 +3115,7 @@ void yet_another_pilot::main_loop(void)
 
 	// all state estimating, AHRS, position, altitude, etc
 	calculate_state();
-
+	handle_acrobatic();
 	run_controllers();
 	output();
 	save_logs();
