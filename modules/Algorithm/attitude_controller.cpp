@@ -46,6 +46,9 @@ attitude_controller::attitude_controller()
 	last_set_euler_sp_time = 0;
 	just_reseted = true;
 
+	for(int i=0; i<3; i++)
+		body_rate_sp_override[i] = NAN;
+
 	reset();
 }
 attitude_controller::~attitude_controller()
@@ -84,6 +87,16 @@ int attitude_controller::set_quaternion_target(const float *quaternion)
 		return -1;		// TODO: set euler target properly
 
 	memcpy(quaternion_sp, quaternion, sizeof(float)*4);
+	return 0;
+}
+
+int attitude_controller::set_body_rate_override(const float *override)
+{
+	if (!override)
+		return -1;
+
+	memcpy(body_rate_sp_override, override, sizeof(body_rate_sp_override));
+
 	return 0;
 }
 
@@ -173,7 +186,14 @@ int attitude_controller::update(float dt)
 			body_rate_sp[i] = radian_sub(euler_sp[i], euler[i]) * pid_factor2[i][0];
 			body_rate_sp[i] = limit(body_rate_sp[i], -PI, PI);
 		}
-	}	
+	}
+
+	// body rate override
+	for(int i=0; i<3; i++)
+	{
+		if (!isnan(body_rate_sp_override[i]))
+			body_rate_sp[i] = body_rate_sp_override[i];
+	}
 
 	
 	// inner loop, body frame rate -> body frame torque.

@@ -41,9 +41,15 @@ public:
 	// a reset() is recommended after changing this settings.
 	void set_quaternion_mode(bool use_quaternion){this->use_quaternion = use_quaternion;}
 
+	// set body rate override for each axis.
+	// usually this is used for acrobatic moves.
+	// set to NAN to revert back to normal attitude controlling.
+	int set_body_rate_override(const float *override);
+
 //protected:
 	float body_rate[3];
 	float body_rate_sp[3];
+	float body_rate_sp_override[3];		// body rate override, usually used for acrobatic moves;
 	float euler[3];
 	float euler_sp[3];		// sp = set point
 	float last_set_euler_sp_time;
