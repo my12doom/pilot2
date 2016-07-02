@@ -1755,7 +1755,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	}
 	
 	armed = arm;
-	execute_mode_switching_from_stick();
+	execute_mode_switching();
 	
 	LOGE("%s OK\n", arm ? "arm" : "disarm");
 	
@@ -1834,7 +1834,7 @@ int yet_another_pilot::finish_accel_cal()
 	return 0;
 }
 
-int yet_another_pilot::execute_mode_switching_from_stick()
+int yet_another_pilot::execute_mode_switching()
 {
 	copter_mode mode = mode_from_stick();
 
@@ -1844,10 +1844,18 @@ int yet_another_pilot::execute_mode_switching_from_stick()
 	if (get_estimator_state() == none && mode == poshold)
 		mode = use_EKF == 2 ? althold : optical_flow;
 
+	if (rc_fail < 0)
+	{
+		if (set_mode(RTL) < 0)
+			islanding = true;
+		else
+			return 0;
+	}
+
 	return set_mode(mode);
 }
 
-int yet_another_pilot::handle_mode_switching()
+int yet_another_pilot::decide_mode_switching()
 {
 	copter_mode stick_mode = mode_from_stick();
 
@@ -1860,7 +1868,7 @@ int yet_another_pilot::handle_mode_switching()
 
 		LOGE("mode switch changed to %d\n", stick_mode);
 
-		execute_mode_switching_from_stick();
+		execute_mode_switching();
 	}
 
 	// position ready state changed?
@@ -1872,7 +1880,7 @@ int yet_another_pilot::handle_mode_switching()
 
 		LOGE("position estimator state changed: %s\n", last_position_state ? "ready" : "failed");
 
-		execute_mode_switching_from_stick();
+		execute_mode_switching();
 	}
 
 	// airborne state changed?
@@ -1882,7 +1890,27 @@ int yet_another_pilot::handle_mode_switching()
 
 		LOGE("airborne!\n", last_position_state ? "ready" : "failed");
 
-		execute_mode_switching_from_stick();
+		execute_mode_switching();
+	}
+
+	// RC failure timed out?
+	if (rc_fail < 0 && airborne)
+	{
+		float new_rc_fail_tick = rc_fail_tick + interval;
+		if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
+		{
+			LOGE("rc fail, trying RTL\n");
+			if (set_mode(RTL) < 0)
+			{
+				LOGE("RTL failed, landing\n");
+				islanding = true;
+			}
+		}
+		rc_fail_tick = new_rc_fail_tick;
+	}
+	else
+	{
+		rc_fail_tick = 0;
 	}
 
 	return 0;
@@ -2387,7 +2415,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		LOGE("mobile stop RTL\n");
 		const char *rtl = "STOPRTL,ok\n";
 		uart->write(rtl, strlen(rtl));
-		execute_mode_switching_from_stick();
+		execute_mode_switching();
 	}
 
 	else if (strstr(line, "state") == line)
@@ -2671,27 +2699,7 @@ int yet_another_pilot::read_rc()
 		rc_fail = 0;
 	}
 
-	// total RC failure handling
-	if (rc_fail < 0)
-	{
-		float new_rc_fail_tick = rc_fail_tick + interval;
-		if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
-		{
-			LOGE("rc fail, RTL\n");
-			if (set_mode(RTL) < 0)
-			{
-				LOGE("RTL failed, landing\n");
-				islanding = true;
-			}
-		}
-		rc_fail_tick = new_rc_fail_tick;
-	}
-	else
-	{
-		rc_fail_tick = 0;
-	}
-
-	// send RC fail event
+	// send RC failure event
 	static int last_rc_fail = 0;
 	if (rc_fail != last_rc_fail)
 	{
@@ -3067,7 +3075,7 @@ void yet_another_pilot::main_loop(void)
 	}
 	
 	// RC modes and RC fail detection, or alternative RC source
-	handle_mode_switching();
+	decide_mode_switching();
 	check_stick_action();
 	handle_takeoff();
 	handle_wifi_controll(manager.getUART("Wifi"));
