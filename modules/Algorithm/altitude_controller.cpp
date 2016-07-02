@@ -54,6 +54,7 @@ altitude_controller::altitude_controller()
 	memset(climb_rate_error_pid, 0, sizeof(climb_rate_error_pid));
 	memset(climb_rate_error_pid, 0, sizeof(climb_rate_error_pid));
 	last_update = 0;
+	climb_rate_override = NAN;
 }
 
 altitude_controller::~altitude_controller()
@@ -158,12 +159,7 @@ int altitude_controller::update(float dt, float user_rate)
 	float leash_down = calc_leash_length(quadcopter_max_descend_rate, quadcopter_max_acceleration, pid_quad_altitude[0]);
 	float &alt_target = isnan(m_sonar_target) ? baro_target : m_sonar_target;
 	float &alt_state = isnan(m_sonar_target) ? m_baro_states[0]: m_last_valid_sonar;
-	
-	if (isnan(alt_target) || isnan(alt_state))
-	{
-		printf("NAN");		
-	}
-	
+		
 	// only move altitude target if throttle and target climb rate didn't hit limits
 	if ((!(m_motor_state & LIMIT_POSITIVE_HARD) && user_rate > 0 && (target_climb_rate < quadcopter_max_climb_rate)) || 
 		(!(m_motor_state & LIMIT_NEGATIVE_HARD) && user_rate < 0 && (target_climb_rate > -quadcopter_max_descend_rate))
@@ -179,6 +175,8 @@ int altitude_controller::update(float dt, float user_rate)
 	altitude_error_pid[0] = alt_target - alt_state;
 	altitude_error_pid[0] = limit(altitude_error_pid[0], -leash_down, leash_up);
 	target_climb_rate = pid_quad_altitude[0] * altitude_error_pid[0];
+	if (!isnan(climb_rate_override))
+		target_climb_rate = climb_rate_override;
 
 	// feed forward
 	// 
@@ -243,23 +241,29 @@ int altitude_controller::update(float dt, float user_rate)
 	output *= throttle_hover / default_throttle_hover;			// normalize throttle output PID, from throttle percentage to acceleration
 
 	throttle_result  = output + throttle_hover;
-	float angle_boost_factor = limit(1/ cos(m_attitude[0]) / cos(m_attitude[1]), 1.0f, 1.5f);
+	float angle_boost_factor = 1/ cos(m_attitude[0]) / cos(m_attitude[1]);
+	if (angle_boost_factor < 0)
+		angle_boost_factor = 0;		// if we got reverted, kill thrust
+	else if (angle_boost_factor > 1.5f)
+		angle_boost_factor = 1.5f;
+	else if (angle_boost_factor < 1.0f)
+		angle_boost_factor = 1.0f;
+
 	throttle_result = throttle_result * angle_boost_factor;
 
 	if (throttle_result > 1 - QUADCOPTER_THROTTLE_RESERVE)
 	{
-		throttle_result = 1 - QUADCOPTER_THROTTLE_RESERVE;
 		m_motor_state = LIMIT_POSITIVE_HARD;
 	}
-	else if (throttle_result < (m_airborne ? QUADCOPTER_THROTTLE_RESERVE : 0))
+	else if (throttle_result < 0)
 	{
-		throttle_result = m_airborne ? QUADCOPTER_THROTTLE_RESERVE : 0;
 		m_motor_state = LIMIT_NEGATIVE_HARD;
 	}
 	else
 	{
 		m_motor_state = 0;
 	}
+	throttle_result = limit(throttle_result, 0.0f, 1.0f);
 
 	TRACE("\rthrottle=%f, altitude = %.2f/%.2f, pid=%.2f,%.2f,%.2f, limit=%d", throttle_result, m_baro_states[0], baro_target,
 		accel_error_pid[0], accel_error_pid[1], accel_error_pid[2], m_motor_state);
