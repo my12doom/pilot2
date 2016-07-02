@@ -84,6 +84,7 @@ int battery_estimator::update(const float voltage, const float current, const fl
 	x = x1 + K*(zk - H*x1);
 	P = (matrix(P1.m) - K*H) * P1;
 	
+#ifndef WIN32
 	if (systimer->gettime() > last_log + 2000000)
 	{
 		TRACE("Batt:%.3f/%.3fV, %d mOhm", voltage, x.data[0], int(x.data[1]*1000));
@@ -91,6 +92,7 @@ int battery_estimator::update(const float voltage, const float current, const fl
 		
 		log2(x.data, TAG_BATT, 8);
 	}
+#endif
 
 	return 0;
 }
