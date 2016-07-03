@@ -2,7 +2,7 @@
 
 #include "flight_mode.h"
 
-class flight_mode_of_loiter : IFlightMode
+class flight_mode_of_loiter : public IFlightMode
 {
 public:
 	flight_mode_of_loiter(){}

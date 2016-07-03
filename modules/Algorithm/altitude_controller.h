@@ -48,6 +48,11 @@ public:
 	// return true if sonar surface tracking enabled
 	bool sonar_actived();
 
+	// set a new climb rate override
+	// this is usually used for acrobatics
+	// set to NAN to go back to normal operation.
+	void set_climbrate_override(float new_ovverride) {climb_rate_override = new_ovverride;}
+
 	// estimated hover throttle
 	float throttle_hover;
 
@@ -65,6 +70,7 @@ public:
 	float climb_rate_error_pid[3];// = {0};
 	float accel_error_pid[3];// = {0};
 	float throttle_result;// = 0;
+	float climb_rate_override;// = NAN;
 
 	float m_sonar;
 	float m_last_valid_sonar;

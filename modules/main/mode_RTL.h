@@ -12,12 +12,13 @@ typedef struct
 	float sonar_setpoint;
 } RTL_state;
 
-class flight_mode_RTL : IFlightMode
+class flight_mode_RTL : public IFlightMode
 {
 public:
 	flight_mode_RTL(){}
 	~flight_mode_RTL(){}
 
+	virtual bool is_ready();
 	virtual int setup();
 	virtual int exit();
 	virtual int loop(float dt);

@@ -14,16 +14,22 @@ static param RTL_loiter_time("rltL", 2);			// RTL loiter at home time
 static param pid_factor_yaw("sP3", 8);
 static param pid_factor_alt("altP", 1);
 
-int flight_mode_RTL::setup()
+bool flight_mode_RTL::is_ready()
 {
-	yap.alt_controller.reset();
-
 	// is position estimator ready?
 	if (yap.get_estimator_state() != fully_ready)
 	{
 		LOGE("RTL failed: position not ready\n");
-		return -1;
+		return false;
 	}
+
+	return true;
+}
+
+int flight_mode_RTL::setup()
+{
+	yap.alt_controller.reset();
+
 
 	// reset pos controller
 	position_meter meter = yap.estimator.get_estimation_meter();

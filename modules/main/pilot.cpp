@@ -183,6 +183,14 @@ yet_another_pilot::yet_another_pilot()
 		gyro_lpf2p[i].set_cutoff_frequency(1000, 60);
 		accel_lpf2p[i].set_cutoff_frequency(1000, 60);
 	}
+
+	memset(modes, 0, sizeof(modes));
+
+	modes[basic] = &mode_basic;
+	modes[althold] = &mode_althold;
+	modes[poshold] = &mode_poshold;
+	modes[optical_flow] = &mode_of_loiter;
+	modes[RTL] = &mode_RTL;
 }
 
 // helper functions
@@ -415,24 +423,8 @@ int yet_another_pilot::run_controllers()
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
 
-	switch(flight_mode)
-	{
-		case basic:
-			mode_basic.loop(interval);
-			break;
-		case althold:
-			mode_althold.loop(interval);
-			break;
-		case poshold:
-			mode_poshold.loop(interval);
-			break;
-		case optical_flow:
-			mode_of_loiter.loop(interval);
-			break;
-		case RTL:
-			mode_RTL.loop(interval);
-			break;
-	}
+	if (modes[flight_mode])
+		modes[flight_mode]->loop(interval);
 	
 	attitude_controll.update(interval);
 
@@ -449,6 +441,66 @@ int yet_another_pilot::run_controllers()
 		}
 	}
 	
+	return 0;
+}
+
+int yet_another_pilot::handle_acrobatic()
+{
+	// TODO: numbers
+	switch(acrobatic)
+	{
+	case acrobatic_flip_rising:
+		acrobatic_timer += interval;
+		alt_controller.set_climbrate_override(limit(2.0+acrobatic_timer*10, 2.0, 5.0f));
+
+		// move to rotating phase.
+		if (acrobatic_timer > 0.5f || alt_controller.m_baro_states[1] > 2.0f)
+		{
+			acrobatic = acrobatic_flip_rotating;
+			acrobatic_timer = 0;
+			acrobatic_number = 0;
+			alt_controller.set_climbrate_override(NAN);
+
+			LOGE("flipping acrobatic: rising done.\n");
+		}
+		break;
+
+	case acrobatic_flip_rotating:
+		{
+			acrobatic_timer += interval;
+			acrobatic_number += body_rate.array[0] * interval;
+
+			float brs[3] = {4*PI, 0, 0};	// brs: body rate setpoint
+			attitude_controll.set_body_rate_override(brs);
+
+			if (acrobatic_timer > 1.0f ||  fabs(acrobatic_number) > PI*3/2)
+			{
+				acrobatic = acrobatic_none;
+				float brs_nan[3] = {NAN, NAN, NAN};
+				attitude_controll.set_body_rate_override(brs_nan);
+				LOGE("flipping acrobatic: rotating done.\n");
+			}
+		}
+		break;
+	}
+
+	return 0;
+}
+
+int yet_another_pilot::start_acrobatic(acrobatic_moves move)
+{
+	if (acrobatic != acrobatic_none || !armed || !airborne)
+		return -1;
+
+	if (move == acrobatic_move_flip)
+	{
+		acrobatic = acrobatic_flip_rising;
+		acrobatic_timer = 0;
+		acrobatic_number = 0;
+
+		LOGE("start flipping acrobatic\n");
+	}
+
 	return 0;
 }
 
@@ -1603,43 +1655,31 @@ int yet_another_pilot::sensor_calibration()
 
 int yet_another_pilot::set_mode(copter_mode newmode)
 {
+	if (newmode < 0 || newmode >= mode_MAX)
+		return -1;
 	if (!armed)
 		newmode = invalid;
 	if (newmode == flight_mode)
 		return 0;
 
-	int error = 0;
-
-	switch(newmode)
+	IFlightMode * p_newmode = modes[newmode];
+	if (!p_newmode)
 	{
-	case basic:
-		error = mode_basic.setup();
-		break;
-	case althold:
-		error = mode_althold.setup();
-		break;
-	case poshold:
-		error = mode_poshold.setup();
-		break;
-	case optical_flow:
-		error = mode_of_loiter.setup();
-		break;
-	case RTL:
-		error = mode_RTL.setup();
-		break;
+		flight_mode = invalid;
+		return -2;
 	}
 	
-	if (error >= 0)
+	if (!p_newmode->is_ready())
 	{
-		flight_mode = newmode;
-		LOGE("new flight mode: %d\n", flight_mode);
-	}
-	else
-	{
-		LOGE("FAILED entering %d mode\n", newmode);
+		LOGE("FAILED entering %d mode, mode not ready\n", newmode);
+		return -3;
 	}
 
-	return error;
+	p_newmode->setup();
+	flight_mode = newmode;
+	LOGE("new flight mode: %d\n", flight_mode);
+
+	return 0;
 }
 
 int yet_another_pilot::arm(bool arm /*= true*/)
@@ -1724,7 +1764,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	}
 	
 	armed = arm;
-	execute_mode_switching_from_stick();
+	execute_mode_switching();
 	
 	LOGE("%s OK\n", arm ? "arm" : "disarm");
 	
@@ -1803,7 +1843,7 @@ int yet_another_pilot::finish_accel_cal()
 	return 0;
 }
 
-int yet_another_pilot::execute_mode_switching_from_stick()
+int yet_another_pilot::execute_mode_switching()
 {
 	copter_mode mode = mode_from_stick();
 
@@ -1813,10 +1853,18 @@ int yet_another_pilot::execute_mode_switching_from_stick()
 	if (get_estimator_state() == none && mode == poshold)
 		mode = use_EKF == 2 ? althold : optical_flow;
 
+	if (rc_fail < 0)
+	{
+		if (set_mode(RTL) < 0)
+			islanding = true;
+		else
+			return 0;
+	}
+
 	return set_mode(mode);
 }
 
-int yet_another_pilot::handle_mode_switching()
+int yet_another_pilot::decide_mode_switching()
 {
 	copter_mode stick_mode = mode_from_stick();
 
@@ -1829,7 +1877,7 @@ int yet_another_pilot::handle_mode_switching()
 
 		LOGE("mode switch changed to %d\n", stick_mode);
 
-		execute_mode_switching_from_stick();
+		execute_mode_switching();
 	}
 
 	// position ready state changed?
@@ -1841,7 +1889,7 @@ int yet_another_pilot::handle_mode_switching()
 
 		LOGE("position estimator state changed: %s\n", last_position_state ? "ready" : "failed");
 
-		execute_mode_switching_from_stick();
+		execute_mode_switching();
 	}
 
 	// airborne state changed?
@@ -1851,7 +1899,27 @@ int yet_another_pilot::handle_mode_switching()
 
 		LOGE("airborne!\n", last_position_state ? "ready" : "failed");
 
-		execute_mode_switching_from_stick();
+		execute_mode_switching();
+	}
+
+	// RC failure timed out?
+	if (rc_fail < 0 && airborne)
+	{
+		float new_rc_fail_tick = rc_fail_tick + interval;
+		if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
+		{
+			LOGE("rc fail, trying RTL\n");
+			if (set_mode(RTL) < 0)
+			{
+				LOGE("RTL failed, landing\n");
+				islanding = true;
+			}
+		}
+		rc_fail_tick = new_rc_fail_tick;
+	}
+	else
+	{
+		rc_fail_tick = 0;
 	}
 
 	return 0;
@@ -2060,12 +2128,12 @@ void yet_another_pilot::handle_takeoff()
 int64_t land_detect_us = 0;
 int yet_another_pilot::land_detector()
 {
-	land_possible = throttle_result < 0.2f && fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f);
+	land_possible = throttle_result < 0.2f && fabs(alt_controller.m_baro_states[1]) < (quadcopter_max_descend_rate/4.0f);
 
-	if ((rc[2] < 0.1f || (islanding && throttle_result < 0.2f))					// landing and low throttle output, or just throttle stick down
-		&& fabs(alt_estimator.state[1]) < (quadcopter_max_descend_rate/4.0f)	// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
-		&& (!alt_controller.used() || (alt_controller.target_climb_rate < 0 && alt_estimator.state[1] > alt_controller.target_climb_rate))	// alt controller not running or can't reach target descending rate
-// 		&& fabs(alt_estimator.state[2] + alt_estimator.state[3]) < 0.5f			// low acceleration
+	if (((rc[2] < 0.1f && flight_mode != RTL) || (islanding && throttle_result < 0.2f))					// landing and low throttle output, or just throttle stick down
+		&& fabs(alt_controller.m_baro_states[1]) < (quadcopter_max_descend_rate/4.0f)	// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
+		&& (!alt_controller.used() || (alt_controller.target_climb_rate < 0 && (alt_controller.m_baro_states[1] > alt_controller.target_climb_rate + quadcopter_max_descend_rate/2)))	// alt controller not running or can't reach target descending rate
+// 		&& fabs(alt_controller.m_baro_states[2]) < 0.5f			// low acceleration
 	)
 	{
 		land_detect_us = land_detect_us == 0 ? systimer->gettime() : land_detect_us;
@@ -2350,7 +2418,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		LOGE("mobile stop RTL\n");
 		const char *rtl = "STOPRTL,ok\n";
 		uart->write(rtl, strlen(rtl));
-		execute_mode_switching_from_stick();
+		execute_mode_switching();
 	}
 
 	else if (strstr(line, "state") == line)
@@ -2637,27 +2705,7 @@ int yet_another_pilot::read_rc()
 		rc_fail = 0;
 	}
 
-	// total RC failure handling
-	if (rc_fail < 0)
-	{
-		float new_rc_fail_tick = rc_fail_tick + interval;
-		if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
-		{
-			LOGE("rc fail, RTL\n");
-			if (set_mode(RTL) < 0)
-			{
-				LOGE("RTL failed, landing\n");
-				islanding = true;
-			}
-		}
-		rc_fail_tick = new_rc_fail_tick;
-	}
-	else
-	{
-		rc_fail_tick = 0;
-	}
-
-	// send RC fail event
+	// send RC failure event
 	static int last_rc_fail = 0;
 	if (rc_fail != last_rc_fail)
 	{
@@ -3033,7 +3081,7 @@ void yet_another_pilot::main_loop(void)
 	}
 	
 	// RC modes and RC fail detection, or alternative RC source
-	handle_mode_switching();
+	decide_mode_switching();
 	check_stick_action();
 	handle_takeoff();
 	handle_wifi_controll(manager.getUART("Wifi"));
@@ -3081,7 +3129,7 @@ void yet_another_pilot::main_loop(void)
 
 	// all state estimating, AHRS, position, altitude, etc
 	calculate_state();
-
+	handle_acrobatic();
 	run_controllers();
 	output();
 	save_logs();

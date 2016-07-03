@@ -14,7 +14,7 @@ public:
 	float get_internal_resistance(){return x.data[1];}
 	float get_mah_consumed(){return mah;}
 
-protected:
+// protected:
 	int64_t last_log;
 	bool init;
 	float mah;

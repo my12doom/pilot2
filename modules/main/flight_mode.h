@@ -3,9 +3,12 @@
 class IFlightMode
 {
 public:
+
+	// called before setup(), to judge if this flight mode is available.
+	// if mode controller returns false (negative values), the caller (autopilot) is responsible for switching into backup flight mode.
+	virtual bool is_ready(){return true;}
+
 	// setup all environment, resetting all needed controller
-	// called before 
-	// if mode controller returns a error (negative values), the caller (autopilot) is responsible for switching into backup flight mode.
 	virtual int setup() = 0;
 
 	// clear up

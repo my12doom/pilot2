@@ -40,6 +40,18 @@ enum pos_estimator_state
 	fully_ready = 3,		// GPS
 };
 
+enum acrobatic_moves_state
+{
+	acrobatic_none,
+	acrobatic_flip_rising,
+	acrobatic_flip_rotating,
+};
+
+enum acrobatic_moves
+{
+	acrobatic_move_flip,
+};
+
 class ymodem_firmware_writter : public ymodem_receiver
 {
 public:
@@ -110,6 +122,7 @@ public:
 	flight_mode_of_loiter mode_of_loiter;
 	flight_mode_poshold mode_poshold;
 	flight_mode_RTL mode_RTL;
+	IFlightMode *modes[mode_MAX];
 
 
 	int64_t collision_detected;// = 0;	// remember to clear it before arming
@@ -187,6 +200,9 @@ public:
 	bool mag_reset_requested;
 	motion_detector detect_acc;
 	motion_detector detect_gyro;
+	acrobatic_moves_state acrobatic;
+	float acrobatic_timer;
+	float acrobatic_number;		// helper variable for acrobatic state tracking.
 
 	// constructor
 	yet_another_pilot();
@@ -211,6 +227,7 @@ public:
 	
 	// automated functions
 	int start_taking_off();
+	int start_acrobatic(acrobatic_moves move);
 	
 	// main loop sub routines.
 	int read_rc();
@@ -229,8 +246,9 @@ public:
 	int output();
 	void handle_takeoff();
 	int save_logs();
-	int handle_mode_switching();
-	int execute_mode_switching_from_stick();		// should and only should be called by handle_mode_switching() or arm(), when armed, airborne state, position estimator state, or mode switch changed.
+	int decide_mode_switching();
+	int execute_mode_switching();		// should and only should be called by handle_mode_switching() or arm(), when armed, airborne state, position estimator state, or mode switch changed.
+	int handle_acrobatic();
 	copter_mode mode_from_stick();
 
 	copter_mode last_mode_from_switch;

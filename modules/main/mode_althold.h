@@ -2,7 +2,7 @@
 
 #include "flight_mode.h"
 
-class flight_mode_althold : IFlightMode
+class flight_mode_althold : public IFlightMode
 {
 public:
 	flight_mode_althold(){}
