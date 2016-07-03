@@ -2394,7 +2394,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		const char *land = "land,ok\n";
 		uart->write(land, strlen(land));
 
-		execute_mode_switching_from_stick();
+		execute_mode_switching();
 		islanding = true;
 	}
 	
