@@ -180,6 +180,14 @@ yet_another_pilot::yet_another_pilot()
 		gyro_lpf2p[i].set_cutoff_frequency(1000, 60);
 		accel_lpf2p[i].set_cutoff_frequency(1000, 60);
 	}
+
+	memset(modes, 0, sizeof(modes));
+
+	modes[basic] = &mode_basic;
+	modes[althold] = &mode_althold;
+	modes[poshold] = &mode_poshold;
+	modes[optical_flow] = &mode_of_loiter;
+	modes[RTL] = &mode_RTL;
 }
 
 // helper functions
@@ -386,24 +394,8 @@ int yet_another_pilot::run_controllers()
 		alt_controller.provide_states(alt_state, sonar_distance, euler, throttle_real, LIMIT_NONE, airborne);
 	}
 
-	switch(flight_mode)
-	{
-		case basic:
-			mode_basic.loop(interval);
-			break;
-		case althold:
-			mode_althold.loop(interval);
-			break;
-		case poshold:
-			mode_poshold.loop(interval);
-			break;
-		case optical_flow:
-			mode_of_loiter.loop(interval);
-			break;
-		case RTL:
-			mode_RTL.loop(interval);
-			break;
-	}
+	if (modes[flight_mode])
+		modes[flight_mode]->loop(interval);
 	
 	attitude_controll.update(interval);
 
@@ -1634,43 +1626,31 @@ int yet_another_pilot::sensor_calibration()
 
 int yet_another_pilot::set_mode(copter_mode newmode)
 {
+	if (newmode < 0 || newmode >= mode_MAX)
+		return -1;
 	if (!armed)
 		newmode = invalid;
 	if (newmode == flight_mode)
 		return 0;
 
-	int error = 0;
-
-	switch(newmode)
+	IFlightMode * p_newmode = modes[newmode];
+	if (!p_newmode)
 	{
-	case basic:
-		error = mode_basic.setup();
-		break;
-	case althold:
-		error = mode_althold.setup();
-		break;
-	case poshold:
-		error = mode_poshold.setup();
-		break;
-	case optical_flow:
-		error = mode_of_loiter.setup();
-		break;
-	case RTL:
-		error = mode_RTL.setup();
-		break;
+		flight_mode = invalid;
+		return -2;
 	}
 	
-	if (error >= 0)
+	if (!p_newmode->is_ready())
 	{
-		flight_mode = newmode;
-		LOGE("new flight mode: %d\n", flight_mode);
-	}
-	else
-	{
-		LOGE("FAILED entering %d mode\n", newmode);
+		LOGE("FAILED entering %d mode, mode not ready\n", newmode);
+		return -3;
 	}
 
-	return error;
+	p_newmode->setup();
+	flight_mode = newmode;
+	LOGE("new flight mode: %d\n", flight_mode);
+
+	return 0;
 }
 
 int yet_another_pilot::arm(bool arm /*= true*/)

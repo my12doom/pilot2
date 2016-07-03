@@ -122,6 +122,7 @@ public:
 	flight_mode_of_loiter mode_of_loiter;
 	flight_mode_poshold mode_poshold;
 	flight_mode_RTL mode_RTL;
+	IFlightMode *modes[mode_MAX];
 
 
 	int64_t collision_detected;// = 0;	// remember to clear it before arming
