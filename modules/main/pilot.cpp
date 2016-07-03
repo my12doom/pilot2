@@ -29,6 +29,9 @@ using namespace math;
 #define SONAR_MIN 0.0f
 #define SONAR_MAX 4.5f
 const float PI180 = 180/PI;
+const int auto_takeoff_delay = 500000;
+const float auto_takeoff_speed = 0.8f;
+const int auto_takeoff_time = 2500000;
 
 // parameters
 static param forced_mobile_controll("mob", 0);		// use mobile controlling even when RF available
@@ -322,6 +325,24 @@ int yet_another_pilot::get_pos_velocity_ned(float *pos, float *velocity)
 	return 0;
 }
 
+static float takeoff_arming_time = 0;
+static bool is_taking_off=false;
+int yet_another_pilot::start_taking_off()
+{
+	if (armed)
+		return -1;
+
+	LOGE("auto take off \n");
+	arm();
+	alt_controller.set_altitude_target(alt_controller.get_altitude_state()-2.0f);
+	LOGE("armed!\n");
+	//1s=1000000us		
+	takeoff_arming_time=systimer->gettime();
+	is_taking_off=true;
+
+	return 0;
+}
+
 int yet_another_pilot::default_alt_controlling()
 {
 	bool fast_stage = (alt_estimator.state[0] > takeoff_ground_altitude + 10.0f) && !alt_controller.sonar_actived();
@@ -350,6 +371,14 @@ int yet_another_pilot::default_alt_controlling()
 			user_rate = -landing_rate;		// disable user interaction in fast landing stage.
 		else
 			user_rate -= landing_rate;		// landing rate is combination of user stick and automated landing rate.
+	}
+
+	else if (is_taking_off)
+	{
+		if (systimer->gettime()>=takeoff_arming_time+auto_takeoff_delay)  // apply a additional 2m/s speed
+			user_rate += auto_takeoff_speed;
+		if (systimer->gettime()>=takeoff_arming_time+auto_takeoff_time)	  // timeout
+			is_taking_off = false;
 	}
 
 	// altitude limit
@@ -1249,7 +1278,7 @@ int yet_another_pilot::calculate_state()
 		detect_gyro.new_data(gyro_reading);
 		detect_acc.new_data(accel);
 
-		if (detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100)
+		if (detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100 && fabs(euler[0]) < PI/6 && fabs(euler[1]) < PI/6)
 		{
 			mag_reset_requested = false;
 			NonlinearSO3AHRSreset_mag(-mag.array[0], -mag.array[1], mag.array[2]);
@@ -1343,7 +1372,7 @@ int yet_another_pilot::calculate_state()
 		memcpy(estimator2.gyro, body_rate.array, sizeof(estimator2.gyro));
 		memcpy(&estimator2.frame, &frame, sizeof(frame));
 
-		estimator2.update(q, acc, gps, a_raw_altitude, interval);
+		estimator2.update(q, acc, gps, a_raw_altitude, interval, armed);
 		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
 	}
 
@@ -1869,25 +1898,6 @@ int yet_another_pilot::handle_events()
 	return 0;
 }
 
-
-static float takeoff_arming_time = 0;
-static bool is_taking_off=false;
-int yet_another_pilot::start_taking_off()
-{
-	if (armed)
-		return -1;
-
-	LOGE("\nauto take off \n");
-	arm();
-	alt_controller.set_altitude_target(alt_controller.get_altitude_state()-2.0f);
-	LOGE("\narmed!\n");
-	//1s=1000000us		
-	takeoff_arming_time=systimer->gettime();
-	is_taking_off=true;
-
-	return 0;
-}
-
 int yet_another_pilot::check_stick_action()
 {
 	if (critical_errors & (~int(ignore_error)) )
@@ -1918,7 +1928,7 @@ int yet_another_pilot::check_stick_action()
 				flashlight->toggle();
 		}
 
-	}
+		}
 
 	// emergency switch
 	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
@@ -2016,7 +2026,7 @@ int yet_another_pilot::check_stick_action()
 		if(airborne && flip_count >=1)
 		{
 			flip_count=0;
-			LOGE("\nauto landing!\n");
+			LOGE("auto landing!\n");
 			islanding=true;
 		}
 		else if(!is_taking_off && !armed && flip_count >=1)
@@ -2030,11 +2040,20 @@ int yet_another_pilot::check_stick_action()
 
 void yet_another_pilot::handle_takeoff()
 {
-	if(is_taking_off && systimer->gettime()>=takeoff_arming_time+2000000)
+	if(is_taking_off)
 	{
-		is_taking_off=false;
-		alt_controller.set_altitude_target(alt_controller.get_altitude_state()+1.0f);
-		LOGE("\nalread take off\n");
+		int64_t t1 = takeoff_arming_time+auto_takeoff_delay;
+		int64_t t2 = takeoff_arming_time+auto_takeoff_delay + cycle_time * 3;
+		int64_t t = systimer->gettime();
+
+
+		if (t>=t1 && t< t2)
+		{
+			alt_controller.set_altitude_target(alt_controller.get_altitude_state()-0.6f);
+			LOGE("auto takeoff: spooling up\n");
+
+			// note: is_taking_off is cleared in default_alt_handling().
+		}
 	}
 }
 
@@ -2188,13 +2207,16 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	
 	char line[1024];
 	char out[1024];
-	int byte_count = uart->readline(line, sizeof(line));
+	int byte_count = uart->readline(line, sizeof(line)-1);
 	if (byte_count <= 0)
 		return 0;
 	
-	line[byte_count-1] = 0;
+	line[byte_count] = 0;
 	if (line[byte_count-2] == '\r')
-		line[byte_count-2] = 0;
+	{
+		line[byte_count-2] = '\n';
+		line[byte_count-1] = 0;
+	}
 
 	int len = strlen(line);
 	const char * keyword = ",stick\n";
@@ -2304,6 +2326,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		const char *land = "land,ok\n";
 		uart->write(land, strlen(land));
 
+		execute_mode_switching_from_stick();
 		islanding = true;
 	}
 	
@@ -2498,6 +2521,9 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 	{
 		char para_name[5] = {0};
 		strncpy(para_name, line+4, 4);
+		for(int i=0; i<4; i++)
+		if (para_name[i] == '\n')
+			para_name[i] = 0;
 
 		float *pv = param::find_param(para_name);
 		if (pv)
@@ -2761,15 +2787,7 @@ int yet_another_pilot::stupid_joystick()
 
 int yet_another_pilot::light_words()
 {
-	if (!rgb)
-		return -1;
-	
-	if (mag_calibration_state)
-	{
-		// do nothing ,let the worker do light words
-	}
-	// critical errors
-	else if (critical_errors & (~int(ignore_error)))
+	if (critical_errors & (~int(ignore_error)))
 	{
 		static int last_critical_errors = 0;
 		if (last_critical_errors != critical_errors)
@@ -2813,6 +2831,14 @@ int yet_another_pilot::light_words()
 		}
 	}
 
+	
+	if (!rgb)
+		return -1;
+	
+	if (mag_calibration_state)
+	{
+		// do nothing ,let the worker do light words
+	}
 	// stay still!
 	else if (mag_reset_requested)
 	{
