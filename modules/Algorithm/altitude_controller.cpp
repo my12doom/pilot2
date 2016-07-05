@@ -96,7 +96,7 @@ int altitude_controller::provide_states(float *alt, float sonar, float *attitude
 		float sonar_update_inteval = 0.1f;
 		float step_change_max = sonar_step_threshold * (fabs(m_baro_states[1]) * sonar_update_inteval + 0.5f * fabs(m_baro_states[2]) * sonar_update_inteval * sonar_update_inteval);
 		step_change_max = fmax(step_change_max, 0.2f);
-		if (!isnan(m_sonar_target) &&  fabs(sonar - m_last_valid_sonar) >  step_change_max)
+		if (isnan(climb_rate_override) && !isnan(m_sonar_target) &&  fabs(sonar - m_last_valid_sonar) >  step_change_max) // note: only do step response with no climb rate override
 			m_sonar_target += sonar - m_last_valid_sonar;
 
 		m_last_valid_sonar = sonar;
@@ -160,9 +160,12 @@ int altitude_controller::update(float dt, float user_rate)
 	float &alt_target = isnan(m_sonar_target) ? baro_target : m_sonar_target;
 	float &alt_state = isnan(m_sonar_target) ? m_baro_states[0]: m_last_valid_sonar;
 		
-	// only move altitude target if throttle and target climb rate didn't hit limits
-	if ((!(m_motor_state & LIMIT_POSITIVE_HARD) && user_rate > 0 && (target_climb_rate < quadcopter_max_climb_rate)) || 
+	// only move altitude target if throttle and target climb rate didn't hit limits, and no climb target override exists
+	if (isnan(climb_rate_override) && 
+		(
+		(!(m_motor_state & LIMIT_POSITIVE_HARD) && user_rate > 0 && (target_climb_rate < quadcopter_max_climb_rate)) || 
 		(!(m_motor_state & LIMIT_NEGATIVE_HARD) && user_rate < 0 && (target_climb_rate > -quadcopter_max_descend_rate))
+		)
 		)
 	{
 		alt_target += user_rate * dt;

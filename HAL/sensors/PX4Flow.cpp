@@ -1,4 +1,6 @@
 #include "PX4Flow.h"
+#include <string.h>
+
 int PX4FLOW_ADDRESS = 0x84;
 extern int I2C_speed;// = 5;
 namespace sensors
@@ -18,6 +20,12 @@ namespace sensors
 	{
 		int result;
 		result=I2C->read_regs(PX4FLOW_ADDRESS,0,(uint8_t*)out,sizeof(px4flow_frame));
+
+		if (out->qual < 0 || out->pixel_flow_x_sum< -1000 || out->pixel_flow_x_sum > 1000 || out->pixel_flow_y_sum <-1000 || out->pixel_flow_y_sum > 1000 || out->ground_distance < 0 || out->ground_distance > 10000 )
+		{
+			memset(out, 0, sizeof(px4flow_frame));
+		}
+
 		return result;
 	}
 	int PX4Flow::read_integral(px4flow_integral_frame *out)

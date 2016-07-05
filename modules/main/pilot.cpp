@@ -446,15 +446,14 @@ int yet_another_pilot::run_controllers()
 
 int yet_another_pilot::handle_acrobatic()
 {
-	// TODO: numbers
 	switch(acrobatic)
 	{
 	case acrobatic_flip_rising:
 		acrobatic_timer += interval;
-		alt_controller.set_climbrate_override(limit(2.0+acrobatic_timer*10, 2.0, 5.0f));
+		alt_controller.set_climbrate_override(limit(2.0f+acrobatic_timer*10, 2.0f, 5.0f));
 
 		// move to rotating phase.
-		if (acrobatic_timer > 0.5f || alt_controller.m_baro_states[1] > 2.0f)
+		if (acrobatic_timer > 0.3f || alt_controller.m_baro_states[1] > 1.0f)
 		{
 			acrobatic = acrobatic_flip_rotating;
 			acrobatic_timer = 0;
@@ -470,10 +469,10 @@ int yet_another_pilot::handle_acrobatic()
 			acrobatic_timer += interval;
 			acrobatic_number += body_rate.array[0] * interval;
 
-			float brs[3] = {4*PI, 0, 0};	// brs: body rate setpoint
+			float brs[3] = {8*PI, 0, 0};	// brs: body rate setpoint
 			attitude_controll.set_body_rate_override(brs);
 
-			if (acrobatic_timer > 1.0f ||  fabs(acrobatic_number) > PI*3/2)
+			if (acrobatic_timer > 0.5f ||  fabs(acrobatic_number)+fabs(body_rate.array[0]/4.5f) > 2*PI)
 			{
 				acrobatic = acrobatic_none;
 				float brs_nan[3] = {NAN, NAN, NAN};
@@ -1279,7 +1278,7 @@ int yet_another_pilot::read_imu_and_filter()
 
 	// log unfiltered imu data
 	int16_t data[6] = {acc.V.x * 100, acc.V.y * 100, acc.V.z * 100,
-						gyro.V.x * 18000 / PI, gyro.V.y * 18000 / PI, gyro.V.z * 18000 / PI,};
+						gyro.V.x * 1800 / PI, gyro.V.y * 1800 / PI, gyro.V.z * 1800 / PI,};
 
 	//log2(data, 5, sizeof(data));
 	raw_imu_buffer.put(data, sizeof(data));
@@ -1994,9 +1993,10 @@ int yet_another_pilot::check_stick_action()
 			LOGE("toggle flashlight\n");
 			if (flashlight)
 				flashlight->toggle();
-		}
 
+			//start_acrobatic(acrobatic_move_flip);
 		}
+	}
 
 	// emergency switch
 	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
@@ -2132,7 +2132,7 @@ int yet_another_pilot::land_detector()
 
 	if (((rc[2] < 0.1f && flight_mode != RTL) || (islanding && throttle_result < 0.2f))					// landing and low throttle output, or just throttle stick down
 		&& fabs(alt_controller.m_baro_states[1]) < (quadcopter_max_descend_rate/4.0f)	// low climb rate : 25% of max descend rate should be reached in such low throttle, or ground was touched
-		&& (!alt_controller.used() || (alt_controller.target_climb_rate < 0 && (alt_controller.m_baro_states[1] > alt_controller.target_climb_rate + quadcopter_max_descend_rate/2)))	// alt controller not running or can't reach target descending rate
+		&& (!alt_controller.used() || (alt_controller.target_climb_rate < 0 && (alt_controller.m_motor_state == LIMIT_NEGATIVE_HARD)))	// alt controller not running or can't reach target descending rate
 // 		&& fabs(alt_controller.m_baro_states[2]) < 0.5f			// low acceleration
 	)
 	{

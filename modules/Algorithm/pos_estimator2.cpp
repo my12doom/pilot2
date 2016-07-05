@@ -65,12 +65,37 @@ int pos_estimator2::state()
 
 int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt, bool armed)			// unit: meter/s
 {
+	// 	DCM
+	float q0q0 = q[0] * q[0];
+	float q0q1 = q[0] * q[1];
+	float q0q2 = q[0] * q[2];
+	float q0q3 = q[0] * q[3];
+	float q1q1 = q[1] * q[1];
+	float q1q2 = q[1] * q[2];
+	float q1q3 = q[1] * q[3];
+	float q2q2 = q[2] * q[2];
+	float q2q3 = q[2] * q[3];
+	float q3q3 = q[3] * q[3];
+	float r[9] = 
+	{
+		q0q0 + q1q1 - q2q2 - q3q3,// 11
+		2.f * (q1q2 - q0q3),	// 21
+		2.f * (q1q3 + q0q2),	// 31
+		2.f * (q1q2 + q0q3),	// 12
+		q0q0 - q1q1 + q2q2 - q3q3,// 22
+		2.f * (q2q3 - q0q1),	// 32
+		2.f * (q1q3 - q0q2),	// 13
+		2.f * (q2q3 + q0q1),	// 23
+		q0q0 - q1q1 - q2q2 + q3q3,// 33
+	};
+
+
 	Q(3,3) = armed ? 5e-4 : 1e-3;
 	Q(4,4) = armed ? 5e-4 : 1e-3;
 	Q(5,5) = armed ? 1e-6 : 1e-3;
 
 	// flow switching
-	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133);
+	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133) && r[8] > 0.7;
 	if (!flow_healthy && use_flow)
 	{
 		flow_ticker += dt;
@@ -191,28 +216,6 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	}
 
 	// prepare matrices
-	float q0q0 = q[0] * q[0];
-	float q0q1 = q[0] * q[1];
-	float q0q2 = q[0] * q[2];
-	float q0q3 = q[0] * q[3];
-	float q1q1 = q[1] * q[1];
-	float q1q2 = q[1] * q[2];
-	float q1q3 = q[1] * q[3];
-	float q2q2 = q[2] * q[2];
-	float q2q3 = q[2] * q[3];
-	float q3q3 = q[3] * q[3];
-	float r[9] = 
-	{
-		q0q0 + q1q1 - q2q2 - q3q3,// 11
-		2.f * (q1q2 - q0q3),	// 21
-		2.f * (q1q3 + q0q2),	// 31
-		2.f * (q1q2 + q0q3),	// 12
-		q0q0 - q1q1 + q2q2 - q3q3,// 22
-		2.f * (q2q3 - q0q1),	// 32
-		2.f * (q1q3 - q0q2),	// 13
-		2.f * (q2q3 + q0q1),	// 23
-		q0q0 - q1q1 - q2q2 + q3q3,// 33
-	};
 	float yaw = atan2f(r[3], r[0]);
 	float dtsq_2 = dt*dt/2;
 	acc_ned[0] = r[0]* acc_body[0] + r[1] *acc_body[1] + r[2] * acc_body[2];
@@ -337,11 +340,25 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			);
 // 		R = matrix::diag(count,600.0, saturation?50.0 : 5.0, saturation ? 50.0 : 5.0, 16.0);
 
+		float height_factor = last_valid_sonar;
+		if (height_factor < 1.0f)
+			height_factor = 1.0f;
+		height_factor *= height_factor;
+
 		R_count = 3;
 		R_diag[0] = 60.0f;
-		R_diag[1] = saturation?50.0 : 15.0;
-		R_diag[2] = saturation?50.0 : 15.0;
+		R_diag[1] = (saturation?25.0f : 5.0f) * height_factor;
+		R_diag[2] = (saturation?25.0f : 5.0f) * height_factor;
 		R_diag[3] = 16.0f;
+
+#ifdef WIN32
+		if (use_flow)
+		{
+			matrix hx1 = H*x1;
+			predict_flow[0] = hx1[1];
+			predict_flow[1] = hx1[2];
+		}
+#endif
 	}
 
 	if (sonar_healthy)
@@ -373,10 +390,6 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 
 	matrix Sk = H * P1 * H.transpos() + R;
 	matrix K = P1 * H.transpos() * Sk.inversef();
-	matrix hx1 = H*x1;
-
-	predict_flow[0] = hx1[1];
-	predict_flow[1] = hx1[2];
 
 	float cos_yaw = cos(yaw);
 	float sin_yaw = sin(yaw);
@@ -386,7 +399,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	// -->> vx ~= -v_hbf[1]
 	// -->> vy ~= v_hbf[0]
 
-	x = x1 + K*(zk - hx1);
+	x = x1 + K*(zk - H*x1);
 	P = (matrix(P1.m) - K*H) * P1;
 
 

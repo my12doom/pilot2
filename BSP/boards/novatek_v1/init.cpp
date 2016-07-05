@@ -339,7 +339,6 @@ int iTLC59208F()
 	return 0;
 }
 
-
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
@@ -387,10 +386,10 @@ int bsp_init_all()
 
 		// PID
 		param("rP1", 0.2f)=0.60f;
-		param("rI1", 0.3f)=0.60f;
+		param("rI1", 0.3f)=0.80f;
 		param("rD1", 0.005f)=0.020f;
 		param("rP2", 0.36f)=0.80f;
-		param("rI2", 0.4f)=0.80f;
+		param("rI2", 0.4f)=1.20f;
 		param("rD2", 0.01f)=0.025f;
 		param("sP1", 4.5f)=4.5f;
 		param("sP2", 4.5f)=4.5f;
