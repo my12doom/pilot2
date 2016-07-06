@@ -122,7 +122,7 @@ int pos_estimator::update_gps(COORDTYPE lat, COORDTYPE lon, float hdop, int64_t 
 	if (hdop <= 0.05f)		// this might be wrong...
 		return -1;
 
-	if (!gps_healthy && hdop < 2.0f)
+	if (!gps_healthy && hdop < 1.5f)
 	{
 		if (!home_set)
 		{
