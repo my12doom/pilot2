@@ -1886,7 +1886,7 @@ int yet_another_pilot::decide_mode_switching()
 
 		last_position_state = get_estimator_state();
 
-		LOGE("position estimator state changed: %s\n", last_position_state ? "ready" : "failed");
+		LOGE("position estimator state changed: %s(%d)\n", pos_estimator_state_str[last_position_state], last_position_state);
 
 		execute_mode_switching();
 	}

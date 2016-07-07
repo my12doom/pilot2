@@ -46,6 +46,8 @@ public:
 	sensors::px4flow_frame frame;
 	float vx;
 	float vy;
+	float vx_lpf;
+	float vy_lpf;
 	float predict_flow[2];
 	float v_hbf[2];
 

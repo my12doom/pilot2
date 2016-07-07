@@ -210,8 +210,8 @@ int attitude_controller::update(float dt)
 			pid[i][1] = limit(pid[i][1], -pid_factor[i][3], pid_factor[i][3]);
 		}
 
-		// D, with 40hz low pass filter
-		static const float lpf_RC = 1.0f/(2*PI * 40.0f);
+		// D, with 10hz low pass filter
+		static const float lpf_RC = 1.0f/(2*PI * 10.0f);
 		float alpha = dt / (dt + lpf_RC);
 		float derivative = (new_p - pid[i][0] )/dt;
 		if (just_reseted)

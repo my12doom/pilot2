@@ -41,6 +41,9 @@ public:
 	float pid[2][3];						// [north, east][p, i, d]
 	float ff[2];
 
+	bool limit_accel;
+	bool limit_angle;
+
 	float sin_yaw;
 	float cos_yaw;
 	float min_braking_speed;

@@ -17,7 +17,7 @@ static float max_speed = 5.0f;
 static float max_speed_ff = 2.0f;
 static bool use_desired_feed_forward = false;
 static float feed_forward_factor = 1;
-static float rate2accel[4] = {1.2f, 0.25f, 0.4f, 6.0f};
+static float rate2accel[4] = {1.2f, 0.5f, 0.2f, 6.0f};
 static float pos2rate_P = 1.0f;
 
 // "parameters/constants"
@@ -31,7 +31,6 @@ static param quadcopter_range[3] =
 #else
 static float quadcopter_range[3] = {PI/4, PI/4, PI/4};
 #endif
-
 // win32 helper
 #ifdef WIN32
 #include <Windows.h>
@@ -50,6 +49,10 @@ static float length(float a, float b, float c)
 {
 	return sqrt(a*a+b*b+c*c);
 }
+static inline float fmin(float a, float b)
+{
+	return a<b?a:b;
+}
 
 static float sqrt2(float in)
 {
@@ -63,7 +66,7 @@ pos_controller::pos_controller()
 	low_speed_tick = 0;
 #ifdef WIN32
 	f = fopen("Z:\\log.csv", "wb");
-	fprintf(f, "time,v,tv,p,sp,roll_target,pitch_target\r\n");
+	fprintf(f, "time,v,tv,p,i,roll_target,pitch_target\r\n");
 	tick = GetTickCount();
 
 	float v = atan2(1, G_in_ms2);
@@ -85,6 +88,8 @@ int pos_controller::reset()
 
 	state = direct;
 	low_speed_tick = 0;
+	limit_accel = false;
+	limit_angle = false;
 
 	return 0;
 }
@@ -242,6 +247,48 @@ int pos_controller::update_controller(float dt)
 	{
 		target_euler[0] = pilot_stick[0] * quadcopter_range[0];
 		target_euler[1] = -pilot_stick[1] * quadcopter_range[1];
+
+		// reduce I slowly during direct mode
+		const float time_constant = 5.0f;
+		float alpha = 1-dt/(dt+time_constant);
+		pid[0][1] *= alpha;
+		pid[1][1] *= alpha;
+		
+		// to accel
+		float accel_forward = - tan(target_euler[1]) * G_in_ms2;
+		float accel_right = tan(target_euler[0]) * G_in_ms2 / cos(eulers[1]);
+
+		// rotate to earth frame
+		float accel_north = accel_forward * cos_yaw - accel_right * sin_yaw;
+		float accel_east = accel_forward * sin_yaw + accel_right * cos_yaw;
+
+		// add I
+		accel_north += pid[0][1] * rate2accel[1];
+		accel_east += pid[1][1] * rate2accel[1];
+
+		// rotate back to body frame
+		accel_forward = accel_north * cos_yaw + accel_east * sin_yaw;
+		accel_right = -accel_north * sin_yaw + accel_east * cos_yaw; 
+
+		// back to angle and handle limitation
+		// accel to lean angle
+		float new_euler_pitch  = atan2(-accel_forward, G_in_ms2);
+		float new_euler_roll = atan2(accel_right*cos(eulers[1]), G_in_ms2);		// maybe target_pitch not needed?
+
+		if (fabs(new_euler_roll) > quadcopter_range[0] || fabs(new_euler_pitch) > quadcopter_range[1])
+		{
+			// TODO: handle angle limitation correctly
+			float factor = fmin(quadcopter_range[0] / fabs(new_euler_roll) , quadcopter_range[1] / fabs(new_euler_pitch));
+			new_euler_roll *= factor;
+			new_euler_pitch *= factor;
+		}
+
+		target_euler[0] = new_euler_roll;
+		target_euler[1] = new_euler_pitch;
+
+		// reduce I slowly
+
+
 	}
 	else
 	{
@@ -295,17 +342,6 @@ int pos_controller::set_setpoint(float *pos, bool reset /*= true*/)
 		float accel_north = cos_yaw * accel_target[0] - sin_yaw * accel_target[1];
 		float accel_east = sin_yaw * accel_target[0] + cos_yaw * accel_target[1];
 
-		// set integrator to correct numbers to achieve smooth transition
-		if (rate2accel[1] > 0)
-		{
-			pid[0][1] = accel_north / rate2accel[1];
-			pid[1][1] = accel_east / rate2accel[1];
-		}
-		else
-		{
-// 			pid[0][1] = 0;
-// 			pid[1][1] = 0;
-		}
 	}
 
 	// set desired pos
@@ -428,8 +464,8 @@ int pos_controller::rate_to_accel(float dt)
 	last_target_velocity[0] = target_velocity[0];
 	last_target_velocity[1] = target_velocity[1];
 
-	// 30hz LPF for D term
-	float alpha30 = dt / (dt + 1.0f/(2*PI * 5.0f));
+	// 2hz LPF for D term
+	float alpha30 = dt / (dt + 1.0f/(2*PI * 2.0f));
 
 	for(int axis=0; axis<2; axis++)
 	{
@@ -447,9 +483,9 @@ int pos_controller::rate_to_accel(float dt)
 		pid[axis][0] = p;
 
 		// update I only if we did not hit accel/angle limit or throttle limit or I term will reduce
-		if (true && state != braking)
+		if (!limit_accel && !limit_angle && state != braking)
 		{
-			pid[axis][1] += pow((double)fabs(p), 1) * (p>0?1:-1) * dt;
+			pid[axis][1] += p *  dt;
 			pid[axis][1] = limit(pid[axis][1], -rate2accel[3], rate2accel[3]);
 		}
 
@@ -474,11 +510,21 @@ int pos_controller::accel_to_lean_angles(float dt)
 	
 	// accel to lean angle
 	float new_euler_pitch  = atan2(-accel_forward, G_in_ms2);
-	float new_euler_roll = atan2(accel_right*cos(eulers[1]), G_in_ms2);		// maybe target_pitch not needed?
+	float new_euler_roll = atan2(accel_right*cos(eulers[1]), G_in_ms2);
 
-	// TODO: handle angle limitation correctly
-	new_euler_roll = limit(new_euler_roll, -quadcopter_range[0], quadcopter_range[0]);
-	new_euler_pitch = limit(new_euler_pitch, -quadcopter_range[1], quadcopter_range[1]);
+	if (fabs(new_euler_roll) > quadcopter_range[0] || fabs(new_euler_pitch) > quadcopter_range[1])
+	{
+		limit_angle = true;
+		// TODO: handle angle limitation correctly
+		float factor = fmin(quadcopter_range[0] / fabs(new_euler_roll), quadcopter_range[1] / fabs(new_euler_pitch));
+		new_euler_roll *= factor;
+		new_euler_pitch *= factor;
+	}
+	else
+	{
+		limit_angle = false;
+	}
+
 
 	// max rotation speed: 100 degree/s, then apply a 5hz LPF
 	float delta_roll = new_euler_roll - target_euler[0];

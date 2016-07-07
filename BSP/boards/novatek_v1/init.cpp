@@ -397,7 +397,7 @@ int bsp_init_all()
 		param("rP3", 1.2f)=1.2f;
 		param("rI3", 0.15f)=0.15f;
 		
-		param("triP", 0)=0.7;
+		param("triP", 0)=0.55f;
 		
 		// tilt angle
 		param("rngR", PI / 8)= PI / 5;
