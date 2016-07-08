@@ -198,6 +198,12 @@ void NonlinearSO3AHRSupdate(float ax, float ay, float az, float mx, float my, fl
     		halfeyM = err_m[1];
     		halfezM = err_m[2];
 		}
+		else
+		{
+			halfexM = err_m[0] * 0.1f;
+			halfeyM = err_m[1] * 0.1f;
+			halfezM = err_m[2] * 0.1f;
+		}
 	}
 
 	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)

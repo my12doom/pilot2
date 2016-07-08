@@ -359,8 +359,8 @@ int bsp_init_all()
 	iTLC59208F();
 	
 	// parameter config
-	param bsp_parameter("BSP", 1);
-	if (bsp_parameter)
+	param is_booting("boot", 1);
+	if (is_booting)
 	{
 		// remote
 		for(int i=0; i<6; i++)
@@ -407,6 +407,11 @@ int bsp_init_all()
 		param("mat", 1)=1;
 		param("ekf", 0)=2;
 		param("time", 3000)=5000;
+		
+		is_booting = 0;
+		is_booting.save();
+		
+		param::save_all();
 	}
 	
 	return 0;

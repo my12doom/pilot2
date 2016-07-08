@@ -94,14 +94,16 @@ DWORD WINAPI update_state(LPVOID p)
 		float accel_east = sin(euler[2]) * accel_forward + cos(euler[2]) * accel_right;
 
 		float accel_from_attitude[2];
+		float wind[2] = {5.5f, 5.5f};
 		for(int axis = 0; axis < 2; axis ++)
 		{
 			// accel noise
-			float noise = randf()*2 + 0.01f;
+			float noise = randf()*2.0f;
 
 			// air resistance
-			float air_resistance = 0.055 * velocity[axis]*velocity[axis] + 0.005;		// TODO: factor
-			if (air_resistance * velocity[axis] > 0)
+			float dv = velocity[axis] - wind[axis];
+			float air_resistance = dv*dv*dv*0.005 + 0.12 * dv*dv + 0.005;		// TODO: factor
+			if (air_resistance * dv > 0)
 				air_resistance = - air_resistance;
 
 
@@ -204,7 +206,8 @@ DWORD WINAPI update_controller(LPVOID p)
 			target_euler[0] = rc[0] * PI/4;
 			target_euler[1] = -rc[1] * PI/4;
 		}
-		target_euler[2] += dt * rc[3] * PI;
+		if (fabs(rc[3]) > 0.05f)
+			target_euler[2] += dt * rc[3] * PI;
 
 		LeaveCriticalSection(&cs);
 

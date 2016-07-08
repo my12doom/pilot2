@@ -32,6 +32,7 @@ public:
 	bool sonar_healthy;
 	float sonar_ticker;
 	float last_valid_sonar;
+	float saturation_timeout;
 
 	matrix P;
 	matrix x; // {pos_ned[3], vel_ned[3], acc_bias_body[3], vel_bias_ned[3], sonar_surface_height}
@@ -43,6 +44,7 @@ public:
 	float gps_east;
 
 	float gyro[3];
+	float local[2];
 	sensors::px4flow_frame frame;
 	float vx;
 	float vy;
