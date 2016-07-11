@@ -121,6 +121,12 @@ void param::init_all()
 	while(handle > 0);
 }
 
+void param::save_all()
+{
+	for(int i=0; i<all_param_count; i++)
+		param(all_params[i].fourcc, all_params[i].v).save();
+}
+
 float *param::find_param(const char *fourcc)
 {
 	for(int i=0; i<all_param_count; i++)

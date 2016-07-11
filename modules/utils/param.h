@@ -28,6 +28,7 @@ public:
 	static float *find_param(const char *fourcc);
 	static const char *enum_params(int pos);
 	const char *fourcc();
+	static void save_all();
 protected:
 
 	float* volatile pv;

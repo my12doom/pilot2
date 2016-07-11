@@ -40,6 +40,14 @@ enum pos_estimator_state
 	fully_ready = 3,		// GPS
 };
 
+static const char * pos_estimator_state_str[] = 
+{
+	"none",
+	"velocity_and_local",
+	"transiting",
+	"fully_ready",
+};
+
 enum acrobatic_moves_state
 {
 	acrobatic_none,

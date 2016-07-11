@@ -21,7 +21,12 @@ pos_estimator2::pos_estimator2()
 	gps_north = 0;
 	gps_east = 0;
 	_state = 1;
+	vx_lpf = 0;
+	vy_lpf = 0;
+	saturation_timeout = 0.3f;
 	reset();
+
+	memset(local, 0, sizeof(local));
 }
 
 pos_estimator2::~pos_estimator2()
@@ -95,7 +100,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	Q(5,5) = armed ? 1e-6 : 1e-3;
 
 	// flow switching
-	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133) && r[8] > 0.7;
+	bool use_flow = last_valid_sonar < 3.5f && (frame.ground_distance > 0) && (frame.qual > 133) && r[8] > 0.7;		// note:0.7 ~= cos(30deg), use flow in less than 30degree flight
 	if (!flow_healthy && use_flow)
 	{
 		flow_ticker += dt;
@@ -118,11 +123,6 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	}
 	else
 	{
-		if (flow_ticker > 1)
-		{
-			printf("...\n");
-		}
-
 		flow_ticker = 0;
 	}
 
@@ -159,7 +159,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	// sonar step response
 
 	// GPS switching
-	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 3.5f && gps.velocity_accuracy_horizontal < 0.8f && gps.DOP[1] < 150) || (position_healthy && gps.position_accuracy_horizontal < 7.0f && gps.velocity_accuracy_horizontal < 2.0f && gps.DOP[1] < 250);
+	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 3.5f && gps.velocity_accuracy_horizontal < 0.8f && gps.DOP[1] < 150) || (position_healthy && gps.position_accuracy_horizontal < 7.0f && gps.velocity_accuracy_horizontal < 2.0f && gps.DOP[1] < 300);
 
 	// home
 	if (use_gps && isnan(home_lat))
@@ -205,7 +205,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			position_healthy = false;
 			ticker = 0;
 
-			printf("pos_estimator2: position failed\n");
+			LOGE("pos_estimator2: position failed\n");
 
 			_state = 1;
 		}
@@ -213,6 +213,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	else
 	{
 		ticker = 0;
+		_state = use_gps ? 3 : 1;
 	}
 
 	// prepare matrices
@@ -287,12 +288,18 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			0.0, 0.0, 0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,
 			0.0, 0.0, 0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0);
 
+		float R_pos = 4.0f * gps.position_accuracy_horizontal * gps.position_accuracy_horizontal;
+		float R_vel = 4.0f * gps.velocity_accuracy_horizontal * gps.velocity_accuracy_horizontal;
+
+// 		R_pos = 25;
+// 		R_vel = 5;
+
 		R_count = 6;
-		R_diag[0] = 25.0;
-		R_diag[1] = 25.0;
+		R_diag[0] = R_pos;
+		R_diag[1] = R_pos;
 		R_diag[2] = 60.0;
-		R_diag[3] = 5.0;
-		R_diag[4] = 5.0;
+		R_diag[3] = R_vel;
+		R_diag[4] = R_vel;
 		R_diag[5] = 65.0;
 
 
@@ -307,13 +314,18 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		float pixel_compensated_x = frame.pixel_flow_x_sum;
 		float pixel_compensated_y = frame.pixel_flow_y_sum;
 
-		bool saturation = fabs(gyro[0]) > 60 * PI / 180 || fabs(gyro[1]) > 60 * PI / 180;
+		if (fabs(gyro[0]) > 60 * PI / 180 || fabs(gyro[1]) > 60 * PI / 180)
+			saturation_timeout = 0.3f;
+
+		saturation_timeout -= dt;
+		bool saturation = saturation_timeout > 0;
+
 		
-		if (/*fabs(pixel_compensated_x) > 5 && */fabs(pixel_compensated_x) < 35 /*&& fabs(pixel_compensated_y)>5 */&& fabs(pixel_compensated_y)<35 && !saturation)
-		{
+ 		if (/*fabs(pixel_compensated_x) > 5 && */fabs(pixel_compensated_x) < 35 /*&& fabs(pixel_compensated_y)>5 */&& fabs(pixel_compensated_y)<35 && !saturation)
+ 		{
 			 pixel_compensated_x -= gyro[0] * 18000 / PI * 0.0028f;
 			 pixel_compensated_y -= gyro[1] * 18000 / PI * 0.0028f;
-		}
+ 		}
 		
 
 		float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
@@ -322,9 +334,13 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		vx = wx * last_valid_sonar;
 		vy = wy * last_valid_sonar;
 
+		float alpha5 = dt / (dt + 1.0f/(2 * PI * 15.0f));
+
 		if (!use_flow)
 			vx = vy = 0;
 
+		vx_lpf = vx * alpha5 + (1-alpha5) * vx_lpf;
+		vy_lpf = vy * alpha5 + (1-alpha5) * vy_lpf;
 
 		zk = matrix(3,1,baro, vx, vy, last_valid_sonar);
 		H = use_flow ? 
@@ -402,6 +418,10 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	x = x1 + K*(zk - H*x1);
 	P = (matrix(P1.m) - K*H) * P1;
 
+	float alpha05 = dt / (dt + 1.0f/(2 * PI * 0.2f));
+
+	local[0] = (local[0] + x[3] * dt) * (1-alpha05) + alpha05 * x[0];
+	local[1] = (local[1] + x[4] * dt) * (1-alpha05) + alpha05 * x[1];
 
 	return 0;
 }

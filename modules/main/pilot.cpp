@@ -306,14 +306,22 @@ int yet_another_pilot::get_pos_velocity_ned(float *pos, float *velocity)
 	{
 		if (pos)
 		{
-			pos[0]= estimator2.x[0];
-			pos[1]= estimator2.x[1];
+			if (get_estimator_state() == fully_ready)
+			{
+				pos[0]= estimator2.x[0];
+				pos[1]= estimator2.x[1];
+			}
+			else
+			{
+				pos[0] = estimator2.local[0];
+				pos[1] = estimator2.local[1];
+			}
 		}
 		if (velocity)
 		{
 			velocity[0] = estimator2.x[3];
 			velocity[1] = estimator2.x[4];
-		}		
+		}
 	}
 	else
 	{
@@ -1720,6 +1728,12 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 			return -1;
 		}
 
+		if (!mag_ok)
+		{
+			LOGE("arm failed: ahrs reports mag error\n");
+			return -1;
+		}
+
 		if (lowpower > 1)
 		{
 			LOGE("arm failed: power critical\n");
@@ -1901,7 +1915,7 @@ int yet_another_pilot::decide_mode_switching()
 
 		last_position_state = get_estimator_state();
 
-		LOGE("position estimator state changed: %s\n", last_position_state ? "ready" : "failed");
+		LOGE("position estimator state changed: %s(%d)\n", pos_estimator_state_str[last_position_state], last_position_state);
 
 		execute_mode_switching();
 	}
@@ -2949,6 +2963,8 @@ int yet_another_pilot::light_words()
 	else		// normal flashlight, double flash if SDCARD running, single flash if SDCARD failed
 	{
 		float color[3];
+		int64_t systime = systimer->gettime();
+		int time_mod_1500 = (systime%1500000)/1000;
 
 		if (rc_fail < 0)
 		{
@@ -2967,8 +2983,9 @@ int yet_another_pilot::light_words()
 		}
 		else if ((get_estimator_state() == velocity_and_local || get_estimator_state() == transiting) && mode_from_stick() == poshold)
 		{
-			color[0] = 1;
-			color[1] = 0;
+			// green then yellow for flow/transition mode 
+			color[0] = time_mod_1500 < 20 ? 0 : 1;
+			color[1] = 1;
 			color[2] = 0;
 		}
 		else
@@ -2979,8 +2996,6 @@ int yet_another_pilot::light_words()
 			color[2] = 0;
 		}
 
-		int64_t systime = systimer->gettime();
-		int time_mod_1500 = (systime%1500000)/1000;
 		if (time_mod_1500 < 20 || (time_mod_1500 > 200 && time_mod_1500 < 220 && log_ready()))
 		{
 			if (rgb && mag_calibration_state == 0)
@@ -3275,13 +3290,6 @@ int yet_another_pilot::setup(void)
 	rgb = manager.getRGBLED("rgb");
 	vcp = manager.getUART("VCP");
 
-	for(int i=0; i<16; i++)
-		g_ppm_output[i] = THROTTLE_MAX;
-	output_rc();
-	
-	int64_t t = systimer->gettime();
-	while(systimer->gettime() < t + 20000)
-		output_rc();
 	STOP_ALL_MOTORS();
 	
 	estimator.set_gps_latency(0);
@@ -3299,6 +3307,28 @@ int yet_another_pilot::setup(void)
 
 	SAFE_OFF(flashlight);
 	read_rc();
+
+	// check flow
+	do 
+	{
+		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read_flow(&frame) == 0 && frame.frame_count > 0 && yap.frame.cmos_version == 0x76)
+			break;
+		systimer->delayms(10);
+		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read_flow(&frame) == 0 && frame.frame_count > 0 && yap.frame.cmos_version == 0x76)
+			break;
+
+		// flash the rgb light indicate a error
+		for(int i=0; i<10; i++)
+		{
+			if(rgb)
+			{
+				rgb->write(1,1,1);
+				systimer->delayms(100);
+				rgb->write(0,0,0);
+				systimer->delayms(100);
+			}
+		}
+	} while (0);
 		
 	// get two timers, one for main loop and one for SDCARD logging loop
 	manager.getTimer("mainloop")->set_period(cycle_time);
