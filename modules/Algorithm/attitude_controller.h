@@ -46,6 +46,10 @@ public:
 	// set to NAN to revert back to normal attitude controlling.
 	int set_body_rate_override(const float *override);
 
+	// helper function:
+	// map rectangular stick to a rounded attitude
+	static void get_attitude_from_stick(const float *stick, float *attitude);
+
 //protected:
 	float body_rate[3];
 	float body_rate_sp[3];

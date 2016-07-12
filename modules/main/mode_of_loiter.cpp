@@ -31,8 +31,9 @@ int flight_mode_of_loiter::loop(float dt)
 	bool after_unlock_action = yap.airborne || yap.rc[2] > 0.55f;
 	if (after_unlock_action)	// airborne or armed and throttle up
 	{
-		float stick_roll = yap.rc[0] * quadcopter_range[0];
-		float stick_pitch = -yap.rc[1] * quadcopter_range[1];	// pitch stick and coordinate are reversed
+		float att[2];
+		yap.attitude_controll.get_attitude_from_stick(yap.rc, att);
+
 
 		float flow_roll = -yap.frame.flow_comp_m_x/1000.0f * 10;
 		float flow_pitch = -yap.frame.flow_comp_m_y/1000.0f * 10;
@@ -58,7 +59,7 @@ int flight_mode_of_loiter::loop(float dt)
 			vx = vy = 0;
 		}
 
-		yap.of_controller.update_controller(vx, vy, stick_roll, stick_pitch, dt);
+		yap.of_controller.update_controller(vx, vy, att[0], att[1], dt);
 		float euler_target[3] = {0,0, NAN};
 		yap.of_controller.get_result(&euler_target[0], &euler_target[1]);
 		yap.attitude_controll.set_euler_target(euler_target);

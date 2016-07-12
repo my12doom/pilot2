@@ -5,6 +5,7 @@
 #include <Protocol/common.h>
 #include <utils/param.h>
 #include <utils/log.h>
+#include <modules/Algorithm/attitude_controller.h>
 
 // constants
 // static float leash = 5.0f;
@@ -245,8 +246,8 @@ int pos_controller::update_controller(float dt)
 	}
 	else if (state == direct)
 	{
-		target_euler[0] = pilot_stick[0] * quadcopter_range[0];
-		target_euler[1] = -pilot_stick[1] * quadcopter_range[1];
+		//
+		attitude_controller::get_attitude_from_stick(pilot_stick, target_euler);
 
 		// reduce I slowly during direct mode
 		const float time_constant = 5.0f;
