@@ -935,6 +935,21 @@ int yet_another_pilot::read_sensors()
 	if (manager.get_GPS_count() == 0)
 		critical_errors |= error_GPS;
 
+	static bool gps_data_stopped = false;
+	if (systimer->gettime() - last_gps_tick > 1000000)
+	{
+		if (!gps_data_stopped)
+		{
+			LOGE("warning: GPS data stopped for more than 1 seconds\n");
+			gps.DOP[0] = gps.DOP[1] = gps.DOP[2] = 9999;
+			gps_data_stopped = true;
+		}
+	}
+	else
+	{
+		gps_data_stopped = false;
+	}
+
 	if (vcp && (usb_data_publish & data_publish_gps) && new_gps_data)
 	{
 		if (usb_data_publish & data_publish_binary)
