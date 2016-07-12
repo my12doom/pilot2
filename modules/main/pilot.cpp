@@ -94,7 +94,7 @@ static param mag_scale[3] =
 {
 	param("mgx", 1), param("mgy", 1), param("mgz", 1),
 };
-static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
+static float quadcopter_mixing_matrix[3][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
 {
 	{							// + mode
 		{0, -1, +1},			// rear, CCW
@@ -102,12 +102,20 @@ static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixi
 		{0, +1, +1},			// front, CCW
 		{+1, 0, -1},			// left, CW
 	},
+
 	{							// X mode
 		{-0.707f,-0.707f,+0.707f},				//REAR_R, CCW
 		{-0.707f,+0.707f,-0.707f},				//FRONT_R, CW
 		{+0.707f,+0.707f,+0.707f},				//FRONT_L, CCW
 		{+0.707f,-0.707f,-0.707f},				//REAR_L, CW
-	}
+	},
+
+	{							// Pi mode, a stupid very imbalance frame
+		{-0.6970,-0.6061,0.6663},
+		{-0.6970,0.8201,-0.7530},
+		{0.6970,0.8201,0.7530},
+		{0.6970,-0.6061,-0.6663},
+	},
 };
 
 // constructor and destructor, initializer

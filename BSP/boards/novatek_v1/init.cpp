@@ -400,11 +400,11 @@ int bsp_init_all()
 		param("triP", 0)=0.55f;
 		
 		// tilt angle
-		param("rngR", PI / 8)= PI / 5;
-		param("rngP", PI / 8)= PI / 5;
+		param("rngR", PI / 8)= PI / 8;
+		param("rngP", PI / 8)= PI / 8;
 
 		// frame
-		param("mat", 1)=1;
+		param("mat", 1)=2;
 		param("ekf", 0)=2;
 		param("time", 3000)=5000;
 		
