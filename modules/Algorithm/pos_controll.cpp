@@ -130,6 +130,30 @@ int pos_controller::set_desired_stick(float *stick)
 	return 0;
 }
 
+int pos_controller::set_state_machine(poshold_state new_state)
+{
+	if (new_state != state)
+	{
+		// reset tick
+		low_speed_tick = 0;
+		release_stick_tick = 0;
+
+		// reset pid and feed forward
+		// 		memset(pid, 0, sizeof(pid));
+		pid[0][0] = NAN;
+		pid[1][0] = NAN;
+		pid[0][2] = NAN;
+		pid[1][2] = NAN;
+		last_target_velocity[0] = NAN;
+		ff[0] = 0;
+		ff[1] = 0;
+	}
+
+	state = new_state;
+
+	return 0;
+}
+
 int pos_controller::update_state_machine(float dt)
 {
 	poshold_state next_state = state;
@@ -199,24 +223,7 @@ int pos_controller::update_state_machine(float dt)
 		break;
 	}
 
-	if (next_state != state)
-	{
-		// reset tick
-		low_speed_tick = 0;
-		release_stick_tick = 0;
-
-		// reset pid and feed forward
-// 		memset(pid, 0, sizeof(pid));
-		pid[0][0] = NAN;
-		pid[1][0] = NAN;
-		pid[0][2] = NAN;
-		pid[1][2] = NAN;
-		last_target_velocity[0] = NAN;
-		ff[0] = 0;
-		ff[1] = 0;
-	}
-
-	state = next_state;
+	set_state_machine(next_state);
 
 	return 0;
 }

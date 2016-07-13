@@ -56,7 +56,7 @@ int flight_mode_poshold::loop(float dt)
 			// hacks
 			if (yap.get_estimator_state() == transiting)
 			{
-				yap.pos_control_hybird.state = pos_controller::braking;
+				yap.pos_control_hybird.set_state_machine(pos_controller::braking);
 				yap.pos_control_hybird.low_speed_tick = 0;
 			}
 
