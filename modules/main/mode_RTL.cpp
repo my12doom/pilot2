@@ -17,7 +17,7 @@ static param pid_factor_alt("altP", 1);
 bool flight_mode_RTL::is_ready()
 {
 	// is position estimator ready?
-	if (yap.get_estimator_state() != fully_ready)
+	if (yap.get_estimator_state() != fully_ready || !yap.airborne)
 	{
 		LOGE("RTL failed: position not ready\n");
 		return false;
@@ -28,6 +28,11 @@ bool flight_mode_RTL::is_ready()
 
 int flight_mode_RTL::setup()
 {
+	// save landing state
+	islanding_before = yap.islanding;
+	if (yap.flashlight)
+		light_before = yap.flashlight->get();
+
 	yap.alt_controller.reset();
 
 
@@ -81,6 +86,16 @@ int flight_mode_RTL::setup()
 
 int flight_mode_RTL::exit()
 {
+	// restore landing state
+	yap.islanding = islanding_before;
+	if (yap.flashlight)
+	{
+		if (light_before)
+			yap.flashlight->on();
+		else
+			yap.flashlight->off();
+	}
+
 	return 0;
 }
 
