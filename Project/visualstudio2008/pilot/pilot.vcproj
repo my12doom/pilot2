@@ -522,6 +522,14 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\..\HAL\sensors\BM1383.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\HAL\sensors\BM1383.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\..\HAL\sensors\HMC5983SPI.cpp"
 						>
 					</File>
