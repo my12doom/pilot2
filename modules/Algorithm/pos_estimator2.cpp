@@ -156,8 +156,6 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		sonar_ticker = 0;
 	}
 
-	// sonar step response
-
 	// GPS switching
 	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 3.5f && gps.velocity_accuracy_horizontal < 0.8f && gps.DOP[1] < 150) || (position_healthy && gps.position_accuracy_horizontal < 7.0f && gps.velocity_accuracy_horizontal < 2.0f && gps.DOP[1] < 300);
 

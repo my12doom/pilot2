@@ -5,6 +5,14 @@
 class pos_controller : public pos_controller_base
 {
 public:
+
+	enum poshold_state
+	{
+		loiter,
+		direct,
+		braking,
+	};
+
 	pos_controller();
 	virtual ~pos_controller();
 
@@ -24,6 +32,8 @@ public:
 	int accel_to_lean_angles(float dt);
 	int lean_angle_to_accel(float *angles, float *accels);
 	int update_state_machine(float dt);
+
+	int set_state_machine(poshold_state new_state);
 
 	// states
 	float setpoint[2];						// [north, east]
@@ -54,12 +64,6 @@ public:
 	unsigned int tick;
 #endif
 
-	enum poshold_state
-	{
-		loiter,
-		direct,
-		braking,
-	};
 	poshold_state state;
 	float low_speed_tick;
 	float release_stick_tick;

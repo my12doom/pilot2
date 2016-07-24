@@ -94,7 +94,7 @@ static param mag_scale[3] =
 {
 	param("mgx", 1), param("mgy", 1), param("mgz", 1),
 };
-static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
+static float quadcopter_mixing_matrix[3][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
 {
 	{							// + mode
 		{0, -1, +1},			// rear, CCW
@@ -102,12 +102,20 @@ static float quadcopter_mixing_matrix[2][MAX_MOTOR_COUNT][3] = // the motor mixi
 		{0, +1, +1},			// front, CCW
 		{+1, 0, -1},			// left, CW
 	},
+
 	{							// X mode
 		{-0.707f,-0.707f,+0.707f},				//REAR_R, CCW
 		{-0.707f,+0.707f,-0.707f},				//FRONT_R, CW
 		{+0.707f,+0.707f,+0.707f},				//FRONT_L, CCW
 		{+0.707f,-0.707f,-0.707f},				//REAR_L, CW
-	}
+	},
+
+	{							// Pi mode, a stupid very imbalance frame
+		{-0.6970,-0.6061,0.6663},
+		{-0.6970,0.8201,-0.7530},
+		{0.6970,0.8201,0.7530},
+		{0.6970,-0.6061,-0.6663},
+	},
 };
 
 // constructor and destructor, initializer
@@ -1598,11 +1606,11 @@ int yet_another_pilot::sensor_calibration()
 
 	int baro_counter = 0;
 	ground_pressure = 0;
-	int calibrating_count = 900;
+	int calibrating_count = 1500;
 	ground_temperature = 0;
 	
 	int lastt = 0;
-	while(detect_acc.get_average(NULL) < calibrating_count && detect_gyro.get_average(NULL) < calibrating_count)
+	while(detect_acc.get_average(NULL) < calibrating_count || detect_gyro.get_average(NULL) < calibrating_count)
 	{
 		read_imu_and_filter();
 		read_sensors();
@@ -1657,13 +1665,17 @@ int yet_another_pilot::sensor_calibration()
 	ground_pressure /= baro_counter;
 	ground_temperature /= baro_counter;
 
-	LOGE("base value measured\n");
-	
 	vector accel_avg;
 	vector gyro_avg;
 	detect_gyro.get_average(&gyro_avg);
 	detect_acc.get_average(&accel_avg);
 
+	log_flush();
+	LOGE("base value measured, acc:%.2f, %.2f, %.2f,  gyro:%.2f,%.2f,%.2f, mag:%.2f,%.2f,%.2f, baro:%.0f, temp:%.1f\n",
+		accel_avg.array[0], accel_avg.array[1], accel_avg.array[2],
+		gyro_avg.array[0]*180/PI, gyro_avg.array[1]*180/PI, gyro_avg.array[2]*180/PI, 
+		mag_avg.array[0], mag_avg.array[1], mag_avg.array[2],
+		ground_pressure, ground_temperature);
 
 
 	NonlinearSO3AHRSinit(-accel_avg.V.x, -accel_avg.V.y, -accel_avg.V.z, 
@@ -1696,6 +1708,9 @@ int yet_another_pilot::set_mode(copter_mode newmode)
 		LOGE("FAILED entering %d mode, mode not ready\n", newmode);
 		return -3;
 	}
+
+	if (modes[flight_mode])
+		modes[flight_mode]->exit();
 
 	p_newmode->setup();
 	flight_mode = newmode;
@@ -1878,17 +1893,34 @@ int yet_another_pilot::execute_mode_switching()
 	if (!airborne && mode != basic)
 		mode = althold;
 
-	if (get_estimator_state() == none && mode == poshold)
+	pos_estimator_state state = get_estimator_state();
+
+	// use althold/optical_flow mode if no position information available.
+	if (state == none && mode == poshold)
 		mode = use_EKF == 2 ? althold : optical_flow;
 
-	if (rc_fail < 0)
+	// RC failure handling
+	if (rc_fail < 0 && airborne)
 	{
+		if (flight_mode == RTL)
+		{
+			// if we are already RTLing, don't stop RTL due to minor GPS glitch event ( transiting)
+			if (state == fully_ready || state == transiting)
+				return 0;
+			
+			// land if we lost position information, start landing.
+			if (state == none)
+				islanding = true;
+		}
+
+		// try enter RTL mode, if failed, start landing.
 		if (set_mode(RTL) < 0)
 			islanding = true;
 		else
 			return 0;
 	}
 
+	// do mode switching
 	return set_mode(mode);
 }
 
@@ -1937,11 +1969,7 @@ int yet_another_pilot::decide_mode_switching()
 		if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
 		{
 			LOGE("rc fail, trying RTL\n");
-			if (set_mode(RTL) < 0)
-			{
-				LOGE("RTL failed, landing\n");
-				islanding = true;
-			}
+			execute_mode_switching();
 		}
 		rc_fail_tick = new_rc_fail_tick;
 	}
@@ -2458,7 +2486,9 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		bool pos_ready = false;
 		if (home_set)
 		{
-			if (pos_ready = get_pos_velocity_ned(pos, velocity) == 0)
+			pos_ready = get_estimator_state() == fully_ready;
+
+			if (get_pos_velocity_ned(pos, velocity) == 0)
 			{
 				pos[0] -= home[0];
 				pos[1] -= home[1];

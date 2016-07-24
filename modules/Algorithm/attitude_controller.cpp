@@ -124,22 +124,49 @@ int attitude_controller::set_euler_target(const float *euler)
 	return 0;
 }
 
+static inline float fmin(float a, float b)
+{
+	return a<b?a:b;
+}
+
+
+// helper function:
+// map rectangular stick to a rounded attitude
+void attitude_controller::get_attitude_from_stick(const float *stick, float *attitude)
+{
+	attitude[0] = stick[0] * quadcopter_range[0];
+	attitude[1] = -stick[1] * quadcopter_range[1];
+
+	if (fabs(stick[0]) > 0.001f && fabs(stick[1]) > 0.001f)
+	{
+		float v = fmin(fabs(stick[0]/stick[1]), fabs(stick[1]/stick[0]));
+		float f = 1.0f / sqrt(1+v*v);
+
+		attitude[0] *= f;
+		attitude[1] *= f;
+	}
+
+}
+
 int attitude_controller::update_target_from_stick(const float *stick, float dt)
 {
 	// copy stick command into member variable only, since no dt available
 	// setpoint will be updated in update();
 	// update set point if stick command exists
 	// caller can pass any of three axis NAN to disable updading of that axis. to update yaw stick only in optical flow mode for example
-	// roll & pitch
-	for(int i=0; i<2; i++)
-	{
-		if (isnan(stick[i]))
-			continue;
 
-		float limit_l = euler_sp[i] - slew_rate * dt;
-		float limit_r = euler_sp[i] + slew_rate * dt;
-		euler_sp[i] = stick[i] * quadcopter_range[i] * (i==1?-1:1);	// pitch stick and coordinate are reversed 
-		euler_sp[i] = limit(euler_sp[i], limit_l, limit_r);
+	// roll & pitch
+	if (!isnan(stick[0]) && !isnan(stick[1]))
+	{
+		float att[2];
+		get_attitude_from_stick(stick, att);
+
+		for(int i=0; i<2; i++)
+		{
+			float limit_l = euler_sp[i] - slew_rate * dt;
+			float limit_r = euler_sp[i] + slew_rate * dt;
+			euler_sp[i] = limit(att[i], limit_l, limit_r);
+		}
 	}
 	
 	// yaw
@@ -211,7 +238,7 @@ int attitude_controller::update(float dt)
 		}
 
 		// D, with 10hz low pass filter
-		static const float lpf_RC = 1.0f/(2*PI * 10.0f);
+		static const float lpf_RC = 1.0f/(2*PI * 20.0f);
 		float alpha = dt / (dt + lpf_RC);
 		float derivative = (new_p - pid[i][0] )/dt;
 		if (just_reseted)

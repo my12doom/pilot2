@@ -45,4 +45,6 @@ protected:
 	float loiter_tick;
 
 	RTL_state s;
+	bool islanding_before;
+	bool light_before;
 };
