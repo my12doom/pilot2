@@ -414,7 +414,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	// -->> vy ~= v_hbf[0]
 
 	x = x1 + K*(zk - H*x1);
-	P = (matrix(P1.m) - K*H) * P1;
+	P -= K*H * P1;
 
 	float alpha05 = dt / (dt + 1.0f/(2 * PI * 0.2f));
 
