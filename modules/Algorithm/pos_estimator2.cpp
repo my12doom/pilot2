@@ -100,12 +100,12 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	Q(5,5) = armed ? 1e-6 : 1e-3;
 
 	// flow switching
-	bool use_flow = last_valid_sonar < 3.5f && (frame.ground_distance > 0) && (frame.qual > 133) && r[8] > 0.7;		// note:0.7 ~= cos(30deg), use flow in less than 30degree flight
+	bool use_flow = last_valid_sonar < 3.5f && (frame.ground_distance > 0) && (frame.qual > 133) && r[8] > 0.7f;		// note:0.7 ~= cos(30deg), use flow in less than 30degree flight
 	if (!flow_healthy && use_flow)
 	{
 		flow_ticker += dt;
 
-		if (flow_ticker > 1)
+		if (flow_ticker > 0.3f)
 		{
 			LOGE("pos_estimator2: using flow\n");
 			flow_healthy = true;
@@ -115,7 +115,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	{
 		flow_ticker += dt;
 
-		if (flow_ticker > 1)
+		if (flow_ticker > 0.3f)
 		{
 			LOGE("pos_estimator2: flow failed\n");
 			flow_healthy = false;
