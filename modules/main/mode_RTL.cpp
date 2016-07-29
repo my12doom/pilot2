@@ -37,13 +37,12 @@ int flight_mode_RTL::setup()
 
 
 	// reset pos controller
-	position_meter meter = yap.estimator.get_estimation_meter();
-	float ne_pos[2] = {meter.latitude, meter.longtitude};
-	float ne_velocity[2] = {meter.vlatitude, meter.vlongtitude};
+	float ne_velocity[2];
 	float desired_velocity[2] = {0, 0};
 	float euler_target[3];
+	yap.get_pos_velocity_ned(start_pos_ne, ne_velocity);
 
-	yap.pos_control->provide_attitue_position(euler, ne_pos, ne_velocity);
+	yap.pos_control->provide_attitue_position(euler, start_pos_ne, ne_velocity);
 	yap.pos_control->set_desired_velocity(desired_velocity);
 	yap.pos_control->get_target_angles(euler_target);
 	yap.pos_control->reset();
@@ -57,12 +56,11 @@ int flight_mode_RTL::setup()
 	move_tick = 0;
 
 	// record current position and home
-	yap.get_pos_velocity_ned(start_pos_ne, NULL);
 	home_pos_ne[0] = yap.home[0];
 	home_pos_ne[1] = yap.home[1];
 
-	float bearing_north = home_pos_ne[0] - ne_pos[0];
-	float bearing_east = home_pos_ne[1] - ne_pos[1];
+	float bearing_north = home_pos_ne[0] - start_pos_ne[0];
+	float bearing_east = home_pos_ne[1] - start_pos_ne[1];
 	float distance = sqrt(bearing_north * bearing_north + bearing_east * bearing_east);
 
 	if (distance > 5.0f)

@@ -594,6 +594,7 @@ namespace STM32F4
 		int c = -1;
 		if(USART_GetFlagStatus(USART1,USART_IT_RXNE)==SET || USART_GetFlagStatus(USART1,USART_IT_ORE_RX)==SET)
 		{
+			c = USART1->SR;
 			c = USART_ReceiveData(USART1);
 		}
 		

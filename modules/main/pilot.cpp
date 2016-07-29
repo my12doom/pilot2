@@ -49,6 +49,8 @@ static param max_altitude("limV", 100);
 static param max_distance("limH", 100);
 static param ignore_error("err",0);
 static param rookie_mode("rook",0);
+static param selfie_mode("self", 0);
+static param rc_mode("mode", 1);
 
 static param quadcopter_trim[3] = 
 {
@@ -1454,7 +1456,10 @@ int yet_another_pilot::calculate_state()
 		memcpy(estimator2.gyro, body_rate.array, sizeof(estimator2.gyro));
 		memcpy(&estimator2.frame, &frame, sizeof(frame));
 
+		int64_t t = systimer->gettime();
 		estimator2.update(q, acc, gps, a_raw_altitude, interval, armed);
+		t = systimer->gettime() - t;
+		//LOGE("estimator2 cost %d us", int(t));
 		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
 	}
 
@@ -1900,7 +1905,7 @@ int yet_another_pilot::execute_mode_switching()
 		mode = use_EKF == 2 ? althold : optical_flow;
 
 	// RC failure handling
-	if (rc_fail < 0 && airborne)
+	if (rc_fail_tick > 3.0f && airborne)
 	{
 		if (flight_mode == RTL)
 		{
@@ -1910,14 +1915,18 @@ int yet_another_pilot::execute_mode_switching()
 			
 			// land if we lost position information, start landing.
 			if (state == none)
-				islanding = true;
+			{
+				islanding = true;		// note we didn't return, the following set_mode() get called and set mode to althold or poshold flow mode.
+			}
 		}
-
-		// try enter RTL mode, if failed, start landing.
-		if (set_mode(RTL) < 0)
-			islanding = true;
 		else
-			return 0;
+		{
+			// try enter RTL mode, if failed, start landing.
+			if (set_mode(RTL) < 0)
+				islanding = true;
+			else
+				return 0;
+		}
 	}
 
 	// do mode switching
@@ -2762,6 +2771,20 @@ int yet_another_pilot::read_rc()
 	else
 	{
 		rc_fail = 0;
+	}
+
+	if (int(rc_mode) == 2)
+	{
+		// "Japanese" mode,  swap throttle and elevator channel, note that throttle ranges from 0 to 1
+		float rc1 = rc[1];
+		rc[1] = (rc[2]-0.5f)*2;
+		rc[2] = (rc1+1.0f)*0.5f;
+	}
+
+	if (int(selfie_mode))	// "selfie" mode, reverse aileron and elevator.
+	{
+		rc[0] = -rc[0];
+		rc[1] = -rc[1];
 	}
 
 	// send RC failure event

@@ -47,6 +47,41 @@ extern "C" void EXTI15_10_IRQHandler(void)
 	}
 	//LOGE("t=%d\n", int(systimer->gettime()-t));
 }
+extern "C" void EXTI9_5_IRQHandler(void)
+{
+	int64_t t = systimer->gettime();
+	if (EXTI_GetITStatus(EXTI_Line5) != RESET)
+	{
+		if (int_table[5])
+			int_table[5]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line8);
+	}
+	if (EXTI_GetITStatus(EXTI_Line6) != RESET)
+	{
+		if (int_table[6])
+			int_table[6]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line8);
+	}
+	if (EXTI_GetITStatus(EXTI_Line7) != RESET)
+	{
+		if (int_table[7])
+			int_table[7]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line8);
+	}
+	if (EXTI_GetITStatus(EXTI_Line8) != RESET)
+	{
+		if (int_table[8])
+			int_table[8]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line8);
+	}
+	if (EXTI_GetITStatus(EXTI_Line9) != RESET)
+	{
+		if (int_table[9])
+			int_table[9]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line8);
+	}
+}
+
 extern "C" void EXTI0_IRQHandler(void)
 {
 	int64_t t = systimer->gettime();
@@ -56,7 +91,6 @@ extern "C" void EXTI0_IRQHandler(void)
 			int_table[0]->call_callback();
 		EXTI_ClearITPendingBit(EXTI_Line0);
 	}
-
 }
 
 namespace STM32F4

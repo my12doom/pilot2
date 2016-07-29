@@ -157,6 +157,12 @@ int log(const void *data, int size)
 	return 0;
 }
 
+int log_write(const void *data, int size)
+{
+	return log(data, size);
+}
+
+
 int log2(const void *packet, uint16_t tag, uint16_t size)
 {
 	if (buffer_locked)

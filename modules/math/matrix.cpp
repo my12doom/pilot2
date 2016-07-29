@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <math.h>
+#include <stdint.h>
 
 #ifndef WIN32
 #define assert(...)
@@ -98,6 +99,8 @@ void matrix::operator *=(const matrix &v)
 	o.m = m;
 	o.n = v.n;
 
+#if 0
+
 	for(int x1 = 0; x1<v.n; x1++)
 	{
 		for(int y1 = 0; y1<m; y1++)
@@ -107,6 +110,122 @@ void matrix::operator *=(const matrix &v)
 				o.data[y1*v.n+x1] += data[y1*n+k] * v.data[k*v.n+x1];
 		}
 	}
+#else
+  float *pIn1 = this->data;                /* input data matrix pointer A */
+  const float *pIn2 = v.data;                /* input data matrix pointer B */
+  float *pInA = this->data;                /* input data matrix pointer A  */
+  float *pOut = o.data;                 /* output data matrix pointer */
+  float *px;                                 /* Temporary output data matrix pointer */
+  float sum;                                 /* Accumulator */
+  uint16_t numRowsA = this->m;            /* number of rows of input matrix A */
+  uint16_t numColsB = v.n;            /* number of columns of input matrix B */
+  uint16_t numColsA = this->n;            /* number of columns of input matrix A */
+
+  /* Run the below code for Cortex-M4 and Cortex-M3 */
+
+  float in1, in2, in3, in4;
+  uint16_t col, i = 0u, j, row = numRowsA, colCnt;      /* loop counters */
+//   arm_status status;                             /* status of matrix multiplication */
+
+  {
+    /* The following loop performs the dot-product of each row in pSrcA with each column in pSrcB */
+    /* row loop */
+    do
+    {
+      /* Output pointer is set to starting address of the row being processed */
+      px = pOut + i;
+
+      /* For every row wise process, the column loop counter is to be initiated */
+      col = numColsB;
+
+      /* For every row wise process, the pIn2 pointer is set    
+       ** to the starting address of the pSrcB data */
+      pIn2 = v.data;
+
+      j = 0u;
+
+      /* column loop */
+      do
+      {
+        /* Set the variable sum, that acts as accumulator, to zero */
+        sum = 0.0f;
+
+        /* Initiate the pointer pIn1 to point to the starting address of the column being processed */
+        pIn1 = pInA;
+
+        /* Apply loop unrolling and compute 4 MACs simultaneously. */
+        colCnt = numColsA >> 2u;
+
+        /* matrix multiplication        */
+        while(colCnt > 0u)
+        {
+          /* c(m,n) = a(1,1)*b(1,1) + a(1,2) * b(2,1) + .... + a(m,p)*b(p,n) */
+          in3 = *pIn2;
+          pIn2 += numColsB;
+          in1 = pIn1[0];
+          in2 = pIn1[1];
+          sum += in1 * in3;
+          in4 = *pIn2;
+          pIn2 += numColsB;
+          sum += in2 * in4;
+
+          in3 = *pIn2;
+          pIn2 += numColsB;
+          in1 = pIn1[2];
+          in2 = pIn1[3];
+          sum += in1 * in3;
+          in4 = *pIn2;
+          pIn2 += numColsB;
+          sum += in2 * in4;
+          pIn1 += 4u;
+
+          /* Decrement the loop count */
+          colCnt--;
+        }
+
+        /* If the columns of pSrcA is not a multiple of 4, compute any remaining MACs here.    
+         ** No loop unrolling is used. */
+        colCnt = numColsA % 0x4u;
+
+        while(colCnt > 0u)
+        {
+          /* c(m,n) = a(1,1)*b(1,1) + a(1,2) * b(2,1) + .... + a(m,p)*b(p,n) */
+          sum += *pIn1++ * (*pIn2);
+          pIn2 += numColsB;
+
+          /* Decrement the loop counter */
+          colCnt--;
+        }
+
+        /* Store the result in the destination buffer */
+        *px++ = sum;
+
+        /* Update the pointer pIn2 to point to the  starting address of the next column */
+        j++;
+        pIn2 = v.data + j;
+
+        /* Decrement the column loop counter */
+        col--;
+
+      } while(col > 0u);
+
+
+      /* Update the pointer pInA to point to the  starting address of the next row */
+      i = i + numColsB;
+      pInA = pInA + numColsA;
+
+      /* Decrement the row loop counter */
+      row--;
+
+    } while(row > 0u);
+
+    /* Set status as ARM_MATH_SUCCESS */
+    //status = ARM_MATH_SUCCESS;
+  }
+
+  /* Return to application */
+  //return (status);
+#endif
 
 	*this = o;
 }
