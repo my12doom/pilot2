@@ -252,7 +252,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		);
 
 	matrix x1 = F * x + Bu;
-	matrix P1 = F * P * F.transpos() + Q;
+	matrix P1 = F * P * F.transpos() + Q * dt / 0.05f;		// note: Q values are tuned for dt = 0.05f, so we normalize it to dt to achieve proper covariance growth.
 
 	matrix zk;
 	matrix H;
