@@ -9,8 +9,10 @@
 #include <algorithm/ekf_ahrs.h>
 #include <algorithm/EKFINS.h>
 #include <Windows.h>
+#include <math/LowPassFilter2p.h>
 
 #define PI 3.1415926
+math::LowPassFilter2p lpf2p[3];//
 
 int compare_sat(const void *v1, const void*v2)
 {
@@ -23,8 +25,10 @@ int compare_sat(const void *v1, const void*v2)
 
 int main(int argc, char* argv[])
 {
-	double baro = 1013.26;
-	double alt = (1-pow(baro/1013.25, 0.190284)) * 145366.45 / 0.3048;
+	lpf2p[0].set_cutoff_frequency(1000, 60);
+	lpf2p[1].set_cutoff_frequency(1000, 60);
+	lpf2p[2].set_cutoff_frequency(1000, 60);
+
 	double scaling = (double)1013.26 / 1013.25;
 	double temp = ((float)40) + 273.15f;
 	double a_raw_altitude = 153.8462f * temp * (1.0f - exp(0.190259f * log(scaling)));
@@ -42,6 +46,7 @@ int main(int argc, char* argv[])
 	FILE *in = fopen(argv[1], "rb");
 	FILE *out = fopen(out_name, "wb");
 	FILE *excel = fopen("Z:\\flow.csv", "wb");
+	fprintf(excel, "t,x,y\r\n");
 
 	if (!in)
 	{
@@ -66,6 +71,7 @@ int main(int argc, char* argv[])
 	quadcopter_data3 quad3 = {0};
 	quadcopter_data4 quad4 = {0};
 	quadcopter_data5 quad5 = {0};
+	pilot_data pilot = {0};
 	bool sensor_valid = false;
 	bool imu_valid = false;
 	bool gps_valid = false;
@@ -79,6 +85,7 @@ int main(int argc, char* argv[])
 	float on_pos2[12] = {0};
 	px4flow_frame frame = {0};
 	rc_mobile_data mobile = {0};
+	//float gyro[3] = {0};
 
 	int ssss = sizeof(frame);
 	ekf_estimator ekf_est;
@@ -137,6 +144,10 @@ int main(int argc, char* argv[])
 		{
 			memcpy(&quad2, data, size);
 		}
+		if (tag == TAG_PILOT_DATA)
+		{
+			memcpy(&pilot, data, sizeof(pilot));
+		}
 		if (tag == TAG_QUADCOPTER_DATA3)
 		{
 			memcpy(&quad3, data, size);
@@ -161,6 +172,13 @@ int main(int argc, char* argv[])
 		{
 			memcpy(&posc, data, size);
 		}
+		if (tag_ex == 5)
+		{
+			int16_t *p = (int16_t*) data;
+			//for(int i=0; i<3; i++)
+			//	gyro[i] = lpf2p[i].apply(p[i+3]) * PI / 1800;
+		}
+
 		else if (tag_ex == TAG_UBX_SAT_DATA)
 		{
 			memcpy(&sat, data, size);
@@ -259,7 +277,7 @@ int main(int argc, char* argv[])
 					acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
 
 				// experimental EKF
-				ahrs.update(acc, gyro, mag, dt);
+				ahrs.update(acc, gyro, mag, dt, true);
 
 				// EKF
 				EKF_U ekf_u;
@@ -323,10 +341,22 @@ int main(int argc, char* argv[])
 
 				}
 
+
 				memcpy(pos2.gyro, gyro, sizeof(gyro));
 				memcpy(&pos2.frame, &frame, sizeof(frame));
-				pos2.update(quad5.q, acc, gps_extra2, quad2.altitude_baro_raw/100.0f, dt);
-				ins.update(gyro, acc, mag, gps_extra, *(sensors::px4flow_frame*)&frame, quad2.altitude_baro_raw/100.0f, dt, ppm.out[0]>=1240, quad2.airborne);
+				float baro = quad2.altitude_baro_raw/100.0f;
+
+				static int last_state = 0;
+				pos2.update(quad5.q, acc, gps_extra2, baro, dt, pilot.fly_mode);
+				if (last_state != pos2.state())
+				{
+					last_state = pos2.state();
+					printf("pos2: %d\n", last_state);
+					printf("pos2: %d\n", last_state);
+				}
+
+
+				ins.update(gyro, acc, mag, gps_extra, *(sensors::px4flow_frame*)&frame, baro, dt, ppm.out[0]>=1240, quad2.airborne);
 
 				if (time > 12000000)
 				{
@@ -367,17 +397,18 @@ int main(int argc, char* argv[])
 				fprintf(out, "FMT, 9, 23, ATT_RAW, Ihhh, TimeMS, roll_raw, pitch_raw, yaw_raw\r\n");
 				fprintf(out, "FMT, 9, 23, P, Ihhhhhhhhh, TimeMS, p[0], p[1], p[2], p[3], p[4], p[5], p[6], pmax, plen\r\n");
 				fprintf(out, "FMT, 9, 23, Motor, Ihhhh, TimeMS, m[0], m[1], m[2], m[3]\r\n");
-				fprintf(out, "FMT, 9, 23, GPS, Ihhhhh, TimeMS, v[0], v[1], v[2], HDOP, acc_horizontal\r\n");
+				fprintf(out, "FMT, 9, 23, GPS, Ihhhhh, TimeMS, v[0], v[1], v[2], HDOP, acc_horizontal, acc_vel_hori, NSat\r\n");
 				fprintf(out, "FMT, 9, 23, VerticalLoop, Ihhhhh, TimeMS,desZAcc,DesCLimb,ZAcc,Climb\r\n");
-				fprintf(out, "FMT, 9, 23, PosControl, Ihhhhhhhh, TimeMS,Pos[0],Pos[1],velocity[0],velocity[1],setpoint[0],setpoint[1],velocity_setpoint[0],velocity_setpoint[1],accel_taget[0],accel_taget[1]\r\n");
+				fprintf(out, "FMT, 9, 23, PosControl, Ihhhhhhhh, TimeMS,Pos[0],Pos[1],velocity[0],velocity[1],setpoint[0],setpoint[1],velocity_setpoint[0],velocity_setpoint[1],accel_taget[0],accel_taget[1], I[0], I[1]\r\n");
 				fprintf(out, "FMT, 9, 23, POS2_P, Ihhhhhhhh, TimeMS,p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7],p[8],p[9],p[10],p[11],p[12]\r\n");
 				fprintf(out, "FMT, 9, 23, RC, Ihhhhhh, TimeMS, RC[1], RC[2], RC[3], RC[4], RC[5], RC[6]\r\n");
 				fprintf(out, "FMT, 9, 23, APP, Ihhhhhh, TimeMS, latency, RC[1], RC[2], RC[3], RC[4]\r\n");
+				fprintf(out, "FMT, 9, 23, V_BF, Ihhhhhh, TimeMS, v_bf[0], v_bf[1], v_bf[2],baro-sonar, baro_comp, baro_comped\r\n");
 			}
 
 
 			static int att_id = 0;
-			if (att_id++ % 10 == 0 && imu_valid && sensor_valid && gps_valid)
+			if (att_id++ % 5 == 0 && imu_valid && sensor_valid && gps_valid)
 			{
 				float euler_sekf[3];
 				ahrs.get_euler(euler_sekf);
@@ -411,7 +442,7 @@ int main(int argc, char* argv[])
 				{
 					fprintf(out, "POSITION, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), lat_meter, lon_meter, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_y, speed_east, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps.DOP[1]/100.0f, 0, 0);
 					fprintf(out, "ALT, %d, %f, %f, %f, %f,%f,%f,%f,%f\r\n", int(time/1000), quad2.altitude_baro_raw/100.0f, ekf_est.ekf_result.Pos_z, quad2.altitude_kalman/100.0f, quad3.altitude_target/100.0f, frame.ground_distance/1000.0f*1.15f, quad4.sonar_target/100.0f, quad2.climb_rate_kalman/100.0f, quad3.climb_target/100.0f);
-					fprintf(out, "POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f, %f, %f,%f,%f,%f,%f,%f\r\n", int(time/1000), pos2.x[0], pos2.x[1], pos2.x[2], pos2.x[3], pos2.x[4], pos2.x[5], pos2.x[6], pos2.x[7], pos2.x[8], pos2.x[9], pos2.x[10], pos2.x[11], pos2.x[12], pos2.gps_north, pos2.gps_east, pos2.vx, pos2.vy, pos2.predict_flow[0], pos2.predict_flow[1], pos2.v_hbf[0], pos2.v_hbf[1]);
+					fprintf(out, "POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f, %f, %f,%f,%f,%f,%f,%f\r\n", int(time/1000), pos2.x[0], pos2.x[1], pos2.x[2], pos2.x[3], pos2.x[4], pos2.x[5], pos2.x[6], pos2.x[7], pos2.x[8], pos2.x[9], pos2.x[10], pos2.x[11], pos2.x[12], pos2.gps_north, pos2.gps_east, pos2.vx, pos2.vy, pos2.predict_flow[0], pos2.predict_flow[1], (float)frame.pixel_flow_x_sum, (float)frame.pixel_flow_y_sum);
 					fprintf(out, "POS2_P, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), float(pos2.P[0*14]), float(pos2.P[1*14]), float(pos2.P[2*14]), float(pos2.P[3*14]), float(pos2.P[4*14]), float(pos2.P[5*14]), float(pos2.P[6*14]), float(pos2.P[7*14]), float(pos2.P[8*14]), float(pos2.P[9*14]), float(pos2.P[10*14]), float(pos2.P[11*14]), float(pos2.P[12*14]));
 					fprintf(out, "ON_POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f\r\n", int(time/1000), on_pos2[0], on_pos2[1], on_pos2[2], on_pos2[3], on_pos2[4], on_pos2[5], on_pos2[6], on_pos2[7], on_pos2[8], on_pos2[9], on_pos2[10], on_pos2[11], pos2.gps_north, pos2.gps_east);
 					fprintf(out, "ACC_NED,%d,%f,%f,%f\r\n", int(time/1000), pos2.acc_ned[0], pos2.acc_ned[1], pos2.acc_ned[2]);
@@ -419,14 +450,17 @@ int main(int argc, char* argv[])
 				if (home_set)
 				fprintf(out, "LatLon, %d, %f, %f, %f, %f, %d, %f, %f\r\n", int(time/1000), gps_extra.latitude, gps_extra.longitude, 0.0005 * gps_extra.position_accuracy_horizontal * gps_extra.position_accuracy_horizontal, 0.02 * gps_extra.velocity_accuracy_horizontal * gps_extra.velocity_accuracy_horizontal, gps.satelite_in_use, avg_cno, top6_cno);
 				fprintf(out, "Motor,%d,%d,%d,%d,%d\r\n", int(time/1000), ppm.out[0], ppm.out[1], ppm.out[2], ppm.out[3]);
-				fprintf(out, "GPS,%d,%f,%f,%f,%f,%f\r\n", int(time/1000), gps_extra.speed, speed_east, gps_extra.climb_rate, gps_extra.DOP[1]/100.0f, gps_extra.position_accuracy_horizontal);
+				fprintf(out, "GPS,%d,%f,%f,%f,%f,%f,%f,%d\r\n", int(time/1000), speed_north, speed_east, gps_extra.climb_rate, gps_extra.DOP[1]/100.0f, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps_extra.satelite_in_use);
 				fprintf(out, "VerticalLoop,%d,%f,%f,%f,%f\r\n", int(time/1000), (float)quad3.accel_target/100.0f, (float)quad3.climb_target/100.0f, pos2.acc_ned[2], pos2.x[5]);
-				fprintf(out, "PosControl,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", int(time/1000), posc.pos[0], posc.pos[1], posc.velocity[0], posc.velocity[1], posc.setpoint[0], posc.setpoint[1],posc.velocity_setpoint[0], posc.velocity_setpoint[1], posc.accel_target[0], posc.accel_target[1]);
+				fprintf(out, "PosControl,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", int(time/1000), posc.pos[0], posc.pos[1], posc.velocity[0], posc.velocity[1], posc.setpoint[0], posc.setpoint[1],posc.velocity_setpoint[0], posc.velocity_setpoint[1], posc.accel_target[0], posc.accel_target[1], (float)posc.pid[0][1]), (float)posc.pid[1][1];
 				fprintf(out, "RC,%d,%d,%d,%d,%d,%d,%d\r\n", int(time/1000), ppm.in[0], ppm.in[1], ppm.in[2], ppm.in[3], ppm.in[4], ppm.in[5]);
 				fprintf(out, "APP,%d,%d,%d,%d,%d,%d,%d\r\n", int (time/1000), mobile.latency, mobile.channel[0], mobile.channel[1], mobile.channel[2], mobile.channel[3]);
+				fprintf(out, "V_BF,%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\r\n", int (time/1000), pos2.v_bf[0], pos2.v_bf[1], pos2.v_bf[2], quad2.altitude_baro_raw/100.0f - pos2.last_valid_sonar, pos2.baro_comp, quad2.altitude_baro_raw/100.0f - pos2.baro_comp);
 
 				if(excel)
-				fprintf(excel, "%f,%f,%f\r\n", time/1000000.0f, pos2.x[0], pos2.x[1]);
+				{
+					fprintf(excel, "%f,%.2f,%.2f,%.2f,%.2f\r\n", time/1000000.0f, pos2.v_bf[0], pos2.v_bf[1], pos2.v_bf[2], quad2.altitude_baro_raw/100.0f - pos2.last_valid_sonar);
+				}
 			}
 
 		}
@@ -442,6 +476,9 @@ int main(int argc, char* argv[])
 
 
 	}
+
+	for(int i=0; i<sat.num_sat_visible; i++)
+		printf("sat:%d, %ddb, residual:%d\n", sats[i].gnss_id, sats[i].cno, sats[i].residual);
 
 	fclose(in);
 	fclose(out);

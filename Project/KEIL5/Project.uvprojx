@@ -81,7 +81,7 @@
             <RunUserProg1>1</RunUserProg1>
             <RunUserProg2>1</RunUserProg2>
             <UserProg1Name>C:\Keil_v5\ARM\ARMCC\bin\fromelf.exe --bin -o ./Output/MainController/pilot.bin ./Output/MainController/Firmware.axf</UserProg1Name>
-            <UserProg2Name>BIn2Yap.exe output/MainController/pilot.bin e</UserProg2Name>
+            <UserProg2Name>BIn2Yap.exe output/MainController/pilot.bin</UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
             <nStopA1X>0</nStopA1X>
@@ -366,7 +366,7 @@
             <v6Lang>0</v6Lang>
             <v6LangP>0</v6LangP>
             <VariousControls>
-              <MiscControls>--diag_suppress 177,550,1,1295 --gnu</MiscControls>
+              <MiscControls>--diag_suppress 177,550,1,1295,1299,611 --gnu</MiscControls>
               <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=8000000,__FPU_USED=1,USE_USB_OTG_FS</Define>
               <Undefine></Undefine>
               <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface;..\..\HAL\STM32F4;..\..\;..\..\modules</IncludePath>
@@ -1407,6 +1407,11 @@
               <FileName>RGBLED.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\dev_v4\RGBLED.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>BM1383.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\BM1383.cpp</FilePath>
             </File>
           </Files>
         </Group>

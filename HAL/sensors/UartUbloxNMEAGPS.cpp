@@ -14,6 +14,7 @@ namespace sensors
 UartUbloxGPS::UartUbloxGPS()
 {
 	current_baudrate = 0;
+	sat_config = IOCTL_SAT_NORMAL;
 }
 
 UartUbloxGPS::~UartUbloxGPS()
@@ -374,28 +375,7 @@ int UartUbloxGPS::detect_and_config(HAL::IUART *uart, int baudrate)
 		return -3;
 
 	// NAV5 config
-	struct
-	{
-		uint16_t mask;
-		uint8_t dyn_model;
-		uint8_t fix_mode;
-		int32_t fix_alt;
-		uint32_t fix_alt_var;
-		uint8_t min_elev;
-		uint8_t dr_limit;
-		uint16_t pdop;
-		uint16_t tdop;
-		uint16_t pacc;
-		uint16_t tacc;
-		uint8_t static_hold_thresh;
-		uint8_t dgps_timeout;
-		uint8_t cno_thresh_num_SVs;
-		uint8_t cno_thresh;
-		uint8_t reserved1[2];
-		uint16_t static_hold_max_dist;
-		uint8_t utc_standard;
-		uint8_t reserved2[5];
-	} nav_cfg = 
+	ubx_nav5_config_packet nav_cfg = 
 	{
 		0xffff,
 		6,
@@ -411,16 +391,19 @@ int UartUbloxGPS::detect_and_config(HAL::IUART *uart, int baudrate)
 		0,
 		60,
 		8,
-		25,
+		20,
 		{0,0},
 		200,
 		0,
 		{0,0,0,0,0}
 	};
+	_nav_cfg = nav_cfg;
 	size = sizeof(nav_cfg);
 	send_ubx_packet(0x6, 0x24, &nav_cfg, size);
 	if (wait_ack(0x6, 0x24) != 0)
 		return -3;
+	last_nav_sending_time = systimer->gettime();
+	nav_config_required = false;
 
 	// rate config
 	uint16_t rate_config[3] = {100, 1, 0};
@@ -484,6 +467,7 @@ int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 UartUbloxBinaryGPS::UartUbloxBinaryGPS()
 :UartUbloxGPS()
 {
+	next_nav_config_ioctl_time = 0;
 }
 
 UartUbloxBinaryGPS::~UartUbloxBinaryGPS()
@@ -537,8 +521,48 @@ int UartUbloxBinaryGPS::init(HAL::IUART *uart, int baudrate)
 		return -2;
 
 	// UBX-SAT
-	if (enable_message(0x01, 0x35, false) < 0)
+	if (enable_message(0x01, 0x35, true) < 0)
 		return -2;
+
+	// save settings for faster boot
+	uint32_t save[3] = {0,0x1f,0};
+	send_ubx_packet(0x6, 0x9, save, 12);
+	if (wait_ack(0x6, 0x9) != 0)
+		return -4;
+
+
+	return 0;
+}
+int UartUbloxBinaryGPS::ioctl(int request, void *data)
+{
+	if (request == sat_config || !(request == IOCTL_SAT_NORMAL || request == IOCTL_SAT_MINIMUM))
+		return 0;
+
+	if (systimer->gettime() < next_nav_config_ioctl_time)
+		return 1;
+
+	sat_config = request;
+	next_nav_config_ioctl_time = systimer->gettime() + 1000000;
+
+	if (sat_config == IOCTL_SAT_NORMAL)
+	{
+		_nav_cfg.cno_thresh = 20;
+		_nav_cfg.cno_thresh_num_SVs = 8;
+	}
+	else
+	{
+		_nav_cfg.cno_thresh = 0;
+		_nav_cfg.cno_thresh_num_SVs = 0;
+	}
+
+	nav_config_required = true;
+	last_nav_sending_time = 0;
+
+	if (request == IOCTL_SAT_NORMAL)
+		LOGE("ublox GPS: switching to normal operation, nav=%d*%d\n", _nav_cfg.cno_thresh_num_SVs, _nav_cfg.cno_thresh);
+	if (request == IOCTL_SAT_MINIMUM)
+		LOGE("ublox GPS: switching to minimum operation\n");
+	
 
 	return 0;
 }
@@ -549,6 +573,13 @@ int UartUbloxBinaryGPS::read(devices::gps_data *data)
 
 	int t2 = systimer->gettime();
 
+	// send nav config packet @ 5hz if new nav5 configuration required.
+	if (nav_config_required && systimer->gettime() > last_nav_sending_time + 200000)
+	{
+		send_ubx_packet(0x6, 0x24, &_nav_cfg, sizeof(_nav_cfg));
+		last_nav_sending_time = systimer->gettime();
+	}
+
 	while(true)
 	{
 		int64_t t = systimer->gettime();
@@ -557,6 +588,16 @@ int UartUbloxBinaryGPS::read(devices::gps_data *data)
 
 		if (!p)
 			break;
+
+		// check for NAV5 ACK packet
+		if (p->cls == 0x5 && p->crc_ok && p->payload_size >= 2)
+		{
+			if (p->payload[0] == 0x6 && p->payload[1] == 0x24)
+			{
+				nav_config_required = false;
+				LOGE("UBX:NAV5 ACK\n");
+			}
+		}
 
 // 		printf("packet:%2x, %2x, CRC(%s)\n", p->cls, p->id, p->crc_ok ? "OK" : "FAIL");
 
@@ -742,3 +783,4 @@ int UartUbloxBinaryGPS::read(devices::gps_data *data)
 }
 
 }
+

@@ -13,12 +13,13 @@
 #include <utils/console.h>
 #include <utils/gauss_newton.h>
 #include <protocol/crc32.h>
-
 #include <FileSystem/ff.h>
+#include <HAL/sensors/UartUbloxNMEAGPS.h>
 
 using namespace HAL;
 using namespace devices;
 using namespace math;
+using namespace sensors;
 
 // constants
 #define THROTTLE_STOP ((int)(isnan((float)pwm_override_min)? max(rc_setting[2][0]-20,1000):pwm_override_min))
@@ -917,8 +918,12 @@ int yet_another_pilot::read_sensors()
 	for(int i=0; i<manager.get_GPS_count(); i++)
 	{
 		IGPS *gps = manager.get_GPS(i);
+		IRawDevice *raw = dynamic_cast<IRawDevice*> (gps);
 		if (!gps->healthy())
 			continue;
+
+		if (raw)
+			raw->ioctl((rc_fail || flight_mode == RTL) ? IOCTL_SAT_MINIMUM : IOCTL_SAT_NORMAL, NULL);
 
 		devices::gps_data data;
 		int res = gps->read(&data);
@@ -1978,6 +1983,7 @@ int yet_another_pilot::decide_mode_switching()
 		if (new_rc_fail_tick > 3.0f && rc_fail_tick <= 3.0f)
 		{
 			LOGE("rc fail, trying RTL\n");
+			rc_fail_tick = new_rc_fail_tick;
 			execute_mode_switching();
 		}
 		rc_fail_tick = new_rc_fail_tick;

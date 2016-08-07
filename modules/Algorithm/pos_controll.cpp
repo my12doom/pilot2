@@ -534,16 +534,22 @@ int pos_controller::accel_to_lean_angles(float dt)
 	}
 
 
-	// max rotation speed: 100 degree/s, then apply a 5hz LPF
+	// limit max rotation speed in braking mode: 150 degree/s, for smooth braking
 	float delta_roll = new_euler_roll - target_euler[0];
 	float delta_pitch = new_euler_pitch - target_euler[1];
+	float LPF_frequency = 12.0f;
 
-	float max_delta = dt * 100 * PI / 180;
-// 	delta_roll = limit(delta_roll, -max_delta, max_delta);
-// 	delta_pitch = limit(delta_pitch, -max_delta, max_delta);
+	if (state == braking)
+	{
+// 		float max_delta = dt * 150 * PI / 180;
+// 		delta_roll = limit(delta_roll, -max_delta, max_delta);
+// 		delta_pitch = limit(delta_pitch, -max_delta, max_delta);
 
-	float alpha5 = dt / (dt + 1.0f/(2*PI * 12.0f));
+		LPF_frequency = 2.0f;
+	}
 
+	// then apply a LPF
+	float alpha5 = dt / (dt + 1.0f/(2*PI * LPF_frequency));
 	target_euler[0] = (target_euler[0] + delta_roll) * alpha5 + (1-alpha5) * target_euler[0];
 	target_euler[1] = (target_euler[1] + delta_pitch) * alpha5 + (1-alpha5) * target_euler[1];
 

@@ -248,57 +248,6 @@ int init_flow()
 	return 0;
 }
 
-F4GPIO tx(GPIOC,GPIO_Pin_1);
-F4GPIO level(GPIOA,GPIO_Pin_1);
-
-sensors::Sonar sonar;
-extern "C" void EXTI9_5_IRQHandler()
-{
-	if (EXTI_GetITStatus(EXTI_Line7) == SET)
-	{
-		sonar.echo();
-		EXTI_ClearITPendingBit(EXTI_Line7);
-	}
-}
-
-int init_sonar()
-{
-	GPIO_InitTypeDef GPIO_InitStructure;
-	EXTI_InitTypeDef   EXTI_InitStructure;
-	NVIC_InitTypeDef NVIC_InitStructure;
-	
-	// C7 as echo
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
-	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_7;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOC, &GPIO_InitStructure);
-
-	// EXTI
-	EXTI_ClearITPendingBit(EXTI_Line7);
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource7);
-
-	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
-	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-	EXTI_InitStructure.EXTI_Line = EXTI_Line7;
-	EXTI_Init(&EXTI_InitStructure);
-
-	// priority : lowest
-	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);	
-		
-	sonar.init(&tx, &level);
-	manager.register_device("sonar", &sonar);
-	
-	return 0;
-}
-
 int init_VCP()
 {
 	static F4VCP vcp;
@@ -337,7 +286,7 @@ int init_9150()
 
 int bsp_init_all()
 {
-	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);	
 	//init_sonar();
 	init_led();
 	init_BatteryMonitor();
@@ -350,7 +299,7 @@ int bsp_init_all()
 	init_asyncworker();
 	init_led();
 	init_flow();
-	init_GPS();	
+	init_GPS();
 	//init_external_compass();
 	
 	// parameter config

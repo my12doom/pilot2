@@ -55,6 +55,7 @@ void PCA963x::toggle()
 // IRGBLED
 int PCA963x::write(float R, float G, float B)
 {
+	return 0;
 }
 
 

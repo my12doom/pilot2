@@ -35,10 +35,11 @@ int BM1383::init(HAL::II2C *i2c)
 
 int BM1383::read(devices::baro_data *out)
 {
-	uint8_t data[3] = {0};
-	FAIL_RET(i2c->read_regs(address, 0x1C, data, 3));
+	uint8_t data[5] = {0};
+	FAIL_RET(i2c->read_regs(address, 0x1A, data, 5));
 	out->pressure = (data[2] >> 2 | (data[0] << 16) | (data[1] << 8)) / 20.48f;		// TODO; verify this.
-	out->temperature = 25.0f;
+	int16_t tmp = (data[3] << 8) | data[4];
+	out->temperature = tmp / 32.0f;
 
 	return 0;
 }

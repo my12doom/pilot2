@@ -4,6 +4,8 @@
 
 namespace sensors
 {
+	static const int IOCTL_SAT_NORMAL = 0x38;	// set satelite requirements to normal operation, to reject low quality sats to avoid drifting.
+	static const int IOCTL_SAT_MINIMUM = 0x39;	// set satelite requirements to minimum, to achieve max RTL possibility in loss of controll situation.
 	typedef struct
 	{
 		uint8_t cls;
@@ -13,6 +15,28 @@ namespace sensors
 		uint16_t crc;
 		bool crc_ok;
 	} ubx_packet;
+	typedef struct
+	{
+		uint16_t mask;
+		uint8_t dyn_model;
+		uint8_t fix_mode;
+		int32_t fix_alt;
+		uint32_t fix_alt_var;
+		uint8_t min_elev;
+		uint8_t dr_limit;
+		uint16_t pdop;
+		uint16_t tdop;
+		uint16_t pacc;
+		uint16_t tacc;
+		uint8_t static_hold_thresh;
+		uint8_t dgps_timeout;
+		uint8_t cno_thresh_num_SVs;
+		uint8_t cno_thresh;
+		uint8_t reserved1[2];
+		uint16_t static_hold_max_dist;
+		uint8_t utc_standard;
+		uint8_t reserved2[5];
+	} ubx_nav5_config_packet;
 
 	class UartUbloxGPS
 	{
@@ -77,6 +101,12 @@ namespace sensors
 		ubx_packet _packet;
 		int current_baudrate;
 		HAL::IUART *uart;
+
+		// nav5 setting sender
+		int sat_config;
+		ubx_nav5_config_packet _nav_cfg;
+		int64_t last_nav_sending_time;
+		bool nav_config_required;
 	};
 
 	class UartUbloxNMEAGPS : public UartUbloxGPS, public UartNMEAGPS
@@ -85,7 +115,7 @@ namespace sensors
 		int init(HAL::IUART *uart, int baudrate);
 	};
 
-	class UartUbloxBinaryGPS : public UartUbloxGPS, public devices::IGPS
+	class UartUbloxBinaryGPS : public UartUbloxGPS, public devices::IGPS, public devices::IRawDevice
 	{
 	public:
 		UartUbloxBinaryGPS();
@@ -94,6 +124,7 @@ namespace sensors
 		int init(HAL::IUART *uart, int baudrate);
 		virtual int read(devices::gps_data *data);
 		virtual bool healthy(){return true;}
+		virtual int ioctl(int request, void *data);
 
 	protected:
 		enum ubx_nav_packets
@@ -105,5 +136,6 @@ namespace sensors
 
 		uint32_t packt_mask;
 		devices::gps_data local_data;
+		int64_t next_nav_config_ioctl_time;
 	};
 }

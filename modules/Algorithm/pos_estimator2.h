@@ -52,6 +52,8 @@ public:
 	float vy_lpf;
 	float predict_flow[2];
 	float v_hbf[2];
+	float v_bf[3];
+	float baro_comp;
 
 	bool flow_healthy;
 	float flow_ticker;

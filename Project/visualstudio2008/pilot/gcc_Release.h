@@ -335,6 +335,9 @@
 #ifndef __ULLACCUM_MAX__
 #define __ULLACCUM_MAX__ 0XFFFFFFFFFFFFFFFFP-32ULLK
 #endif
+#ifndef __GXX_RTTI
+#define __GXX_RTTI 1
+#endif
 #ifndef __HQ_IBIT__
 #define __HQ_IBIT__ 0
 #endif
@@ -597,6 +600,9 @@
 #ifndef __INT16_MAX__
 #define __INT16_MAX__ 0x7fff
 #endif
+#ifndef __cpp_rtti
+#define __cpp_rtti 199711
+#endif
 #ifndef __SIZE_TYPE__
 #define __SIZE_TYPE__ unsigned int
 #endif
@@ -761,6 +767,9 @@
 #endif
 #ifndef __UTA_IBIT__
 #define __UTA_IBIT__ 64
+#endif
+#ifndef __EXCEPTIONS
+#define __EXCEPTIONS 1
 #endif
 #ifndef __LDBL_MANT_DIG__
 #define __LDBL_MANT_DIG__ 53
@@ -974,6 +983,9 @@
 #endif
 #ifndef __SIZEOF_DOUBLE__
 #define __SIZEOF_DOUBLE__ 8
+#endif
+#ifndef __cpp_exceptions
+#define __cpp_exceptions 199711
 #endif
 #ifndef __UFRACT_EPSILON__
 #define __UFRACT_EPSILON__ 0x1P-16UR

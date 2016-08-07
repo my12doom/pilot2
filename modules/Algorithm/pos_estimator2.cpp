@@ -3,14 +3,27 @@
 #include <string.h>
 #include <stdio.h>
 
+#define sonar_step_threshold 0.45f
 #ifdef WIN32
 #include <float.h>
 static unsigned long pnan[2]={0xffffffff, 0x7fffffff};
 static double NAN = *( double* )pnan;
 #define isnan _isnan
+float baro_comp_coeff[6] = 
+{
+	0.25, -0.18,
+	0.45, -0.45,
+	0, 0,
+};
+#else
+#include <utils/param.h>
+param baro_comp_coeff[6] = 
+{
+	param("bcxp", 0.25f), param("bcxn", -0.18f),
+	param("bcyp", 0.45f), param("bcyn", -0.45f),
+	param("bczp", 0.00f), param("bczn", -0.00f),
+};
 #endif
-
-#define sonar_step_threshold 0.45f
 
 pos_estimator2::pos_estimator2()
 {
@@ -214,7 +227,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		_state = use_gps ? 3 : 1;
 	}
 
-	// prepare matrices
+	// prepare matrices and helper variables
 	float yaw = atan2f(r[3], r[0]);
 	float dtsq_2 = dt*dt/2;
 	acc_ned[0] = r[0]* acc_body[0] + r[1] *acc_body[1] + r[2] * acc_body[2];
@@ -224,6 +237,17 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	acc_ned[0] += r[0]* x[6] + r[1] *x[7] + r[2] * x[8];
 	acc_ned[1] += r[3]* x[6] + r[4] *x[7] + r[5] * x[8];
 	acc_ned[2] += -(r[6]* x[6] + r[7] *x[7] + r[8] * x[8]);
+
+	v_bf[0] = r[0]*x[3] + r[3]*x[4] + r[6]*x[5];
+	v_bf[1] = r[1]*x[3] + r[4]*x[4] + r[7]*x[5];
+	v_bf[2] = r[2]*x[3] + r[5]*x[4] + r[8]*x[5];
+
+	baro_comp = 0;
+	baro_comp += v_bf[0] > 0 ? (v_bf[0] * baro_comp_coeff[0]) : (v_bf[0] * baro_comp_coeff[1]);
+	baro_comp += v_bf[1] > 0 ? (v_bf[1] * baro_comp_coeff[2]) : (v_bf[1] * baro_comp_coeff[3]);
+	baro_comp += v_bf[2] > 0 ? (v_bf[2] * baro_comp_coeff[4]) : (v_bf[2] * baro_comp_coeff[5]);
+	baro -= baro_comp;
+
 
 	matrix F = matrix(13,13,
 		1.0,0.0,0.0, dt, 0.0, 0.0, dtsq_2*r[0], dtsq_2*r[1], dtsq_2*r[2], 0.0, 0.0, 0.0, 0.0,
@@ -350,7 +374,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			matrix(3,13,
 			0.0,0.0,1.0, 0.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0,
 			0.0,0.0,0.0, 1.0,0.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0,
-			0.0,0.0,0.0, 0.0,1.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0				// strange flow coordinates
+			0.0,0.0,0.0, 0.0,1.0,0.0,  0.0,0.0,0.0,  0.0,0.0,0.0, 0.0
 			);
 // 		R = matrix::diag(count,600.0, saturation?50.0 : 5.0, saturation ? 50.0 : 5.0, 16.0);
 
@@ -409,7 +433,6 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	float sin_yaw = sin(yaw);
 	v_hbf[0] = cos_yaw * x[3] + sin_yaw * x[4];
 	v_hbf[1] = -sin_yaw * x[3] + cos_yaw * x[4];
-
 	// -->> vx ~= -v_hbf[1]
 	// -->> vy ~= v_hbf[0]
 
