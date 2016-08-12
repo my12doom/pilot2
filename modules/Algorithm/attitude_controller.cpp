@@ -4,6 +4,7 @@
 #include <utils/param.h>
 #include <math/quaternion.h>
 #include <HAL/Interface/ISysTimer.h>
+#include <utils/log.h>
 
 // parameters
 #define yaw_dead_band 0.08f
@@ -202,7 +203,7 @@ int attitude_controller::update(float dt)
 		quat_inverse(q_desired);
 		quat_mult(q_desired, quaternion, q_error);
 		quat_inverse(q_error);
-		Quaternion2RPY(q_error, body_frame_error);
+		Quaternion2BFAngle(q_error, body_frame_error);
 		for(int i=0; i<3; i++)
 			body_rate_sp[i] = limit(body_frame_error[i] * pid_factor2[i][0], -PI, PI);
 	}
@@ -222,6 +223,8 @@ int attitude_controller::update(float dt)
 			body_rate_sp[i] = body_rate_sp_override[i];
 	}
 
+	//float dbg[4] = {euler_sp[1], body_rate_sp[1], euler[1], body_rate[1]};
+	//log2(dbg, TAG_ATTITUDE_CONTROLLER_DATA, sizeof(dbg));
 	
 	// inner loop, body frame rate -> body frame torque.
 	for(int i=0; i<3; i++)

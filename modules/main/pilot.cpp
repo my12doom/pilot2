@@ -478,20 +478,39 @@ int yet_another_pilot::handle_acrobatic()
 			acrobatic_timer = 0;
 			acrobatic_number = 0;
 			alt_controller.set_climbrate_override(NAN);
-
-			LOGE("flipping acrobatic: rising done.\n");
 		}
 		break;
 
 	case acrobatic_flip_rotating:
 		{
-			acrobatic_timer += interval;
-			acrobatic_number += body_rate.array[0] * interval;
+			static int axiss[5] = {0,0,1,0,1};
+			static int signs[5] = {0,+1,-1,-1,+1};
 
-			float brs[3] = {8*PI, 0, 0};	// brs: body rate setpoint
+			int axis = axiss[arcrobatic_arg];
+			int sign = signs[arcrobatic_arg];
+
+			acrobatic_timer += interval;
+			acrobatic_number += body_rate.array[axis] * interval;
+
+			float brs[3] = {0, 0, 0};	// brs: body rate setpoint
+			brs[axis] = 8*PI * sign;
 			attitude_controll.set_body_rate_override(brs);
 
-			if (acrobatic_timer > 0.5f ||  fabs(acrobatic_number)+fabs(body_rate.array[0]/4.5f) > 2*PI)
+			//LOGE("flip:%.3f,%.3f\n", acrobatic_number*180/PI, body_rate.array[axis]*180/PI);
+			static const float latency = 0.045;
+			static const float braking_factor = 1.0f;
+			float velocity_abs = fabs(body_rate.array[axis]);
+			float t = limit(acrobatic_timer - latency, 0, 0.5f);
+
+			float slew =  t > 0.001f ? velocity_abs/t : 0;
+			float velocity_top = slew * (t+latency);
+			float total_distance = 0.5*(t+latency)*velocity_top* (1+braking_factor);
+
+			LOGE("dis=%.3f\n", total_distance * 180 / PI);
+
+
+
+			if (acrobatic_timer > 0.5f ||  total_distance > 2*PI /*fabs(acrobatic_number)+fabs(body_rate.array[axis]/(axis == 0 ? 4.5f : 3.3f)) > 2*PI*/)
 			{
 				acrobatic = acrobatic_none;
 				float brs_nan[3] = {NAN, NAN, NAN};
@@ -505,16 +524,20 @@ int yet_another_pilot::handle_acrobatic()
 	return 0;
 }
 
-int yet_another_pilot::start_acrobatic(acrobatic_moves move)
+int yet_another_pilot::start_acrobatic(acrobatic_moves move, int arg)
 {
 	if (acrobatic != acrobatic_none || !armed || !airborne)
 		return -1;
 
 	if (move == acrobatic_move_flip)
 	{
+		if (arg < 1 || arg > 4)
+			return -1;
+
 		acrobatic = acrobatic_flip_rising;
 		acrobatic_timer = 0;
 		acrobatic_number = 0;
+		arcrobatic_arg = arg;
 
 		LOGE("start flipping acrobatic\n");
 	}
@@ -2066,7 +2089,7 @@ int yet_another_pilot::check_stick_action()
 			if (flashlight)
 				flashlight->toggle();
 
-			//start_acrobatic(acrobatic_move_flip);
+			//start_acrobatic(acrobatic_move_flip, 4);
 		}
 	}
 
@@ -2534,6 +2557,32 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			);
 		uart->write(out, strlen(out));
 			
+	}
+
+	else if (strstr(line, "flip,") == line)
+	{
+		int dir = atoi(line+5);
+		LOGE("flip:%d\n", dir);
+
+		if (dir < 1 || dir > 4)
+		{
+			char out[] = "flip,fail,wrong direction\n";
+			uart->write(out, strlen(out));
+			return 0;
+		}
+
+		int rtn = start_acrobatic(acrobatic_move_flip, dir);
+
+		if (rtn < 0)
+		{
+			char out[] = "flip,fail\n";
+			uart->write(out, strlen(out));
+		}
+		else
+		{
+			char out[] = "flip,ok\n";
+			uart->write(out, strlen(out));
+		}
 	}
 
 	else if (strstr(line, "param") == line)

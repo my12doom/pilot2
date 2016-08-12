@@ -211,6 +211,7 @@ public:
 	acrobatic_moves_state acrobatic;
 	float acrobatic_timer;
 	float acrobatic_number;		// helper variable for acrobatic state tracking.
+	int arcrobatic_arg;
 
 	// constructor
 	yet_another_pilot();
@@ -235,7 +236,7 @@ public:
 	
 	// automated functions
 	int start_taking_off();
-	int start_acrobatic(acrobatic_moves move);
+	int start_acrobatic(acrobatic_moves move, int arg);
 	
 	// main loop sub routines.
 	int read_rc();

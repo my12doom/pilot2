@@ -77,3 +77,19 @@ static void Quaternion2RPY(const float q[4], float rpy[3])
 
     // TODO: consider the cases where |R13| ~= 1, |pitch| ~= pi/2
 }
+
+static void Quaternion2BFAngle(const float q[4], float angle[3])
+{
+	angle[0] = q[1];
+	angle[1] = q[2];
+	angle[2] = q[3];
+
+	float len = sqrt(angle[0]*angle[0] + angle[1]*angle[1] + angle[2]*angle[2]);
+	if (len >= 1.0e-12f) {
+		float invl = 1.0f/len;
+		float qp = radian_add(2.0f * atan2f(len,q[0]), 0);
+		angle[0] *= qp * invl;
+		angle[1] *= qp * invl;
+		angle[2] *= qp * invl;
+	}
+}

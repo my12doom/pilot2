@@ -4,6 +4,12 @@
 #include <stdio.h>
 
 #define sonar_step_threshold 0.45f
+
+const float attitude_error_yaw = sin(10*PI/180);
+const float attitude_error_roll_pitch = sin(1*PI/180);
+const float gain_error = 0.003;
+const float mis_alignment_error = 0.02;
+
 #ifdef WIN32
 #include <float.h>
 static unsigned long pnan[2]={0xffffffff, 0x7fffffff};
@@ -242,11 +248,14 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	v_bf[1] = r[1]*x[3] + r[4]*x[4] + r[7]*x[5];
 	v_bf[2] = r[2]*x[3] + r[5]*x[4] + r[8]*x[5];
 
-	baro_comp = 0;
-	baro_comp += v_bf[0] > 0 ? (v_bf[0] * baro_comp_coeff[0]) : (v_bf[0] * baro_comp_coeff[1]);
-	baro_comp += v_bf[1] > 0 ? (v_bf[1] * baro_comp_coeff[2]) : (v_bf[1] * baro_comp_coeff[3]);
-	baro_comp += v_bf[2] > 0 ? (v_bf[2] * baro_comp_coeff[4]) : (v_bf[2] * baro_comp_coeff[5]);
-	baro -= baro_comp;
+	if (position_healthy || flow_healthy)
+	{
+		baro_comp = 0;
+		baro_comp += v_bf[0] > 0 ? (v_bf[0] * baro_comp_coeff[0]) : (v_bf[0] * baro_comp_coeff[1]);
+		baro_comp += v_bf[1] > 0 ? (v_bf[1] * baro_comp_coeff[2]) : (v_bf[1] * baro_comp_coeff[3]);
+		baro_comp += v_bf[2] > 0 ? (v_bf[2] * baro_comp_coeff[4]) : (v_bf[2] * baro_comp_coeff[5]);
+		baro -= baro_comp;
+	}
 
 
 	matrix F = matrix(13,13,
@@ -275,8 +284,40 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		0.0,0.0,0.0, 0.0
 		);
 
+#if 1
+	matrix G = matrix(6, 3, 
+		dtsq_2 * r[0], dtsq_2 *  r[1], dtsq_2 * r[2],
+		dtsq_2 * r[3], dtsq_2 *  r[4], dtsq_2 * r[5],
+		-dtsq_2 * r[6], dtsq_2 *  r[7], dtsq_2 * r[8],
+		dt * r[0], dt *  r[1], dt * r[2],
+		dt * r[3], dt *  r[4], dt * r[5],
+		-dt * r[6], dt *  r[7], dt * r[8]
+		);
+
+	float acc_ned_abs[4] = {fabs(acc_ned[0]), fabs(acc_ned[1]), fabs(acc_ned[2]), fabs(acc_ned[0])+ fabs(acc_ned[1])+ fabs(acc_ned[2])};
+	float acc_bf_abs[4] = {fabs(acc_body[0]), fabs(acc_body[1]), fabs(acc_body[2]), fabs(acc_body[0])+ fabs(acc_body[1])+ fabs(acc_body[2])};
+
+// 	const float attitude_error_yaw = sin(10*PI/180);
+// 	const float attitude_error_roll_pitch = sin(1*PI/180);
+// 	const float gain_error = 0.003;
+// 	const float mis_alignment_error = 0.02;
+
+	float err0 = attitude_error_yaw * acc_bf_abs[1] + attitude_error_roll_pitch * acc_bf_abs[2] + gain_error * acc_bf_abs[0]  + mis_alignment_error * (acc_bf_abs[1]+acc_bf_abs[2]);
+	float err1 = attitude_error_yaw * acc_bf_abs[0] + attitude_error_roll_pitch * acc_bf_abs[2] + gain_error * acc_bf_abs[1]  + mis_alignment_error * (acc_bf_abs[0]+acc_bf_abs[2]);
+	float err2 =									  attitude_error_roll_pitch * (acc_bf_abs[0]+acc_bf_abs[1]) + gain_error * acc_bf_abs[2]  + mis_alignment_error * (acc_bf_abs[0]+acc_bf_abs[1]);
+
+	matrix Q0 = matrix::diag(3, err0*5, err1*5, err2*5);		// covariance increment including noise, mis-alignment/attitude/gain error.
+	matrix Q1 = G * Q0 * Q0 * G.transpos();
+	for(int m=0; m<6; m++)
+		for(int n=0; n<6; n++)
+			Q(m,n) = Q1(m,n);
+
+	co[0] = Q1(1,1)*1E+10;
+
+#endif
+
 	matrix x1 = F * x + Bu;
-	matrix P1 = F * P * F.transpos() + Q * dt / 0.05f;		// note: Q values are tuned for dt = 0.05f, so we normalize it to dt to achieve proper covariance growth.
+	matrix P1 = F * P * F.transpos() + Q/* * dt / 0.05f*/;		// note: Q values are tuned for dt = 0.05f, so we normalize it to dt to achieve proper covariance growth.
 
 	matrix zk;
 	matrix H;

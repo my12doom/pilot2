@@ -390,8 +390,8 @@ int UartUbloxGPS::detect_and_config(HAL::IUART *uart, int baudrate)
 		300,
 		0,
 		60,
-		8,
-		20,
+		6,
+		28,
 		{0,0},
 		200,
 		0,
@@ -546,8 +546,8 @@ int UartUbloxBinaryGPS::ioctl(int request, void *data)
 
 	if (sat_config == IOCTL_SAT_NORMAL)
 	{
-		_nav_cfg.cno_thresh = 20;
-		_nav_cfg.cno_thresh_num_SVs = 8;
+		_nav_cfg.cno_thresh = 28;
+		_nav_cfg.cno_thresh_num_SVs = 6;
 	}
 	else
 	{

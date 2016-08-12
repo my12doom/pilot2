@@ -326,6 +326,9 @@
 #ifndef __ULLACCUM_MAX__
 #define __ULLACCUM_MAX__ 0XFFFFFFFFFFFFFFFFP-32ULLK
 #endif
+#ifndef __GXX_RTTI
+#define __GXX_RTTI 1
+#endif
 #ifndef __HQ_IBIT__
 #define __HQ_IBIT__ 0
 #endif
@@ -591,6 +594,9 @@
 #ifndef __INT16_MAX__
 #define __INT16_MAX__ 0x7fff
 #endif
+#ifndef __cpp_rtti
+#define __cpp_rtti 199711
+#endif
 #ifndef __SIZE_TYPE__
 #define __SIZE_TYPE__ unsigned int
 #endif
@@ -599,6 +605,9 @@
 #endif
 #ifndef __UDQ_FBIT__
 #define __UDQ_FBIT__ 64
+#endif
+#ifndef DEBUG
+#define DEBUG 1
 #endif
 #ifndef __INT8_TYPE__
 #define __INT8_TYPE__ signed char
@@ -755,6 +764,9 @@
 #endif
 #ifndef __UTA_IBIT__
 #define __UTA_IBIT__ 64
+#endif
+#ifndef __EXCEPTIONS
+#define __EXCEPTIONS 1
 #endif
 #ifndef __LDBL_MANT_DIG__
 #define __LDBL_MANT_DIG__ 53
@@ -969,8 +981,8 @@
 #ifndef __SIZEOF_DOUBLE__
 #define __SIZEOF_DOUBLE__ 8
 #endif
-#ifndef Debug
-#define Debug 1
+#ifndef __cpp_exceptions
+#define __cpp_exceptions 199711
 #endif
 #ifndef __UFRACT_EPSILON__
 #define __UFRACT_EPSILON__ 0x1P-16UR
@@ -1095,10 +1107,7 @@
 #endif
 
 // --- Include directories begin --- //
-//../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver
 //../../..
-//../../../modules
-//../../../modules/Algorithm/ekf_lib/inc
 //.
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/5.2.0/../../../../arm-eabi/include/c++/5.2.0
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/5.2.0/../../../../arm-eabi/include/c++/5.2.0/arm-eabi/thumb/fpu/cortex_m4
@@ -1107,8 +1116,10 @@
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/5.2.0/include-fixed
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/5.2.0/../../../../arm-eabi/sys-include
 //c:\sysgcc\arm-eabi\bin\../lib/gcc/arm-eabi/5.2.0/../../../../arm-eabi/include
+//../../../HAL/STM32F4/STMLib/STM32F4xx_StdPeriph_Driver
 //../../../
 //../../../modules/
+//../../../modules/Algorithm/ekf_lib/inc
 // --- Include directories end --- //
 
 

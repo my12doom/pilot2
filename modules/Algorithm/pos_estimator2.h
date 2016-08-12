@@ -58,4 +58,7 @@ public:
 	bool flow_healthy;
 	float flow_ticker;
 	int _state;	// 0: not ready, 1: flow, 2: transiting, 3:gps
+
+
+	float co[3];
 };
