@@ -10,6 +10,8 @@
 #include <algorithm/EKFINS.h>
 #include <Windows.h>
 #include <math/LowPassFilter2p.h>
+#include <math/FIR.h>
+#include <math/quaternion.h>
 
 #define PI 3.1415926
 math::LowPassFilter2p lpf2p[3];//
@@ -22,9 +24,121 @@ int compare_sat(const void *v1, const void*v2)
 	return p1->cno < p2->cno ? 1 : -1;
 }
 
+float weights[] = 
+{
+	0.0631297580000000,
+	0.0654184550000000,
+	0.111688605000000,
+	0.152938067000000,
+	0.190829723000000,
+	0.218888877000000,
+	0.231410108000000,
+	0.224725340000000,
+	0.197890975000000,
+	0.153378354000000,
+	0.0965476750000000,
+	0.0347751970000000,
+	-0.0239214040000000,
+	-0.0723772250000000,
+	-0.105478283000000,
+	-0.121162892000000,
+	-0.120233530000000,
+	-0.106095926000000,
+	-0.0837842500000000,
+	-0.0504882480000000,
+	-0.0580793770000000,
+};
+
+math::FIR<21> fir(weights);
+
+float rand32()
+{
+	int32_t v = rand() &0xff;
+	v |= (rand() &0xff) << 8;
+	v |= (rand() &0xff) << 16;
+	v |= (rand() &0xff) << 24;
+
+	return (float)v / (1<<31);
+}
+
+int FIR_test()
+{
+	FILE * f = fopen("Z:\\latency.pcm", "wb");
+
+	math::LowPassFilter2p lpf2p(1000, 60);
+
+	for(int i=0; i<200000; i++)
+	{
+		float module = sin(i*5.0f/2000*PI);
+		if (module < 0)
+			module = 0;
+
+
+		int16_t v = (sin(50*2*PI*i/2000)) * module * 16384;
+		int16_t v_lpf = lpf2p.apply(v);
+		int16_t v_fir = fir.apply(v);
+
+		fwrite(&v, 1, 2, f);
+		fwrite(&v_fir, 1, 2, f);
+	}
+
+	fclose(f);
+
+	return 0;
+}
+
+float sq(float v)
+{
+	return v*v;
+}
+
+int quat_test()
+{
+	float q_t[4];
+	float q[4];
+	float q_error[4];
+
+	float euler_t[3] = {4*PI/180, -90 * PI / 180, 0*PI/3};
+	float euler[3] = { 3*PI/180, 0 * PI / 180, 0*PI/3};
+	float body_frame_error[3];
+
+	RPY2Quaternion(euler, q);
+	RPY2Quaternion(euler_t, q_t);
+
+	quat_inverse(q_t);
+	quat_mult(q_t, q, q_error);
+	quat_inverse(q_error);
+	Quaternion2BFAngle(q_error, body_frame_error);
+
+	float euler2[3];
+	Quaternion2RPY(q_t, euler2);
+	float q_t2[4];
+	RPY2Quaternion(euler2, q_t2);
+
+	float q1 = q_error[0];
+	float q2 = q_error[1];
+	float q3 = q_error[2];
+	float q4 = q_error[3];
+
+	//float roll = atan2f(2.0f*(q1*q2 + q3*q4), 1 - 2.0f*(q2*q2 + q3*q3));
+	float len = sqrt(sq(q2)+sq(q3)+sq(q4));
+	if (len >= 1.0e-12f) {
+		float invl = 1.0f/len;
+		float qp = radian_add(2.0f * atan2f(len,q1), 0);
+		q2 *= qp * invl;
+		q3 *= qp * invl;
+		q4 *= qp * invl;
+	}
+
+
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
+	FIR_test();
+	quat_test();
+
 	lpf2p[0].set_cutoff_frequency(1000, 60);
 	lpf2p[1].set_cutoff_frequency(1000, 60);
 	lpf2p[2].set_cutoff_frequency(1000, 60);
@@ -60,6 +174,9 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+	float az = 0;
+	float az_raw = 0;
+
 	int64_t time = 0;
 	ppm_data ppm = {0};
 	gps_data gps;
@@ -85,7 +202,8 @@ int main(int argc, char* argv[])
 	float on_pos2[12] = {0};
 	px4flow_frame frame = {0};
 	rc_mobile_data mobile = {0};
-	//float gyro[3] = {0};
+	float gyro[3] = {0};
+	float att_dbg[4] = {0};
 
 	int ssss = sizeof(frame);
 	ekf_estimator ekf_est;
@@ -101,7 +219,7 @@ int main(int argc, char* argv[])
 	while (fread(&time, 1, 8, in) == 8)
 	{
 		uint8_t tag = time >> 56;
-		uint16_t tag_ex;
+		uint16_t tag_ex = 0xffff;
 		time = time & ~((uint64_t)0xff << 56);
 		char data[65536];
 		int size = 24;
@@ -135,6 +253,11 @@ int main(int argc, char* argv[])
 		if (tag_ex == TAG_EXTRA_GPS_DATA)
 		{
 			memcpy(&gps_extra, data, size);
+		}
+		if (tag_ex == TAG_ATTITUDE_CONTROLLER_DATA)
+		{
+			if (size == 16)
+				memcpy(&att_dbg, data, size);
 		}
 		if (tag == TAG_PX4FLOW_DATA)
 		{
@@ -175,8 +298,11 @@ int main(int argc, char* argv[])
 		if (tag_ex == 5)
 		{
 			int16_t *p = (int16_t*) data;
-			//for(int i=0; i<3; i++)
-			//	gyro[i] = lpf2p[i].apply(p[i+3]) * PI / 1800;
+			for(int i=0; i<3; i++)
+				gyro[i] = lpf2p[i].apply(p[i+3]) * PI / 1800;
+
+			az_raw = -p[2]/100.0f;
+			az = fir.apply(az_raw);
 		}
 
 		else if (tag_ex == TAG_UBX_SAT_DATA)
@@ -222,7 +348,7 @@ int main(int argc, char* argv[])
 
 			float acc[3] = {-imu.accel[0]/100.0f, -imu.accel[1]/100.0f, -imu.accel[2]/100.0f};
 			float mag[3] = {-imu.mag[0]/10.0f, -imu.mag[1]/10.0f, imu.mag[2]/10.0f};
-			float gyro[3] = {sensor.gyro[0]*PI/18000, sensor.gyro[1]*PI/18000, sensor.gyro[2]*PI/18000};
+			//float gyro[3] = {sensor.gyro[0]*PI/18000, sensor.gyro[1]*PI/18000, sensor.gyro[2]*PI/18000};
 
 			float q0 = quad5.q[0];
 			float q1 = quad5.q[1];
@@ -380,6 +506,7 @@ int main(int argc, char* argv[])
 				fprintf(out, "MoMo\r\n");
 				fprintf(out, "FMT, 9, 23, CURR, IhIhh, TimeMS,ThrOut,Volt,Curr,Temp\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_OFF_CF, IhIh, TimeMS,Roll,Pitch,Yaw\r\n");
+				fprintf(out, "FMT, 9, 23, ATT_DBG, IhIh, TimeMS,pitch_t,pitch_rate_t,pitch,pitch_rate\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_ON_CF, IhIh, TimeMS,RollOnCF,PitchOnCF,YawOnCF\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_OFF_EKF, IhIh, TimeMS,Roll_EKF,Pitch_EKF,Yaw_EKF\r\n");
 				fprintf(out, "FMT, 9, 23, COVAR_OFF_EKF, IhIhhhh, TimeMS,q0,q1,q2,q3,PN,PE\r\n");
@@ -388,10 +515,10 @@ int main(int argc, char* argv[])
 				fprintf(out, "FMT, 9, 23, LatLon, IhIhhh, TimeMS,Lat,Lon,RPOS,RVEL,NSAT,AVGCNO,TOP6CNO\r\n");
 
 				fprintf(out, "FMT, 9, 23, ALT, Ihhhhhhh, TimeMS,BARO,ALT_EKF,ALT_ON, ALT_DST,Sonar,DesSonar,CRate,DesCRate\r\n");
-				fprintf(out, "FMT, 9, 23, IMU, Ihhhhhh, TimeMS,ACCX,ACCY,ACCZ,GYROX,GYROY,GYROZ\r\n");
+				fprintf(out, "FMT, 9, 23, IMU, Ihhhhhh, TimeMS,ACCX,ACCY,ACCZ,GYROX,GYROY,GYROZ, ACCZ_RAW,ACCZ_FIR\r\n");
 				fprintf(out, "FMT, 9, 23, POS2, Ihhhhhhhhhhhh, TimeMS,POSN,POSE,POSD,VELN,VELE,VELD, abiasx, abiasy, abiasz, vbiasx, vbiasy, vbiasz, sonar_surface, rawn, rawe,flowx,flowy,preX,preY,hx,hy\r\n");
 				fprintf(out, "FMT, 9, 23, ON_POS2, Ihhhhhhhhhhhh, TimeMS,POSN,POSE,POSD,VELN,VELE,VELD, abiasx, abiasy, abiasz, vbiasx, vbiasy, vbiasz, rawn, rawe\r\n");
-				fprintf(out, "FMT, 9, 23, ACC_NED, Ihhh, TimeMS,ACC_N, ACC_E, ACC_D\r\n");
+				fprintf(out, "FMT, 9, 23, ACC_NED, Ihhh, TimeMS,ACC_N, ACC_E, ACC_D, ACC_TOTAL\r\n");
 				fprintf(out, "FMT, 9, 23, AHRS_SEKF, Ihhh, TimeMS,ahrs_roll, ahrs_pitch, ahrs_yaw, ahrs_gyro_bias[0], ahrs_gyro_bias[1], ahrs_gyro_bias[2]\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_OFF_INS, Ihhh, TimeMS,ins_roll, ins_pitch, ins_yaw, ins_gyro_bias[0], ins_gyro_bias[1], ins_gyro_bias[2], alt_ins\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_RAW, Ihhh, TimeMS, roll_raw, pitch_raw, yaw_raw\r\n");
@@ -433,11 +560,12 @@ int main(int argc, char* argv[])
 				ekf_est.ekf_result.roll;
 				fprintf(out, "ATT_ON, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), quad.angle_pos[0]/100.0f, quad.angle_pos[1]/100.0f, quad.angle_pos[2]/100.0f, quad.angle_target[0]/100.0f, quad.angle_target[1]/100.0f, quad.angle_target[2]/100.0f, quad.speed[0]/100.0f, quad.speed[1]/100.0f, quad.speed[2]/100.0f, quad.speed_target[0]/100.0f, quad.speed_target[1]/100.0f, quad.speed_target[2]/100.0f);
 				fprintf(out, "ATT_OFF_CF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), euler[0] * 180 / PI, euler[1] * 180 / PI, euler[2] * 180 / PI, 0, 0);
+				fprintf(out, "ATT_DBG, %d, %f, %f, %f, %f, %d\r\n", int(time/1000), att_dbg[0] * 180 / PI, att_dbg[1] * 180 / PI, att_dbg[2] * 180 / PI, att_dbg[3]*180/PI, 0);
 				fprintf(out, "ATT_ON_CF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), roll_cf * 180 / PI, pitch_cf * 180 / PI, yaw_cf * 180 / PI, 0, 0);
 				fprintf(out, "ATT_OFF_EKF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.ekf_result.roll * 180 / PI, ekf_est.ekf_result.pitch * 180 / PI, ekf_est.ekf_result.yaw * 180 / PI, 0, 0);
 
 				fprintf(out, "COVAR_OFF_EKF, %d, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.P[6*14], ekf_est.P[7*14], ekf_est.P[8*14], ekf_est.P[9*14], sqrt(ekf_est.P[0*14]), sqrt(ekf_est.P[4*14]), 0, 0);
-				fprintf(out, "IMU, %d, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), acc[0], acc[1], acc[2], gyro[0]*180/PI, gyro[1]*180/PI, gyro[2]*180/PI);
+				fprintf(out, "IMU, %d, %f, %f, %f, %f, %f, %f,%f,%f\r\n", int(time/1000), acc[0], acc[1], acc[2], gyro[0]*180/PI, gyro[1]*180/PI, gyro[2]*180/PI, az_raw, az);
 				if(ekf_est.ekf_is_ready())
 				{
 					fprintf(out, "POSITION, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), lat_meter, lon_meter, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_y, speed_east, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps.DOP[1]/100.0f, 0, 0);
@@ -445,7 +573,7 @@ int main(int argc, char* argv[])
 					fprintf(out, "POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f, %f, %f,%f,%f,%f,%f,%f\r\n", int(time/1000), pos2.x[0], pos2.x[1], pos2.x[2], pos2.x[3], pos2.x[4], pos2.x[5], pos2.x[6], pos2.x[7], pos2.x[8], pos2.x[9], pos2.x[10], pos2.x[11], pos2.x[12], pos2.gps_north, pos2.gps_east, pos2.vx, pos2.vy, pos2.predict_flow[0], pos2.predict_flow[1], (float)frame.pixel_flow_x_sum, (float)frame.pixel_flow_y_sum);
 					fprintf(out, "POS2_P, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), float(pos2.P[0*14]), float(pos2.P[1*14]), float(pos2.P[2*14]), float(pos2.P[3*14]), float(pos2.P[4*14]), float(pos2.P[5*14]), float(pos2.P[6*14]), float(pos2.P[7*14]), float(pos2.P[8*14]), float(pos2.P[9*14]), float(pos2.P[10*14]), float(pos2.P[11*14]), float(pos2.P[12*14]));
 					fprintf(out, "ON_POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f\r\n", int(time/1000), on_pos2[0], on_pos2[1], on_pos2[2], on_pos2[3], on_pos2[4], on_pos2[5], on_pos2[6], on_pos2[7], on_pos2[8], on_pos2[9], on_pos2[10], on_pos2[11], pos2.gps_north, pos2.gps_east);
-					fprintf(out, "ACC_NED,%d,%f,%f,%f\r\n", int(time/1000), pos2.acc_ned[0], pos2.acc_ned[1], pos2.acc_ned[2]);
+					fprintf(out, "ACC_NED,%d,%f,%f,%f, %f\r\n", int(time/1000), pos2.acc_ned[0], pos2.acc_ned[1], pos2.acc_ned[2], pos2.co[0], sqrt(pos2.acc_ned[0]*pos2.acc_ned[0] + pos2.acc_ned[1]*pos2.acc_ned[1] + pos2.acc_ned[2]*pos2.acc_ned[2]));
 				}
 				if (home_set)
 				fprintf(out, "LatLon, %d, %f, %f, %f, %f, %d, %f, %f\r\n", int(time/1000), gps_extra.latitude, gps_extra.longitude, 0.0005 * gps_extra.position_accuracy_horizontal * gps_extra.position_accuracy_horizontal, 0.02 * gps_extra.velocity_accuracy_horizontal * gps_extra.velocity_accuracy_horizontal, gps.satelite_in_use, avg_cno, top6_cno);
