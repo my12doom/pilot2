@@ -12,6 +12,8 @@ Currently most YAP systems runs on STM32F4xx. Due to computation power issue, mi
 
 #System Stucture and Work Flow
 TODO
+##
+## Bootloader
 
 #Coding Guidelines
 use C+class, minimun template and basic operator override is acceptable.
@@ -27,4 +29,13 @@ non-blocking functions in time-critical thread only. put unpredictable works to 
 #Coordinate Systems
 see [CoordinateSystems.md](CoordinateSystems.md)
 
-#Roadmap
+#TODOs
+Precision IMU calibration.
+Better state estimation, such as UKF, more detailed dynamic physical models.
+System Identification and Advanced Controlling Algorithm.
+Software Defined Radio baseband.
+Battery Management System.
+FOC ESCs.
+Gimbals.
+Image Stabilizer, or "E-Gimbal".
+Redundant System.
