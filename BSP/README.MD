@@ -1,2 +1,0 @@
-HAL is Hardware Abstraction Layer
-HAL文件夹是硬件抽象层 主要适用于不同平台下驱动的抽象
