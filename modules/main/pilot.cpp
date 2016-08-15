@@ -3014,18 +3014,20 @@ int yet_another_pilot::light_words()
 				}
 			}
 		}
+		
+		return 0;
 	}
 
 	
 	if (!rgb)
 		return -1;
-	
+
 	if (mag_calibration_state)
 	{
 		// do nothing ,let the worker do light words
 	}
 	// stay still!
-	else if (mag_reset_requested)
+	else if (mag_reset_requested )
 	{
 		float color[5][3] = 
 		{
