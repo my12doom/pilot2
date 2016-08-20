@@ -135,6 +135,7 @@ uint8_t ads1256_read_registers(uint8_t start, uint8_t n, void *out);
 uint8_t ads1256_write_registers(uint8_t start, uint8_t n, void *out);
 uint8_t ads1256_read_register(uint8_t reg);
 void ads1256_go();
+uint8_t ads1256_read_register(uint8_t reg);
 void ads1256_write_register(uint8_t reg, uint8_t data);
 int ads1256_init(void);
 int ads1256_startconvert(void);

@@ -71,35 +71,27 @@ int main()
 
 	
 	log_init();
-	systimer->delayms(1000);
-	
-	for(int i=0; i<3; i++)
-		ads1256_init();
+	ads1256_init();
 		
 	bool ok = true; 
-	for(int i=0; i<3; i++)
-	{		
-		// configure buffer and calibration
-		ads1256_status adc_status;
-		ads1256_read_registers(REG_Status, 1, &adc_status);
-		adc_status.AutoCalibration = 1;
-		adc_status.BufferEnable = 0;
-		ads1256_write_registers(REG_Status, 1, &adc_status);
-		
-		ok = ok && (adc_status.ID == 3);
-		
-		// input: single ended AIN3
-		ads1256_mux adc_mux;
-		ads1256_read_registers(REG_MUX, 1, &adc_mux);
-		adc_mux.positive = ads1256_channnel_AIN2;
-		adc_mux.negative = ads1256_channnel_AIN6;
-		ads1256_write_registers(REG_MUX, 1, &adc_mux);
+	// configure buffer and calibration
+	ads1256_status adc_status;
+	*(uint8_t*)&adc_status = ads1256_read_register(REG_Status);
+	//ads1256_read_registers(REG_Status, 1, &adc_status);
+	adc_status.AutoCalibration = 1;
+	adc_status.BufferEnable = 1;
+	ads1256_write_register(REG_Status, *(uint8_t*)&adc_status);
+	
+	ok = ok && (adc_status.ID == 3);
+	
+	// input: single ended AIN2
+	ads1256_mux adc_mux;
+	adc_mux.positive = ads1256_channnel_AIN2;
+	adc_mux.negative = ads1256_channnel_AIN6;
+	ads1256_write_register(REG_MUX, *(uint8_t*)&adc_mux);
 
-		// data rate
-		ads1256_speed sps = ads1256_speed_15000sps;
-		ads1256_write_registers(REG_DataRate, 1, &sps);
-
-	}
+	// data rate
+	ads1256_write_register(REG_DataRate, ads1256_speed_1000sps);
 
 	F4Interrupt interrupt;
 	interrupt.init(GPIOA, GPIO_Pin_8, interrupt_falling);

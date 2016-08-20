@@ -59,12 +59,30 @@ uint8_t ads1256_write_registers(uint8_t start, uint8_t n, void *data)
 
 uint8_t ads1256_read_register(uint8_t reg)
 {
-	ads1256_read_registers(reg, 1, &reg);
-	return reg;
+	uint8_t reg1, reg2;
+	for(int i=0; i<10; i++)
+	{
+		reg1 = 0;
+		reg2 = 3;		
+		ads1256_read_registers(reg, 1, &reg1);
+		ads1256_read_registers(reg, 1, &reg2);
+		
+		if (reg1 == reg2)
+			return reg1;
+	}
+	return 0xff;
 }
 void ads1256_write_register(uint8_t reg, uint8_t data)
 {
-	ads1256_write_registers(reg, 1, &data);
+	for(int i=0; i<10; i++)
+	{
+		uint8_t data_read = data+1;
+		ads1256_write_registers(reg, 1, &data);
+		ads1256_read_registers(reg, 1, &data_read);
+		
+		if (data_read == data)
+			return;
+	}
 }
 
 
@@ -119,12 +137,8 @@ int ads1256_init(void)
 	ads1256_tx_rx(0xff);
 	ads1256_end();
 
-	systimer->delayms(50);
-
 	for(i=0; i<10; i++)
 	{
-		systimer->delayms(50);
-
 		ads1256_read_registers(i, 1, &data);
 
 		printf("reg(%d)=0x%02x\n", i, data);
@@ -148,7 +162,7 @@ void ads1256_go()
 	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;							//时钟极性，空闲时为低
 	SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;						//第 1 个边沿有效，上升沿为采样时刻
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;							//NSS 信号由软件产生
-	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32;	//8 分频，9MHz
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;	//8 分频，9MHz
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;					//高位在前
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
 	SPI_Init(SPI1, &SPI_InitStructure);
