@@ -10,6 +10,7 @@ param default_throttle_hover("hov", 0.35f);
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
 static param quadcopter_max_acceleration("maxA", 4.5);
+static param alt_braking_enabled("hbra", 1);
 static param pid_quad_altitude[4] = 	// P, I, D, IMAX, 
 										// unit: 1/second, 1/seconds^2, 1, meter*second
 										// convert altitude error(meter) to target climb rate(meter/second)
@@ -190,6 +191,58 @@ int altitude_controller::update(float dt, float user_rate)
 
 	TRACE("\rtarget_climb_rate=%.2f climb from alt =%.2f, user=%.2f, out=%2f.     ", target_climb_rate, target_climb_rate-user_rate * feed_forward_factor, user_rate, throttle_result);
 
+	// a better outter loop for centered throttle stick remote controller.
+	if (int(alt_braking_enabled) && m_airborne)
+	{
+		bool near_ground = !isnan(m_sonar_target) && m_last_valid_sonar < 0.15f;
+		static bool last_near_ground;
+		if (!last_near_ground && near_ground)
+			m_sonar_target = m_last_valid_sonar + m_baro_states[1] / 2;
+		last_near_ground = near_ground;
+
+
+		if (!near_ground)
+		{
+			bool stick_centered = fabs(user_rate) < 0.1f;
+
+			if (!stick_centered)
+			{
+				m_controller_state = alt_override;
+				m_braking_timer = 0;
+				target_climb_rate = user_rate;
+			}
+			else
+			{
+				if (m_controller_state == alt_override)
+				{
+					m_controller_state = alt_braking;
+					m_braking_timer = 0;
+					target_climb_rate = 0;
+				}
+
+				else if (m_controller_state == alt_braking)
+				{
+					if (fabs(m_baro_states[1]) < 0.5f)
+						m_braking_timer += dt;
+					else
+						m_braking_timer = 0;
+
+					if (m_braking_timer > 0.5f)
+					{
+						float &target = isnan(m_sonar_target) ? baro_target : m_sonar_target;
+						target = (isnan(m_sonar_target) ? m_baro_states[0] : m_last_valid_sonar) + m_baro_states[1] /2;
+						LOGE("alt braking done, target set to %.2f(%s)", target, isnan(m_sonar_target) ? "baro" : "sonar");
+						m_controller_state = alt_hold;
+					}
+					target_climb_rate = 0;
+				}
+				else if (m_controller_state == alt_hold)
+				{
+					// do nothing
+				}
+			}
+		}
+	}
 
 	// new climb rate error
 	float climb_rate_error = target_climb_rate - m_baro_states[1];
@@ -290,6 +343,11 @@ int altitude_controller::update(float dt, float user_rate)
 	return 0;
 }
 
+void altitude_controller::start_braking()
+{
+	m_controller_state = alt_override;
+}
+
 bool altitude_controller::used()
 {
 	if (systimer->gettime() - last_update < 100000)
@@ -314,6 +372,7 @@ int altitude_controller::reset()
 	climb_rate_error_pid[0] = NAN;
 	m_sonar_ticker = 0;
 	m_sonar_target = NAN;
+	m_controller_state = alt_hold;
 
 	LOGE("altitude_controller::reset()\n");
 

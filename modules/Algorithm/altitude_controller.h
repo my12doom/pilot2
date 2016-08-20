@@ -42,6 +42,9 @@ public:
 
 	// return whether this controller is used( update() called in less than 0.1 seconds)
 	bool used();
+
+	// forced braking mode.
+	void start_braking();
 	
 	float get_result();
 
@@ -76,6 +79,14 @@ public:
 	float m_last_valid_sonar;
 	float m_sonar_target;
 	float m_sonar_ticker;
+
+	enum 
+	{
+		alt_hold,
+		alt_override,
+		alt_braking,
+	} m_controller_state;
+	float m_braking_timer;
 
 protected:
 	float feed_forward_factor;

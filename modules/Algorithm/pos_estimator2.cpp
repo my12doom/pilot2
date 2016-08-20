@@ -17,9 +17,9 @@ static double NAN = *( double* )pnan;
 #define isnan _isnan
 float baro_comp_coeff[6] = 
 {
-	0.25, -0.18,
-	0.45, -0.45,
-	0, 0,
+	0.1, -0.1,
+	0.3, -0.3,
+	-0.5, -0,
 };
 #else
 #include <utils/param.h>
@@ -27,7 +27,7 @@ param baro_comp_coeff[6] =
 {
 	param("bcxp", 0.25f), param("bcxn", -0.18f),
 	param("bcyp", 0.45f), param("bcyn", -0.45f),
-	param("bczp", 0.00f), param("bczn", -0.00f),
+	param("bczp", -0.50f), param("bczn", -0.00f),
 };
 #endif
 
@@ -284,6 +284,8 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		0.0,0.0,0.0, 0.0
 		);
 
+	float R_baro = 25.0f;
+
 #if 1
 	matrix G = matrix(6, 3, 
 		dtsq_2 * r[0], dtsq_2 *  r[1], dtsq_2 * r[2],
@@ -313,6 +315,8 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			Q(m,n) = Q1(m,n);
 
 	co[0] = Q1(1,1)*1E+10;
+
+	//Q(2,2) += dt * sqrt(x[0]*x[0]+x[1]*x[1]) * 1E-2;
 
 #endif
 
@@ -360,7 +364,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		R_count = 6;
 		R_diag[0] = R_pos;
 		R_diag[1] = R_pos;
-		R_diag[2] = 60.0;
+		R_diag[2] = R_baro;
 		R_diag[3] = R_vel;
 		R_diag[4] = R_vel;
 		R_diag[5] = 65.0;
@@ -425,7 +429,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		height_factor *= height_factor;
 
 		R_count = 3;
-		R_diag[0] = 60.0f;
+		R_diag[0] = R_baro;
 		R_diag[1] = (saturation?25.0f : 5.0f) * height_factor;
 		R_diag[2] = (saturation?25.0f : 5.0f) * height_factor;
 		R_diag[3] = 16.0f;
