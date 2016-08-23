@@ -212,6 +212,7 @@ public:
 	float acrobatic_timer;
 	float acrobatic_number;		// helper variable for acrobatic state tracking.
 	int arcrobatic_arg;
+	float m_rf_ok_ticker;
 
 	// constructor
 	yet_another_pilot();

@@ -187,6 +187,7 @@ yet_another_pilot::yet_another_pilot()
 	event_count = 0;
 	home_set = false;
 	rc_fail_tick = 0;
+	m_rf_ok_ticker = 0;
 	pos_control = &pos_control_hybird;
 
 	for(int i=0; i<3; i++)
@@ -2096,7 +2097,7 @@ int yet_another_pilot::check_stick_action()
 	// emergency switch
 	// magnetometer calibration starts if flip emergency switch 10 times, interval systime between each flip should be less than 1 second.
 	static float last_ch4 = NAN;
-	if (!rc_fail)
+	if (m_rf_ok_ticker > 1.0f)		// only trigger after 1 second RF ok, to prevent chaotic initial data
 	{		
 		if (isnan(last_ch4))
 			last_ch4 = rc[4];
@@ -2795,6 +2796,11 @@ int yet_another_pilot::read_rc()
 	
 	if (g_pwm_input[2] < (rc_setting[2][0] - (rc_setting[2][2] - rc_setting[2][0])/10))
 		rf_fail = true;
+
+	if (rf_fail)
+		m_rf_ok_ticker = 0;
+	else
+		m_rf_ok_ticker += interval;
 	
 	// controll source selecting
 	if (rf_fail || forced_mobile_controll > 0.5f)
