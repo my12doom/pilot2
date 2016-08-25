@@ -320,6 +320,14 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 
 	//Q(2,2) += dt * sqrt(x[0]*x[0]+x[1]*x[1]) * 1E-2;
 
+	if (!armed)
+	{
+		Q(3,3) = 1e-3;
+		Q(4,4) = 1e-3;
+		Q(5,5) = 1e-3;
+	}
+
+
 #endif
 
 	matrix x1 = F * x + Bu;
