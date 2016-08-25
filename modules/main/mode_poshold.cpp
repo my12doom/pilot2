@@ -45,7 +45,7 @@ int flight_mode_poshold::loop(float dt)
 {
 	// altitude
 	yap.default_alt_controlling();
-	if (yap.pos_control_hybird.state == pos_controller::braking)
+	if (yap.pos_control_hybird.state == pos_controller::braking && yap.get_estimator_state() == fully_ready)
 		yap.alt_controller.start_braking();
 
 	// attitude, roll and pitch
