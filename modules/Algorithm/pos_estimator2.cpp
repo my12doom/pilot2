@@ -2,6 +2,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
+#include <stddef.h>
 
 #define sonar_step_threshold 0.45f
 
@@ -15,6 +16,7 @@ const float mis_alignment_error = 0.02;
 static unsigned long pnan[2]={0xffffffff, 0x7fffffff};
 static double NAN = *( double* )pnan;
 #define isnan _isnan
+#define isfinite _finite
 float baro_comp_coeff[6] = 
 {
 	0.1, -0.1,
@@ -33,19 +35,10 @@ param baro_comp_coeff[6] =
 
 pos_estimator2::pos_estimator2()
 {
-	flow_ticker = 0;
-	latency = 400000;
 	home_lat = NAN;
 	home_lon = NAN;
-	gps_north = 0;
-	gps_east = 0;
-	_state = 1;
-	vx_lpf = 0;
-	vy_lpf = 0;
-	saturation_timeout = 0.3f;
 	reset();
 
-	memset(local, 0, sizeof(local));
 }
 
 pos_estimator2::~pos_estimator2()
@@ -63,6 +56,15 @@ int pos_estimator2::reset()		// mainly for after GPS glitch handling
 	position_healthy = false;
 	flow_healthy = false;
 	last_valid_sonar = 0;
+	memset(local, 0, sizeof(local));
+	flow_ticker = 0;
+	latency = 400000;
+	gps_north = 0;
+	gps_east = 0;
+	_state = 1;
+	vx_lpf = 0;
+	vy_lpf = 0;
+	saturation_timeout = 0.3f;
 
 	P = matrix::diag(13, 100.0, 100.0, 4.0, 100.0, 100.0, 4.0, 1.0, 1.0, 1.0, 100.0, 100.0, 100.0, 10.0);
 	x = matrix(13,1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -488,6 +490,14 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 
 	local[0] = (local[0] + x[3] * dt) * (1-alpha05) + alpha05 * x[0];
 	local[1] = (local[1] + x[4] * dt) * (1-alpha05) + alpha05 * x[1];
+
+	// sanity check
+	for(int i=0; i<x.m; i++)
+		if (isnan(x[i] || !isfinite(x[i])) || x[i] != x[i])
+		{
+			reset();
+			return -1;
+		}
 
 	return 0;
 }
