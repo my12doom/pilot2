@@ -52,6 +52,9 @@ static param ignore_error("err",0);
 static param rookie_mode("rook",0);
 static param selfie_mode("self", 0);
 static param rc_mode("mode", 1);
+static param low_voltage_setting1("lp1", 11.0f);
+static param low_voltage_setting2("lp2", 10.8f);
+
 
 static param quadcopter_trim[3] = 
 {
@@ -2877,18 +2880,12 @@ int yet_another_pilot::lowpower_handling()
 		return -1;
 	
 	static float lowpower1 = 0;
-	static float lowpower2 = 0;
-
-#if 0
-	float ref_voltage = voltage;
-	float low_voltage1 = 10.8f;
-	float low_voltage2 = 10.2f;
-#else
+	static float lowpower2 = 0;	
+	
 	float ref_voltage = batt.get_internal_voltage();
 	float delta = fmax(0, alt_estimator.state[0] - takeoff_ground_altitude) * 0.002f;
-	float low_voltage1 = 11.0f + delta;
-	float low_voltage2 = 10.8f + delta;
-#endif
+	float low_voltage1 = low_voltage_setting1 + delta;
+	float low_voltage2 = low_voltage_setting2 + delta;
 
 	if (ref_voltage > 6 && ref_voltage < low_voltage2)
 	{
