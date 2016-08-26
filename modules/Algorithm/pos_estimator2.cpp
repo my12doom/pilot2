@@ -12,23 +12,23 @@ const float gain_error = 0.003;
 const float mis_alignment_error = 0.02;
 
 #ifdef WIN32
-#include <float.h>
+#include <float.h> 
 static unsigned long pnan[2]={0xffffffff, 0x7fffffff};
 static double NAN = *( double* )pnan;
 #define isnan _isnan
 #define isfinite _finite
 float baro_comp_coeff[6] = 
 {
-	0.1, -0.1,
-	0.3, -0.3,
+	0.18, -0.08,
+	0.25, -0.25,
 	-0.5, -0,
 };
 #else
 #include <utils/param.h>
 param baro_comp_coeff[6] = 
 {
-	param("bcxp", 0.25f), param("bcxn", -0.18f),
-	param("bcyp", 0.45f), param("bcyn", -0.45f),
+	param("bcxp", 0.18f), param("bcxn", -0.08f),
+	param("bcyp", 0.25f), param("bcyn", -0.25f),
 	param("bczp", -0.50f), param("bczn", -0.00f),
 };
 #endif
@@ -259,7 +259,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		baro_comp += v_bf[2] > 0 ? (v_bf[2] * baro_comp_coeff[4]) : (v_bf[2] * baro_comp_coeff[5]);
 		baro -= baro_comp;
 
-		if (v_bf[2] > 0)
+		if (v_bf[2] > 1.0f)
 			R_baro = 100.0f;
 	}
 
@@ -326,9 +326,9 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 
 	if (!armed)
 	{
-		Q(3,3) = 1e-3;
-		Q(4,4) = 1e-3;
-		Q(5,5) = 1e-3;
+// 		Q(3,3) = 1e-3;
+// 		Q(4,4) = 1e-3;
+// 		Q(5,5) = 1e-3;
 	}
 
 

@@ -2101,7 +2101,7 @@ int yet_another_pilot::check_stick_action()
 				flashlight->toggle();
 
 			//start_acrobatic(acrobatic_move_flip, 4);
-			start_taking_off();
+			//start_taking_off();
 			//reset_accel_cal();
 			
 		}
