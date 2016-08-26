@@ -1489,7 +1489,7 @@ int yet_another_pilot::calculate_state()
 		memcpy(&estimator2.frame, &frame, sizeof(frame));
 
 		int64_t t = systimer->gettime();
-		estimator2.update(q, acc, gps, a_raw_altitude, interval, armed);
+		estimator2.update(q, acc, gps, a_raw_altitude, interval, armed, airborne);
 		t = systimer->gettime() - t;
 		//LOGE("estimator2 cost %d us", int(t));
 		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
@@ -1760,11 +1760,18 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 {
 	if (arm == armed)
 		return 0;
+
 	if (arm)
 	{
 		if (firmware_loading)
 		{
 			LOGE("arm failed: firmware_loading\n");
+			return -1;
+		}
+
+		if (NED2BODY[2][2] < 0.5)
+		{
+			LOGE("arm failed: tilt %.2f", NED2BODY[2][2]);
 			return -1;
 		}
 
@@ -2094,6 +2101,9 @@ int yet_another_pilot::check_stick_action()
 				flashlight->toggle();
 
 			//start_acrobatic(acrobatic_move_flip, 4);
+			start_taking_off();
+			//reset_accel_cal();
+			
 		}
 	}
 

@@ -89,7 +89,7 @@ int pos_estimator2::state()
 }
 
 
-int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt, bool armed)			// unit: meter/s
+int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt, bool armed, bool airborne)			// unit: meter/s
 {
 	// 	DCM
 	float q0q0 = q[0] * q[0];
@@ -250,6 +250,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	v_bf[1] = r[1]*x[3] + r[4]*x[4] + r[7]*x[5];
 	v_bf[2] = r[2]*x[3] + r[5]*x[4] + r[8]*x[5];
 
+	float R_baro = 25.0f;
 	if (position_healthy || flow_healthy)
 	{
 		baro_comp = 0;
@@ -257,8 +258,13 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		baro_comp += v_bf[1] > 0 ? (v_bf[1] * baro_comp_coeff[2]) : (v_bf[1] * baro_comp_coeff[3]);
 		baro_comp += v_bf[2] > 0 ? (v_bf[2] * baro_comp_coeff[4]) : (v_bf[2] * baro_comp_coeff[5]);
 		baro -= baro_comp;
+
+		if (v_bf[2] > 0)
+			R_baro = 100.0f;
 	}
 
+	if(armed && !airborne)
+		R_baro = 500;
 
 	matrix F = matrix(13,13,
 		1.0,0.0,0.0, dt, 0.0, 0.0, dtsq_2*r[0], dtsq_2*r[1], dtsq_2*r[2], 0.0, 0.0, 0.0, 0.0,
@@ -285,8 +291,6 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		0.0,0.0,0.0,
 		0.0,0.0,0.0, 0.0
 		);
-
-	float R_baro = 25.0f;
 
 #if 1
 	matrix G = matrix(6, 3, 
@@ -473,7 +477,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			float sonar_h[13] = {0,0,1.0f, 0,0,0, 0,0,0, 0,0,0,-1.0f};
 			memcpy(H.data + H.m*H.n, sonar_h, H.n*4);
 			H.m++;
-			R_diag[R_count++] = 16.0f;
+			R_diag[R_count++] = 5.0f;
 			zk[zk.m++] = last_valid_sonar;
 		}
 	}

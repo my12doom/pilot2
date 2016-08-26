@@ -272,6 +272,7 @@ int init_VCP()
 	return 0;
 }
 
+static param ignore_error("err",0);
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
@@ -287,11 +288,12 @@ int bsp_init_all()
 	init_asyncworker();
 	init_led();
 	init_flow();
-	init_GPS();
+	if (! (int(ignore_error) & error_GPS))
+		init_GPS();
 	
 	// parameter config
-	param bsp_parameter("BSP", 1);
-	if (bsp_parameter)
+	param is_booting("boot", 1);
+	if (is_booting)
 	{
 		// alt hold
 		param("accP", 0.12) = 0.12;
@@ -314,6 +316,10 @@ int bsp_init_all()
 		// frame
 		param("ekf", 0)=2;
 		param("time", 3000)=5000;
+		is_booting = 0;
+		is_booting.save();
+		
+		param::save_all();
 	}
 	
 	/*
