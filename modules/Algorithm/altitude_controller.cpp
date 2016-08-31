@@ -187,7 +187,6 @@ int altitude_controller::update(float dt, float user_rate)
 	feed_forward_factor += m_airborne ? -dt : dt;
 	feed_forward_factor = limit(feed_forward_factor, 0.35f, 0.8f);
 	target_climb_rate += user_rate * feed_forward_factor;
-	target_climb_rate = limit(target_climb_rate, -quadcopter_max_descend_rate, quadcopter_max_climb_rate);
 
 	TRACE("\rtarget_climb_rate=%.2f climb from alt =%.2f, user=%.2f, out=%2f.     ", target_climb_rate, target_climb_rate-user_rate * feed_forward_factor, user_rate, throttle_result);
 
@@ -243,6 +242,8 @@ int altitude_controller::update(float dt, float user_rate)
 			}
 		}
 	}
+
+	target_climb_rate = limit(target_climb_rate, -quadcopter_max_descend_rate, quadcopter_max_climb_rate);
 
 	// new climb rate error
 	float climb_rate_error = target_climb_rate - m_baro_states[1];
