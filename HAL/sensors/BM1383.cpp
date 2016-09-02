@@ -23,25 +23,40 @@ int BM1383::init(HAL::II2C *i2c)
 
 	systimer->delayus(100);
 
-	FAIL_RET(i2c->write_reg(address, 0x12, 0x10));		// power down
-	systimer->delayms(2);
+	FAIL_RET(i2c->write_reg(address, 0x12, 0x00));		// power down
+	systimer->delayus(100);
+	FAIL_RET(i2c->write_reg(address, 0x12, 0x01));		// power down
+	systimer->delayus(100);
+	FAIL_RET(i2c->write_reg(address, 0x13, 0x00));		// reset
+	systimer->delayus(100);
 	FAIL_RET(i2c->write_reg(address, 0x13, 0x01));		// reset
-	systimer->delayms(2);
+	systimer->delayus(100);
 
-	FAIL_RET(i2c->write_reg(address, 0x14, 0x8A));		// continuous 50ms mode, 16 times average, 37ms measurement time.
-
-	return 0;
+	for(int i=0; i<3; i++)
+	{
+		FAIL_RET(i2c->write_reg(address, 0x14, 0x8A));		// continuous 50ms mode, 16 times average, 37ms measurement time.
+		uint8_t confirm = 0;
+		i2c->read_reg(address, 0x14, &confirm);
+		
+		if (confirm == 0x8A)
+		{
+			_healthy = true;
+			return 0;
+		}
+	}
+	
+	return -1;
 }
 
 int BM1383::read(devices::baro_data *out)
 {
-	uint8_t data[5] = {0};
-	FAIL_RET(i2c->read_regs(address, 0x1A, data, 5));
-	out->pressure = (data[2] >> 2 | (data[0] << 16) | (data[1] << 8)) / 20.48f;		// TODO; verify this.
-	int16_t tmp = (data[3] << 8) | data[4];
+	uint8_t data[6] = {0};
+	FAIL_RET(i2c->read_regs(address, 0x19, data, 5));
+	out->pressure = (data[1] << 14 | (data[2] << 6) | (data[3] >> 2)) / 20.48f;		// TODO; verify this.
+	int16_t tmp = (data[4] << 8) | data[5];
 	out->temperature = tmp / 32.0f;
 
-	return 0;
+	return (data[0]&0x01)?0:1;
 }
 
 bool BM1383::healthy()
