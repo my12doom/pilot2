@@ -120,13 +120,113 @@ int init_tim1()
 	TIM_Cmd(TIM1, ENABLE);
 
 	
-	TIM1->CCR1 = 1024;
-	TIM1->CCR2 = 2048;
-	TIM1->CCR3 = 3072;
+	TIM1->CCR1 = 0;
+	TIM1->CCR2 = 0;
+	TIM1->CCR3 = 0;
 	
 	return 0;
 }
 
+void CalcTimes()
+{
+}
+
+int apply_power(float Vr1, float Vr2, float Vr3)
+{
+	uint16_t period = TIM1->ARR;
+	float T1, T2;
+	int dPWM1, dPWM2, dPWM3;
+	int Ta, Tb, Tc;
+	
+	if( Vr1 >= 0 )
+	{
+		// (xx1)
+		if( Vr2 >= 0 )
+		{
+			// (x11)
+			// Must be Sector 3 since Sector 7 not allowed
+			// Sector 3: (0,1,1)  0-60 degrees
+			T1 = Vr2;
+			T2 = Vr1;
+			CalcTimes();
+			dPWM1 = Ta;
+			dPWM2 = Tb;
+			dPWM3 = Tc;
+		}
+		else
+		{
+			// (x01)
+			if( Vr3 >= 0 )
+			{
+				// Sector 5: (1,0,1)  120-180 degrees
+				T1 = Vr1;
+				T2 = Vr3;
+				CalcTimes();
+				dPWM1 = Tc;
+				dPWM2 = Ta;
+				dPWM3 = Tb;
+			}
+			else
+			{
+				// Sector 1: (0,0,1)  60-120 degrees
+				T1 = -Vr2;
+				T2 = -Vr3;
+				CalcTimes();
+				dPWM1 = Tb;
+				dPWM2 = Ta;
+				dPWM3 = Tc;
+			}
+		}
+	}
+	else
+	{
+		// (xx0)
+		if( Vr2 >= 0 )
+		{
+			// (x10)
+			if( Vr3 >= 0 )
+			{
+				// Sector 6: (1,1,0)  240-300 degrees
+				T1 = Vr3;
+				T2 = Vr2;
+				CalcTimes();
+				dPWM1 = Tb;
+				dPWM2 = Tc;
+				dPWM3 = Ta;
+			}
+			else
+			{
+				// Sector 2: (0,1,0)  300-0 degrees
+				T1 = -Vr3;
+				T2 = -Vr1;
+				CalcTimes();
+				dPWM1 = Ta;
+				dPWM2 = Tc;
+				dPWM3 = Tb;
+			}
+		}
+		else
+		{            
+			// (x00)
+			// Must be Sector 4 since Sector 0 not allowed
+			// Sector 4: (1,0,0)  180-240 degrees
+			T1 = -Vr1;
+			T2 = -Vr2;
+			CalcTimes();
+			dPWM1 = Tc;
+			dPWM2 = Tb;
+			dPWM3 = Ta;
+		}
+	}
+	
+	T1 *= TIM1->ARR;
+	T2 *= TIM1->ARR;
+	TIM1->CCR1 = (TIM1->ARR-T1-T2)/2;
+	TIM1->CCR2 = TIM1->CCR1 + T1;
+	TIM1->CCR3 = TIM1->CCR2 + T2;
+
+	return 0;
+}
 
 int main()
 {
@@ -232,6 +332,8 @@ int main()
 		float dt = (t-last_t)/1000000.0f;
 		last_t = t;
 		pos += v * dt;
+		
+		pos = 0;
 		
 		int A = power * sin(pos + PI * 0 / 3) + range/2;
 		int B = power * sin(pos + PI * 2 / 3) + range/2;

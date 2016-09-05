@@ -236,6 +236,7 @@ public:
 	void cancel_mag_cal();
 	
 	// automated functions
+	int prepare_for_throw() { pending_throwgo = true; return 0;}
 	int start_taking_off();
 	int start_acrobatic(acrobatic_moves move, int arg);
 	
@@ -247,7 +248,7 @@ public:
 	int land_detector();
 	int check_stick_action();
 	int disarm();
-	int arm(bool arm = true);
+	int arm(bool arm = true, bool forced = false);
 	int set_mode(copter_mode newmode);
 	int calculate_state();
 	int read_sensors();
@@ -263,6 +264,7 @@ public:
 
 	copter_mode last_mode_from_switch;
 	bool last_airborne;
+	bool pending_throwgo;
 	pos_estimator_state last_position_state;
 
 	// event handling

@@ -192,6 +192,7 @@ yet_another_pilot::yet_another_pilot()
 	rc_fail_tick = 0;
 	m_rf_ok_ticker = 0;
 	pos_control = &pos_control_hybird;
+	pending_throwgo = false;
 
 	for(int i=0; i<3; i++)
 	{
@@ -1756,12 +1757,13 @@ int yet_another_pilot::set_mode(copter_mode newmode)
 	return 0;
 }
 
-int yet_another_pilot::arm(bool arm /*= true*/)
+int yet_another_pilot::arm(bool arm /*= true*/, bool forced /*= false*/)
 {
 	if (arm == armed)
 		return 0;
 
-	if (arm)
+	// sanity check
+	if (arm && !forced)
 	{
 		if (firmware_loading)
 		{
@@ -1842,6 +1844,7 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 	islanding = false;
 	last_position_state = get_estimator_state();
 	last_airborne = false;
+	pending_throwgo = false;
 
 	// update home
 	if (get_estimator_state() == fully_ready)
@@ -1860,6 +1863,8 @@ int yet_another_pilot::arm(bool arm /*= true*/)
 
 int yet_another_pilot::disarm()
 {
+	pending_throwgo = false;
+
 	return arm(false);
 }
 
@@ -2103,8 +2108,10 @@ int yet_another_pilot::check_stick_action()
 			//start_acrobatic(acrobatic_move_flip, 4);
 			//start_taking_off();
 			//reset_accel_cal();
-			
 		}
+
+		//if (ch5_flip_count > 5)
+		//	prepare_for_throw();
 	}
 
 	// emergency switch
@@ -2231,6 +2238,32 @@ void yet_another_pilot::handle_takeoff()
 
 			// note: is_taking_off is cleared in default_alt_handling().
 		}
+	}
+
+	static float falling_time = 0;
+	if (use_EKF == 2.0f && !armed && pending_throwgo /*&& NED2BODY[2][2] > 0.8f*/)
+	{
+		if (estimator2.acc_ned[2] < -5.0f)
+		{
+			falling_time += interval;
+
+			if (falling_time > 0.03f)
+			{
+				LOGE("throw go\n");
+				arm(true, true);
+				airborne = true;
+				alt_controller.throttle_hover = limit(alt_controller.throttle_hover * 1.25f, 0.2f, 0.8f);
+				alt_controller.start_braking();
+			}
+		}
+		else
+		{
+			falling_time = 0;
+		}
+	}
+	else
+	{
+		falling_time = 0;
 	}
 }
 
@@ -3067,6 +3100,14 @@ int yet_another_pilot::light_words()
 		else
 			rgb->write(0,0,0);
 	}
+
+	else if (pending_throwgo)
+	{
+		if (systimer->gettime() % (50000*2) < 50000)
+			rgb->write(0,1,0);
+		else
+			rgb->write(0,0,0);
+	}
 	else if (firmware_loading)
 	{
 		rgb->write(0,0,1);
@@ -3440,7 +3481,7 @@ int yet_another_pilot::setup(void)
 		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read_flow(&frame) == 0 && frame.frame_count > 0 && yap.frame.cmos_version == 0x76)
 			break;
 
-		// flash the rgb light indicate a error
+		// flash the rgb light to indicate a error
 		for(int i=0; i<10; i++)
 		{
 			if(rgb)

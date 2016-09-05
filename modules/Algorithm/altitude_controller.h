@@ -44,7 +44,7 @@ public:
 	bool used();
 
 	// forced braking mode.
-	void start_braking();
+	int start_braking();
 	
 	float get_result();
 

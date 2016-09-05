@@ -98,7 +98,10 @@ int altitude_controller::provide_states(float *alt, float sonar, float *attitude
 		float step_change_max = sonar_step_threshold * (fabs(m_baro_states[1]) * sonar_update_inteval + 0.5f * fabs(m_baro_states[2]) * sonar_update_inteval * sonar_update_inteval);
 		step_change_max = fmax(step_change_max, 0.2f);
 		if (isnan(climb_rate_override) && !isnan(m_sonar_target) &&  fabs(sonar - m_last_valid_sonar) >  step_change_max) // note: only do step response with no climb rate override
+		{
 			m_sonar_target += sonar - m_last_valid_sonar;
+			start_braking();
+		}
 
 		m_last_valid_sonar = sonar;
 	}
@@ -344,9 +347,15 @@ int altitude_controller::update(float dt, float user_rate)
 	return 0;
 }
 
-void altitude_controller::start_braking()
+int altitude_controller::start_braking()
 {
+	if (!int(alt_braking_enabled))
+		return -1;
+
 	m_controller_state = alt_override;
+	m_braking_timer = 0;
+
+	return 0;
 }
 
 bool altitude_controller::used()
