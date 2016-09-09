@@ -44,8 +44,8 @@ int flight_mode_of_loiter::loop(float dt)
 		float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
 		float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
 
-		float vx = wx * yap.frame.ground_distance/1000.0f * 1.15f;
-		float vy = wy * yap.frame.ground_distance/1000.0f * 1.15f;
+		float vx = wx * yap.frame.ground_distance/1000.0f;
+		float vy = wy * yap.frame.ground_distance/1000.0f;
 
 
 		//transform fused velocity from ned to body 

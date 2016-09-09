@@ -532,6 +532,51 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\BMS\BMS.cpp</FilePath>
             </File>
+            <File>
+              <FileName>battery_estimator.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\Algorithm\battery_estimator.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>matrix.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\math\matrix.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>sdcard&amp;logging</GroupName>
+          <Files>
+            <File>
+              <FileName>log.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\utils\log.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\utils\SEGGER_RTT.c</FilePath>
+            </File>
+            <File>
+              <FileName>ff.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\modules\FileSystem\ff.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm324xg_eval_sdio_sd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\stm324xg_eval_sdio_sd.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm324xg_eval.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\stm324xg_eval.c</FilePath>
+            </File>
+            <File>
+              <FileName>F4SDCard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4SDCard.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

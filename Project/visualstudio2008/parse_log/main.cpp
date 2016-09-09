@@ -13,6 +13,7 @@
 #include <math/FIR.h>
 #include <math/quaternion.h>
 #include <algorithm/motion_detector.h>
+#include <Algorithm/battery_estimator.h>
 
 #define PI 3.1415926
 math::LowPassFilter2p lpf2p[3];//
@@ -139,10 +140,64 @@ int quat_test()
 	return 0;
 }
 
+int test_batt2()
+{
+	FILE * f = fopen("J:\\0011.dat.txt.csv", "rb");
+
+	if (!f)
+		return -1;
+
+	FILE * o = fopen("Z:\\bat0.csv", "wb");
+	if (!o)
+	{
+		fclose(f);
+		return -2;
+	}
+
+	fprintf(o, "t,vpredict,vint,v,P,res,I\r\n");
+	char tmp[200];
+	fgets(tmp, 200, f);
+	float t = 0;
+	float last_t = 0;
+	float v1,v2,v3,I,mah,bal;
+
+	battery_estimator est[3];
+
+	while(fscanf(f, "%f,%f,%f,%f,%f,%f,%f", &t, &v1,&v2,&v3,&I,&mah,&bal) == 7)		
+	{
+		float dt = t - last_t;
+		last_t = t;
+
+		float Icell[3] = {-I,-I,-I};
+		if (bal >= 0)
+		{
+			if (bal == 0)
+				Icell[0] += v1/20.0;
+			if (bal == 1)
+				Icell[1] += v2/20.0;
+			if (bal == 4)
+				Icell[2] += v3/20.0;
+		}
+
+		est[0].update(v2, Icell[1], dt);
+// 		est[1].update(v2, -I, dt);
+// 		est[2].update(v3, -I, dt);
+
+		fprintf(o, "%.3f,%.3f,%.3f,%.3f,%.6f,%.3f,%.3f\n", t, est[0].hx1, est[0].get_internal_voltage(), v2, sqrt(est[0].P[3]), est[0].get_internal_resistance()*1000, Icell[1]);
+	};
+
+	printf("mah=%.3f\n", est[0].get_mah_consumed());
+
+	fclose(f);
+	fclose(o);
+	return 0;
+}
+
 int main(int argc, char* argv[])
 {
 	FIR_test();
 	quat_test();
+	test_batt2();
 
 	lpf2p[0].set_cutoff_frequency(1000, 60);
 	lpf2p[1].set_cutoff_frequency(1000, 60);
@@ -151,6 +206,7 @@ int main(int argc, char* argv[])
 	double scaling = (double)1013.26 / 1013.25;
 	double temp = ((float)40) + 273.15f;
 	double a_raw_altitude = 153.8462f * temp * (1.0f - exp(0.190259f * log(scaling)));
+	battery_estimator batt_est;
 
 	motion_acc.set_threshold(1);
 	motion_gyro.set_threshold(5*PI/180);
@@ -339,12 +395,17 @@ int main(int argc, char* argv[])
 		}
 		else if (tag == TAG_SENSOR_DATA)
 		{
-			sensor_valid = true;
 			memcpy(&sensor, data, sizeof(sensor));
-			int throttle = (ppm.out[0] + ppm.out[1] + ppm.out[2] + ppm.out[3])/4;
-			static int power_id = 0;
-			if (power_id++ % 10 == 0)
-				fprintf(out, "CURR, %d, %d, %f, %f, %f, %d, %d,\r\n", int(time/1000), throttle, sensor.voltage/1000.0f, sensor.current/1000.0f, imu.temperature/1.0f, 0, 0);
+			sensor_valid = true;
+
+			if (time > 5000000)
+			{
+				batt_est.update(sensor.voltage/1000.0f, sensor.current/1000.0f, 0.005f);
+				int throttle = (ppm.out[0] + ppm.out[1] + ppm.out[2] + ppm.out[3])/4;
+				static int power_id = 0;
+				if (power_id++ % 10 == 0)
+					fprintf(out, "CURR, %d, %d, %f, %f, %f, %f, %f,\r\n", int(time/1000), throttle, sensor.voltage/1000.0f, sensor.current/1000.0f, imu.temperature/1.0f, batt_est.get_internal_voltage(), batt_est.get_internal_resistance()*1000);
+			}
 		}
 		else if (tag == TAG_IMU_DATA)
 		{
@@ -535,7 +596,7 @@ int main(int argc, char* argv[])
 				fprintf(out, "ArduCopter V3.1.5 (3c57e771)\r\n");
 				fprintf(out, "Free RAM: 990\r\n");
 				fprintf(out, "MoMo\r\n");
-				fprintf(out, "FMT, 9, 23, CURR, IhIhh, TimeMS,ThrOut,Volt,Curr,Temp\r\n");
+				fprintf(out, "FMT, 9, 23, CURR, IhIhh, TimeMS,ThrOut,Volt,Curr,Temp,EstVol,EstRes\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_OFF_CF, IhIh, TimeMS,Roll,Pitch,Yaw\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_DBG, IhIh, TimeMS,pitch_t,pitch_rate_t,pitch,pitch_rate\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_ON_CF, IhIh, TimeMS,RollOnCF,PitchOnCF,YawOnCF\r\n");

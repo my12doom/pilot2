@@ -157,7 +157,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			LOGE("pos_estimator2: using sonar\n");
 			sonar_healthy = true;
 			P[12*14] = 10.0;
-			x[12] = x.data[2] - frame.ground_distance/1000.0f*1.15f;
+			x[12] = x.data[2] - frame.ground_distance/1000.0f;
 		}
 	}
 
@@ -320,7 +320,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		for(int n=0; n<6; n++)
 			Q(m,n) = Q1(m,n);
 
-	co[0] = Q1(1,1)*1E+10;
+	co[0] = Q1(1,1)*1E10;
 
 	//Q(2,2) += dt * sqrt(x[0]*x[0]+x[1]*x[1]) * 1E-2;
 
@@ -463,7 +463,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 
 		if (frame.ground_distance > 0)
 		{
-			float new_sonar = frame.ground_distance/1000.0f*1.15f;
+			float new_sonar = frame.ground_distance/1000.0f;
 			float predicted_sonar = x1[2] - x1[12];
 
 			if (fabs(new_sonar-predicted_sonar) > sonar_step_threshold)

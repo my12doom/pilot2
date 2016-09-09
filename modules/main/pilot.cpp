@@ -100,27 +100,27 @@ static param mag_scale[3] =
 {
 	param("mgx", 1), param("mgy", 1), param("mgz", 1),
 };
-static float quadcopter_mixing_matrix[3][MAX_MOTOR_COUNT][3] = // the motor mixing matrix, [motor number] [roll, pitch, yaw]
+static float quadcopter_mixing_matrix[3][MAX_MOTOR_COUNT][4] = // the motor mixing matrix, [motor number] [roll, pitch, yaw, throttle]
 {
 	{							// + mode
-		{0, -1, +1},			// rear, CCW
-		{-1, 0, -1},			// right, CW
-		{0, +1, +1},			// front, CCW
-		{+1, 0, -1},			// left, CW
+		{0, -1, +1, 1},			// rear, CCW
+		{-1, 0, -1, 1},			// right, CW
+		{0, +1, +1, 1},			// front, CCW
+		{+1, 0, -1, 1},			// left, CW
 	},
 
 	{							// X mode
-		{-0.707f,-0.707f,+0.707f},				//REAR_R, CCW
-		{-0.707f,+0.707f,-0.707f},				//FRONT_R, CW
-		{+0.707f,+0.707f,+0.707f},				//FRONT_L, CCW
-		{+0.707f,-0.707f,-0.707f},				//REAR_L, CW
+		{-0.707f,-0.707f,+0.707f, 1},				//REAR_R, CCW
+		{-0.707f,+0.707f,-0.707f, 1},				//FRONT_R, CW
+		{+0.707f,+0.707f,+0.707f, 1},				//FRONT_L, CCW
+		{+0.707f,-0.707f,-0.707f, 1},				//REAR_L, CW
 	},
 
 	{							// Pi mode, a stupid very imbalance frame
-		{-0.6970,-0.6061,0.6663},
-		{-0.6970,0.8201,-0.7530},
-		{0.6970,0.8201,0.7530},
-		{0.6970,-0.6061,-0.6663},
+		{-0.6934,-0.5901,0.6600,0.9288},
+		{-0.6934,0.8404,-0.7612,1.0712},
+		{0.6934,0.8404,0.7612,1.0712},
+		{0.6934,-0.5901,-0.6600,0.9288},
 	},
 };
 
@@ -238,9 +238,12 @@ int yet_another_pilot::calculate_baro_altitude()
 	// raw altitude
 	double scaling = (double)a_raw_pressure / ground_pressure;
 	float temp = ((float)ground_temperature) + 273.15f;
-	a_raw_altitude = 153.8462f * temp * (1.0f - exp(0.190259f * log(scaling)));
+	a_raw_altitude = 153.8462f * temp * (1.0f - exp(0.190259f * log(scaling))) / 1.15f;
 	if (fabs(a_raw_altitude) < 5.0f)
 		ground_temperature = a_raw_temperature;
+
+	scaling = (double)b_raw_pressure / ground_pressure;
+	b_raw_altitude = 153.8462f * temp * (1.0f - exp(0.190259f * log(scaling))) / 1.15f;
 
 	return 0;
 }
@@ -610,7 +613,7 @@ int yet_another_pilot::output()
 		max_throttle = limit(1-max_roll_pitch, 0, 1);
 		float throttle = !airborne ? throttle_result : limit(throttle_result, min_throttle, max_throttle);	// add throttle only if airborne
 		for(int i=0; i<motor_count; i++)
-			motor_output[i] += throttle;
+			motor_output[i] += throttle * quadcopter_mixing_matrix[matrix][i][3];
 		
 		// try adding yaw
 		float min_motor = 1;
@@ -700,6 +703,10 @@ int yet_another_pilot::save_logs()
 {
 	if (!storage_ready)
 		return 0;
+
+	// 2nd baro
+	float baro_2nd[2] = {b_raw_pressure, b_raw_altitude};
+	log2(baro_2nd, TAG_2NDBARO, sizeof(baro_2nd));
 
 	// send/store debug data
 	int64_t systime = systimer->gettime();
@@ -1193,7 +1200,7 @@ int yet_another_pilot::read_imu_and_filter()
 
 		// read barometers
 		int healthy_baro_count = 0;
-		for(int i=0; i<manager.get_barometer_count(); i++)
+		for(int i=0; i<min(manager.get_barometer_count(), 1); i++)
 		{
 			IBarometer* barometer = manager.get_barometer(i);
 			
@@ -1212,6 +1219,16 @@ int yet_another_pilot::read_imu_and_filter()
 		}
 		if (healthy_baro_count == 0)
 			critical_errors |= error_baro;
+
+		if (manager.get_barometer_count() > 1)
+		{
+			baro_data data;
+			IBarometer* barometer = manager.get_barometer(1);
+			if (barometer->healthy() && barometer->read(&data) == 0)
+			{
+				b_raw_pressure = data.pressure;
+			}
+		}
 		
 		if (vcp && (usb_data_publish & data_publish_baro) && new_baro_data)
 		{
@@ -1370,7 +1387,7 @@ int yet_another_pilot::calculate_state()
 	if (interval <=0 || interval > 0.2f)
 		return -1;
 
-	mah_consumed += fabs(current) * interval / 3.6f;	// 3.6 mah = 1As
+	mah_consumed += fabs(current) * interval / 3.6f;	// 1 mah = 3.6As
 
 	float factor = 1.0f;
 	float factor_mag = 4.0f;
@@ -1448,8 +1465,8 @@ int yet_another_pilot::calculate_state()
 			float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
 			
 			float v_flow_body[3];
-			v_flow_body[0] = wy * frame.ground_distance/1000.0f * 1.15f;//black magic
-			v_flow_body[1] = -wx * frame.ground_distance/1000.0f * 1.15f;
+			v_flow_body[0] = wy * frame.ground_distance/1000.0f;//black magic
+			v_flow_body[1] = -wx * frame.ground_distance/1000.0f;
 			v_flow_body[2] = 0;
 
 			if (yap.frame.qual < 100)
@@ -2583,6 +2600,8 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 		float v = sqrt(velocity[0] * velocity[0] + velocity[1] * velocity[1]);
 		float battery = (batt.get_internal_voltage() - 10.7f)/(12.4f-10.7f);
 		battery = limit(battery, 0, 1);
+		static float min_bat = 1.0f;
+		min_bat = fmin(min_bat, battery);
 
 		sprintf(out, 
 			"state,%f,%f,%s,%.1f,%.1f,"		// gps latitude, longitude, gps ready, altitude, vertical velocity,
@@ -2594,7 +2613,7 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 			distance, v,
 			euler[0] * 180 / PI, euler[1] * 180 / PI, euler[2] * 180 / PI,
 			airborne ? "1" : "0", alt_controller.sonar_actived() ? "1" : "0",
-			battery, batt.get_internal_voltage()
+			min_bat, batt.get_internal_voltage()
 			);
 
 		uart->write(out, strlen(out));

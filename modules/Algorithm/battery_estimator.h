@@ -20,4 +20,5 @@ public:
 	float mah;
 	matrix x;
 	matrix P;
+	float hx1;
 };

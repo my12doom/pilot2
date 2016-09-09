@@ -4,11 +4,11 @@
 #include <utils/log.h>
 #include <protocol/RfData.h>
 
-static const matrix Q
+static matrix Q
 (
 	2,2,
-	4e-11, 0.0,
-	0.0, 4e-15
+	4e-9, 0.0,
+	0.0, 4e-12
 );
 static const matrix R
 (
@@ -75,13 +75,15 @@ int battery_estimator::update(const float voltage, const float current, const fl
 		init = true;
 	}
 
-	matrix x1 = F * x + B * u;
-	matrix P1 = F * P * F.transpos() + Q;
+	matrix x1 = F * x/* + B * u / 3.0f*/;
+	matrix P1 = F * P * F.transpos() + Q*(dt/0.005f);
 	matrix Sk = H * P1 * H.transpos() + R;
 	matrix K = P1 * H.transpos() * Sk.inverse();
 	matrix sk_i = Sk.inverse();
 
 	x = x1 + K*(zk - H*x1);
+	hx1 = (H*x1)[0];
+	float residual = (zk - H*x1)[0];
 	P = (matrix(P1.m) - K*H) * P1;
 	
 #ifndef WIN32

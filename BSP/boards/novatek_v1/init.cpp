@@ -12,6 +12,7 @@
 #include <HAL/sensors/SBusIn.h>
 #include <HAL\Interface\ILED.h>
 #include <HAL/sensors/PX4Flow.h>
+#include <HAL/sensors/BM1383.h>
 #include <utils/param.h>
 #include "RGBLED.h"
 #include "TLC59208F.h"
@@ -288,6 +289,29 @@ int iTLC59208F()
 	return 0;
 }
 
+int init_1383()
+{
+	static BM1383 bm1383;
+	static F4GPIO SCL(GPIOC, GPIO_Pin_13);
+	static F4GPIO SDA(GPIOC, GPIO_Pin_14);
+	static I2C_SW i2c(&SCL, &SDA);
+
+	for(int i=0; i<5; i++)
+	{
+		systimer->delayms(50);
+		if (bm1383.init(&i2c) == 0)
+		{
+			manager.register_barometer(&bm1383);
+			
+			LOGE("found BM1383\n");
+			
+			return 0;
+		}
+	}
+	
+	return -1;
+}
+
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
@@ -299,6 +323,7 @@ int bsp_init_all()
 	init_timers();
 	init_RC();
 	init_sensors();
+	init_1383();
 	//init_external_compass();
 	init_ist();
 	init_asyncworker();
@@ -346,7 +371,7 @@ int bsp_init_all()
 		param("rP3", 1.2f)=1.2f;
 		param("rI3", 0.15f)=0.15f;
 		
-		param("triP", 0)=0.55f;
+		param("triP", 0)=0;
 		
 		// tilt angle
 		param("rngR", PI / 8)= PI / 8;

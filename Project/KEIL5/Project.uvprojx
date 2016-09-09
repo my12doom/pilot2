@@ -775,6 +775,11 @@
           <GroupName>Device</GroupName>
           <Files>
             <File>
+              <FileName>BM1383.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\BM1383.cpp</FilePath>
+            </File>
+            <File>
               <FileName>Resources.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\Resources.cpp</FilePath>
@@ -1407,11 +1412,6 @@
               <FileName>RGBLED.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\dev_v4\RGBLED.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>BM1383.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\sensors\BM1383.cpp</FilePath>
             </File>
           </Files>
         </Group>

@@ -171,8 +171,10 @@ public:
 	float interval;// = 0;
 	float yaw_launch;
 	float a_raw_pressure;// = 0;
+	float b_raw_pressure;// = 0;
 	float a_raw_temperature;// = 0;
 	float a_raw_altitude;// = 0;
+	float b_raw_altitude;// = 0;
 	bool new_baro_data;// = false;
 	float throttle_real;// = 0;
 	float throttle_result;// = 0;

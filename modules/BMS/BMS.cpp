@@ -4,11 +4,13 @@
 #include <HAL/Interface/ISysTimer.h>
 #include <HAL/Interface/II2C.h>
 #include <utils/param.h>
+#include <utils/log.h>
 #include <stdio.h>
 #include <Protocol/crc32.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <Algorithm/battery_estimator.h>
 
 // BSP
 using namespace STM32F4;
@@ -28,7 +30,7 @@ static void swap(void *buf, int size)
 
 typedef struct cell_str
 {
-	uint16_t voltage;
+	float voltage;
 	uint16_t id;
 } _cell;
 
@@ -94,6 +96,7 @@ int main()
 	F4GPIO led4(GPIOA, GPIO_Pin_6);
 	
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
+	log_init();
 	led1.set_mode(MODE_OUT_PushPull);
 	led1.write(true);
 	led2.set_mode(MODE_OUT_PushPull);
@@ -130,43 +133,26 @@ int main()
 		printf("reg(%02x) = %02x\n", i, v);
 	}
 		
-	i2c.write_reg(0x30, 0, 0xf);					// clear OCD/SCD/UV/OV
+	i2c.write_reg(0x30, 0, 0xf);				// clear OCD/SCD/UV/OV
 	i2c.write_reg(0x30, 5, 0x43);				// enable DSG/CHG/CC
-	i2c.write_reg(0x30, 6, 0 | (1 << 4));		// SCD : 70us, 56mV
-	i2c.write_reg(0x30, 7, 6 | (4 << 4));		// OCD : 160ms, 19mV
+	i2c.write_reg(0x30, 6, 0 | (3 << 4));		// SCD : 70us, 56mV
+	//i2c.write_reg(0x30, 7, 6 | (4 << 4));		// OCD : 160ms, 19mV
+	i2c.write_reg(0x30, 7, 6 | (7 << 4));		// OCD : 160ms, 28mV
 	i2c.write_reg(0x30, 0xB, 0x19);				// CC:0x19, wtf?!
-	
-	/*
-	if (i2c.read_reg(0x30, 5, &v) == 0)
-	{
-		v |= 3;
-		if (i2c.write_reg(0x30, 5, v) == 0)
-			led2.write(false);
 		
-		systimer->delayms(500);
-		led2.write(true);
-		systimer->delayms(500);
-		led2.write(false);
-		
-		v = 0;
-		
-		if (i2c.read_reg(0x30, 5, &v) != 0 || ((v&3)!=3))
-		{
-			led2.write(true);
-			
-			//i2c.write_reg(0x30, 4, 1);
-			i2c.write_reg(0x30, 4, 2);
-		}
-	}
-	*/
-	
 	int64_t last_t = systimer->gettime();
 	int64_t charging_time = 0;
+	int balancing_cell = -1;
+	
+	log_printf("t,v1,v2,v3,e1,e2,e3,I\r\n");
+	float cell_current[5] = {0};
+	battery_estimator cell_estimator[5]; 
 	
 	while(1)
 	{
 		int64_t t = systimer->gettime();
 		int64_t dt = t - last_t;
+		float dts = dt/1000000.0f;
 		last_t = t;
 		
 		i2c.read_reg(0x30, 5, &v);
@@ -178,7 +164,8 @@ int main()
 
 		i2c.read_reg(0x30, 0, &v);
 		led3.write(!(v&1));			// OCD
-		led4.write(!(v&2));			// SCD
+		//led4.write(!(v&2));			// SCD
+		led4.write(!(storage_ready));
 		
 		// bat voltage
 		uint16_t vbat = 0;
@@ -202,6 +189,27 @@ int main()
 						vbat, lsb2packvoltage(vbat, 3), cell[0], lsb2voltage(cell[0]), cell[1], lsb2voltage(cell[1]), cell[4], lsb2voltage(cell[4]),
 						lsb2voltage( (1<<12) |(uv<<4) ), lsb2voltage( (2<<12) |(ov<<4) ),
 						CC, CC*8.44e-6, CC*8.44e-6/1e-3, state, batt_state_str[bstate] );
+		
+		for(int i=0; i<5; i++)
+		{
+			cell_current[i] = -CC*8.44e-6/1e-3;
+			if (i == balancing_cell)
+				cell_current[i] += lsb2voltage(cell[i]) / 20.0f;
+			
+			cell_estimator[i].update(lsb2voltage(cell[i]), cell_current[i], dts);
+		}
+		
+		static float mah = 0;
+		static int64_t last_t = 0;
+		log_printf("%.3f, %.3f,%.3f,%.3f, %.3f,%.3f,%.3f, %.3f,%.3f,%d\r\n", t/1000000.0f,
+			lsb2voltage(cell[0]), lsb2voltage(cell[1]), lsb2voltage(cell[4]),
+			cell_estimator[0].get_internal_voltage(), cell_estimator[1].get_internal_voltage(), cell_estimator[4].get_internal_voltage(),
+			CC*8.44e-6/1e-3, mah, balancing_cell);
+		if (dts > 0.01f && dts < 1.0f)
+		{
+			mah += dts * CC*8.44e-6/1e-3 / 3.6f;
+		}
+		log_flush();
 		systimer->delayms(500);
 				
 		// state handling
@@ -252,8 +260,8 @@ int main()
 			qsort(cells,  3, sizeof(_cell), compare_uint16);
 			
 			// should we balance? (imbalance not too much, not too small)
-			int imbalance = cells[2].voltage - cells[0].voltage;			
-			printf("imbalance=%d    ", imbalance);
+			float imbalance = cells[2].voltage - cells[0].voltage;			
+			printf("imbalance=%.1f    ", imbalance);
 			
 			if (imbalance > 25 && imbalance < 1000)
 			{
@@ -262,10 +270,12 @@ int main()
 				{
 					last = systimer->gettime();
 					i2c.write_reg(0x30, 1, 1<<cells[2].id);
+					balancing_cell = cells[2].id;
 				}
 				else if (systimer->gettime() - last > 5000000)
 				{
 					i2c.write_reg(0x30, 1, 0);
+					balancing_cell = -1;
 				}
 				else
 				{
@@ -277,11 +287,13 @@ int main()
 					charging_time = 0;
 				
 				i2c.write_reg(0x30, 1, 0);
+				balancing_cell = -1;
 			}
 		}
 		else
 		{
 			i2c.write_reg(0x30, 1, 0);
+			balancing_cell = -1;
 		}
 	}
 }
