@@ -23,13 +23,9 @@ int BM1383::init(HAL::II2C *i2c)
 
 	systimer->delayus(100);
 
-	FAIL_RET(i2c->write_reg(address, 0x12, 0x00));		// power down
-	systimer->delayus(100);
-	FAIL_RET(i2c->write_reg(address, 0x12, 0x01));		// power down
-	systimer->delayus(100);
-	FAIL_RET(i2c->write_reg(address, 0x13, 0x00));		// reset
-	systimer->delayus(100);
-	FAIL_RET(i2c->write_reg(address, 0x13, 0x01));		// reset
+	FAIL_RET(i2c->write_reg(address, 0x12, 0x01));		// power up
+	systimer->delayus(2000);
+	FAIL_RET(i2c->write_reg(address, 0x13, 0x01));		// unreset
 	systimer->delayus(100);
 
 	for(int i=0; i<3; i++)
