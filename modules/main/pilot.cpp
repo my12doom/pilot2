@@ -193,6 +193,7 @@ yet_another_pilot::yet_another_pilot()
 	m_rf_ok_ticker = 0;
 	pos_control = &pos_control_hybird;
 	pending_throwgo = false;
+	last_arming_time = 0;
 
 	for(int i=0; i<3; i++)
 	{
@@ -1871,6 +1872,7 @@ int yet_another_pilot::arm(bool arm /*= true*/, bool forced /*= false*/)
 	}
 	
 	armed = arm;
+	last_arming_time = systimer->gettime();
 	execute_mode_switching();
 	
 	LOGE("%s OK\n", arm ? "arm" : "disarm");
@@ -2313,6 +2315,9 @@ int yet_another_pilot::land_detector()
 
 int yet_another_pilot::crash_detector()
 {
+	if (systimer->gettime() < last_arming_time + 1000000)
+		return 0;
+
 	// always detect high G force
 	vector accel_delta;
 	

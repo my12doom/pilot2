@@ -122,6 +122,7 @@ public:
 	bool airborne;// = false;
 	float takeoff_ground_altitude;// = 0;
 	bool armed;// = false;
+	int64_t last_arming_time;
 
 	copter_mode flight_mode;// = basic;
 
