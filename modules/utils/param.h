@@ -13,15 +13,18 @@ public:
 
 	inline operator float()
 	{
+		if(pv)
 		return *pv;
 	}
 	float* operator& ()
 	{
-		return pv;
+		if(pv)
+			return pv;
 	}
 	inline float& operator= (float in)		// ram operation only
 	{
-		return *pv = in;
+		if(pv)
+			return *pv = in;
 	}
 	void save();						// save to eeprom
 

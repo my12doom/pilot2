@@ -11,6 +11,7 @@
 #include "IRCOUT.h"
 #include "IAsyncWorker.h"
 #include "IInterrupt.h"
+#include "ITimer.h"
 
 #include "IAccelerometer.h"
 #include "IBarometer.h"

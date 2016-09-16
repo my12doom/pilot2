@@ -1,3 +1,6 @@
+#ifdef WIN32
+#error log.cpp is for MCU, use log_win32.cpp instead.
+#endif
 #include <stddef.h>
 #include <stdarg.h>
 #include <string.h>

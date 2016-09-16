@@ -4,13 +4,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#ifdef WIN32
-#include <float.h>
-static unsigned long pnan[2]={0xffffffff, 0x7fffffff};
-static double NAN = *( double* )pnan;
-#define isnan _isnan
-#endif
-
 #define SONAR_MAX 4.5f
 #define SONAR_MIN 0.0f
 

@@ -7,7 +7,7 @@ IStorage *param_storage = get_default_storage();
 int page_size = param_storage->page_size();
 int page_count = param_storage->total_size()/ param_storage->page_size();
 int space_size = (page_count-1)*param_storage->page_size();
-int max_key_size = 8;
+const int max_key_size = 8;
 
 const unsigned short start_code = 0x85a3;
 const unsigned short end_code = 0xa385;
@@ -81,7 +81,6 @@ int space_init(bool erase/* = false*/)
 	page_size = param_storage->page_size();
 	page_count = param_storage->total_size()/ param_storage->page_size();
 	space_size = (page_count-1)*param_storage->page_size();
-	max_key_size = 8;	
 	
 	param_storage->init();
 

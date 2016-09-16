@@ -1,11 +1,14 @@
 #include "param.h"
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include "space.h"
 
 #define PARAM_ENDL "\0\0\0\0"
+#define PARAM_KEY 0x85a3a385
 
 int all_param_count = -1;
+uint32_t param_init_key = 0;
 void init_all_param_count()
 {
 	static bool c = true;
@@ -38,8 +41,7 @@ void param::init(const char *fourcc, float default_value)
 {
 	// TODO : locks
 	init_all_param_count();
-	if (all_param_count<0)
-		init_all();
+	init_all();
 
 	for(int i=0; i<all_param_count; i++)
 	{
@@ -84,6 +86,9 @@ void param::save()						// save to eeprom
 }
 void param::init_all()
 {
+	if (param_init_key == PARAM_KEY)
+		return;
+
 	space_init();
 	all_param_count = 0;
 
@@ -119,6 +124,8 @@ void param::init_all()
 		all_param_count++;
 	}
 	while(handle > 0);
+
+	param_init_key = PARAM_KEY;
 }
 
 void param::save_all()

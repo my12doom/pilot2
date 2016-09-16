@@ -224,7 +224,7 @@ int yet_another_pilot::send_package(const void *data, uint16_t size, uint8_t typ
 
 void yet_another_pilot::output_rc()
 {
-	rcout->write(g_ppm_output, 0,  min(rcout->get_channel_count(), countof(g_ppm_output)));
+	if (rcout)rcout->write(g_ppm_output, 0,  min(rcout->get_channel_count(), countof(g_ppm_output)));
 }
 
 void yet_another_pilot::STOP_ALL_MOTORS()
@@ -732,22 +732,7 @@ int yet_another_pilot::save_logs()
 		{mag.array[0] * 10, mag.array[1] * 10, mag.array[2] * 10},
 	};
 	log(&imu, TAG_IMU_DATA, systime);
-	log(&frame, TAG_PX4FLOW_DATA, systime);
-	
-	position p = estimator.get_estimation();
-	position_meter pmeter = estimator.get_estimation_meter();
-	ned_data ned = 
-	{
-		0,
-		{acc_ned[0] * 1000, acc_ned[1] * 1000, acc_ned[2] * 1000},
-		p.latitude * double(10000000.0/COORDTIMES), 
-		p.longtitude * double(10000000.0/COORDTIMES), 
-		error_lat : pmeter.vlatitude*100,
-		error_lon : pmeter.vlongtitude*100,
-	};
-
-	log(&ned, TAG_NED_DATA, systime);
-
+	log(&frame, TAG_PX4FLOW_DATA, systime);	
 
 	pilot_data pilot = 
 	{
@@ -811,7 +796,7 @@ int yet_another_pilot::save_logs()
 		0,//acc_ned[2]_mwc * 100,
 		loop_hz,
 		THROTTLE_IDLE + throttle_result * (THROTTLE_MAX-THROTTLE_IDLE),
-		kalman_accel_bias : alt_estimator.state[3] * 1000,
+		alt_estimator.state[3] * 1000,
 		{gyro_bias[0] * 1800000/PI, gyro_bias[1] * 1800000/PI, gyro_bias[2] * 1800000/PI,}
 	};
 
@@ -899,11 +884,11 @@ int yet_another_pilot::save_logs()
 		{
 			{gps.DOP[0], gps.DOP[1], gps.DOP[2]},
 			gps.speed*100,
-			gps.longitude * 10000000, gps.latitude * 10000000, gps.altitude,
+			int(gps.longitude * 10000000), int(gps.latitude * 10000000), gps.altitude,
 			gps.satelite_in_view, gps.satelite_in_use,
 			gps.sig, gps.fix,
 			gps_id++ & 0xf,
-			gps.direction,
+			int(gps.direction),
 		};
 
 		log(&data, TAG_GPS_DATA, systime);
@@ -2423,7 +2408,7 @@ int yet_another_pilot::handle_cli(IUART *uart)
 	return 0;
 }
 
-uint32_t __attribute__((weak)) get_chip_id_crc32()
+uint32_t get_chip_id_crc32()
 {
 	const void *stm32_id_address = (const void*)0x1FFFF7E8;
 	char data[12];
@@ -2845,6 +2830,9 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 
 int yet_another_pilot::read_rc()
 {
+	if (!rcin)
+		return -1;
+
 	rcin->get_channel_data(g_pwm_input, 0, 8);
 	rcin->get_channel_update_time(g_pwm_input_update, 0, 8);
 	TRACE("\rRC");
@@ -3557,11 +3545,16 @@ int main()
 		
 		manager.getRGBLED("eye")->write(0,0,1);
 	}
+
+	int64_t t = systimer->gettime();
+	systimer->delayms(10);
+	t = systimer->gettime() - t;
 	
 	yap.setup();
 	while(1)
 	{
+		systimer->delayms(1);
 	}
 }
 
-__attribute__((section("ccm"))) yet_another_pilot yap;
+FASTMEM yet_another_pilot yap;

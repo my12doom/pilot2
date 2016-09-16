@@ -30,14 +30,8 @@ static param quadcopter_range[3] =
 	param("rngY", PI / 8),			// yaw
 };
 #else
-static float quadcopter_range[3] = {PI/4, PI/4, PI/4};
-#endif
-// win32 helper
-#ifdef WIN32
 #include <Windows.h>
-#define isnan _isnan
-static unsigned long pnan[2]={0xffffffff, 0x7fffffff};
-static double NAN = *( double* )pnan;
+static float quadcopter_range[3] = {PI/4, PI/4, PI/4};
 #endif
 
 // helper functions
@@ -69,9 +63,6 @@ pos_controller::pos_controller()
 	f = fopen("Z:\\log.csv", "wb");
 	fprintf(f, "time,v,tv,p,i,roll_target,pitch_target\r\n");
 	tick = GetTickCount();
-
-	float v = atan2(1, G_in_ms2);
-	printf("%f\n", v * 180 / PI);
 #endif
 }
 

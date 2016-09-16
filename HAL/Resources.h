@@ -1,7 +1,6 @@
 #pragma once
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
-#include <HAL/STM32F4/F4Interfaces.h>
 
 #define MAX_ACCELEROMETER_COUNT 5
 #define MAX_GPS_COUNT 3

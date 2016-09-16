@@ -6,9 +6,18 @@
 
 #ifndef WIN32
 #define LOGE log_printf
+#define WEAK __attribute__((weak))
+#define FASTMEM __attribute__((section("ccm")))
 #else
+#define WEAK
+#define FASTMEM
+#include <float.h>
+#define isnan _isnan
+#define isfinite _finite
 typedef unsigned char uint8_t;
 #define LOGE printf
+static unsigned long pnan[2]={0xffffffff, 0x7fffffff};
+static double NAN = *( double* )pnan;
 #endif
 
 #define QUADCOPTER_THROTTLE_RESERVE 0.15f

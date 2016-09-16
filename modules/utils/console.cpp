@@ -13,8 +13,8 @@
 
 using namespace HAL;
 
-const char version_name[] = __DATE__ " " __TIME__;
-const char bsp_name[] = " unknown";
+WEAK const char version_name[] = __DATE__ " " __TIME__;
+WEAK const char bsp_name[] = " unknown";
 
 #define SIGNATURE_ADDRESS 0x0800E800
 
@@ -360,7 +360,6 @@ extern "C" int parse_command_line(const char *line, char *out)
 			rom_size = sizef;
 			rom_crc = crcf;
 			
-			FLASH_Unlock();
 			rom_size.save();
 			rom_crc.save();
 		}
@@ -379,21 +378,6 @@ extern "C" int parse_command_line(const char *line, char *out)
 		rom_crc = 0;
 		rom_crc.save();
 		rom_size.save();
-	}
-
-	else if (strstr(line, "bootloader") == line)
-	{
-		RCC->APB1RSTR &= ~RCC_APB1RSTR_PWRRST; 		// clear RCC_APB1RSTR_PWRRST
-		RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
-		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
-		PWR_BackupAccessCmd(ENABLE);
-		RCC_RTCCLKConfig(RCC_RTCCLKSource_HSE_Div4);
-		RCC_RTCCLKCmd(ENABLE);
-
-		void * bkp = (void*)0x40024000;
-		memcpy(bkp, "hello", 6);
-
-		reset_system();
 	}
 
 	else if (strstr(line, "accel_cal_state") == line)

@@ -26,9 +26,6 @@ static param quadcopter_range[3] =
 // win32 helper
 #ifdef WIN32
 #include <Windows.h>
-#define isnan _isnan
-static unsigned long pnan[2]={0xffffffff, 0x7fffffff};
-static double NAN = *( double* )pnan;
 #endif
 
 // helper functions
@@ -55,9 +52,6 @@ pos_controller_old::pos_controller_old()
 	f = fopen("Z:\\log.csv", "wb");
 	fprintf(f, "time,v,tv,p,sp\r\n");
 	tick = GetTickCount();
-
-	float v = atan2(1, G_in_ms2);
-	printf("%f\n", v * 180 / PI);
 #endif
 }
 

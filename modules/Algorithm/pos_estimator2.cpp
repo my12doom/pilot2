@@ -12,11 +12,6 @@ const float gain_error = 0.003;
 const float mis_alignment_error = 0.02;
 
 #ifdef WIN32
-#include <float.h> 
-static unsigned long pnan[2]={0xffffffff, 0x7fffffff};
-static double NAN = *( double* )pnan;
-#define isnan _isnan
-#define isfinite _finite
 float baro_comp_coeff[6] = 
 {
 	0.18, -0.08,

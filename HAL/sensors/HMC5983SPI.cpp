@@ -1,7 +1,7 @@
 #include "HMC5983SPI.h"
 #include <math.h>
 #include <stdio.h>
-
+#include <Protocol/common.h>
 
 #define	HMC5883SlaveAddress 0x3C
 #define HMC58X3_R_CONFA 0
@@ -17,18 +17,6 @@
 static int16_t min(int16_t a, int16_t b)
 {
 	return a>b?b:a;
-}
-
-static void swap(void *buf, int size)
-{
-	char *p = (char*)buf;
-	int i;
-	for(i=0; i<size/2; i++)
-	{
-		char t = p[i];
-		p[i] = p[size-1-i];
-		p[size-1-i] = t;
-	}
 }
 
 namespace sensors
