@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="SIL"
-	ProjectGUID="{7270A950-D9CB-4D76-AA59-ADE8A9105CA0}"
+	ProjectGUID="{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}"
 	RootNamespace="parse_log"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"

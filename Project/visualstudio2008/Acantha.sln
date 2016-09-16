@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WifiTestBed", "WifiTestBed\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pos_simulator", "pos_simulator\pos_simulator.vcproj", "{D05EA7CD-36E9-4706-BCD6-B9DE5B1B26C2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SIL", "SIL\SIL.vcproj", "{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -49,6 +51,10 @@ Global
 		{D05EA7CD-36E9-4706-BCD6-B9DE5B1B26C2}.Debug|Win32.Build.0 = Debug|Win32
 		{D05EA7CD-36E9-4706-BCD6-B9DE5B1B26C2}.Release|Win32.ActiveCfg = Release|Win32
 		{D05EA7CD-36E9-4706-BCD6-B9DE5B1B26C2}.Release|Win32.Build.0 = Release|Win32
+		{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}.Debug|Win32.Build.0 = Debug|Win32
+		{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}.Release|Win32.ActiveCfg = Release|Win32
+		{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

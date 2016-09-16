@@ -814,7 +814,7 @@
 						>
 					</File>
 					<File
-						RelativePath="..\..\..\modules\utils\vector.c"
+						RelativePath="..\..\..\modules\utils\vector.cpp"
 						>
 					</File>
 					<File
