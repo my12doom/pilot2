@@ -13,17 +13,23 @@ public:
 
 	inline operator float()
 	{
+#ifdef WIN32
 		if(pv)
+#endif
 		return *pv;
 	}
 	float* operator& ()
 	{
+#ifdef WIN32
 		if(pv)
+#endif
 			return pv;
 	}
 	inline float& operator= (float in)		// ram operation only
 	{
+#ifdef WIN32
 		if(pv)
+#endif
 			return *pv = in;
 	}
 	void save();						// save to eeprom
