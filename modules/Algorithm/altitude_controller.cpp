@@ -9,7 +9,7 @@ param default_throttle_hover("hov", 0.35f);
 
 static param quadcopter_max_climb_rate("maxC",5);
 static param quadcopter_max_descend_rate("maxD", 2);
-static param quadcopter_max_acceleration("maxA", 4.5);
+static param quadcopter_max_acceleration("maxA", 12.5f);
 static param alt_braking_enabled("hbra", 1);
 static param pid_quad_altitude[4] = 	// P, I, D, IMAX, 
 										// unit: 1/second, 1/seconds^2, 1, meter*second

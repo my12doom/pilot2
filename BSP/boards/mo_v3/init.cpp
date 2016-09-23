@@ -6,6 +6,7 @@
 #include <HAL\STM32F4\F4Timer.h>
 #include <HAL\STM32F4\F4VCP.h>
 #include <HAL\STM32F4\F4Interrupt.h>
+#include <HAL\STM32F4\F4GPIO.h>
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 #include <HAL/sensors/Sonar.h>
 #include <HAL/sensors/SBusIn.h>
