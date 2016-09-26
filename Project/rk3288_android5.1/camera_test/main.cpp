@@ -49,7 +49,7 @@
 #include <netdb.h>
 
 
-#include "fec/sender.h"
+#include <YAL/fec/sender.h>
 
 using namespace android;
 
@@ -95,7 +95,6 @@ int port = 0xbbb;
 
 int udp_init()
 {
-	//  首先建立套接口
 	socket_descriptor = socket(AF_INET, SOCK_DGRAM, 0);  
 	if (socket_descriptor <0) 
 	{      
