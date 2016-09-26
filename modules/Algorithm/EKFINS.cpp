@@ -193,7 +193,10 @@ int EKFINS::update_mode(const float gyro[3], const float acc_body[3], const floa
 	vector vg = {gyro[0], gyro[1], gyro[2]};
 	motion_acc.new_data(va);
 	motion_gyro.new_data(vg);
-	still_inited = still = motion_acc.get_average(NULL) > 100 && motion_gyro.get_average(NULL) > 100;
+
+	still = motion_acc.get_average(NULL) > 100 && motion_gyro.get_average(NULL) > 100;
+	if (!still_inited)
+		still_inited = still;
 
 	return 0;
 }
@@ -302,10 +305,10 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 	float f1 = dt / 0.005f;		// 0.005: tuned dt.
 	float f2 = dt*dt / (0.005f*0.005f);
 	matrix Q = matrix::diag(19,
-		1e-8, 1e-8, 1e-8, 1e-8, 1e-12, 1e-12, 1e-12,
+		1e-7, 1e-7, 1e-7, 1e-7, 1e-9, 1e-9, 1e-9,
 		4e-3, 4e-3, 4e-6, 
 		1e-4, 1e-4, 1e-6, 
-		1e-7, 1e-7, 1e-7, 
+		1e-9, 1e-9, 1e-9, 
 		1e-7, 1e-7, 5e-7);
 	Q *= f1;
 	matrix x1 = F * x + Bu;
@@ -343,18 +346,24 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		add_observation(60.0, pos_east,  x1[8], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(5.0, vel_north, x1[10], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(5.0, vel_east, x1[11],  0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(15.0, gps.climb_rate, x1[12], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,1.0);
+		add_observation(15.0, gps.climb_rate, x1[12], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 	}
 
 	// still motion, acc and gyro bias with very low noise.
 	if (still)
 	{
-		add_observation(1e-3, acc_body[0]*a_len, -r[6], 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-3, acc_body[1]*a_len, -r[7], -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
-		add_observation(1e-3, acc_body[2]*a_len, -r[8], -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-3, acc_body[0]*a_len, -r[6] + x1[13]/G_in_ms2, 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0/G_in_ms2,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-3, acc_body[1]*a_len, -r[7] + x1[14]/G_in_ms2, -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0/G_in_ms2,0.0, 0.0,0.0,0.0);
+		add_observation(1e-3, acc_body[2]*a_len, -r[8] + x1[15]/G_in_ms2, -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0/G_in_ms2, 0.0,0.0,0.0);
+// 		add_observation(1e-3, acc_body[0]*a_len, -r[6], 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+// 		add_observation(1e-3, acc_body[1]*a_len, -r[7], -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+// 		add_observation(1e-3, acc_body[2]*a_len, -r[8], -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(1e-4, -gyro[0], x1[4], 0.0,0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(1e-4, -gyro[1], x1[5], 0.0,0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(1e-4, -gyro[2], x1[6], 0.0,0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+ 		add_observation(1e-1, 0, x1[10], 0.0,0.0,0.0,0,0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+ 		add_observation(1e-1, 0, x1[11], 0.0,0.0,0.0,0,0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+ 		add_observation(1e-1, 0, x1[12], 0.0,0.0,0.0,0,0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 	}
 
 	// add a attitude observation if no assisting available(flow or GNSS)

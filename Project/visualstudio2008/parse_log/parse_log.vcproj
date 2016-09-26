@@ -195,14 +195,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\modules\math\FIR.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\modules\math\FIR.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\modules\math\LowPassFilter2p.cpp"
 				>
 			</File>
@@ -255,7 +247,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\modules\utils\vector.c"
+				RelativePath="..\..\..\modules\utils\vector.cpp"
 				>
 			</File>
 			<File

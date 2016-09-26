@@ -53,7 +53,7 @@ public:
 	matrix P;
 	matrix x; // {q[4], gyro_bias[3], pos_ned[3], vel_ned[3], acc_bias_body[3], vel_bias_ned[3]}, 19 states, no mag bias, since EKF won't track mag bias correctly.
 	int R_count;
-	float R_diag[20];
+	float R_diag[30];
 	matrix H;
 	matrix zk;
 	matrix predicted_observation;
