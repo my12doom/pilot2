@@ -507,7 +507,7 @@ int yet_another_pilot::handle_acrobatic()
 
 			//LOGE("flip:%.3f,%.3f\n", acrobatic_number*180/PI, body_rate.array[axis]*180/PI);
 			static const float latency = 0.045;
-			static const float braking_factor = 1.0f;
+			static const float braking_factor = 0.7f;
 			float velocity_abs = fabs(body_rate.array[axis]);
 			float t = limit(acrobatic_timer - latency, 0, 0.5f);
 
@@ -1774,7 +1774,7 @@ int yet_another_pilot::arm(bool arm /*= true*/, bool forced /*= false*/)
 			return -1;
 		}
 
-		if (NED2BODY[2][2] < 0.5)
+		if (NED2BODY[2][2] < 0.5f)
 		{
 			LOGE("arm failed: tilt %.2f", NED2BODY[2][2]);
 			return -1;
@@ -2109,7 +2109,7 @@ int yet_another_pilot::check_stick_action()
 			if (flashlight)
 				flashlight->toggle();
 
-			//start_acrobatic(acrobatic_move_flip, 4);
+			start_acrobatic(acrobatic_move_flip, 4);
 			//start_taking_off();
 			//reset_accel_cal();
 		}

@@ -420,8 +420,11 @@ int main(int argc, char* argv[])
 			if (time < 9500000)
 				continue;
 
-// 			if (time > 215000000)
-// 				gyro[0] += 1.5 * PI / 180 * min(time - 215000000, 60000000) / 60000000;
+			if (time > 215000000)
+			{
+				gyro[0] += 5.5 * PI / 180 * min(time - 215000000, 60000000) / 60000000;
+				acc[2] += 1.5* min(time - 215000000, 60000000) / 60000000;
+			}
 
 
 			if (!imu_valid && sensor_valid)
@@ -449,8 +452,8 @@ int main(int argc, char* argv[])
 
 				// CF
 				float acc_gps_bf[3] = {0};
-				float factor = 0.01f;
-				float factor_mag = 0.01f;
+				float factor = 1.0f;
+				float factor_mag = 1.0f;
 				NonlinearSO3AHRSupdate(
 					acc[0], acc[1], acc[2], mag[0], mag[1], mag[2], gyro[0], gyro[1], gyro[2],
 					0.15f*factor, 0.0015f, 0.15f*factor_mag, 0.0015f, dt,
