@@ -141,7 +141,7 @@ int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 
 	// MPU6000 can handle 1mhz max for configuration register accessing
 	// 20mhz for data output and interrupt accesss
-	spi->set_speed(1000000);
+        spi->set_speed(500000);
 	spi->set_mode(1, 1);
 	CS->set_mode(HAL::MODE_OUT_PushPull);
 	CS->write(true);
@@ -164,6 +164,13 @@ int MPU6000::init()
 {
 	uint8_t who_am_i = 0;
 	int i;
+
+        for(i=0; i<128; i++)
+        {
+                uint8_t data;
+                read_reg(i, &data, 1);
+                printf("reg %02x = %02x\n", i, data);
+        }
 
 	// MPU6000 register initialization
 	TRACE("start MPU6000\r\n");

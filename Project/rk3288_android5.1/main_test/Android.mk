@@ -8,23 +8,25 @@ LOCAL_PATH:= $(call my-dir)
 $(warning "LOCAL_PATH = $(LOCAL_PATH)")
 
 SRC = system/eulerOpenGlPro/HAL
-EXEDIR=/media/euler/newvolume/3288sdk/sdk0801/system/eulerOpenGlPro/eulerspace-euler_pilot/binary_release/rkPilotEXE
+EXEDIR=/media/euler/newvolume/3288sdk/sdk0801/system/eulerPilotProject/euler_pilot/binary_release/rkPilotEXE
 PRODUCTDIR=/media/euler/newvolume/3288sdk/sdk0801/out/target/product/rk3288/obj/EXECUTABLES/sensorTest_intermediates/LINKED
 include $(CLEAR_VARS)
 
 #local pilot source file
 LOCAL_SRC_FILES := \
 		testMain.cpp \
-        ../../HAL/AInterface/ASPI.cpp \
-        ../../HAL/AInterface/AGpio.cpp \
-        ../../HAL/Sensors/MPU6000.cpp \
-        ../../modules/Protocol/data_protocol.cpp
+        ../../../HAL/rk32885.1/ASPI.cpp \
+        ../../../HAL/rk32885.1/AGpio.cpp \
+        ../../../HAL/rk32885.1/ASysTimer.cpp \
+        ../../../HAL/sensors/MPU6000.cpp 
+        #../../modules/Protocol/data_protocol.cpp
         
 LOCAL_C_INCLUDES :=  \
-			system/eulerOpenGlPro \
-            system/eulerOpenGlPro/modules \
+			system/eulerPilotProject/euler_pilot \
+            system/eulerPilotProject/euler_pilot/modules \
             kernel/include/uapi \
-            system/eulerOpenGlPro/HAL/Android
+            system/eulerPilotProject/euler_pilot/HAL/rk32885.1 \
+            system/eulerPilotProject/euler_pilot/HAL/Interface
 #LOCAL_CFLAGS += -Wno-multichar
 
 LOCAL_MODULE_TAGS := optional
