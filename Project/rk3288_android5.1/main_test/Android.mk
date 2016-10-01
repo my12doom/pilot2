@@ -20,6 +20,7 @@ LOCAL_SRC_FILES := \
         ../../../HAL/rk32885.1/ASysTimer.cpp \
         ../../../HAL/rk32885.1/AUART.cpp \
         ../../../HAL/rk32885.1/AStorage.cpp \
+        ../../../HAL/rk32885.1/ATimer.cpp \
         ../../../HAL/sensors/MPU6000.cpp 
         #../../modules/Protocol/data_protocol.cpp
         
@@ -35,7 +36,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE:= sensorTest
 
 include $(BUILD_EXECUTABLE)
-#copy exe to euler_pilot/binary_release after build
+#copy exe to euler_pilot/binary_release after buil
 $(shell cp $(PRODUCTDIR)/$(LOCAL_MODULE) $(EXEDIR))
 #include $(BUILD_SHARED_LIBRARY)
 
