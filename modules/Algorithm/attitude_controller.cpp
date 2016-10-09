@@ -41,15 +41,13 @@ static param slew_rate("slew", PI*2);
 
 attitude_controller::attitude_controller()
 {
-	euler_sp[0] = 0;
+        euler_sp[0] = 0;
 	euler_sp[1] = 0;
 	euler_sp[2] = NAN;
 	last_set_euler_sp_time = 0;
 	just_reseted = true;
-
 	for(int i=0; i<3; i++)
 		body_rate_sp_override[i] = NAN;
-
 	reset();
 }
 attitude_controller::~attitude_controller()
@@ -268,18 +266,17 @@ int attitude_controller::update(float dt)
 // call this if the controller has just been engaged
 int attitude_controller::reset()
 {
-	memcpy(euler_sp, euler, sizeof(euler));
-	memcpy(body_rate_sp, body_rate, sizeof(body_rate_sp));
-	for(int i=0; i<3; i++)
-	{
-		pid[i][1] = rate_trim[i];
-		pid[i][0] = 0;
-		pid[i][2] = 0;
-	}
+    memcpy(euler_sp, euler, sizeof(euler));
+    memcpy(body_rate_sp, body_rate, sizeof(body_rate_sp));
+    for(int i=0; i<3; i++)
+    {
+        pid[i][1] = rate_trim[i];
+        pid[i][0] = 0;
+        pid[i][2] = 0;
+    }
+    just_reseted = true;
 
-	just_reseted = true;
-
-	return 0;
+    return 0;
 }
 
 // torque in body frame, axis: [0-2] -> [roll, pitch, yaw]

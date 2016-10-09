@@ -62,7 +62,7 @@ namespace androidUAV
     void ATimer::set_period(uint32_t period)
     {
         lock();
-        //this->period = period;
+        this->period = period;
         unlock();
     }
     void ATimer::set_callback(HAL::timer_callback cb)
@@ -92,25 +92,26 @@ namespace androidUAV
         _this->run();
         return 0;
     }
-    static int get_thread_policy(pthread_attr_t *attr)
-    {
-        int policy;
-        int rs = pthread_attr_getschedpolicy(attr, &policy);
-        return policy;
-    }
-    static int get_thread_priority(pthread_attr_t *attr,struct sched_param *param)
-    {
-        int rs = pthread_attr_getschedparam (attr, param);
-        return param->__sched_priority;
-    }
-    static void set_thread_policy(pthread_attr_t *attr,int policy)
-    {
-        int rs = pthread_attr_setschedpolicy (attr, policy);
-        get_thread_policy (attr);
-    }
-    static void set_thread_priority(pthread_attr_t *attr,struct sched_param *param,int32_t priority)
-    {
-        param->sched_priority = priority;
-        pthread_attr_setschedparam(attr,param);
-    }
+
+}
+static int get_thread_policy(pthread_attr_t *attr)
+{
+    int policy;
+    int rs = pthread_attr_getschedpolicy(attr, &policy);
+    return policy;
+}
+static int get_thread_priority(pthread_attr_t *attr,struct sched_param *param)
+{
+    int rs = pthread_attr_getschedparam (attr, param);
+    return param->__sched_priority;
+}
+static void set_thread_policy(pthread_attr_t *attr,int policy)
+{
+    int rs = pthread_attr_setschedpolicy (attr, policy);
+    get_thread_policy (attr);
+}
+static void set_thread_priority(pthread_attr_t *attr,struct sched_param *param,int32_t priority)
+{
+    param->sched_priority = priority;
+    pthread_attr_setschedparam(attr,param);
 }

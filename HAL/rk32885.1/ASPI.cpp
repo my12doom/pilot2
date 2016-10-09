@@ -1,4 +1,5 @@
 #include "ASPI.h"
+#include <inttypes.h>
 namespace androidUAV
 {
     ASPI::ASPI(const char* spiPath)
@@ -7,7 +8,8 @@ namespace androidUAV
         speed = DEFAULTSPEED;
         bits = DEFAULTBITS;
         delay = DEFFAULTDELAY;
-
+        uint32_t max_speed;
+        max_speed = SPIMAXSPEED;
 
         if(!spiPath)
         {
@@ -20,7 +22,9 @@ namespace androidUAV
                 LOG2("androidUAV:Create spi dev error\n");
             }
         }
-        setSpeed(speed);
+        //set spi max_speed
+        ioctl(spiFd, SPI_IOC_WR_MAX_SPEED_HZ,&max_speed);
+
         setBits(bits);
         setMode(3);
     }
@@ -63,21 +67,23 @@ namespace androidUAV
         }
         return ret;
     }
-    int ASPI::setSpeed(uint32_t speedHz)
+    int ASPI::setSpeed(int speedHz)
     {
         int ret = 0;
-        ret = ioctl(spiFd, SPI_IOC_WR_MAX_SPEED_HZ, &speedHz); //写模式
+        uint32_t read;
+        /*ret = ioctl(spiFd, SPI_IOC_WR_MAX_SPEED_HZ, &speedHz); //写模式
         if (ret < 0)
         {
             LOG2("androidUAV:set write speed %d error\n",speedHz);
             return ret;
         }
-        ret = ioctl(spiFd, SPI_IOC_RD_MAX_SPEED_HZ, &speedHz);    //写模式
+        ret = ioctl(spiFd, SPI_IOC_RD_MAX_SPEED_HZ, &read);    //写模式
         if (ret < 0)
         {
             LOG2("androidUAV:set read speed %d error\n",speedHz);
             return ret;
         }
+        printf("speed = %"PRIu32"\n",read);*/
         this->speed = speedHz;
         return ret;
     }
@@ -166,6 +172,33 @@ namespace androidUAV
     uint8_t ASPI::txrx(uint8_t data)
     {
         return spi_rxtx(data);
+    }
+    uint8_t ASPI::txrx2(const uint8_t *tx, uint8_t *rx, int len)
+    {
+        int ret  = 0;
+        /*unsigned char sendData;
+        unsigned char recvData = 0;
+        uint8_t *recvDataP = NULL;
+        uint8_t *sendDataP = NULL;
+
+        recvDataP = &recvData;// write
+        sendDataP = &sendData;*/
+
+        struct spi_ioc_transfer tr;
+        tr.tx_buf = (unsigned long)tx;
+        tr.rx_buf = (unsigned long)rx;
+        tr.len = len;
+        tr.delay_usecs = delay;
+        tr.speed_hz = speed;
+        tr.bits_per_word = bits;
+        //.cs_change = 1,
+        ret = ioctl(spiFd, SPI_IOC_MESSAGE(1), &tr);
+        if(ret < 0)// Need fix here.....
+        {
+            LOG2("androidUAV:transfer failed\n");
+            return ret;
+        }
+        return len;
     }
 }
 

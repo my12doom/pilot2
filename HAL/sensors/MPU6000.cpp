@@ -58,17 +58,39 @@ int MPU6000::read_reg(uint8_t reg, void *out, int count)
 
 	if (spi)
 	{
-		systimer->delayus(1);
-		CS->write(false);
-		systimer->delayus(1);
+            if(count > 1)
+            {
+                systimer->delayus(1);
+                CS->write(false);
+                systimer->delayus(1);
 
-		spi->txrx((reg&0x7f) | 0x80);
-		for(i=0; i<count; i++)
-			p[i] = spi->txrx(0);
+                uint8_t tx_buf[15] = {(reg&0x7f) | 0x80};
+                uint8_t rx_buf[15];
 
-		systimer->delayus(1);
-		CS->write(true);
-		systimer->delayus(1);
+                spi->txrx2(tx_buf, rx_buf, 15);
+                memcpy(out, rx_buf+1, 14);
+
+
+                systimer->delayus(1);
+                CS->write(true);
+                systimer->delayus(1);
+            }
+            else
+            {
+                systimer->delayus(1);
+                CS->write(false);
+                systimer->delayus(1);
+
+                spi->txrx((reg&0x7f) | 0x80);
+                for(i=0; i<count; i++)
+                        p[i] = spi->txrx(0);
+
+                //spi->txrx((reg&0x7f) | 0x80);
+                //spi->txrx2(NULL,(uint8_t*)out,14);
+                systimer->delayus(1);
+                CS->write(true);
+                systimer->delayus(1);
+            }
 	}
 
 	else if (i2c)
@@ -212,7 +234,7 @@ int MPU6000::read(short*data)
 	
 	if (spi)
 	{
-		spi->set_speed(20000000);
+                spi->set_speed(20000000);
 		spi->set_mode(1, 1);
 	}
 	

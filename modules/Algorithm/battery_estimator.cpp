@@ -1,8 +1,8 @@
 #include "battery_estimator.h"
 #include <HAL/Interface/Interfaces.h>
-#include <protocol/common.h>
+#include <Protocol/common.h>
 #include <utils/log.h>
-#include <protocol/RfData.h>
+#include <Protocol/RFData.h>
 
 static matrix Q
 (

@@ -50,14 +50,20 @@ int MS5611_SPI::read_regs(uint8_t start_reg, void *out, int count)
 {
 	int i;
 	uint8_t *p = (uint8_t*)out;
+        uint8_t *tx_buf = new uint8_t[count+1];
+        uint8_t *rx_buf = new uint8_t[count+1];
+        tx_buf[0] = start_reg;
 	CS->write(false);
 
-	spi->txrx(start_reg);
+        /*spi->txrx(start_reg);
 	for(i=0; i<count; i++)
 		p[i] = spi->txrx(0);
-
+        */
+        spi->txrx2(tx_buf, rx_buf, count+1);
+        memcpy(out, rx_buf+1, count);
 	CS->write(true);
-
+        delete [] tx_buf;
+        delete [] rx_buf;
 	return 0;
 }
 

@@ -33,8 +33,9 @@ namespace androidUAV
             //SCHED_FIFO SCHED_RR SCHED_OTHER
             int set_priority(int32_t priority);
     };
-    static int get_thread_policy (pthread_attr_t *attr);
-    static int get_thread_priority (pthread_attr_t *attr,struct sched_param *param);
-    static void set_thread_policy (pthread_attr_t *attr,int policy);
-    static void set_thread_priority(pthread_attr_t *attr,struct sched_param *param,int32_t priority);
+
 }
+static int get_thread_policy (pthread_attr_t *attr);
+static int get_thread_priority (pthread_attr_t *attr,struct sched_param *param);
+static void set_thread_policy (pthread_attr_t *attr,int policy);
+static void set_thread_priority(pthread_attr_t *attr,struct sched_param *param,int32_t priority);

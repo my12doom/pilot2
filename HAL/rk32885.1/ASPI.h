@@ -8,10 +8,10 @@
 
 #define READ 1
 #define WRITE 0
-#define DEFAULTSPEED 500000
+#define DEFAULTSPEED 1000000
 #define DEFAULTBITS 8
 #define DEFFAULTDELAY 0
-
+#define SPIMAXSPEED 24000000
 namespace androidUAV
 {
     class ASPI : public HAL::ISPI
@@ -21,7 +21,7 @@ namespace androidUAV
             ~ASPI();
 
             int setMode(uint8_t mode);
-            int setSpeed(uint32_t speedHz);
+            int setSpeed(int speedHz);
             int setDelay(uint16_t delayus);
             int setBits(uint8_t bits);
             uint8_t spi_rxtx(uint8_t data);
@@ -30,6 +30,7 @@ namespace androidUAV
             virtual int set_speed(int speed);// speed in hz
             virtual int set_mode(int CPOL, int CPHA);// CPOL: 0 = Idle Low, 1 = Idle High; CPHA: 0 = capture at first edge, 1 = capture at second edge
             virtual uint8_t txrx(uint8_t data);
+            virtual uint8_t txrx2(const uint8_t *tx, uint8_t *rx, int len);
         private:
             int fdOpen(const char*);
             int fdClose();

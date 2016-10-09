@@ -3,6 +3,7 @@
 #define MAX_PARAM_COUNT 256
 
 #ifdef __cplusplus
+#define WIN32
 class param
 {
 public:
@@ -46,7 +47,7 @@ protected:
 private:
 	void init_all();
 };
-
+#undef WIN32
 extern "C"
 {
 #endif
