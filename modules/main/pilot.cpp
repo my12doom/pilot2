@@ -1621,7 +1621,7 @@ int yet_another_pilot::sensor_calibration()
 				gyro_temp_a.array[i] = group >= 0 ? _gyro_bias[group][i+1] : 0;
 				gyro_temp_k.array[i] = 0;
 			}
-			temperature0 = group != 0 ? _gyro_bias[group][0] : 0;
+			temperature0 = group >= 0 ? _gyro_bias[group][0] : 0;
 		}
 	}
 	else
@@ -1632,7 +1632,7 @@ int yet_another_pilot::sensor_calibration()
 			gyro_temp_a.array[i] = group >= 0 ? _gyro_bias[group][i+1] : 0;
 			gyro_temp_k.array[i] = 0;
 		}
-		temperature0 = group != 0 ? _gyro_bias[group][0] : 0;
+		temperature0 = group >= 0 ? _gyro_bias[group][0] : 0;
 	}
 
 	// static base value detection
