@@ -334,6 +334,14 @@
 					RelativePath="..\..\..\HAL\SIL_WIN32\Win32Timer.h"
 					>
 				</File>
+				<File
+					RelativePath="..\..\..\HAL\SIL_WIN32\Win32UART.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\HAL\SIL_WIN32\Win32UART.h"
+					>
+				</File>
 			</Filter>
 		</Filter>
 		<Filter
