@@ -433,7 +433,9 @@ int yet_another_pilot::default_alt_controlling()
 
 int yet_another_pilot::run_controllers()
 {
-	attitude_controll.provide_states(euler, use_EKF ==1.0f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	float q_cf[4] = {q0,q1,q2,q3};
+
+	attitude_controll.provide_states(euler, use_EKF ==1.0f ? &ekf_est.ekf_result.q0 : q_cf, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 
 	if (use_alt_estimator2 > 0.5f)
 	{	
@@ -459,8 +461,8 @@ int yet_another_pilot::run_controllers()
 
 	// check airborne
 	if ((alt_estimator.state[0] > takeoff_ground_altitude + 1.0f) ||
-		(alt_estimator.state[0] > takeoff_ground_altitude && throttle_result > alt_controller.throttle_hover) ||
-		(throttle_result > alt_controller.throttle_hover + QUADCOPTER_THROTTLE_RESERVE))
+		(alt_estimator.state[0] > takeoff_ground_altitude && throttle_result > alt_controller.get_throttle_hover()) ||
+		(throttle_result > alt_controller.get_throttle_hover() + QUADCOPTER_THROTTLE_RESERVE))
 	{
 		if (!airborne && armed)
 		{
@@ -566,8 +568,8 @@ int yet_another_pilot::output()
 	{
 		int matrix = (float)motor_matrix;
 		float motor_output[MAX_MOTOR_COUNT] = {0};
-
 		
+
 		// how many motor exists in this motor matrix?
 		static int motor_count = 0;
 		if(0==motor_count)
@@ -685,7 +687,7 @@ int yet_another_pilot::output()
 			if (g_ppm_output[i] <= THROTTLE_IDLE+20 || g_ppm_output[i] >= THROTTLE_MAX-20)
 				motor_saturated = true;
 		}
-
+		
 	}
 
 	else
@@ -842,7 +844,7 @@ int yet_another_pilot::save_logs()
 		throttle_result*1000,
 		yaw_launch * 18000 / PI,
 		euler[2] * 18000 / PI,
-		alt_controller.throttle_hover*1000,
+		alt_controller.get_throttle_hover()*1000,
 		0,//sonar_result(),
 		alt_controller.accel_error_pid[1]*1000,
 	};
@@ -1818,7 +1820,8 @@ int yet_another_pilot::arm(bool arm /*= true*/, bool forced /*= false*/)
 		}
 	}
 
-	attitude_controll.provide_states(euler, use_EKF == 1.0f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	float q_cf[4] = {q0,q1,q2,q3};
+	attitude_controll.provide_states(euler, use_EKF == 1.0f ? &ekf_est.ekf_result.q0 : q_cf, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controll.reset();
 	if (use_alt_estimator2 > 0.5f)
 	{	
@@ -2256,7 +2259,7 @@ void yet_another_pilot::handle_takeoff()
 				LOGE("throw go\n");
 				arm(true, true);
 				airborne = true;
-				alt_controller.throttle_hover = limit(alt_controller.throttle_hover * 1.25f, 0.2f, 0.8f);
+				//alt_controller.throttle_hover = limit(alt_controller.throttle_hover * 1.25f, 0.2f, 0.8f);
 				alt_controller.start_braking();
 			}
 		}
