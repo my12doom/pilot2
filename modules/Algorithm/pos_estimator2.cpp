@@ -246,7 +246,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	v_bf[2] = r[2]*x[3] + r[5]*x[4] + r[8]*x[5];
 
 	float R_baro = 25.0f;
-	if (position_healthy || flow_healthy)
+	if (position_healthy/* || flow_healthy*/)
 	{
 		baro_comp = 0;
 		baro_comp += v_bf[0] > 0 ? (v_bf[0] * baro_comp_coeff[0]) : (v_bf[0] * baro_comp_coeff[1]);
