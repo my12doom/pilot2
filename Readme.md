@@ -31,11 +31,19 @@ see [CoordinateSystems.md](CoordinateSystems.md)
 
 #TODOs
 Precision IMU calibration.
+
 Better state estimation, such as UKF, more detailed dynamic physical models.
+
 System Identification and Advanced Controlling Algorithm.
+
 Software Defined Radio baseband.
+
 Battery Management System.
-FOC ESCs.
+
+Advanced ESCs.
+
 Gimbals.
+
 Image Stabilizer, or "E-Gimbal".
+
 Redundant System.
