@@ -204,6 +204,10 @@ int attitude_controller::update(float dt)
 		Quaternion2BFAngle(q_error, body_frame_error);
 		for(int i=0; i<3; i++)
 			body_rate_sp[i] = limit(body_frame_error[i] * pid_factor2[i][0], -PI, PI);
+
+		//printf("br_sp:%.1f,%.1f,%.1f\n", body_rate_sp[0]*180/PI, body_rate_sp[1]*180/PI, body_rate_sp[2]*180/PI);
+
+		//printf("Q:%f, %.3f,%.3f,%.3f,%.3f\n", body_rate_sp[0], quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
 	}
 	else
 	{
@@ -220,6 +224,8 @@ int attitude_controller::update(float dt)
 		if (!isnan(body_rate_sp_override[i]))
 			body_rate_sp[i] = body_rate_sp_override[i];
 	}
+
+	//printf("euler_sp:%.1f, rate:%.1f/%.1f\n", euler_sp[0]*180/PI, body_rate[0]*180/PI, body_rate_sp[0]*180/PI);
 
 	//float dbg[4] = {euler_sp[1], body_rate_sp[1], euler[1], body_rate[1]};
 	//log2(dbg, TAG_ATTITUDE_CONTROLLER_DATA, sizeof(dbg));
@@ -256,7 +262,7 @@ int attitude_controller::update(float dt)
 	}
 
 	just_reseted = false;
-	TRACE(", pid=%.2f, %.2f, %.2f\n", pid_result[0], pid_result[1], pid_result[2]);
+	//printf(", pid=%.2f, %.2f, %.2f\n", result[0], result[1], result[2]);
 	
 	
 	return 0;

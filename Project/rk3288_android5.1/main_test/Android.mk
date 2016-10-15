@@ -16,6 +16,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
 		testPilot.cpp \
 		../../../BSP/boards/rk3288UAV/init.cpp \
+		../../../BSP/boards/rk3288UAV/ARCOUT.cpp \
         ../../../HAL/rk32885.1/ASPI.cpp \
         ../../../HAL/rk32885.1/AGpio.cpp \
         ../../../HAL/rk32885.1/ASysTimer.cpp \
@@ -68,13 +69,16 @@ LOCAL_SRC_FILES := \
         ../../../modules/math/LowPassFilter2p.cpp \
         ../../../HAL/Resources.cpp \
         ../../../HAL/sensors/MPU6000.cpp \
-        ../../../HAL/sensors/MS5611_SPI.cpp
+        ../../../HAL/sensors/MS5611_SPI.cpp \
+        ../../../HAL/sensors/UartUbloxNMEAGPS.cpp \
+        ../../../HAL/sensors/EBusIn.cpp
         #../../modules/Protocol/data_protocol.cpp
         
 LOCAL_C_INCLUDES :=  \
 			system/eulerPilotProject/euler_pilot \
             system/eulerPilotProject/euler_pilot/modules \
             system/eulerPilotProject/euler_pilot/modules/Protocol \
+            system/eulerPilotProject/euler_pilot/BSP/boards \
             kernel/include/uapi \
             system/eulerPilotProject/euler_pilot/HAL/rk32885.1 \
             system/eulerPilotProject/euler_pilot/HAL/Interface \

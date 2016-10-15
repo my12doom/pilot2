@@ -58,6 +58,7 @@ public:
 
 	// estimated hover throttle
 	float throttle_hover;
+	float get_throttle_hover();
 
 	float m_baro_states[3];
 	float m_attitude[3];

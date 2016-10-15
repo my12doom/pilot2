@@ -229,7 +229,7 @@ public:
 	static void mag_calibrating_worker_entry(int parameter){((yet_another_pilot*)parameter)->mag_calibrating_worker();}
 	static void main_loop_entry(){yap.main_loop();}
 	static void sdcard_loop_entry(){yap.sdcard_loop();}
-	static void imu_reading_entry(){yap.read_imu_and_filter();}
+	static void imu_reading_entry(){;}
 	
 	// mag and accelerometer calibration
 	int sensor_calibration();

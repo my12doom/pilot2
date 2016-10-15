@@ -123,6 +123,13 @@ float altitude_controller::get_altitude_state()
 	return alt_state;
 }
 
+float altitude_controller::get_throttle_hover()
+{
+	if (throttle_hover <= 0.01f || isnan(throttle_hover))
+		throttle_hover = default_throttle_hover;
+	return throttle_hover;
+}
+
 // update the controller
 // dt: time dt
 // user_rate: user desired climb rate, usually from stick.

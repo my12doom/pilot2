@@ -7,16 +7,16 @@
 namespace Android_TIME
 {
     class ASysTimer : public HAL::ISysTimer
-    {
-        public:
-            ASysTimer();
-            ~ASysTimer();
-            virtual int64_t gettime();		// micro-second
-            virtual void delayms(float ms);
-            virtual void delayus(float us);
-        private:
-            struct timeval tpend;
-            struct timeval timecurrent;
-            struct timespec start;
-    };
+	{
+	    public:
+		    ASysTimer();
+			~ASysTimer();
+			virtual int64_t gettime();		// micro-second
+			virtual void delayms(float ms);
+			virtual void delayus(float us);
+	    private:
+			struct timeval tpend;
+			struct timeval timecurrent;
+			struct timespec start;
+	};
 }
