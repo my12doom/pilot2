@@ -4,7 +4,7 @@
 #include <utils/gauss_newton.h>
 #include <utils/log.h>
 #include <math.h>
-#include <HAL/resources.h>
+#include <HAL/Resources.h>
 #include <math/matrix.h>
 
 static inline float fmax(float a, float b)

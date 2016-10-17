@@ -7,7 +7,7 @@
 #include <math.h>
 #include <Algorithm/pos_estimator.h>
 #include <Algorithm/mag_calibration.h>
-#include <HAL/resources.h>
+#include <HAL/Resources.h>
 #include <Protocol/crc32.h>
 #include <modules/main/pilot.h>
 

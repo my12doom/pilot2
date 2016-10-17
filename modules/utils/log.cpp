@@ -10,7 +10,7 @@
 #include <FileSystem/ff.h>
 #include <utils/fifo2.h>
 #include <Protocol/RFData.h>
-#include <protocol/common.h>
+#include <Protocol/common.h>
 #include <HAL/Interface/Interfaces.h>
 
 extern "C"

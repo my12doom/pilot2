@@ -1,8 +1,8 @@
 #include "UartUbloxNMEAGPS.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <HAL/Interface/ISystimer.h>
-#include <protocol/common.h>
+#include <HAL/Interface/ISysTimer.h>
+#include <Protocol/common.h>
 #include <utils/log.h>
 #include <time.h>
 
@@ -65,7 +65,7 @@ int UartUbloxGPS::enable_message(uint8_t cls, uint8_t id, bool enable/* = true*/
 		}
 	}while(systimer->gettime() < timeout_tick);
 
-	return -1;	
+	return -1;
 }
 
 int UartUbloxGPS::trig_ubx_packet(int timeout)
