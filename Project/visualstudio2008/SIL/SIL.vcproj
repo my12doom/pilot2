@@ -311,6 +311,14 @@
 				Name="SIL_WIN32"
 				>
 				<File
+					RelativePath="..\..\..\HAL\SIL_WIN32\Win32CriticalSection.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\HAL\SIL_WIN32\Win32CriticalSection.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\..\HAL\SIL_win32\Win32Storage.cpp"
 					>
 				</File>
