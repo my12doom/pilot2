@@ -138,10 +138,17 @@ public:
 	int64_t tilt_us;// = 0;	// remember to clear it before arming
 	math::LowPassFilter2p gyro_lpf2p[3];// = {LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40)};	// 2nd order low pass filter for gyro.
 	math::LowPassFilter2p accel_lpf2p[3];// = {LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40)};	// 2nd order low pass filter for gyro.
-	vector gyro_reading;			// gyro reading with temperature compensation and LPF, without AHRS bias estimating
 	vector body_rate;				// body rate, with all compensation applied
-	vector accel;// = {NAN, NAN, NAN};
+
+	// data for main loop use, updated at the beginning of main loop
+	vector accel;
+	vector gyro_reading;			// gyro reading with temperature compensation and LPF, without AHRS bias estimating
 	vector mag;
+	// latest data from imu thread
+	vector accel_imu;
+	vector gyro_reading_imu;		// gyro reading with temperature compensation and LPF, without AHRS bias estimating
+	vector mag_imu;
+
 	vector gyro_uncalibrated;
 	vector accel_uncalibrated;
 	vector mag_uncalibrated;
@@ -200,7 +207,7 @@ public:
 	motion_detector motion_acc;						// motion detector for accelerometer calibration.
 	bool islanding;// = false ;
 	bool land_possible;
-	bool imu_data_lock;
+	HAL::ICriticalSection *cs_imu;
 	int event_count;
 	int events[10];
 	int events_args[10];
