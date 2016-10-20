@@ -2,9 +2,32 @@
 #include <float.h>
 #include <time.h>
 #include <algorithm/pos_controll.h>
+#include <algorithm/attitude_controller.h>
 #include <win32/comm.h>
+#include <Protocol/common.h>
 #include "rc.h"
 #include <math.h>
+
+#ifdef WIN32
+#include <Windows.h>
+// helper function:
+// map rectangular stick to a rounded attitude
+void attitude_controller::get_attitude_from_stick(const float *stick, float *attitude)
+{
+	attitude[0] = stick[0] * 3.14 / 8;
+	attitude[1] = -stick[1] * 3.14 / 8;
+
+	if (fabs(stick[0]) > 0.001f && fabs(stick[1]) > 0.001f)
+	{
+		float v = min(fabs(stick[0]/stick[1]), fabs(stick[1]/stick[0]));
+		float f = 1.0f / sqrt(1+v*v);
+
+		attitude[0] *= f;
+		attitude[1] *= f;
+	}
+
+}
+#endif
 
 static float g = 9.80;
 float pos[2] = {0};
@@ -12,7 +35,6 @@ float velocity[2] = {0};
 float euler[3] = {0};
 float target_euler[3] = {0};
 pos_controller controller;
-static float PI = acos(-1.0);
 
 CRITICAL_SECTION cs;
 Comm comm;
@@ -124,7 +146,12 @@ DWORD WINAPI update_state(LPVOID p)
 		}
 
 		float alpha = dt / (dt + 1.0f/(2*PI * 3.3f)); 
-		euler[2] = euler[2] * (1-alpha) + (target_euler[2]) * alpha;
+		euler[2] = radian_add(euler[2], radian_sub(target_euler[2], euler[2]) * alpha);
+
+		if (euler[2] > PI)
+			euler[2] -= 2*PI;
+		if (euler[2] < -PI)
+			euler[2] += 2*PI;
 
 		LeaveCriticalSection(&cs);
 
@@ -150,7 +177,7 @@ DWORD WINAPI update_controller(LPVOID p)
 
 	while(true)
 	{
-		use_pos_controller = rc[4] > 0;
+// 		use_pos_controller = rc[4] > 0;
 
 		float dt = (GetTickCount() - time)/1000.0f;
 		if (dt < 0.01f)
@@ -165,6 +192,9 @@ DWORD WINAPI update_controller(LPVOID p)
 		}
 
 		EnterCriticalSection(&cs);
+
+		rc[1] = (GetKeyState(VK_DOWN)<0) ? -1 : ((GetKeyState(VK_UP)<0) ? 1 : 0);
+		rc[3] = (GetKeyState(VK_LEFT)<0) ? -1 : ((GetKeyState(VK_RIGHT)<0) ? 1 : 0);
 
 		float desired_velocity[2] = {rc[1] * 5, rc[0] * 5};
 		if (abs(desired_velocity[0]) < 0.2 || !use_pos_controller)
@@ -207,7 +237,13 @@ DWORD WINAPI update_controller(LPVOID p)
 			target_euler[1] = -rc[1] * PI/4;
 		}
 		if (fabs(rc[3]) > 0.05f)
+		{
 			target_euler[2] += dt * rc[3] * PI;
+			if (target_euler[2] > PI)
+				target_euler[2] -= 2*PI;
+			if (target_euler[2] < -PI)
+				target_euler[2] += 2*PI;
+		}
 
 		LeaveCriticalSection(&cs);
 

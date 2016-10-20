@@ -482,7 +482,7 @@ int pos_controller::rate_to_accel(float dt)
 		pid[axis][0] = p;
 
 		// update I only if we did not hit accel/angle limit or throttle limit or I term will reduce
-		if (!limit_accel && !limit_angle && state != braking)
+		if (!limit_accel && !limit_angle/* && state != braking*/)
 		{
 			pid[axis][1] += p *  dt;
 			pid[axis][1] = limit(pid[axis][1], -rate2accel[3], rate2accel[3]);
