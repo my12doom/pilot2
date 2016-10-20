@@ -5,7 +5,7 @@
 #include "log.h"
 
 #include <Protocol/RFData.h>
-#include <protocol/common.h>
+#include <Protocol/common.h>
 #include <HAL/Interface/Interfaces.h>
 
 bool storage_ready = true;
@@ -120,12 +120,14 @@ extern "C" uint32_t get_fattime(void)
 		return 0;
 
 	struct tm _tm;
-	time_t current_time = _unix_time + (GetTickCount()*1000 - sys_time) / 1000000;
+        /*time_t current_time = _unix_time + (GetTickCount()*1000 - sys_time) / 1000000;
 	_tm = *localtime(&current_time);
 	
 	TRACE("\r%d, %d", current_time, _tm.tm_sec);
 	
 	return make_fattime(_tm.tm_sec, _tm.tm_min, _tm.tm_hour, _tm.tm_mday, _tm.tm_mon, _tm.tm_year);
+        */
+        return 0;
 }
 
 int log_printf(const char*format, ...)

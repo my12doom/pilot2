@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Protocol/Common.h>
+#include <Protocol/common.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -186,7 +186,7 @@ yet_another_pilot::yet_another_pilot()
 	memset(&v_flow_ned,0,sizeof(v_flow_ned));
 	gps_attitude_timeout = 0;
 	land_possible = false;
-	imu_data_lock = false;
+	cs_imu = HAL::create_critical_section();
 	event_count = 0;
 	home_set = false;
 	rc_fail_tick = 0;
@@ -1117,7 +1117,7 @@ int yet_another_pilot::read_imu_and_filter()
 	// at lower rate (50hz)
 	static int64_t last_mag_read = 0;
 	bool got_mag = false;
-	if (!imu_data_lock && systimer->gettime() - last_mag_read > 20000)
+	if (systimer->gettime() - last_mag_read > 20000)
 	{
 		last_mag_read = systimer->gettime();
 		got_mag = true;
@@ -1259,29 +1259,22 @@ int yet_another_pilot::read_imu_and_filter()
 		acc.array[i] *= acc_scale[i];
 		mag.array[i] += mag_bias[i];
 		mag.array[i] *= mag_scale[i];
-		gyro_reading.array[i] += gyro_bias[i];
+		gyro.array[i] += gyro_bias[i];
 	}	
 	
-	// copy mag
-	if (!imu_data_lock && got_mag)
-	{
-		this->mag = mag;
-	}
 
-	// apply a 40hz 2nd order LPF to accelerometer readings
-	// stop overwriting target data if imu data lock acquired
-	if (!imu_data_lock)
-	{
-// 		float alpha = 0.001f / (0.001f + 1.0f/(2*PI * 20.0f));
-		for(int i=0; i<3; i++)
-			this->accel.array[i] = accel_lpf2p[i].apply(acc.array[i]);
-//  			this->accel.array[i] = acc.array[i]*alpha + this->accel.array[i] * (1-alpha);
-	}
-	else
-	{
-		for(int i=0; i<3; i++)
-			accel_lpf2p[i].apply(acc.array[i]);
-	}
+	// apply a 40hz 2nd order LPF to accelerometer and gyro readings
+	if (cs_imu)
+		cs_imu->enter();
+	for(int i=0; i<3; i++)
+		this->accel_imu.array[i] = accel_lpf2p[i].apply(acc.array[i]);
+	for(int i=0; i<3; i++)
+		this->gyro_reading_imu.array[i] = gyro_lpf2p[i].apply(gyro.array[i]);
+	// copy mag
+	if (got_mag)
+		this->mag_imu = mag;
+	if (cs_imu)
+		cs_imu->leave();
 
 
 	// read optical flow @ 100hz
@@ -1334,19 +1327,6 @@ int yet_another_pilot::read_imu_and_filter()
 	}
 	
 	
-	// apply a 2nd order LPF to gyro readings
-	// stop overwriting target data if imu data lock acquired
-	if (!imu_data_lock)
-	{
-		for(int i=0; i<3; i++)
-			this->gyro_reading.array[i] = gyro_lpf2p[i].apply(gyro.array[i]);
-	}
-	else
-	{
-		for(int i=0; i<3; i++)
-			gyro_lpf2p[i].apply(gyro.array[i]);
-	}
-
 	// log unfiltered imu data
 	int16_t data[6] = {acc.V.x * 100, acc.V.y * 100, acc.V.z * 100,
 						gyro.V.x * 1800 / PI, gyro.V.y * 1800 / PI, gyro.V.z * 1800 / PI,};
@@ -1487,8 +1467,7 @@ int yet_another_pilot::calculate_state()
 	}
 	else if (use_EKF == 2.0f)
 	{
-		float q[4];
-		memcpy(q, &q0, sizeof(q));
+		float q[4] = {q0,q1,q2,q3};
 		float acc[3] = {-accel.array[0], -accel.array[1], -accel.array[2]};
 
 		memcpy(estimator2.gyro, body_rate.array, sizeof(estimator2.gyro));
@@ -1657,6 +1636,10 @@ int yet_another_pilot::sensor_calibration()
 	{
 		read_imu_and_filter();
 		read_sensors();
+		accel = accel_imu;
+		gyro_reading = gyro_reading_imu;
+		mag = mag_imu;
+
 		if ((critical_errors & (~int(ignore_error))) & (error_baro | error_gyro | error_magnet | error_accelerometer))
 			return -2;
 		if (detect_gyro.new_data(gyro_reading))
@@ -3267,6 +3250,17 @@ void yet_another_pilot::mag_calibrating_worker()
 
 void yet_another_pilot::main_loop(void)
 {
+	// load latest data from imu thread
+	if (cs_imu)
+		cs_imu->enter();
+
+	accel = accel_imu;
+	gyro_reading = gyro_reading_imu;
+	mag = mag_imu;
+
+	if (cs_imu)
+		cs_imu->leave();
+
 	// calculate systime interval
 	static int64_t tic = 0;
 	int64_t round_start_tick = systimer->gettime();
@@ -3299,7 +3293,6 @@ void yet_another_pilot::main_loop(void)
 
 	// read sensors
 	int64_t read_sensor_cost = systimer->gettime();
-	//read_sensors();
 	read_sensors();
 	read_sensor_cost = systimer->gettime() - read_sensor_cost;
 
@@ -3367,9 +3360,6 @@ void yet_another_pilot::main_loop(void)
 			SAFE_OFF(SD_led);
 		}
 	}
-
-	// unlock imu data
-	imu_data_lock = false;
 
 	// update home once position ready
 	if (!home_set && get_estimator_state() == fully_ready)

@@ -422,6 +422,14 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\..\HAL\STM32F4\F4CriticalSection.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\HAL\STM32F4\F4CriticalSection.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\..\HAL\STM32F4\F4GPIO.cpp"
 						>
 					</File>

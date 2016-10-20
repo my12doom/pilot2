@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-#include <HAL/Interface/SDCARD.h>	/* Basic integer types */
+#include <HAL/Interface/SDCard.h>	/* Basic integer types */
 #include "ffconf.h"		/* FatFs configuration options */
 
 #if _FATFS != _FFCONF
