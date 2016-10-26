@@ -18,10 +18,10 @@
 
 namespace androidUAV
 {
-    class AUART : public HAL::IUART
+	class AUART : public HAL::IUART
 	{
-	    public:
-		    AUART(const char*);
+		public:
+			AUART(const char*);
 			~AUART();
 			virtual int set_baudrate(int baudrate);
 			virtual int peak(void *data, int max_count);
@@ -35,13 +35,17 @@ namespace androidUAV
 			void readProcess();
 			int uartInit(int baudrate);
 			static void *send_thread(void *p);
-	    protected:
+		protected:
 			int update_buffer();
 			char buffer[20*1024];
 			char dataTmp[100];
 			fd_set rd;
 			int buffer_pos;
-	    private:
+
+			int policy;
+			pthread_attr_t attr;
+			struct sched_param schparam;
+		private:
 			int readThreadId;
 			int sendThreadID;
 			pthread_t tidp;
@@ -64,6 +68,12 @@ namespace androidUAV
 
 			char tx_buffer[TX_BUFFER_SIZE];
 			struct sigaction sigio;
+
+			int set_priority(int32_t priority);
 	};
 	void signal_handler_IO(int status);
 }
+static int get_thread_policy (pthread_attr_t *attr);
+static int get_thread_priority (pthread_attr_t *attr,struct sched_param *param);
+static void set_thread_policy (pthread_attr_t *attr,int policy);
+static void set_thread_priority(pthread_attr_t *attr,struct sched_param *param,int32_t priority);

@@ -11,6 +11,7 @@
 #define MAX_FLOW_COUNT 2
 #define MAX_DEVICE_COUNT 20
 
+#define FIFO_NUM 5
 class Manager
 {
 	//Manager construct:
@@ -45,7 +46,10 @@ class Manager
 			uint8_t num;
 			devices::IBatteryVoltage *pIBatteryVoltage; 
 		}BatteryVoltage_table;
-	
+		typedef struct{
+			char name[30];
+			HAL::IFIFO *pFIFO;
+		}FIFO_table;
 	
 	private:
 		HAL::IRCIN *rcins[2];
@@ -75,7 +79,10 @@ class Manager
 		HAL::IAsyncWorker * async_worker;
 		int flow_count;
 		sensors::IFlow * Flows[MAX_FLOW_COUNT];
-
+		
+		int fifo_num;
+		FIFO_table fifo_table[FIFO_NUM];
+		
 		int device_count;
 		device_entry devices[MAX_DEVICE_COUNT];
 		
@@ -93,6 +100,7 @@ class Manager
 		int get_GPS_count();
 		int get_device_count();
 		int get_RCIN_count();
+		int get_FIFO_count();
 		
 		//register function:
 		int register_LED(const char *name,devices::ILED *pLED);
@@ -110,7 +118,7 @@ class Manager
 		int register_RCOUT(HAL::IRCOUT *rcout);
 		int register_asyncworker(HAL::IAsyncWorker *worker);
 		int register_device(const char *name, void *device);
-
+		int register_FIFO(const char *name,HAL::IFIFO *pFIFO);
 		//getDevice function:
 		void *get_device(const char *name);
 		devices::ILED* getLED(const char *name);
@@ -127,6 +135,7 @@ class Manager
 		HAL::IRCOUT * get_RCOUT();
 		HAL::IAsyncWorker *get_asyncworker();
 		sensors::IFlow *get_flow(int index);
+		HAL::IFIFO *get_FIFO(const char *name);
 };
 
 //Declear manager as global:

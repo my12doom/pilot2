@@ -1,14 +1,22 @@
 #include "AUART.h"
 #include <HAL/rk32885.1/AGpio.h>
+#include <unistd.h>
+
 int speed_arrEuler[] = {B115200,B38400, B19200, B9600, B4800, B2400, B1200, B300, B38400, B19200, B9600, B4800, B2400, B1200, B300};
 int name_arrEuler[] = {115200,38400, 19200, 9600, 4800, 2400, 1200, 300, 38400, 19200, 9600, 4800, 2400, 1200, 300};
 volatile int cnt = 0;
 namespace androidUAV
 {
-    AUART::AUART(const char* uartPath):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),ongoing_rx_start(0),ongoing_rx_size(0)
+	AUART::AUART(const char* uartPath):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),ongoing_rx_start(0),ongoing_rx_size(0)
 	{
 		exit = false;
 		readThreadId = 0;
+		policy = get_thread_policy (&attr);
+		//Only before pthread_create excuted ,can we set thread parameters
+		set_thread_policy(&attr,SCHED_FIFO);
+		//update thread pilicy after set thread policy
+		policy = get_thread_policy (&attr);
+		//set_priority(95);
 		pthread_mutex_init(&mutex,NULL);
 		if(!uartPath)
 		{
@@ -86,6 +94,10 @@ namespace androidUAV
 				buffer_pos+=ret;
 				return ret;
 			}
+			else
+			{
+
+			}
 		}
 		return ret;
 	}
@@ -116,7 +128,8 @@ namespace androidUAV
 	}
 	int AUART::flush()
 	{
-		tcflush(uartFd,TCIOFLUSH);
+		tcdrain(uartFd);
+		//tcflush(uartFd,TCIOFLUSH);
 		return 0;
 	}
 	int AUART::read(void *data, int max_count)
@@ -175,6 +188,7 @@ namespace androidUAV
 		{
 
 			ret = update_buffer();
+			usleep(80);
 			/*if(ret > 0)
 			{
 				cnt+=ret;
@@ -194,5 +208,39 @@ namespace androidUAV
 			usleep(100);
 		}
 	}
-
+	int AUART::set_priority(int32_t priority)
+	{
+		//checkout policy ,only SCHED_FIFO SCHED_RR policies have a sched_priority value (1~99)
+		if(policy == SCHED_OTHER)
+			return -1;
+		int32_t priority_min = 0;
+		int32_t priority_max = 0;
+		priority_min = sched_get_priority_min(policy);
+		priority_max = sched_get_priority_max(policy);
+		if(priority<=priority_min || priority>=priority_max)
+			return -1;
+		set_thread_priority(&attr,&schparam,priority);
+		return 0;
+	}
+}
+static int get_thread_policy(pthread_attr_t *attr)
+{
+	int policy;
+	int rs = pthread_attr_getschedpolicy(attr, &policy);
+	return policy;
+}
+static int get_thread_priority(pthread_attr_t *attr,struct sched_param *param)
+{
+	int rs = pthread_attr_getschedparam (attr, param);
+	return param->__sched_priority;
+}
+static void set_thread_policy(pthread_attr_t *attr,int policy)
+{
+	int rs = pthread_attr_setschedpolicy (attr, policy);
+	get_thread_policy (attr);
+}
+static void set_thread_priority(pthread_attr_t *attr,struct sched_param *param,int32_t priority)
+{
+	param->sched_priority = priority;
+	pthread_attr_setschedparam(attr,param);
 }

@@ -13,6 +13,8 @@
 #include "IInterrupt.h"
 #include "ITimer.h"
 
+#include "ICriticalSection.h"
+		
 #include "IAccelerometer.h"
 #include "IBarometer.h"
 #include "IBatteryVoltage.h"
@@ -24,3 +26,5 @@
 #include "IRawDevice.h"
 #include "IRGBLED.h"
 #include "IRangeFinder.h"
+
+#include "IFIFO.h"
