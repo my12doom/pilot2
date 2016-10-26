@@ -27,29 +27,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define	SMPLRT_DIV		0x19
-#define	MPU9250_CONFIG	0x1A
-#define	GYRO_CONFIG		0x1B
-#define	ACCEL_CONFIG	0x1C
-#define	ACCEL_XOUT_H	0x3B
-#define	ACCEL_XOUT_L	0x3C
-#define	ACCEL_YOUT_H	0x3D
-#define	ACCEL_YOUT_L	0x3E
-#define	ACCEL_ZOUT_H	0x3F
-#define	ACCEL_ZOUT_L	0x40
-#define	TEMP_OUT_H		0x41
-#define	TEMP_OUT_L		0x42
-#define	GYRO_XOUT_H		0x43
-#define	GYRO_XOUT_L		0x44	
-#define	GYRO_YOUT_H		0x45
-#define	GYRO_YOUT_L		0x46
-#define	GYRO_ZOUT_H		0x47
-#define	GYRO_ZOUT_L		0x48
-#define EXT_SENS_DATA	0x49
-#define	USER_CTRL		0x6A
-#define	PWR_MGMT_1		0x6B
-#define	PWR_MGMT_2		0x6C
-#define	WHO_AM_I		0x75
 using namespace androidUAV;
 using namespace HAL;
 using namespace sensors;
@@ -87,38 +64,17 @@ MPU6000 mpu6000device;
 MS5611_SPI ms5611device;
 UartUbloxBinaryGPS gpsdevice;
 EBusIN ebus;
-typedef struct
-{
-	float x;
-	float y;
-	float z;
-	float temperature;
-}accelerometer_data;
 
-accelerometer_data accData;
-
-int write_reg_i2c(uint8_t reg,uint8_t data)
-{
-	char dataSend = 0;
-	int ret;
-	dataSend = data;
-	ret = i2c2.write_regs(0x68,reg,(const uint8_t*)&dataSend,1);
-	if(ret < 0)
-	{
-		printf(" init erro \n");
-	}
-	return ret;
-}
 void init_sensor()
 {
-	if (mpu6000device.init(&i2c2,0x68) == 0)
+	/*if (mpu6000device.init(&i2c2,0x68) == 0)
 	{
 		mpu6000device.accelerometer_axis_config(1, 0, 2, -1, -1, +1);
 		mpu6000device.gyro_axis_config(1, 0, 2, +1, +1, -1);
 		manager.register_accelerometer(&mpu6000device);
 		manager.register_gyroscope(&mpu6000device);
-	}
-	/*cs_mpu.set_status(1);
+	}*/
+	cs_mpu.set_status(1);
 	cs_ms5611.set_status(1);
 	//spi1.setSpeed(10000000);
 	if (mpu6000device.init(&spi1, &cs_mpu) == 0)
@@ -127,7 +83,7 @@ void init_sensor()
 		mpu6000device.gyro_axis_config(1, 0, 2, +1, +1, -1);
 		manager.register_accelerometer(&mpu6000device);
 		manager.register_gyroscope(&mpu6000device);
-	}*/
+	}
 	if(ms5611device.init(&spi1,&cs_ms5611) == 0)
 	{
 		manager.register_barometer(&ms5611device);
