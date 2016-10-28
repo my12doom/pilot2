@@ -24,13 +24,13 @@ namespace androidUAV
 		}
 		else
 		{
-			uartFd = open(uartPath,O_RDWR | O_NOCTTY | O_NDELAY );
+			uartFd = open(uartPath,O_RDWR | O_NONBLOCK );
 			if(uartFd < 0)
 			{
 				LOG2("androidUAV:oepn uart dev error Path = %s\n",uartPath);
 			}
 		}
-		uartInit(115200);
+		//uartInit(115200);
 		exit = true;
 		readThreadId = pthread_create(&tidp,NULL,read_thread,(void *)this);
 	}
@@ -45,10 +45,10 @@ namespace androidUAV
 	{
 		struct termios oldtio,newtio;
 		int i;
-		if((fcntl(uartFd,F_SETFL,0)) < 0)
-		{
-			LOG2("fcntl F_SETFL error\n");
-		}
+		//if((fcntl(uartFd,F_SETFL,0)) < 0)
+		//{
+			//LOG2("fcntl F_SETFL error\n");
+		//}
 		tcgetattr(uartFd,&oldtio);
 		newtio = oldtio;
 		cfmakeraw(&newtio);
@@ -104,7 +104,7 @@ namespace androidUAV
 	int AUART::set_baudrate(int baudrate)
 	{
 		int ret = 0;
-		//printf("set %d\n",baudrate);
+		//printf("in set set %d\n",baudrate);
 		ret = uartInit(baudrate);
 		return ret;
 	}
@@ -179,16 +179,13 @@ namespace androidUAV
 	{
 		int ret;
 
-		FD_ZERO(&rd);
-		FD_SET(uartFd,&rd);
-
 		int cnt1 = 0;
 		int cnt2 = 0;
 		while(exit)
 		{
 
 			ret = update_buffer();
-			usleep(80);
+			usleep(100);
 			/*if(ret > 0)
 			{
 				cnt+=ret;

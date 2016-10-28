@@ -42,6 +42,7 @@ static const char *pwmdevice = "/dev/eulerpwm0";
 
 static const char *i2c2device = "/dev/mpu6050";;
 
+static const char *imufifoPath = "/data/IMU_FIFO";
 const char bsp_name[] = "androidUAV";
 
 void reset_system()
@@ -56,7 +57,7 @@ AGPIO cs_ms5611(gpiodevice,230);
 AUART uart3(uart3device);
 AUART uart4(uart4device);
 ARCOUT rcout(pwmdevice);
-AFIFO imufifo;
+AFIFO imufifo(imufifoPath);
 AI2C i2c2(i2c2device);
 
 
@@ -99,8 +100,16 @@ int init_rc()
 int init_GPS()
 {
 	int ret = -1;
+	//uart3.set_baudrate(9600);
 	ret = gpsdevice.init(&uart3,115200);
-	manager.register_GPS(&gpsdevice);
+	if(ret < 0)
+	{
+		LOG2("androidUAV:Warning GPS init failed\n");
+	}
+	else
+	{
+		manager.register_GPS(&gpsdevice);
+	}
 	return 0;
 }
 int init_RC()
@@ -113,17 +122,8 @@ void init_external_compass()
 }
 int init_imufifo()
 {
-	int ret;
-	ret = imufifo.open(FIFOPATH);
-	if(ret < 0)
-	{
-		LOG2("androidUAV:open imu_fifo error\n");
-		return -1;
-	}
-	else
-	{
-		manager.register_FIFO("imu_FIFO",&imufifo);
-	}
+	manager.register_FIFO("imu_FIFO",&imufifo);
+	return 0;
 }
 int bsp_init_all()
 {

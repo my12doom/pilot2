@@ -1,6 +1,7 @@
 #pragma once
 #include <HAL/Interface/II2C.h>
 #include <HAL/rk32885.1/ALog.h>
+
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/types.h>

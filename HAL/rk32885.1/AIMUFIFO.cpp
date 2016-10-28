@@ -10,19 +10,22 @@ namespace androidUAV
 		}
 		else
 		{
-			//fifofd = open();
+			memset(filePath,0,sizeof(filePath));
+			memcpy(filePath,fifopath,sizeof(filePath));
 		}
 		memset(&imudata,0,sizeof(imu_data_t));
 	}
 	AFIFO::~AFIFO()
 	{
-		::close(fifofd);
+		if(fifofd > 0)
+			::close(fifofd);
 	}
 	int AFIFO::open(const char* path)
 	{
-		if(!path)
+		if(!path || is_file_exist(path)<0)
 			return -1;
-		fifofd = ::open(path,O_RDWR);
+		// open mode :O_NONBLOCK when pip buf is full return -1 immediately 
+		fifofd = ::open(path,O_RDWR|O_NONBLOCK);
 		if(fifofd < 0)
 		{
 			LOG2("androidUAV:open error\n");
@@ -35,7 +38,7 @@ namespace androidUAV
 	}
 	int AFIFO::create(const char* path,int mode)
 	{
-		if(!path)
+		if(!path || 0 == is_file_exist(filePath))
 			return -1;
 		fifofd = mkfifo(path,mode);
 		return fifofd;
@@ -43,28 +46,67 @@ namespace androidUAV
 	int AFIFO::read(void *data,int count)
 	{
 		int ret = 0;
-		if(!data)
+		if(!data || is_file_exist(filePath)<0)
+		{
+			if(fifofd > 0)
+			{
+				::close(fifofd);
+				fifofd = 0;
+			}
 			return -1;
+		}
+		else
+		{		
+			if(fifofd<0 || !fifofd)
+			{
+				open(filePath);
+			}
+		}
 		memset(&imudata,0,sizeof(imu_data_t));
 		
 		ret = ::read(fifofd,&imudata,sizeof(imu_data_t));
 		
-		//ret = ::read(fifofd,data,count);
 		return ret;
 	}
 	int AFIFO::write(void *data,int count)
 	{
-		if(!data)
+		int ret;
+		if(!data || is_file_exist(filePath)<0)
+		{
+			if(fifofd > 0)
+			{
+				::close(fifofd);
+				fifofd = 0;
+			}
 			return -1;
+		}
+		else
+		{		
+			if(fifofd<0 || !fifofd)
+			{
+				open(filePath);
+			}
+		}
+
 		memset(&imudata,0,sizeof(imu_data_t));
 		imudata.pack_head_chk[0] = 0xfe;
 		imudata.pack_head_chk[1] = ~imudata.pack_head_chk[0];
-		imudata.time_stamp = 1234;
+		imudata.time_stamp = gettime();
 		
 		memcpy(&imudata.array[0],data,count);
 		imudata.crc = crc16((uint8_t *)(&imudata)+2,sizeof(imu_data_t)-4);
-		::write(fifofd,&imudata,sizeof(imu_data_t));
-		return 0;
+		ret = ::write(fifofd,&imudata,sizeof(imu_data_t));
+
+		return (ret == sizeof(imu_data_t))?count:ret;
+	}
+	int AFIFO::is_file_exist(const char *filePath)
+	{
+		if(!filePath)
+			return -1;
+		
+		if(access(filePath,F_OK) == 0)
+			return 0;
+		return -1;
 	}
 	
 }
@@ -93,3 +135,10 @@ static uint16_t crc16(const uint8_t* data,uint32_t size)
 	crc = UpdateCRC16(crc,0);
 	return crc&0xffffu;
 }
+static int64_t gettime()
+{
+	struct timespec tv;
+	clock_gettime(CLOCK_MONOTONIC, &tv);
+	return (int64_t)((tv.tv_sec) * 1000000 + (tv.tv_nsec)/1000);
+}
+
