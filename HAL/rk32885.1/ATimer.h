@@ -25,7 +25,7 @@ namespace androidUAV
 			void lock();
 			void unlock();
 	    public:
-			ATimer();
+			ATimer(int priority);
 			~ATimer();
 			virtual void set_period(uint32_t period) ;// micro-second
 			virtual void set_callback(HAL::timer_callback cb);

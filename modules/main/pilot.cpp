@@ -2095,7 +2095,7 @@ int yet_another_pilot::check_stick_action()
 			if (flashlight)
 				flashlight->toggle();
 
-			start_acrobatic(acrobatic_move_flip, 4);
+			//start_acrobatic(acrobatic_move_flip, 1);
 			//start_taking_off();
 			//reset_accel_cal();
 		}

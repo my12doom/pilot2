@@ -4,17 +4,18 @@
 #include <unistd.h>
 namespace androidUAV
 {
-    ATimer::ATimer()
+    ATimer::ATimer(int priority)
 	{
 		pthread_attr_init (&attr);
 
 		policy = get_thread_policy (&attr);
 		//Only before pthread_create excuted ,can we set thread parameters
-		/*set_thread_policy (&attr,SCHED_FIFO);
-		set_priority(51);
-		*/
+		set_thread_policy(&attr,SCHED_FIFO);
+		//update thread pilicy after set thread policy
+		policy = get_thread_policy (&attr);
+		set_priority(priority);
 		pthread_mutex_init(&mutex,NULL);
-		thread = pthread_create(&tidp,NULL,entry,(void*)this);
+		thread = pthread_create(&tidp,&attr,entry,(void*)this);
 		if(thread < 0)
 		{
 			//perror
@@ -27,7 +28,6 @@ namespace androidUAV
 	{
 		exit = false;
 		pthread_join(thread,0);
-		//printf("thread exited\n");
 		pthread_mutex_destroy(&mutex);
 	}
 	void ATimer::run()
@@ -42,7 +42,7 @@ namespace androidUAV
 			{
 				int64_t t = systimer->gettime();
 				while((t = systimer->gettime()) < last_call_time + period)
-					usleep(0);
+					usleep(100);
 				last_call_time = t;
 			}
 			else
@@ -81,8 +81,7 @@ namespace androidUAV
 		int32_t priority_max = 0;
 		priority_min = sched_get_priority_min(policy);
 		priority_max = sched_get_priority_max(policy);
-
-		if(priority<priority_min || priority>priority_max)
+		if(priority<=priority_min || priority>=priority_max)
 			return -1;
 		set_thread_priority(&attr,&schparam,priority);
 		return 0;

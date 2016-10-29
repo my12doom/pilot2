@@ -769,6 +769,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4Interrupt.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F4CriticalSection.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4CriticalSection.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -878,6 +883,11 @@
               <FileName>ads1115.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\sensors\ads1115.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>SPL06.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\SPL06.cpp</FilePath>
             </File>
           </Files>
         </Group>

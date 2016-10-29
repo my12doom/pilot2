@@ -4,6 +4,8 @@
 #include <HAL/rk32885.1/ASPI.h>
 #include <HAL/rk32885.1/AUART.h>
 #include <rk3288UAV/ARCOUT.h>
+#include <HAL/rk32885.1/AIMUFIFO.h>
+#include <HAL/rk32885.1/AI2C.h>
 
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 #include <HAL/sensors/Sonar.h>
@@ -24,6 +26,7 @@
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 using namespace androidUAV;
 using namespace HAL;
 using namespace sensors;
@@ -37,6 +40,9 @@ static const char *uart4device = "/dev/ttyS4";
 
 static const char *pwmdevice = "/dev/eulerpwm0";
 
+static const char *i2c2device = "/dev/mpu6050";;
+
+static const char *imufifoPath = "/data/IMU_FIFO";
 const char bsp_name[] = "androidUAV";
 
 void reset_system()
@@ -51,13 +57,24 @@ AGPIO cs_ms5611(gpiodevice,230);
 AUART uart3(uart3device);
 AUART uart4(uart4device);
 ARCOUT rcout(pwmdevice);
+AFIFO imufifo(imufifoPath);
+AI2C i2c2(i2c2device);
+
 
 MPU6000 mpu6000device;
 MS5611_SPI ms5611device;
 UartUbloxBinaryGPS gpsdevice;
 EBusIN ebus;
+
 void init_sensor()
 {
+	/*if (mpu6000device.init(&i2c2,0x68) == 0)
+	{
+		mpu6000device.accelerometer_axis_config(1, 0, 2, -1, -1, +1);
+		mpu6000device.gyro_axis_config(1, 0, 2, +1, +1, -1);
+		manager.register_accelerometer(&mpu6000device);
+		manager.register_gyroscope(&mpu6000device);
+	}*/
 	cs_mpu.set_status(1);
 	cs_ms5611.set_status(1);
 	//spi1.setSpeed(10000000);
@@ -83,8 +100,16 @@ int init_rc()
 int init_GPS()
 {
 	int ret = -1;
+	//uart3.set_baudrate(9600);
 	ret = gpsdevice.init(&uart3,115200);
-	manager.register_GPS(&gpsdevice);
+	if(ret < 0)
+	{
+		LOG2("androidUAV:Warning GPS init failed\n");
+	}
+	else
+	{
+		manager.register_GPS(&gpsdevice);
+	}
 	return 0;
 }
 int init_RC()
@@ -95,6 +120,11 @@ void init_external_compass()
 {
 	sensors::HMC5983 hmc5983;
 }
+int init_imufifo()
+{
+	manager.register_FIFO("imu_FIFO",&imufifo);
+	return 0;
+}
 int bsp_init_all()
 {
 	// Prio in the range -20  to  19
@@ -103,20 +133,25 @@ int bsp_init_all()
 	init_GPS();
 	init_rc();
 	init_RC();
-	static androidUAV::ATimer timer[3];
-	manager.register_Timer("mainloop", &timer[0]);
-	manager.register_Timer("log", &timer[1]);
-	manager.register_Timer("imu", &timer[2]);
-	timer[0].set_period(0);
-	timer[1].set_period(-15);
-	timer[2].set_period(2);
+	init_imufifo();
+	//static androidUAV::ATimer timer[3];
+	static androidUAV::ATimer timer1(98);
+	static androidUAV::ATimer timer2(97);
+	static androidUAV::ATimer timer3(96);
+	manager.register_Timer("mainloop", &timer1);
+	manager.register_Timer("log", &timer2);
+	manager.register_Timer("imu", &timer3);
+	timer1.set_period(0);
+	timer2.set_period(0);
+	timer3.set_period(0);
 	param bsp_parameter("BSP",1);
 	if(bsp_parameter)
 	{
-		param("time", 3000)=1000;
+		param("time", 3000)=3000;
 		param("ekf", 0)=2;
 		param("err",0) = error_magnet|error_GPS;
-		// frame
+		//
+		
 		param("mat", 1)=1;
 
 

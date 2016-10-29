@@ -14,7 +14,7 @@ include $(CLEAR_VARS)
 
 #local pilot source file
 LOCAL_SRC_FILES := \
-		testPilot.cpp \
+		testMain.cpp \
 		../../../BSP/boards/rk3288UAV/init.cpp \
 		../../../BSP/boards/rk3288UAV/ARCOUT.cpp \
         ../../../HAL/rk32885.1/ASPI.cpp \
@@ -23,14 +23,17 @@ LOCAL_SRC_FILES := \
         ../../../HAL/rk32885.1/AUART.cpp \
         ../../../HAL/rk32885.1/AStorage.cpp \
         ../../../HAL/rk32885.1/ATimer.cpp \
+        ../../../HAL/rk32885.1/ACriticalSection.cpp \
+        ../../../HAL/rk32885.1/AIMUFIFO.cpp \
+        ../../../HAL/rk32885.1/AI2C.cpp \
         ../../../modules/utils/param.cpp \
         ../../../modules/utils/space.cpp \
-        ../../../modules/utils/log_win32.cpp \
         ../../../modules/utils/gauss_newton.cpp \
         ../../../modules/utils/vector.cpp \
         ../../../modules/utils/console.cpp \
         ../../../modules/utils/ymodem.cpp \
         ../../../modules/utils/SEGGER_RTT.c \
+        ../../../modules/utils/log_android.cpp \
         ../../../modules/Algorithm/pos_controll.cpp \
         ../../../modules/Algorithm/pos_controll_old.cpp \
         ../../../modules/Algorithm/pos_estimator.cpp \
@@ -71,7 +74,7 @@ LOCAL_SRC_FILES := \
         ../../../HAL/sensors/MPU6000.cpp \
         ../../../HAL/sensors/MS5611_SPI.cpp \
         ../../../HAL/sensors/UartUbloxNMEAGPS.cpp \
-        ../../../HAL/sensors/EBusIn.cpp
+        ../../../HAL/sensors/EBusIn.cpp 
         #../../modules/Protocol/data_protocol.cpp
         
 LOCAL_C_INCLUDES :=  \

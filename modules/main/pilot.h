@@ -286,7 +286,8 @@ public:
 	int handle_uart4_controll();
 	int handle_wifi_controll(HAL::IUART *uart);
 	int stupid_joystick();
-		
+	//fifo function
+	int handle_fifo_controll(HAL::IFIFO *fifo);
 	// helper functions
 	float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert);	
 	static int min(int a, int b){return a>b?b:a;}

@@ -31,7 +31,7 @@ namespace androidUAV
 			virtual int set_mode(int CPOL, int CPHA);// CPOL: 0 = Idle Low, 1 = Idle High; CPHA: 0 = capture at first edge, 1 = capture at second edge
 			virtual uint8_t txrx(uint8_t data);
 			virtual uint8_t txrx2(const uint8_t *tx, uint8_t *rx, int len);
-        private:
+        protected:
 			int fdOpen(const char*);
 			int fdClose();
 			int spiFd;

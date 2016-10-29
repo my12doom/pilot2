@@ -18,6 +18,7 @@ Manager::Manager()
 	device_count = 0;
 	rcin_count = 0;
 	last_valid_rcin = 0;
+	fifo_num = 0;
 }
 
 int  Manager::register_RGBLED(const char *name,devices::IRGBLED *pLED)
@@ -127,6 +128,30 @@ ITimer *Manager::getTimer(const char *name)
 			}
 	}
 	//check if not valid,return null pointer:
+	return NULL;
+}
+//Manager::fifo part:
+int Manager::register_FIFO(const char *name,HAL::IFIFO *pFIFO)
+{
+	strcpy(fifo_table[fifo_num].name,name);
+	fifo_table[fifo_num].pFIFO = pFIFO;
+	fifo_num++;
+	return 0;
+}
+int Manager::get_FIFO_count()
+{
+	return fifo_num;
+}
+HAL::IFIFO *Manager::get_FIFO(const char *name)
+{
+	for(int i=0;i<FIFO_NUM;i++)
+	{
+		//check if valid,return pointer:
+		if(0==strcmp(name,fifo_table[i].name))
+		{
+			return fifo_table[i].pFIFO;
+		}
+	}
 	return NULL;
 }
 int Manager::register_BatteryVoltage(const char *name,devices::IBatteryVoltage *pIBatteryVoltage)
