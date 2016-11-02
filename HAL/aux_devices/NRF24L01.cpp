@@ -75,6 +75,8 @@ int NRF24L01::rf_on(bool rx)		// power up and enter standby-I, should be called 
 int NRF24L01::rf_off()
 {
 	ce->write(false);
+	
+	return 0;
 }
 
 int NRF24L01::write_tx(const uint8_t *data, int count)
