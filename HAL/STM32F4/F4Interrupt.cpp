@@ -82,6 +82,17 @@ extern "C" void EXTI9_5_IRQHandler(void)
 	}
 }
 
+extern "C" void EXTI1_IRQHandler(void)
+{
+	int64_t t = systimer->gettime();
+	if (EXTI_GetITStatus(EXTI_Line1) != RESET)
+	{
+		if (int_table[1])
+			int_table[1]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line1);
+	}
+}
+
 extern "C" void EXTI0_IRQHandler(void)
 {
 	int64_t t = systimer->gettime();
