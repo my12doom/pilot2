@@ -135,7 +135,7 @@ namespace STM32F4
 		return ((uint32_t)GPIOx - (uint32_t)GPIOA) / 0x0400;
 	}
 	
-	int pin2irqn(uint32_t GPIO_Pin)
+	IRQn_Type pin2irqn(uint32_t GPIO_Pin)
 	{
 		if (GPIO_Pin == GPIO_Pin_0)
 			return EXTI0_IRQn;
@@ -152,7 +152,7 @@ namespace STM32F4
 		if (GPIO_Pin >= GPIO_Pin_10 && GPIO_Pin <= GPIO_Pin_15)
 			return EXTI15_10_IRQn;
 		
-		return -1;
+		return (IRQn_Type)-1;
 	}
 	
 	F4Interrupt::F4Interrupt()
@@ -213,6 +213,18 @@ namespace STM32F4
 		NVIC_Init(&NVIC_InitStructure);		
 		
 		return true;
+	}
+
+	int F4Interrupt::enable()
+	{
+		NVIC_EnableIRQ(pin2irqn(GPIO_Pin));
+		return 0;
+	}
+
+	int F4Interrupt::disable()
+	{
+		NVIC_DisableIRQ(pin2irqn(GPIO_Pin));
+		return 0;
 	}
 	
 	void F4Interrupt::set_callback(HAL::interrupt_callback cb, void *parameter)

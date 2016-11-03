@@ -7,8 +7,8 @@ using namespace HAL;
 
 #define TX_ADR_WIDTH    5   //5字节的地址宽度
 #define RX_ADR_WIDTH    5   //5字节的地址宽度
-const uint8_t TX_ADDRESS[TX_ADR_WIDTH]={0xE7,0xE7,0xE7,0xE7,0xE7}; //发送地址
-const uint8_t RX_ADDRESS[RX_ADR_WIDTH]={0xC2,0xC2,0xC2,0xC2,0xC2}; //发送地址
+uint8_t TX_ADDRESS[TX_ADR_WIDTH] = {0xb0,0x3d,0x12,0x34,0x01}; //????
+uint8_t RX_ADDRESS[RX_ADR_WIDTH] = {0xb0,0x3d,0x12,0x34,0x01}; //????
 #define TX_PLOAD_WIDTH  32
 #define RX_PLOAD_WIDTH  32
 
@@ -49,9 +49,9 @@ int NRF24L01::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *ce)
 	write_cmd(TX_ADDR | WRITE_REG, TX_ADDRESS, TX_ADR_WIDTH);
 	write_cmd(RX_ADDR_P0 | WRITE_REG, RX_ADDRESS, RX_ADR_WIDTH);
 	write_reg(EN_AA, 0);
-	write_reg(EN_RXADDR, 3);
+	write_reg(EN_RXADDR, 1);
 	write_reg(SETUP_RETR, 0);
-	write_reg(RF_CH, 24);
+	write_reg(RF_CH, 95);
 	write_reg(RX_PW_P0, RX_PLOAD_WIDTH);
 	write_reg(RX_PW_P1, RX_PLOAD_WIDTH);
 	write_reg(RF_SETUP, 0x27);
@@ -64,7 +64,7 @@ int NRF24L01::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *ce)
 	return 0;
 }
 
-int NRF24L01::rf_on(bool rx)		// power up and enter standby-I, should be called only in power down state
+int NRF24L01::rf_on(bool rx)
 {
 	write_reg(CONFIG, (read_reg(CONFIG) & 0xfe) | (rx ? 1 : 0));
 
@@ -81,7 +81,6 @@ int NRF24L01::rf_off()
 
 int NRF24L01::write_tx(const uint8_t *data, int count)
 {
-	write_reg(STATUS, read_reg(STATUS));
 	write_cmd(WR_TX_PLOAD, data, count);
 
 	return 0;

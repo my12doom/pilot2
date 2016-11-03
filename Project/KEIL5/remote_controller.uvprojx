@@ -46,14 +46,14 @@
             <NotGenerated>0</NotGenerated>
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
-          <OutputDirectory>.\Output\PPM\</OutputDirectory>
-          <OutputName>PPM</OutputName>
+          <OutputDirectory>.\Output\RC\</OutputDirectory>
+          <OutputName>RC</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
-          <ListingPath>.\Output\PPM\</ListingPath>
+          <ListingPath>.\Output\RC\</ListingPath>
           <HexFormatSelection>1</HexFormatSelection>
           <Merge32K>0</Merge32K>
           <CreateBatchFile>0</CreateBatchFile>
@@ -311,7 +311,7 @@
               </OCR_RVCT3>
               <OCR_RVCT4>
                 <Type>1</Type>
-                <StartAddress>0x8000000</StartAddress>
+                <StartAddress>0x8008000</StartAddress>
                 <Size>0x100000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
@@ -423,16 +423,6 @@
               <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_conf.h</FilePath>
             </File>
             <File>
-              <FileName>stm32f4xx_it.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\HAL\STM32F4\STMLib\stm32f4xx_it.c</FilePath>
-            </File>
-            <File>
-              <FileName>system_stm32f4xx.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\HAL\STM32F4\STMLib\system_stm32f4xx.c</FilePath>
-            </File>
-            <File>
               <FileName>misc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\misc.c</FilePath>
@@ -492,11 +482,26 @@
               <FileType>1</FileType>
               <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_spi.c</FilePath>
             </File>
+            <File>
+              <FileName>system_stm32f4xx_APP.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\STMLib\system_stm32f4xx_APP.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>HAL&amp;utils</GroupName>
           <Files>
+            <File>
+              <FileName>SWO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\main\SWO.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>NRF24L01.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\aux_devices\NRF24L01.cpp</FilePath>
+            </File>
             <File>
               <FileName>F4Storage.cpp</FileName>
               <FileType>8</FileType>
@@ -537,25 +542,87 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4SPI.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F4Timer.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4Timer.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>OLED_I2C.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\aux_devices\OLED_I2C.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>TX</GroupName>
+          <GroupOption>
+            <CommonProperty>
+              <UseCPPCompiler>0</UseCPPCompiler>
+              <RVCTCodeConst>0</RVCTCodeConst>
+              <RVCTZI>0</RVCTZI>
+              <RVCTOtherData>0</RVCTOtherData>
+              <ModuleSelection>0</ModuleSelection>
+              <IncludeInBuild>0</IncludeInBuild>
+              <AlwaysBuild>2</AlwaysBuild>
+              <GenerateAssemblyFile>2</GenerateAssemblyFile>
+              <AssembleAssemblyFile>2</AssembleAssemblyFile>
+              <PublicsOnly>2</PublicsOnly>
+              <StopOnExitCode>11</StopOnExitCode>
+              <CustomArgument></CustomArgument>
+              <IncludeLibraryModules></IncludeLibraryModules>
+              <ComprImg>1</ComprImg>
+            </CommonProperty>
+            <GroupArmAds>
+              <Cads>
+                <interw>2</interw>
+                <Optim>0</Optim>
+                <oTime>2</oTime>
+                <SplitLS>2</SplitLS>
+                <OneElfS>2</OneElfS>
+                <Strict>2</Strict>
+                <EnumInt>2</EnumInt>
+                <PlainCh>2</PlainCh>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <wLevel>2</wLevel>
+                <uThumb>2</uThumb>
+                <uSurpInc>2</uSurpInc>
+                <uC99>2</uC99>
+                <useXO>2</useXO>
+                <v6Lang>0</v6Lang>
+                <v6LangP>0</v6LangP>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Cads>
+              <Aads>
+                <interw>2</interw>
+                <Ropi>2</Ropi>
+                <Rwpi>2</Rwpi>
+                <thumb>2</thumb>
+                <SplitLS>2</SplitLS>
+                <SwStkChk>2</SwStkChk>
+                <NoWarn>2</NoWarn>
+                <uSurpInc>2</uSurpInc>
+                <useXO>2</useXO>
+                <VariousControls>
+                  <MiscControls></MiscControls>
+                  <Define></Define>
+                  <Undefine></Undefine>
+                  <IncludePath></IncludePath>
+                </VariousControls>
+              </Aads>
+            </GroupArmAds>
+          </GroupOption>
           <Files>
             <File>
               <FileName>tx.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\remote_controller\tx.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>SWO.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\modules\main\SWO.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>NRF24L01.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\aux_devices\NRF24L01.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -591,6 +658,16 @@
               <FileName>F4SDCard.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\HAL\STM32F4\F4SDCard.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>RX</GroupName>
+          <Files>
+            <File>
+              <FileName>rx.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\remote_controller\rx.cpp</FilePath>
             </File>
           </Files>
         </Group>

@@ -17,5 +17,7 @@ namespace HAL
 	{
 	public:
 		virtual void set_callback(interrupt_callback cb, void *parameter) = 0;
+		virtual int enable(){return -1;}
+		virtual int disable(){return -1;}
 	};
 }
