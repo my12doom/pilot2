@@ -23,9 +23,12 @@ F4SPI spi1;
 F4Interrupt interrupt;
 F4Timer timer(TIM2);
 uint8_t data[32];
-randomizer rando;
-uint16_t rand_pos = 0;
+randomizer<256,256> rando;
+uint16_t hoop_id = 0;
 uint64_t seed = 0x1234567890345678;
+
+int64_t ts;
+int dt;
 
 extern "C" void TIM2_IRQHandler(void)
 {
@@ -34,30 +37,31 @@ extern "C" void TIM2_IRQHandler(void)
 
 void nrf_irq_entry(void *parameter, int flags)
 {
-	nrf.write_reg(7, nrf.read_reg(7));
+	dt = systimer->gettime() - ts;
+	nrf.write_reg(7, nrf.read_reg(7));				// sending 32bytes payload with 3byte address and 2byte CRC cost ~1373us
+													// delay between tx and rx is 25us max
 }
 
 void timer_entry()
 {
 	interrupt.disable();
+	dbg.write(true);
 	
-	*(uint16_t*)data = rand_pos;
-	rand_pos ++;
+	*(uint16_t*)data = hoop_id;
+	hoop_id ++;
 	
 	int channel = (int64_t)rando.next() * 100 / 0xffffffff;
+	data[2] = channel;
 	
-	if (rand_pos == 0)
-		rando.reset(seed);
+	if (hoop_id == 0)
+		rando.reset();
 	
-	nrf.rf_off();
+	ce.write(false);
 	nrf.write_reg(5, channel);
 	nrf.write_tx(data, 32);
-	nrf.rf_on(false);	
-	
+	ce.write(true);
 	interrupt.enable();
-	
-	dbg.write(true);
-	systimer->delayus(1);
+	ts = systimer->gettime();
 	dbg.write(false);
 }
 
@@ -71,14 +75,14 @@ int main()
 	dbg.set_mode(MODE_OUT_PushPull);
 	dbg.write(false);	
 	
-	rando.reset(seed);
-	rand_pos = 0;
+	rando.reset(0);
+	hoop_id = 0;
 	int c = nrf.init(&spi1, &cs, &ce);
 	
 	interrupt.init(GPIOB, GPIO_Pin_1, interrupt_falling);
 	interrupt.set_callback(nrf_irq_entry, NULL);
 	timer.set_callback(timer_entry);
-	timer.set_period(1500);
+	timer.set_period(2000);
 	
 	int64_t lt = systimer->gettime();
 	
