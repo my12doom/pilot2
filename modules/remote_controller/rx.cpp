@@ -33,7 +33,7 @@ OLED96 oled;
 int o = 0;
 int rdp;
 int hoop_id = 0;
-int miss = 0;
+int miss = 99999;
 
 extern "C" void TIM2_IRQHandler(void)
 {
@@ -76,10 +76,14 @@ void nrf_irq_entry(void *parameter, int flags)
 		
 		next_hoop_id = *(uint16_t*)data;
 	}
+	
 	if (next_hoop_id >= 0)
+	{
 		hoop_to(next_hoop_id+2);
-	miss = 0;
-	timer.restart();	
+		miss = 0;
+		timer.restart();	
+	}
+	
 	timer.enable_cb();
 	dbg.write(true);
 }
@@ -90,10 +94,13 @@ void timer_entry()
 	
 	miss ++;
 	
-	if (miss == 0)
-		hoop_to((hoop_id+2)%65536);
-	else
-		hoop_to((hoop_id+1)%65536);
+	if (miss < 1000)
+	{
+		if (miss == 0)
+			hoop_to((hoop_id+2)%65536);
+		else
+			hoop_to((hoop_id+1)%65536);
+	}
 	
 	interrupt.enable();
 }
@@ -124,8 +131,6 @@ int main()
 	
 	interrupt.init(GPIOA, GPIO_Pin_15, interrupt_falling);
 	interrupt.set_callback(nrf_irq_entry, NULL);
-	timer.set_callback(timer_entry);
-	timer.set_period(2000);
 		
 	int64_t lt = systimer->gettime();
 	
@@ -137,11 +142,14 @@ int main()
 	nrf.write_reg(STATUS, nrf.read_reg(STATUS));
 	dbg.write(true);
 	
+	timer.set_callback(timer_entry);
+	timer.set_period(2000);
+	
 	while(1)
 	{		
 		char tmp[100];
 		sprintf(tmp, "%dp, pos=%d    ", o, *(uint16_t*)data);
-		oled.show_str(0, 0, tmp);		
+		oled.show_str(0, 0, tmp);
 		sprintf(tmp, "rdp=%d,%dp/s    ", rdp, lp);
 		oled.show_str(0, 1, tmp);
 		
