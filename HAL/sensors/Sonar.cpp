@@ -24,7 +24,7 @@ namespace sensors
 		if (level)
 			level->set_mode(HAL::MODE_OUT_OpenDrain);
 		
-		return tx && level ? 0 : -1;
+		return tx ? 0 : -1;
 	}
 	// return 0 if new data available, 1 if old data, negative for error.
 	// unit: meter.
@@ -64,7 +64,8 @@ namespace sensors
 		distance = 0;
 		
 		// pull level shifter low
-		level->write(false);
+		if (level)
+			level->write(false);
 		
 		// send 8 pulses
 		for(int i=0; i<8; i++)
@@ -76,7 +77,8 @@ namespace sensors
 		}
 		
 		// release level shifter
-		level->write(true);
+		if (level)
+			level->write(true);
 		
 		return 0;
 	}
@@ -117,6 +119,6 @@ namespace sensors
 	// return false if any error/waning
 	bool Sonar::healthy()
 	{
-		return tx && level ? 0 : -1;
+		return tx ? 0 : -1;
 	}
 }
