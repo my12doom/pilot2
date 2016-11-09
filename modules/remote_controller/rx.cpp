@@ -59,8 +59,11 @@ int hoop_to(int next_hoop_id)
 	return 0;
 }
 
+int m = 0;
+
 void nrf_irq_entry(void *parameter, int flags)
 {
+	int64_t t = systimer->gettime();
 	dbg.write(false);
 	timer.disable_cb();
 	nrf.write_reg(7, nrf.read_reg(7));
@@ -74,6 +77,7 @@ void nrf_irq_entry(void *parameter, int flags)
 		fifo_state = nrf.read_reg(FIFO_STATUS);
 		o++;
 		
+		if (o % 5 == 0)
 		next_hoop_id = *(uint16_t*)data;
 	}
 	
@@ -81,11 +85,15 @@ void nrf_irq_entry(void *parameter, int flags)
 	{
 		hoop_to(next_hoop_id+2);
 		miss = 0;
-		timer.restart();	
+		timer.restart();
 	}
 	
 	timer.enable_cb();
 	dbg.write(true);
+	m = systimer->gettime() - t;
+	
+	if (m > 200)
+		fputc('o', NULL);
 }
 
 void timer_entry()
@@ -96,10 +104,12 @@ void timer_entry()
 	
 	if (miss < 1000)
 	{
+		dbg2.write(false);
 		if (miss == 0)
 			hoop_to((hoop_id+2)%65536);
 		else
 			hoop_to((hoop_id+1)%65536);
+		dbg2.write(true);
 	}
 	
 	interrupt.enable();
@@ -135,7 +145,7 @@ int main()
 	int64_t lt = systimer->gettime();
 	
 	int lo = 0;
-	int t = systimer->gettime();
+	int64_t t = systimer->gettime();
 	int lp = 0;
 	
 	nrf.write_cmd(FLUSH_RX, NOP);
@@ -153,11 +163,13 @@ int main()
 		sprintf(tmp, "rdp=%d,%dp/s    ", rdp, lp);
 		oled.show_str(0, 1, tmp);
 		
-		if (systimer->gettime() - t > 1000000)
+		int64_t current = systimer->gettime();
+		
+		if (current - t > 1000000)
 		{
-			t = systimer->gettime();
+			t = current;
 			lp = o - lo;
 			lo = o;
-		}		
+		}
 	}
 }

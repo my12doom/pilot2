@@ -7,7 +7,7 @@
 
   <Targets>
     <Target>
-      <TargetName>YetAnotherPilotStation</TargetName>
+      <TargetName>SonarF1</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <TargetOption>
@@ -562,26 +562,16 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F1\F1SysTimer.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F1Interrupt.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F1\F1Interrupt.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>main</GroupName>
           <Files>
-            <File>
-              <FileName>imulite.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\modules\main\imulite.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>MPU6000.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\sensors\MPU6000.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>MS5611_SPI.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\sensors\MS5611_SPI.cpp</FilePath>
-            </File>
             <File>
               <FileName>SEGGER_RTT.c</FileName>
               <FileType>1</FileType>
@@ -591,6 +581,11 @@
               <FileName>SEGGER_RTT_Printf.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\modules\utils\SEGGER_RTT_Printf.c</FilePath>
+            </File>
+            <File>
+              <FileName>sonarF1.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\main\sonarF1.cpp</FilePath>
             </File>
           </Files>
         </Group>
