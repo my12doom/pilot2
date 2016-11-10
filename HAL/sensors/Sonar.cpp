@@ -5,7 +5,7 @@
 #define TIMEOUT	59000		// 59ms, ~10 meter
 #define DEADBAND 0		// 2ms, ~34cm
 #define MIN_PULSE_COUNT 5
-#define PULSE_TIMEOUT 50	// 30us max pulse interval, 2x 
+#define PULSE_TIMEOUT 120	// 30us max pulse interval, 2x 
 
 namespace sensors
 {
@@ -14,17 +14,21 @@ namespace sensors
 		send_time = 0;
 		echo_confirmed = false;
 	}
-	int Sonar::init(HAL::IGPIO *tx, HAL::IGPIO *level)
+	int Sonar::init(HAL::IGPIO *tx, HAL::IInterrupt *echo_int, HAL::IGPIO *level, HAL::IGPIO *gain)
 	{
 		this->tx = tx;
 		this->level = level;
+		this->echo_int = echo_int;
+		this->gain = gain;
 		
 		if (tx)
 			tx->set_mode(HAL::MODE_OUT_PushPull);
 		if (level)
 			level->set_mode(HAL::MODE_OUT_OpenDrain);
+		if (echo_int)
+			echo_int->set_callback(interupt_entry, this);
 		
-		return tx ? 0 : -1;
+		return (echo_int && tx) ? 0 : -1;
 	}
 	// return 0 if new data available, 1 if old data, negative for error.
 	// unit: meter.
@@ -67,18 +71,32 @@ namespace sensors
 		if (level)
 			level->write(false);
 		
+		// use low gain
+		if (gain)
+			gain->write(true);
+		
+		echo_int->disable();
+		
 		// send 8 pulses
 		for(int i=0; i<8; i++)
 		{
 			tx->write(true);
-			systimer->delayus(12);	// this might need some tuning
+			systimer->delayus(12.5);	// this might need some tuning
 			tx->write(false);
-			systimer->delayus(12);
+			systimer->delayus(12.5);
 		}
+		
+		echo_int->enable();
 		
 		// release level shifter
 		if (level)
 			level->write(true);
+		
+		// use high gain
+		systimer->delayms(1);
+		if (gain)
+			gain->write(false);
+
 		
 		return 0;
 	}
@@ -119,6 +137,6 @@ namespace sensors
 	// return false if any error/waning
 	bool Sonar::healthy()
 	{
-		return tx ? 0 : -1;
+		return (echo_int && tx) ? 0 : -1;
 	}
 }

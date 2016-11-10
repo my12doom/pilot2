@@ -19,8 +19,8 @@ namespace STM32F4
 		virtual void set_period(uint32_t period);				// micro-second
 		virtual void set_callback(HAL::timer_callback cb);	
 		virtual void call_callback();
-		void restart();
-		void enable_cb();
-		void disable_cb();
+		virtual void restart();
+		virtual void enable_cb();
+		virtual void disable_cb();
 	};
 }
