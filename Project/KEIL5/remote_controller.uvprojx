@@ -493,16 +493,6 @@
           <GroupName>HAL&amp;utils</GroupName>
           <Files>
             <File>
-              <FileName>SWO.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\modules\main\SWO.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>NRF24L01.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\aux_devices\NRF24L01.cpp</FilePath>
-            </File>
-            <File>
               <FileName>F4Storage.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4Storage.cpp</FilePath>
@@ -511,16 +501,6 @@
               <FileName>F4SysTimer.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4SysTimer.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>param.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\modules\utils\param.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>space.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\modules\utils\space.cpp</FilePath>
             </File>
             <File>
               <FileName>F4GPIO.cpp</FileName>
@@ -546,11 +526,6 @@
               <FileName>F4Timer.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F4\F4Timer.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>OLED_I2C.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\aux_devices\OLED_I2C.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -624,11 +599,36 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\remote_controller\tx.cpp</FilePath>
             </File>
+            <File>
+              <FileName>board_3288breakout.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\remote_controller\board_3288breakout.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>sdcard&amp;logging</GroupName>
+          <GroupName>utils</GroupName>
           <Files>
+            <File>
+              <FileName>NRF24L01.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\aux_devices\NRF24L01.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>SWO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\main\SWO.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>space.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\utils\space.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>param.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\utils\param.cpp</FilePath>
+            </File>
             <File>
               <FileName>log.cpp</FileName>
               <FileType>8</FileType>
@@ -727,9 +727,19 @@
           </GroupOption>
           <Files>
             <File>
+              <FileName>OLED_I2C.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\aux_devices\OLED_I2C.cpp</FilePath>
+            </File>
+            <File>
               <FileName>rx.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\remote_controller\rx.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>board_sheet1.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\remote_controller\board_sheet1.cpp</FilePath>
             </File>
           </Files>
         </Group>
