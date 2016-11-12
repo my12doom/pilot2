@@ -50,8 +50,8 @@ namespace sheet1
 		::interrupt = &interrupt;
 		::timer = &timer;
 		
-		spi.init(SPI1);		
-		interrupt.init(GPIOA, GPIO_Pin_15, interrupt_falling);
+		spi.init(SPI1);
+		interrupt.init(GPIOB, GPIO_Pin_1, interrupt_falling);
 		
 		return 0;
 	}
