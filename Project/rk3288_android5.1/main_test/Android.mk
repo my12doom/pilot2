@@ -1,15 +1,6 @@
-# Description:
-# Date: 09-08
-# Version:v 0.0.0
 
 LOCAL_PATH:= $(call my-dir)
 
-#show parameters
-$(warning "LOCAL_PATH = $(LOCAL_PATH)")
-
-SRC = system/acantha/HAL
-EXEDIR=/media/euler/newvolume/3288sdk/sdk0801/system/eulerPilotProject/euler_pilot/binary_release/rkPilotEXE
-PRODUCTDIR=/media/euler/newvolume/3288sdk/sdk0801/out/target/product/rk3288/obj/EXECUTABLES/acantha_intermediates/LINKED
 include $(CLEAR_VARS)
 
 #local pilot source file
@@ -101,9 +92,9 @@ LOCAL_SHARED_LIBRARIES := \
 	libcamera_client \
 
 
-LOCAL_CFLAGS := -Wno-format -Wno-unused -Wno-unused-parameter
-LOCAL_LDLIBS := -ldl -lm 
-LOCAL_CPPFLAGS += -fexceptions
+LOCAL_CFLAGS := -Wno-format -Wno-unused -Wno-unused-parameter -Wfatal-errors -Wno-non-virtual-dtor
+LOCAL_LDLIBS := -ldl -lm
+LOCAL_RTTI_FLAG := -frtti
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE:= acantha
 LOCAL_STATIC_LIBRARIES := \

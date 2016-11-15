@@ -73,6 +73,8 @@ namespace androidUAV
 		tcflush(uartFd,TCIFLUSH);
 		tcsetattr(uartFd,TCSANOW,&newtio);
 		//fcntl(uartFd,F_SETFL,FNDELAY);
+
+		return 0;
 	}
 	int AUART::update_buffer()
 	{
@@ -204,6 +206,8 @@ namespace androidUAV
 			_this->write(send,1);
 			usleep(100);
 		}
+
+		return NULL;
 	}
 	int AUART::set_priority(int32_t priority)
 	{

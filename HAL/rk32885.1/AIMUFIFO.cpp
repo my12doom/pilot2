@@ -35,6 +35,8 @@ namespace androidUAV
 	int AFIFO::close()
 	{
 		::close(fifofd);
+
+		return 0;
 	}
 	int AFIFO::create(const char* path,int mode)
 	{

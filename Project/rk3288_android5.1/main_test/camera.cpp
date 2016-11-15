@@ -185,6 +185,7 @@ namespace sensors
 	// return 0 if successed, -1 if failed.
 	int RK3288Camera51::set_frame_format(const devices::frame_format format)
 	{
+		return -1;
 	}
 
 	// set a callback

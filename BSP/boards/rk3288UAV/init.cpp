@@ -120,6 +120,8 @@ int init_GPS()
 int init_RC()
 {
 	manager.register_RCOUT(&rcout);
+
+	return 0;
 }
 void init_external_compass()
 {
