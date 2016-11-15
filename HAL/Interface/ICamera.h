@@ -54,7 +54,7 @@ namespace devices
 
 		// set frame format.
 		// return 0 if successed, -1 if failed.
-		virtual int set_frame_format(const frame_format *format) = 0;
+		virtual int set_frame_format(const frame_format format) = 0;
 
 		// set a callback
 		virtual int set_callback(ICameraCallback *cb) = 0;
