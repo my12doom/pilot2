@@ -12,7 +12,7 @@
 #include <utils/log.h>
 #include <utils/console.h>
 #include <utils/gauss_newton.h>
-#include <protocol/crc32.h>
+#include <Protocol/crc32.h>
 #include <FileSystem/ff.h>
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 

@@ -65,7 +65,7 @@ MPU6000 mpu6000device;
 MS5611_SPI ms5611device;
 UartUbloxBinaryGPS gpsdevice;
 EBusIN ebus;
-
+HMC5983 hmc5983;
 void init_sensor()
 {
 	/*if (mpu6000device.init(&i2c2,0x68) == 0)
@@ -84,6 +84,11 @@ void init_sensor()
 		mpu6000device.gyro_axis_config(1, 0, 2, +1, +1, -1);
 		manager.register_accelerometer(&mpu6000device);
 		manager.register_gyroscope(&mpu6000device);
+	}
+	if(hmc5983.init(&i2c2) == 0)
+	{
+		LOG2("androidUAV:found HMC5983 on I2C4\n");
+		manager.register_magnetometer(&hmc5983);
 	}
 	if(ms5611device.init(&spi1,&cs_ms5611) == 0)
 	{

@@ -9,12 +9,12 @@ $(warning "LOCAL_PATH = $(LOCAL_PATH)")
 
 SRC = system/eulerOpenGlPro/HAL
 EXEDIR=/media/euler/newvolume/3288sdk/sdk0801/system/eulerPilotProject/euler_pilot/binary_release/rkPilotEXE
-PRODUCTDIR=/media/euler/newvolume/3288sdk/sdk0801/out/target/product/rk3288/obj/EXECUTABLES/sensorTest_intermediates/LINKED
+PRODUCTDIR=/media/euler/newvolume/3288sdk/sdk0801/out/target/product/rk3288/obj/EXECUTABLES/acantha_intermediates/LINKED
 include $(CLEAR_VARS)
 
 #local pilot source file
 LOCAL_SRC_FILES := \
-		testMain.cpp \
+		../../../modules/main/pilot.cpp \
 		../../../BSP/boards/rk3288UAV/init.cpp \
 		../../../BSP/boards/rk3288UAV/ARCOUT.cpp \
         ../../../HAL/rk32885.1/ASPI.cpp \
@@ -73,25 +73,27 @@ LOCAL_SRC_FILES := \
         ../../../HAL/Resources.cpp \
         ../../../HAL/sensors/MPU6000.cpp \
         ../../../HAL/sensors/MS5611_SPI.cpp \
+        ../../../HAL/sensors/HMC5983SPI.cpp \
         ../../../HAL/sensors/UartUbloxNMEAGPS.cpp \
         ../../../HAL/sensors/EBusIn.cpp 
         #../../modules/Protocol/data_protocol.cpp
         
 LOCAL_C_INCLUDES :=  \
-			system/eulerPilotProject/euler_pilot \
-            system/eulerPilotProject/euler_pilot/modules \
-            system/eulerPilotProject/euler_pilot/modules/Protocol \
-            system/eulerPilotProject/euler_pilot/BSP/boards \
+	system/acantha \
+            system/acantha/modules \
+            system/acantha/modules/Protocol \
+            system/acantha/BSP/boards \
             kernel/include/uapi \
-            system/eulerPilotProject/euler_pilot/HAL/rk32885.1 \
-            system/eulerPilotProject/euler_pilot/HAL/Interface \
-            system/eulerPilotProject/euler_pilot/modules/Algorithm/ekf_lib/inc 
+            system/acantha/HAL/rk32885.1 \
+            system/acantha/HAL/Interface \
+            system/acantha/modules/Algorithm/ekf_lib/inc 
+
 #LOCAL_CFLAGS += -Wno-multichar
 LOCAL_LDLIBS := -ldl -lm 
 LOCAL_CPPFLAGS += -fexceptions -frtti
 #LOCAL_CPPFLAGS = -fno-rtti
 LOCAL_MODULE_TAGS := optional
-LOCAL_MODULE:= sensorTest
+LOCAL_MODULE:= acantha
 LOCAL_STATIC_LIBRARIES := \
 		libc++
 include $(BUILD_EXECUTABLE)
