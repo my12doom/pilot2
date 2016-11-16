@@ -8,15 +8,16 @@
 #include <math.h>
 #include <Windows.h>
 #include <atlbase.h>
+#include <conio.h>
 #include "feature.h"
 #include "flow.h"
 #include "avisynth.h"
 
 
-#pragma comment(lib, "opencv_highgui243d.lib")
-#pragma comment(lib, "opencv_core243d.lib")
-#pragma comment(lib, "opencv_video243d.lib")
-#pragma comment(lib, "opencv_imgproc243d.lib")
+#pragma comment(lib, "opencv_highgui243.lib")
+#pragma comment(lib, "opencv_core243.lib")
+#pragma comment(lib, "opencv_video243.lib")
+#pragma comment(lib, "opencv_imgproc243.lib")
 
 static const double pi = 3.14159265358979323846;
 static LONGLONG total_flow_time = 0;
@@ -80,12 +81,14 @@ bool is_avs(const wchar_t *file)
 	return wcscmp(tmp, L"avs") == 0;
 }
 
-int test_avisynth()
+int main()
 {
 	int re_w = 0;
 	int re_h = 0;
 	wchar_t msg[2048];
-	wchar_t video[] = L"optical_flow_input.avi";
+	wchar_t video[] = L"b.avi";
+
+	IplImage *frame1_1C = NULL;
 
 	try 
 	{
@@ -123,15 +126,15 @@ int test_avisynth()
 
 		fprintf(stderr, "OK\n");
 
-		if (inf.pixel_type != VideoInfo::CS_BGR32)
+		if (inf.pixel_type != VideoInfo::CS_YV12)
 		{
-			fprintf(stderr, "Converting to RGB32....");
-			res = env->Invoke("ConvertToRGB32", res);
+			fprintf(stderr, "Converting to YV12....");
+			res = env->Invoke("ConvertToYV12", res);
 			clip = res.AsClip();
 			inf = clip->GetVideoInfo();
 		}
 
-		if (inf.pixel_type != VideoInfo::CS_BGR32)
+		if (inf.pixel_type != VideoInfo::CS_YV12)
 		{
 			fprintf(stderr, "FAILED\n");
 			{wcscpy(msg, L"FAILED Converting to RGB32"); return E_FAIL;}
@@ -153,19 +156,54 @@ int test_avisynth()
 			inf = clip->GetVideoInfo();
 		}
 
+		CvSize frame_size;
+		frame_size.height = inf.height;
+		frame_size.width = inf.width;
+		allocateOnDemand(&frame1_1C, frame_size, IPL_DEPTH_8U, 1 );
+
 		int width = clip->GetVideoInfo().width;
 		int height = clip->GetVideoInfo().height;
 		RGBQUAD *data = (RGBQUAD*) malloc(width * (height+32) * sizeof(RGBQUAD));
-		for(int i=0; i< clip->GetVideoInfo().num_frames; i++)
+		int t = GetTickCount();
+		int lt = t;
+		CvScalar color = CV_RGB(255,0,0);
+		for(int i=0; i< clip->GetVideoInfo().num_frames; i= getch() == 'p' ? i+1 : i-1)
 		{
 			PVideoFrame frame = clip->GetFrame(i, env);
 			RGBQUAD* src_data = (RGBQUAD*) frame->GetReadPtr();
+			int pitch_avisynth = frame->GetPitch();
+			int pitch_frame = frame1_1C->widthStep;
 
 			printf("\rdecoding %d/%d frames", i, inf.num_frames);
 
 			RGBQUAD * tmp = data;
 			for (int j=0; j< inf.height; j++)
-				memcpy(tmp + j*height, src_data + j*inf.height, sizeof(RGBQUAD) * inf.width);
+			{
+				//memcpy(tmp + j*height, src_data + j*inf.height, sizeof(RGBQUAD) * inf.width);
+
+				int width_step = min(pitch_avisynth, pitch_frame);
+				memcpy(frame1_1C->imageData + pitch_frame * j, frame->GetReadPtr() + pitch_avisynth * j, width_step);
+			}
+
+			int number_of_features = 400;
+			CvPoint2D32f frame1_features[400];
+
+
+			cvGoodFeaturesToTrack(frame1_1C, NULL, NULL, frame1_features, &number_of_features, .01, 25, NULL);
+
+			printf("%d/%d ms\n", GetTickCount()-t, GetTickCount()-lt);
+			lt = GetTickCount();
+
+			for(int i=0; i<number_of_features; i++)
+			{
+				CvPoint p = {frame1_features[i].x, frame1_features[i].y};
+				cvCircle(frame1_1C, p, 10, color, 3);
+
+				//frame1_1C->imageData[int(frame1_features[i].x + frame1_features->y * pitch_frame)] ^= 0xff;
+			}
+
+			cvShowImage("input", frame1_1C);
+			DoEvents();
 		}
 
 		free(data);
@@ -183,9 +221,8 @@ int test_avisynth()
 	return -4;
 }
 
-int main(void)
+int x(void)
 {
-	test_avisynth();
 
 	/* Create an object that decodes the input video stream. */
 	CvCapture *input_video = cvCaptureFromFile(
