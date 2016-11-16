@@ -50,7 +50,7 @@ namespace devices
 
 		// get available frame format.
 		virtual int get_available_frame_format(int index, frame_format *format) = 0;
-		int get_available_frame_format_count();
+		virtual int get_available_frame_format_count() = 0;
 
 		// set frame format.
 		// return 0 if successed, -1 if failed.
