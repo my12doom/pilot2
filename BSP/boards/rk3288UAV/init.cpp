@@ -3,7 +3,6 @@
 #include <HAL/rk32885.1/AGpio.h>
 #include <HAL/rk32885.1/ASPI.h>
 #include <HAL/rk32885.1/AUART.h>
-#include <rk3288UAV/ARCOUT.h>
 #include <HAL/rk32885.1/AIMUFIFO.h>
 #include <HAL/rk32885.1/AI2C.h>
 
@@ -19,6 +18,7 @@
 #include <HAL/sensors/MS5611_SPI.h>
 #include <HAL/sensors/ads1115.h>
 
+
 #include <Protocol/common.h>
 #include <stdio.h>
 #include <utils/param.h>
@@ -26,6 +26,8 @@
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include "ARCOUT.h"
 
 using namespace androidUAV;
 using namespace HAL;

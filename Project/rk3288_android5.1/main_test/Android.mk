@@ -73,12 +73,7 @@ LOCAL_SRC_FILES := \
 LOCAL_C_INCLUDES :=  \
 	system/acantha \
 	system/acantha/modules \
-	system/acantha/modules/Protocol \
-	system/acantha/BSP/boards \
-	kernel/include/uapi \
-	system/acantha/HAL/rk32885.1 \
-	system/acantha/HAL/Interface \
-	system/acantha/modules/Algorithm/ekf_lib/inc 
+	system/acantha/modules/Algorithm/ekf_lib/inc \
 
 
 LOCAL_SHARED_LIBRARIES := \
