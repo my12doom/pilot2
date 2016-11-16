@@ -941,12 +941,10 @@ int yet_another_pilot::read_sensors()
 	for(int i=0; i<manager.get_GPS_count(); i++)
 	{
 		IGPS *gps = manager.get_GPS(i);
-		IRawDevice *raw = dynamic_cast<IRawDevice*> (gps);
 		if (!gps->healthy())
 			continue;
 
-		if (raw)
-			raw->ioctl((rc_fail || flight_mode == RTL) ? IOCTL_SAT_MINIMUM : IOCTL_SAT_NORMAL, NULL);
+		gps->ioctl((rc_fail || flight_mode == RTL) ? IOCTL_SAT_MINIMUM : IOCTL_SAT_NORMAL, NULL);
 
 		devices::gps_data data;
 		int res = gps->read(&data);

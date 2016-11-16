@@ -115,7 +115,7 @@ namespace sensors
 		int init(HAL::IUART *uart, int baudrate);
 	};
 
-	class UartUbloxBinaryGPS : public UartUbloxGPS, public devices::IGPS, public devices::IRawDevice
+	class UartUbloxBinaryGPS : public UartUbloxGPS, public devices::IGPS
 	{
 	public:
 		UartUbloxBinaryGPS();

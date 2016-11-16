@@ -25,7 +25,7 @@ namespace sensors
 
 		// get available frame format.
 		virtual int get_available_frame_format(int index, devices::frame_format *format);
-		int get_available_frame_format_count();
+		virtual int get_available_frame_format_count();
 
 		// set frame format.
 		// return 0 if successed, -1 if failed.

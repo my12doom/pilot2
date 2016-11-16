@@ -67,8 +67,7 @@ LOCAL_SRC_FILES := \
 	../../../HAL/sensors/MS5611_SPI.cpp \
 	../../../HAL/sensors/HMC5983SPI.cpp \
 	../../../HAL/sensors/UartUbloxNMEAGPS.cpp \
-	../../../HAL/sensors/EBusIn.cpp 
-	#../../modules/Protocol/data_protocol.cpp
+	../../../HAL/sensors/EBusIn.cpp  \
 
 	
 LOCAL_C_INCLUDES :=  \
@@ -94,7 +93,7 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_CFLAGS := -Wno-format -Wno-unused -Wno-unused-parameter -Wfatal-errors -Wno-non-virtual-dtor
 LOCAL_LDLIBS := -ldl -lm
-LOCAL_RTTI_FLAG := -frtti
+#LOCAL_RTTI_FLAG := -frtti
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE:= acantha
 LOCAL_STATIC_LIBRARIES := \
