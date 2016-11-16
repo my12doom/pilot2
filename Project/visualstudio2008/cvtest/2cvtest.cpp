@@ -7,8 +7,10 @@
 #include <opencv/highgui.h>
 #include <math.h>
 #include <Windows.h>
+#include <atlbase.h>
 #include "feature.h"
 #include "flow.h"
+#include "avisynth.h"
 
 
 #pragma comment(lib, "opencv_highgui243d.lib")
@@ -66,8 +68,125 @@ inline static void allocateOnDemand( IplImage **img, CvSize size, int depth, int
 	}
 }
 
+
+bool is_avs(const wchar_t *file)
+{
+	int len = wcslen(file);
+	wchar_t tmp[1024];
+	wcscpy(tmp, file + len - 3);
+	for(int i=0; i<3; i++)
+		tmp[i] = towlower(tmp[i]);
+
+	return wcscmp(tmp, L"avs") == 0;
+}
+
+int test_avisynth()
+{
+	int re_w = 0;
+	int re_h = 0;
+	wchar_t msg[2048];
+	wchar_t video[] = L"optical_flow_input.avi";
+
+	try 
+	{
+		HMODULE avsdll = LoadLibrary(_T("avisynth.dll"));
+		if(!avsdll)
+		{
+			wcscpy(msg, L"failed to load avisynth.dll\n");
+			return -1;
+		}
+		IScriptEnvironment*  (__stdcall* CreateScriptEnvironment)(int version) = (IScriptEnvironment*(__stdcall*)(int)) GetProcAddress(avsdll, "CreateScriptEnvironment");
+		if(!CreateScriptEnvironment)
+		{
+			wcscpy(msg, L"failed to load CreateScriptEnvironment()\n");
+			return -2;
+		}
+
+		USES_CONVERSION;
+		fprintf(stderr, "Loading file %s...", W2A(video));
+		IScriptEnvironment* env = CreateScriptEnvironment(AVISYNTH_INTERFACE_VERSION);
+		AVSValue arg[2] = {W2A(video), 24.0f};
+
+		AVSValue res;
+		if (is_avs(video))
+			res = env->Invoke("Import", AVSValue(arg, 1));
+		else
+			res = env->Invoke("DirectShowSource", AVSValue(arg, 1));
+
+		if(!res.IsClip())
+		{swprintf(msg, L"Error: '%s' didn't return a video clip.\n", video); return E_FAIL;}
+
+		PClip clip = res.AsClip();
+		VideoInfo inf = clip->GetVideoInfo();
+		if(!inf.HasVideo())
+		{swprintf(msg, L"Error: '%s' didn't return a video clip.\n", video); return E_FAIL;}
+
+		fprintf(stderr, "OK\n");
+
+		if (inf.pixel_type != VideoInfo::CS_BGR32)
+		{
+			fprintf(stderr, "Converting to RGB32....");
+			res = env->Invoke("ConvertToRGB32", res);
+			clip = res.AsClip();
+			inf = clip->GetVideoInfo();
+		}
+
+		if (inf.pixel_type != VideoInfo::CS_BGR32)
+		{
+			fprintf(stderr, "FAILED\n");
+			{wcscpy(msg, L"FAILED Converting to RGB32"); return E_FAIL;}
+		}
+		else
+		{
+			fprintf(stderr, "OK\n");
+		}
+
+		// resize
+		if (re_w !=0 && re_h != 0)
+		{
+			AVSValue args[3];
+			args[0] = res;
+			args[1] = AVSValue(re_w);
+			args[2] = AVSValue(re_h);
+			res = env->Invoke("LanczosResize", AVSValue(args, 3));
+			clip = res.AsClip();
+			inf = clip->GetVideoInfo();
+		}
+
+		int width = clip->GetVideoInfo().width;
+		int height = clip->GetVideoInfo().height;
+		RGBQUAD *data = (RGBQUAD*) malloc(width * (height+32) * sizeof(RGBQUAD));
+		for(int i=0; i< clip->GetVideoInfo().num_frames; i++)
+		{
+			PVideoFrame frame = clip->GetFrame(i, env);
+			RGBQUAD* src_data = (RGBQUAD*) frame->GetReadPtr();
+
+			printf("\rdecoding %d/%d frames", i, inf.num_frames);
+
+			RGBQUAD * tmp = data;
+			for (int j=0; j< inf.height; j++)
+				memcpy(tmp + j*height, src_data + j*inf.height, sizeof(RGBQUAD) * inf.width);
+		}
+
+		free(data);
+
+		return 0;
+	}
+
+	catch(AvisynthError err) 
+	{
+		fprintf(stderr, err.msg);
+
+		return -3;
+	}
+
+	return -4;
+}
+
 int main(void)
 {
+	test_avisynth();
+
 	/* Create an object that decodes the input video stream. */
 	CvCapture *input_video = cvCaptureFromFile(
 		"optical_flow_input.avi"
