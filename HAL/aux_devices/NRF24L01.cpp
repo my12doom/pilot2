@@ -12,6 +12,30 @@ uint8_t RX_ADDRESS[] = {0xb0,0x3d,0x12,0x34,0x01}; //????
 #define TX_PLOAD_WIDTH  32
 #define RX_PLOAD_WIDTH  32
 
+//analog register initialization value
+uint32_t RegArrFSKAnalog[]={
+0x32780504,//for 5.1GHz:33780504 ; 5.8GHz:32780504
+0x00AE05C0,
+0xD20C80E8,//for 5.1GHz:D38C80E8 ; 5.8GHz:D20C80E8
+0x6D7D0D19,//for 5.1GHz:6C7D0D18 ; 5.8GHz:6D7D0D19
+0x1B828EE9,//for single carrier:21828EE9
+0xA6FF1024,
+0x00000000,
+0x00000000,
+0x00000000,
+0x00000000,
+0x00000000,
+0x00000000,
+0x00127300,
+0x36B48000
+};
+
+uint8_t RegArrFSKAnalogReg14[]=
+{
+0x41,0x20,0x08,0x04,0x81,0x20,0xCF,0xF7,0xFE,0xFF,0xFF
+};
+
+
 namespace devices
 {
 
@@ -27,11 +51,36 @@ int NRF24L01::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *ce)
 	cs->write(true);
 	ce->write(false);
 
-	spi->set_speed(10000000);
+	spi->set_speed(8000000);
 	spi->set_mode(0, 0);
 
 	systimer->delayms(100);
 	power_on();
+	if (is_bk5811())
+	{
+		SwitchCFG(1);
+		uint8_t WriteArr[12];
+		for(int i=0;i<=8;i++)//reverse
+		{
+			for(int j=0;j<4;j++)
+				WriteArr[j]=(RegArrFSKAnalog[i]>>(8*(j) ) )&0xff;
+
+			write_cmd((WRITE_REG|i),&(WriteArr[0]),4);
+		}
+
+
+		for(int i=9;i<=13;i++)
+		{
+			for(int j=0;j<4;j++)
+				WriteArr[j]=(RegArrFSKAnalog[i]>>(8*(3-j) ) )&0xff;
+
+			write_cmd((WRITE_REG|i),&(WriteArr[0]),4);
+		}
+
+		write_cmd((WRITE_REG|14),&(RegArrFSKAnalogReg14[0]),11);
+
+		SwitchCFG(0);		
+	}
 
 	write_cmd(FLUSH_TX, NOP);
 	write_cmd(FLUSH_RX, NOP);
@@ -41,7 +90,7 @@ int NRF24L01::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *ce)
 	for(int i=0; i<5; i++)
 		buf[i] = 0xff;
 	read_cmd(TX_ADDR, buf, 5);
-
+	
 	for(int i=0; i<5; i++)
 		if (buf[i] != 0xc2)
 			return -1;
@@ -55,9 +104,9 @@ int NRF24L01::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *ce)
 	write_reg(RF_CH, 95);
 	write_reg(RX_PW_P0, RX_PLOAD_WIDTH);
 	write_reg(RX_PW_P1, RX_PLOAD_WIDTH);
-	write_reg(RF_SETUP, 0x27);
+	write_reg(RF_SETUP, bk5811 ? 0x17 : 0x27);
 	write_reg(CONFIG, 0x0e);
-		
+
 	write_reg(7, read_reg(7));	// clear all interrupt
 
 	rf_on(false);
@@ -154,6 +203,28 @@ uint8_t NRF24L01::read_reg(uint8_t cmd)
 void NRF24L01::write_reg(uint8_t cmd, uint8_t data)
 {
 	write_cmd((cmd & 0x1f) | WRITE_REG, &data, 1);
+}
+
+// BK5811 helper functions
+void NRF24L01::SwitchCFG(bool analog)
+{
+	uint8_t s = read_reg(7);
+	
+	if (bool(s&0x80)^analog)
+		write_cmd(0x50, 0x53);	
+}
+
+bool NRF24L01::is_bk5811()
+{
+	uint8_t s = read_reg(7);
+	write_cmd(0x50, 0x53);
+	uint8_t s2 = read_reg(7);
+	
+	if ((s&0x80)^(s2&0x80))
+		bk5811 = true;
+	else
+		bk5811 = false;
+	return bk5811;
 }
 
 }

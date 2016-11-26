@@ -69,5 +69,9 @@ protected:
 	HAL::ISPI *spi;
 	HAL::IGPIO *cs;
 	HAL::IGPIO *ce;
+
+	void SwitchCFG(bool analog);
+	bool is_bk5811();
+	bool bk5811;
 };
 }
