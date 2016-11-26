@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define PACKET_SIZE 1500
+#define PACKET_SIZE 1400
 
 // frame structure for exchange data in program.
 typedef struct frame_struct
@@ -28,7 +28,7 @@ typedef struct raw_packet_struct
 class IFrameReciever
 {
 public:
-	virtual ~IFrameReciever() = 0;
+	virtual ~IFrameReciever(){};
 	virtual int handle_event() = 0;
 	virtual int handle_frame(const frame &frame) = 0;
 };
@@ -36,3 +36,4 @@ public:
 // helper function
 void release_frame(frame *f);
 frame *alloc_frame(int payload_size, int frame_id = 0, bool integrality = false);
+frame *clone_frame(const frame *f);

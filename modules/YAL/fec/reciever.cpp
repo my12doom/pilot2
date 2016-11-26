@@ -5,6 +5,7 @@
 
 reciever::reciever()
 {
+	cb = NULL;
 	init();
 }
 
@@ -16,12 +17,12 @@ reciever::reciever(IFrameReciever *cb)
 
 reciever::~reciever()
 {
-	delete [] packets;
+// 	delete [] packets;
 }
 
 void reciever::init()
 {
-	packets = new raw_packet[270];
+// 	packets = new raw_packet[270];
 	memset(packets, 0, sizeof(raw_packet) * 256);
 	current_frame_id = -1;
 	current_packet_count = 0;
@@ -64,7 +65,7 @@ int reciever::assemble_and_out()
 		return 0;
 
 	int payload_packet_count = 0;
-	int parity_packet_count;
+	int parity_packet_count = 0;
 	for(int i=0; i<256; i++)
 	{
 		if (packets[i].payload_packet_count)
@@ -88,6 +89,10 @@ int reciever::assemble_and_out()
 		}
 	}
 	
+
+	if (payload_packet_count == 0 || parity_packet_count == 0)
+		return -1;
+
 	// assemble and do FEC if needed
 
 	// create erasures
