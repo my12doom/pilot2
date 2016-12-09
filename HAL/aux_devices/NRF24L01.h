@@ -64,6 +64,7 @@ public:
 	int read_cmd(uint8_t cmd, uint8_t *data, int count);
 	void write_cmd(uint8_t cmd, uint8_t data);
 	uint8_t read_cmd(uint8_t cmd);
+	bool is_bk5811();
 
 protected:
 	HAL::ISPI *spi;
@@ -71,7 +72,6 @@ protected:
 	HAL::IGPIO *ce;
 
 	void SwitchCFG(bool analog);
-	bool is_bk5811();
 	bool bk5811;
 };
 }

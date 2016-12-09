@@ -18,3 +18,4 @@ extern HAL::IGPIO *SCL;
 extern HAL::IGPIO *SDA;
 
 int board_init();
+void read_channels(int16_t *channel, int max_channel_count);

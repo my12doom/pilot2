@@ -20,6 +20,7 @@ using namespace HAL;
 using namespace devices;
 using namespace math;
 using namespace sensors;
+bool calvin = false;
 
 // constants
 #define THROTTLE_STOP ((int)(isnan((float)pwm_override_min)? max(rc_setting[2][0]-20,1000):pwm_override_min))
@@ -3062,7 +3063,43 @@ int yet_another_pilot::light_words()
 
 	
 	if (!rgb)
-		return -1;
+		return -1;	
+	
+	if (calvin)
+	{
+		detect_gyro.new_data(gyro_reading);
+		detect_acc.new_data(accel);
+		
+		static bool last_static = false;
+		bool current_is_static = detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100;
+		
+		if (!current_is_static && last_static)
+		{
+			/*
+			flashlight->on();
+			systimer->delayms(50);
+			flashlight->off();
+			systimer->delayms(50);
+			*/
+				
+			for(int i=0; i<10; i++)
+			{
+				for(int j=0; j<16; j++)
+					g_ppm_output[j] = (i < 2) ? (THROTTLE_IDLE) : (THROTTLE_STOP);
+				output_rc();
+				flashlight->on();
+				systimer->delayms(50);
+				flashlight->off();
+				systimer->delayms(50);
+				for(int j=0; j<16; j++)
+					g_ppm_output[j] = THROTTLE_STOP;
+				output_rc();
+			}
+		}
+		
+		last_static = current_is_static;
+		LOGE("calvin");
+	}
 
 	if (mag_calibration_state)
 	{

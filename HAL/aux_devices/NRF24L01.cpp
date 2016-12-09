@@ -5,8 +5,8 @@
 using namespace HAL;
 
 
-#define TX_ADR_WIDTH    3   //5字节的地址宽度
-#define RX_ADR_WIDTH    3   //5字节的地址宽度
+#define TX_ADR_WIDTH    5   //5字节的地址宽度
+#define RX_ADR_WIDTH    5   //5字节的地址宽度
 uint8_t TX_ADDRESS[] = {0xb0,0x3d,0x12,0x34,0x01}; //????
 uint8_t RX_ADDRESS[] = {0xb0,0x3d,0x12,0x34,0x01}; //????
 #define TX_PLOAD_WIDTH  32
@@ -104,7 +104,7 @@ int NRF24L01::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *ce)
 	write_reg(RF_CH, 95);
 	write_reg(RX_PW_P0, RX_PLOAD_WIDTH);
 	write_reg(RX_PW_P1, RX_PLOAD_WIDTH);
-	write_reg(RF_SETUP, bk5811 ? 0x17 : 0x27);
+	write_reg(RF_SETUP, bk5811 ? 0x57 : 0x27);
 	write_reg(CONFIG, 0x0e);
 
 	write_reg(7, read_reg(7));	// clear all interrupt

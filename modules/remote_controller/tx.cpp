@@ -3,6 +3,7 @@
 #include <utils/log.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <HAL/aux_devices/NRF24L01.h>
 #include "randomizer.h"
 
@@ -15,6 +16,7 @@ uint8_t data[32];
 randomizer<256,256> rando;
 uint16_t hoop_id = 0;
 uint64_t seed = 0x1234567890345678;
+uint16_t hoop_interval = 1000;
 
 int64_t ts;
 int dt;
@@ -37,6 +39,10 @@ void timer_entry()
 	int channel = (int64_t)rando.next() * 100 / 0xffffffff;
 	data[2] = channel;
 	
+	//channel = 85;
+	
+	read_channels((int16_t*)(data+2), 6);
+	
 	if (hoop_id == 0)
 		rando.reset();
 	
@@ -55,19 +61,42 @@ int main()
 	
 	irq->set_mode(MODE_IN);
 	dbg->set_mode(MODE_OUT_PushPull);
-	dbg->write(false);	
+	dbg->write(false);
+	dbg2->set_mode(MODE_OUT_PushPull);
+	dbg2->write(true);
 	
 	rando.reset(0);
 	hoop_id = 0;
-	int c = nrf.init(spi, cs, ce);
+	int c = 1;
+	while( (c = nrf.init(spi, cs, ce)) != 0)
+	{
+		dbg2->write(false);
+		systimer->delayms(100);
+		dbg2->write(true);
+		systimer->delayms(100);
+	}
+	dbg2->write(false);
+	
+	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;
 	
 	interrupt->set_callback(nrf_irq_entry, NULL);
 	timer->set_callback(timer_entry);
-	timer->set_period(2000);
+	timer->set_period(hoop_interval);
 	
 	int64_t lt = systimer->gettime();
 	
+	int16_t v[6] = {0};
 	while(1)
 	{
+		//read_channels(v, 6);
+		
+		//printf("\rv=%d,%d,%d,%d,%d,%d,    ", v[0], v[1], v[2], v[3], v[4], v[5]);
+		
+		/*
+		if (v[0]>2000)
+			dbg2->write(true);
+		else
+			dbg2->write(false);
+		*/
 	}
 }

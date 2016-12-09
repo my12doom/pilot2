@@ -23,6 +23,8 @@ int o = 0;
 int rdp;
 int hoop_id = 0;
 int miss = 99999;
+int maxmiss = 0;
+uint16_t hoop_interval = 1000;
 
 int hoop_to(int next_hoop_id)
 {
@@ -35,7 +37,7 @@ int hoop_to(int next_hoop_id)
 	
 
 	int channel = (int64_t)rando.next() * 100 / 0xffffffff;
-		
+	
 	nrf.write_reg(RF_CH, channel);
 	
 	ce->write(true);
@@ -88,6 +90,9 @@ void timer_entry()
 		dbg2->write(true);
 	}
 	
+	if (maxmiss < miss)
+		maxmiss = miss;
+	
 	interrupt->enable();
 }
 
@@ -110,7 +115,13 @@ int main()
 	while(nrf.init(spi, cs, ce) != 0)
 		;
 	nrf.write_reg(RF_CH, 95);
-	nrf.rf_on(true);		
+	nrf.rf_on(true);
+	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;
+	
+	for(int i=0; i<30; i++)
+	{
+		printf("reg(%d)=%02x\n", i, nrf.read_reg(i));
+	}
 	
 	int lo = 0;
 	int64_t t = systimer->gettime();
@@ -123,23 +134,31 @@ int main()
 	
 	interrupt->set_callback(nrf_irq_entry, NULL);
 	timer->set_callback(timer_entry);
-	timer->set_period(2000);
+	timer->set_period(hoop_interval);
 		
 	while(1)
 	{
 		char tmp[100];
 		sprintf(tmp, "%dp, pos=%d    ", o, *(uint16_t*)data);
 		oled.show_str(0, 0, tmp);
-		sprintf(tmp, "rdp=%d,%dp/s    ", rdp, lp);
+		sprintf(tmp, "rdp=%d,%dp/s, %dms    ", rdp, lp, maxmiss * hoop_interval / 1000);
 		oled.show_str(0, 1, tmp);
 		
 		int64_t current = systimer->gettime();
+		
+		int16_t *channel = (int16_t *)(data+2);
+		
+		sprintf(tmp, "%04d,%04d,%04d ", channel[0], channel[1], channel[2]);
+		oled.show_str(0, 2, tmp);
+		sprintf(tmp, "%04d,%04d,%04d ", channel[3], channel[4], channel[5]);
+		oled.show_str(0, 3, tmp);
 		
 		if (current - t > 1000000)
 		{
 			t = current;
 			lp = o - lo;
 			lo = o;
+			maxmiss = 0;
 		}
 	}
 }
