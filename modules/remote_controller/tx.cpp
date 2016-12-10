@@ -76,7 +76,7 @@ int main()
 		systimer->delayms(100);
 	}
 	dbg2->write(false);
-	
+		
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;
 	
 	interrupt->set_callback(nrf_irq_entry, NULL);
@@ -88,15 +88,5 @@ int main()
 	int16_t v[6] = {0};
 	while(1)
 	{
-		//read_channels(v, 6);
-		
-		//printf("\rv=%d,%d,%d,%d,%d,%d,    ", v[0], v[1], v[2], v[3], v[4], v[5]);
-		
-		/*
-		if (v[0]>2000)
-			dbg2->write(true);
-		else
-			dbg2->write(false);
-		*/
 	}
 }

@@ -67,3 +67,7 @@ int board_init()
 {
 	return sheet1_init();
 }
+
+void read_channels(short *c, int count)
+{
+}

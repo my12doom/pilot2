@@ -211,7 +211,7 @@ void NRF24L01::SwitchCFG(bool analog)
 	uint8_t s = read_reg(7);
 	
 	if (bool(s&0x80)^analog)
-		write_cmd(0x50, 0x53);	
+		write_cmd(0x50, 0x53);
 }
 
 bool NRF24L01::is_bk5811()
@@ -219,6 +219,7 @@ bool NRF24L01::is_bk5811()
 	uint8_t s = read_reg(7);
 	write_cmd(0x50, 0x53);
 	uint8_t s2 = read_reg(7);
+	write_cmd(0x50, 0x53);
 	
 	if ((s&0x80)^(s2&0x80))
 		bk5811 = true;
