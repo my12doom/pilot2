@@ -48,7 +48,7 @@ namespace androidUAV
 		}
 		else
 		{
-			LOG2("read error ret = %d\n",ret);
+			LOG2("androidUAV:read error ret = %d\n",ret);
 		}
 		return -1;
 	}

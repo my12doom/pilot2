@@ -6,6 +6,7 @@
 #include <rk3288UAV/ARCOUT.h>
 #include <HAL/rk32885.1/AIMUFIFO.h>
 #include <HAL/rk32885.1/AI2C.h>
+#include <HAL//rk32885.1/AUIOTimer.h>
 
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 #include <HAL/sensors/Sonar.h>
@@ -18,6 +19,7 @@
 #include <HAL/sensors/HMC5983SPI.h>
 #include <HAL/sensors/MS5611_SPI.h>
 #include <HAL/sensors/ads1115.h>
+#include <HAL/Interface/ILED.h>
 
 #include <Protocol/common.h>
 #include <stdio.h>
@@ -30,6 +32,7 @@
 using namespace androidUAV;
 using namespace HAL;
 using namespace sensors;
+using namespace devices;
 static const char *spidevice = "/dev/oledEuler_dev";
 
 static const char *gpiodevice = "/dev/luobogpio";
@@ -60,12 +63,13 @@ ARCOUT rcout(pwmdevice);
 AFIFO imufifo(imufifoPath);
 AI2C i2c2(i2c2device);
 
+//static GPIOLED led_red(&cs_ms5611);
 
 MPU6000 mpu6000device;
 MS5611_SPI ms5611device;
 UartUbloxBinaryGPS gpsdevice;
 EBusIN ebus;
-
+HMC5983 hmc5983;
 void init_sensor()
 {
 	/*if (mpu6000device.init(&i2c2,0x68) == 0)
@@ -84,11 +88,21 @@ void init_sensor()
 		mpu6000device.gyro_axis_config(1, 0, 2, +1, +1, -1);
 		manager.register_accelerometer(&mpu6000device);
 		manager.register_gyroscope(&mpu6000device);
+		LOG2("androidUAV:Init MPU6000 ok\n");
+	}
+	
+	if(hmc5983.init(&i2c2) == 0)
+	{
+		LOG2("androidUAV:found HMC5983 on I2C4\n");
+		manager.register_magnetometer(&hmc5983);
 	}
 	if(ms5611device.init(&spi1,&cs_ms5611) == 0)
 	{
 		manager.register_barometer(&ms5611device);
+		LOG2("androidUAV:found ms5611device\n");
 	}
+	//manager.register_LED("state",&led_red);
+	
 
 }
 int init_rc()
@@ -137,7 +151,12 @@ int bsp_init_all()
 	//static androidUAV::ATimer timer[3];
 	static androidUAV::ATimer timer1(98);
 	static androidUAV::ATimer timer2(97);
-	static androidUAV::ATimer timer3(96);
+	//static androidUAV::ATimer timer3(96);
+	
+	//static androidUAV::AUIOTimer timer1(98);
+	//static androidUAV::AUIOTimer timer2(97);
+	static androidUAV::AUIOTimer timer3(96);
+	
 	manager.register_Timer("mainloop", &timer1);
 	manager.register_Timer("log", &timer2);
 	manager.register_Timer("imu", &timer3);

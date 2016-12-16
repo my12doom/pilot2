@@ -38,9 +38,9 @@ namespace androidUAV
 		public:
 			AFIFO(const char* fifopath=NULL);
 			~AFIFO();
-			virtual int open(const char* path);
-			virtual int close();
-			virtual int create(const char* path,int mode);
+			int open(const char* path);
+			int close();
+			int create(const char* path,int mode);
 			virtual int read(void *data,int count);
 			virtual int write(void *data,int count);
 			int is_file_exist(const char *filePath);

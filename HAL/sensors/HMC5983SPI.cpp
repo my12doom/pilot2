@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <Protocol/common.h>
 
-#define	HMC5883SlaveAddress 0x3C
+//#define	HMC5883SlaveAddress 0x3C
+#define	HMC5883SlaveAddress 0x1E
+
 #define HMC58X3_R_CONFA 0
 #define HMC58X3_R_CONFB 1
 #define HMC58X3_R_MODE 2

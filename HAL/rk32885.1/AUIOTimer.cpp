@@ -1,11 +1,17 @@
-#include "ATimer.h"
+#include "AUIOTimer.h"
 #include <HAL/Interface/ISysTimer.h>
-#include <stdio.h>
-#include <unistd.h>
+
 namespace androidUAV
 {
-    ATimer::ATimer(int priority)
+	AUIOTimer::AUIOTimer(int priority)
 	{
+		uio_fd = 0;
+		eventCount = 0;
+		uio_fd = open(uioDev,O_RDWR|O_SYNC);
+		if(uio_fd < 0)
+		{
+			LOG2("androidUAV:open uio device error %s\n",uioDev);
+		}
 		pthread_attr_init (&attr);
 
 		policy = get_thread_policy (&attr);
@@ -24,16 +30,17 @@ namespace androidUAV
 		period = 0;
 		exit = false;
 	}
-	ATimer::~ATimer()
+	AUIOTimer::~AUIOTimer()
 	{
 		exit = false;
 		pthread_join(thread,0);
 		pthread_mutex_destroy(&mutex);
 	}
-	void ATimer::run()
+	void AUIOTimer::run()
 	{
 		int64_t last_call_time = systimer->gettime();
 		struct timeval delay;
+
 		while(!exit)
 		{
 			lock();
@@ -41,13 +48,19 @@ namespace androidUAV
 			unlock();
 			if(period)
 			{
-				int64_t t = systimer->gettime();
-				while((t = systimer->gettime()) < last_call_time + period)
-					usleep(100);
-				last_call_time = t;
-				/*delay.tv_sec = 0;
-				delay.tv_usec = period; // 20 ms
-				select(0, NULL, NULL, NULL, &delay);*/
+				//int64_t t1 = systimer->gettime();
+				int cntTimes = period/IOIRQPERIOD;
+				int cntTmp = 0;
+				int startEvent = 0;
+				int currentEvent = 0;
+				
+				int ret = read(uio_fd,&currentEvent,sizeof(currentEvent));
+				cntTmp++;
+				if(ret < 0)
+				{
+					LOG2("androidUAV:read uio error\n");
+				}
+				
 			}
 			else
 				usleep(1000);
@@ -56,27 +69,27 @@ namespace androidUAV
 		}
 		pthread_exit(NULL);
 	}
-	void ATimer::lock()
+	void AUIOTimer::lock()
 	{
 		pthread_mutex_lock(&mutex);
 	}
-	void ATimer::unlock()
+	void AUIOTimer::unlock()
 	{
 		pthread_mutex_unlock(&mutex);
 	}
-	void ATimer::set_period(uint32_t period)
+	void AUIOTimer::set_period(uint32_t period)
 	{
 		lock();
 		this->period = period;
 		unlock();
 	}
-	void ATimer::set_callback(HAL::timer_callback cb)
+	void AUIOTimer::set_callback(HAL::timer_callback cb)
 	{
 		lock();
 		this->cb = cb;
 		unlock();
 	}
-	int ATimer::set_priority(int32_t priority)
+	int AUIOTimer::set_priority(int32_t priority)
 	{
 		//checkout policy ,only SCHED_FIFO SCHED_RR policies have a sched_priority value (1~99)
 		if(policy == SCHED_OTHER)
@@ -90,13 +103,12 @@ namespace androidUAV
 		set_thread_priority(&attr,&schparam,priority);
 		return 0;
 	}
-	void *ATimer::entry(void *p)
+	void *AUIOTimer::entry(void *p)
 	{
-		ATimer *_this = (ATimer *)p;
+		AUIOTimer *_this = (AUIOTimer *)p;
 		_this->run();
 		return 0;
 	}
-
 }
 static int get_thread_policy(pthread_attr_t *attr)
 {
@@ -119,3 +131,4 @@ static void set_thread_priority(pthread_attr_t *attr,struct sched_param *param,i
 	param->sched_priority = priority;
 	pthread_attr_setschedparam(attr,param);
 }
+

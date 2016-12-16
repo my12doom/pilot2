@@ -26,6 +26,7 @@ LOCAL_SRC_FILES := \
         ../../../HAL/rk32885.1/ACriticalSection.cpp \
         ../../../HAL/rk32885.1/AIMUFIFO.cpp \
         ../../../HAL/rk32885.1/AI2C.cpp \
+        ../../../HAL/rk32885.1/AUIOTimer.cpp \
         ../../../modules/utils/param.cpp \
         ../../../modules/utils/space.cpp \
         ../../../modules/utils/gauss_newton.cpp \
@@ -63,6 +64,7 @@ LOCAL_SRC_FILES := \
         ../../../modules/Algorithm/ekf_lib/src/inv.c \
         ../../../modules/Algorithm/ekf_lib/src/h.c \
         ../../../modules/Algorithm/ekf_lib/src/rt_nonfinite.c \
+        ../../../modules/Algorithm/ekf_lib/src/rtGetInf.c \
         ../../../modules/main/mode_basic.cpp \
         ../../../modules/main/mode_althold.cpp \
         ../../../modules/main/mode_of_loiter.cpp \
@@ -73,6 +75,7 @@ LOCAL_SRC_FILES := \
         ../../../HAL/Resources.cpp \
         ../../../HAL/sensors/MPU6000.cpp \
         ../../../HAL/sensors/MS5611_SPI.cpp \
+        ../../../HAL/sensors/HMC5983SPI.cpp \
         ../../../HAL/sensors/UartUbloxNMEAGPS.cpp \
         ../../../HAL/sensors/EBusIn.cpp 
         #../../modules/Protocol/data_protocol.cpp
@@ -87,7 +90,7 @@ LOCAL_C_INCLUDES :=  \
             system/eulerPilotProject/euler_pilot/HAL/Interface \
             system/eulerPilotProject/euler_pilot/modules/Algorithm/ekf_lib/inc 
 #LOCAL_CFLAGS += -Wno-multichar
-LOCAL_LDLIBS := -ldl -lm 
+LOCAL_LDLIBS := -ldl -lm
 LOCAL_CPPFLAGS += -fexceptions -frtti
 #LOCAL_CPPFLAGS = -fno-rtti
 LOCAL_MODULE_TAGS := optional
