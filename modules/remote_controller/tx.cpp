@@ -28,7 +28,7 @@ void nrf_irq_entry(void *parameter, int flags)
 													// delay between tx and rx is 25us max
 }
 
-void timer_entry()
+void timer_entry(void *p)
 {
 	interrupt->disable();
 	dbg->write(true);
@@ -80,7 +80,7 @@ int main()
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;
 	
 	interrupt->set_callback(nrf_irq_entry, NULL);
-	timer->set_callback(timer_entry);
+	timer->set_callback(timer_entry, NULL);
 	timer->set_period(hoop_interval);
 	
 	int64_t lt = systimer->gettime();

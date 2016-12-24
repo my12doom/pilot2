@@ -106,9 +106,10 @@ namespace STM32F1
 		TIM_Cmd(TIMx,ENABLE);
 		TimerInit(this->TIMx);
 	}
-	void F1Timer::set_callback(timer_callback cb)
+	void F1Timer::set_callback(timer_callback cb, void *user_data)
 	{		
 		this->cb=cb;
+		this->user_data = user_data;
 	}
 	
 	void F1Timer::restart()
@@ -162,6 +163,6 @@ namespace STM32F1
 		else if(TIM8==TIMx)
 			TIM_ClearITPendingBit(TIM8 , TIM_FLAG_Update);
 		if(cb)
-			cb();
+			cb(user_data);
 	}
 }

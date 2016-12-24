@@ -16,7 +16,6 @@ NRF24L01 nrf;
 
 uint8_t data[32];
 randomizer<128, 512> rando;
-uint16_t rand_pos = 0;
 uint64_t seed = 0x1234567890345678;
 OLED96 oled;
 int o = 0;
@@ -74,7 +73,7 @@ void nrf_irq_entry(void *parameter, int flags)
 	dbg->write(true);
 }
 
-void timer_entry()
+void timer_entry(void * p)
 {
 	interrupt->disable();
 	
@@ -111,7 +110,6 @@ int main()
 	dbg2->write(true);
 	
 	rando.set_seed(seed);
-	rand_pos = 0;
 	while(nrf.init(spi, cs, ce) != 0)
 		;
 	nrf.write_reg(RF_CH, 95);
@@ -133,7 +131,7 @@ int main()
 	dbg->write(true);
 	
 	interrupt->set_callback(nrf_irq_entry, NULL);
-	timer->set_callback(timer_entry);
+	timer->set_callback(timer_entry, NULL);
 	timer->set_period(hoop_interval);
 		
 	while(1)

@@ -54,18 +54,23 @@ namespace STM32F4
 		}
 		else if(TIM6==TIMx)
 		{
-			/*
-			NVIC_InitStructure.NVIC_IRQChannel = TIM6_IRQn;		// TODO: IRQ?
+			NVIC_InitStructure.NVIC_IRQChannel = TIM6_DAC_IRQn;		// TODO: IRQ?
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);
-			*/
-			printf("TIM6 not supported\n");
 		}
 		else if(TIM7==TIMx)
 		{
 			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM7_IRQn;		// TODO: IRQ?
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+		}
+		else if(TIM8==TIMx)
+		{
+			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM8_UP_TIM13_IRQn;		// TODO: IRQ?
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -88,10 +93,12 @@ namespace STM32F4
 			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6,ENABLE);
 		if(TIM7==TIMx)
 			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7,ENABLE);
+		if(TIM8==TIMx)
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM8,ENABLE);
 		TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 		TIM_DeInit(TIMx);
 		TIM_InternalClockConfig(TIMx);
-		TIM_TimeBaseStructure.TIM_Prescaler=TIMx == TIM1 ? 167: 83;//1Mhz 1us 65536
+		TIM_TimeBaseStructure.TIM_Prescaler = (TIMx == TIM1 || TIMx == TIM8) ? 167: 83;//1Mhz 1us 65536
 		TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
 		TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
 		TIM_TimeBaseStructure.TIM_Period=period;
@@ -103,9 +110,10 @@ namespace STM32F4
 		TIM_Cmd(TIMx,ENABLE);
 		TimerInit(this->TIMx);
 	}
-	void F4Timer::set_callback(timer_callback cb)
+	void F4Timer::set_callback(timer_callback cb, void *user_data /*= NULL*/)
 	{		
 		this->cb=cb;
+		this->user_data = user_data;
 	}
 	
 	void F4Timer::restart()
@@ -159,6 +167,6 @@ namespace STM32F4
 		else if(TIM8==TIMx)
 			TIM_ClearITPendingBit(TIM8 , TIM_FLAG_Update);
 		if(cb)
-			cb();
+			cb(user_data);
 	}
 }

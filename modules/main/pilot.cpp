@@ -929,10 +929,12 @@ int yet_another_pilot::read_sensors()
 				sonar_distance = distance;
 		}
 		
+		/*
 		if (isnan(sonar_distance))
 			printf("\rNAN     ");
 		else
 			printf("\r%.3f", sonar_distance);
+		*/
 	}
 	
 
@@ -1684,6 +1686,8 @@ int yet_another_pilot::sensor_calibration()
 		}
 		
 		STOP_ALL_MOTORS();
+		log_flush();
+
 	}
 	
 	vector_divide(&mag_avg, calibrating_count);
@@ -1695,7 +1699,6 @@ int yet_another_pilot::sensor_calibration()
 	detect_gyro.get_average(&gyro_avg);
 	detect_acc.get_average(&accel_avg);
 
-	log_flush();
 	LOGE("base value measured, acc:%.2f, %.2f, %.2f,  gyro:%.2f,%.2f,%.2f, mag:%.2f,%.2f,%.2f, baro:%.0f, temp:%.1f\n",
 		accel_avg.array[0], accel_avg.array[1], accel_avg.array[2],
 		gyro_avg.array[0]*180/PI, gyro_avg.array[1]*180/PI, gyro_avg.array[2]*180/PI, 
@@ -3520,6 +3523,8 @@ int yet_another_pilot::setup(void)
 		systimer->delayms(10);
 		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read_flow(&frame) == 0 && frame.frame_count > 0 && yap.frame.cmos_version == 0x76)
 			break;
+		
+		LOGE("flow error\n");
 
 		// flash the rgb light to indicate a error
 		for(int i=0; i<10; i++)
