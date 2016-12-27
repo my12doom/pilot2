@@ -155,8 +155,35 @@ int test_batt2()
 	return 0;
 }
 
+int test_quaternion()
+{
+	float rpy[3] = {PI, PI/6, PI/6};
+	float q[4];
+	float rp[3];
+
+
+	RPY2Quaternion(rpy, q);
+
+	float y[3];
+	float qrp[4];
+	float qy[4];
+	Quaternion2RPY(q, y);
+	y[0] = y[1] = 0;
+	y[2] = -y[2];
+	RPY2Quaternion(y, qy);
+	quat_mult(qy, q, qrp);
+	memcpy(q, qrp, sizeof(q));
+
+
+	Quaternion2RPY(qrp, rp);
+
+	return 0;
+}
+
 int main(int argc, char* argv[])
 {
+	test_quaternion();
+
 	lpf2p[0].set_cutoff_frequency(1000, 60);
 	lpf2p[1].set_cutoff_frequency(1000, 60);
 	lpf2p[2].set_cutoff_frequency(1000, 60);
@@ -526,11 +553,11 @@ int main(int argc, char* argv[])
 
 
 				memcpy(pos2.gyro, gyro, sizeof(gyro));
-				memcpy(&pos2.frame, &frame, sizeof(frame));
+// 				memcpy(&pos2.frame, &frame, sizeof(frame));
 				float baro = quad2.altitude_baro_raw/100.0f;
 
 				static int last_state = 0;
-				pos2.update(quad5.q, acc, gps_extra2, baro, dt, pilot.fly_mode);
+// 				pos2.update(quad5.q, acc, gps_extra2, baro, dt, pilot.fly_mode);
 				if (last_state != pos2.state())
 				{
 					last_state = pos2.state();
@@ -641,7 +668,7 @@ int main(int argc, char* argv[])
 				if(ekf_est.ekf_is_ready())
 				{
 					fprintf(out, "POSITION, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), lat_meter, lon_meter, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_y, speed_east, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps.DOP[1]/100.0f, 0, 0);
-					fprintf(out, "ALT, %d, %f, %f, %f, %f,%f,%f,%f,%f\r\n", int(time/1000), quad2.altitude_baro_raw/100.0f, ekf_est.ekf_result.Pos_z, quad2.altitude_kalman/100.0f, quad3.altitude_target/100.0f, last_valid_sonar, quad4.sonar_target/100.0f, quad2.climb_rate_kalman/100.0f, quad3.climb_target/100.0f);
+					fprintf(out, "ALT, %d, %f, %f, %f, %f,%f,%f,%f,%f\r\n", int(time/1000), quad2.altitude_baro_raw/100.0f, ekf_est.ekf_result.Pos_z, quad2.altitude_kalman/100.0f, quad3.altitude_target/100.0f, quad3.ultrasonic/1000.0f, quad4.sonar_target/100.0f, quad2.climb_rate_kalman/100.0f, quad3.climb_target/100.0f);
 					fprintf(out, "POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f, %f, %f,%f,%f,%f,%f,%f\r\n", int(time/1000), pos2.x[0], pos2.x[1], pos2.x[2], pos2.x[3], pos2.x[4], pos2.x[5], pos2.x[6], pos2.x[7], pos2.x[8], pos2.x[9], pos2.x[10], pos2.x[11], pos2.x[12], pos2.gps_north, pos2.gps_east, pos2.vx, pos2.vy, pos2.predict_flow[0], pos2.predict_flow[1], (float)frame.pixel_flow_x_sum, (float)frame.pixel_flow_y_sum);
 					fprintf(out, "POS2_P, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), float(pos2.P[0*14]), float(pos2.P[1*14]), float(pos2.P[2*14]), float(pos2.P[3*14]), float(pos2.P[4*14]), float(pos2.P[5*14]), float(pos2.P[6*14]), float(pos2.P[7*14]), float(pos2.P[8*14]), float(pos2.P[9*14]), float(pos2.P[10*14]), float(pos2.P[11*14]), float(pos2.P[12*14]));
 					fprintf(out, "ON_POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f\r\n", int(time/1000), on_pos2[0], on_pos2[1], on_pos2[2], on_pos2[3], on_pos2[4], on_pos2[5], on_pos2[6], on_pos2[7], on_pos2[8], on_pos2[9], on_pos2[10], on_pos2[11], pos2.gps_north, pos2.gps_east);

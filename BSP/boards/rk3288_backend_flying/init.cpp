@@ -10,6 +10,7 @@
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 #include <HAL/sensors/Sonar.h>
 #include <HAL/sensors/SBusIn.h>
+#include <HAL/sensors/EBusIn.h>
 #include <HAL/sensors/PPMIn.h>
 #include <HAL/sensors/NRF_RC.h>
 #include <HAL\Interface\ILED.h>
@@ -24,6 +25,8 @@
 #include <HAL/sensors/ADS1115.h>
 #include <bootloader/bootloader_bin.h>
 #include "RGBLED.h"
+#include <Protocol/crc32.h>
+#include <string.h>
 
 extern "C" const char bsp_name[] = "mo_v3";
 
@@ -160,24 +163,8 @@ int init_RC()
 	static F4Interrupt irq;
 	
 	irq.init(GPIOA, GPIO_Pin_8, interrupt_falling);
-	in.init(&spi2, &cs, &ce, &irq, &tim8);
-	manager.register_RCIN(&in);
-	
-	
-	// decrease irq priority manually, to prevent interrupting usart/sonar
-	NVIC_InitTypeDef NVIC_InitStructure;
-	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
-	
-	//while(1)
-	{
-		int16_t v[6];
-		in.get_channel_data(v, 0, 6);
-	}
-	
+	if (in.init(&spi2, &cs, &ce, &irq, &tim8) == 0)
+		manager.register_RCIN(&in);		
 
 	static dev_v2::RCOUT rcout;	
 	manager.register_RCOUT(&rcout);
@@ -409,6 +396,35 @@ int bsp_init_all()
 		
 		param::save_all();
 	}
+	
+	IRCIN * rcin = manager.get_RCIN();
+	int64_t t = systimer->gettime();
+	while(1)
+	{
+		if (rcin && rcin->state() == HAL::RCIN_Normal)
+		{
+			if (systimer->gettime() - t > 20000)
+			{
+				t = systimer->gettime();
+				int8_t ebus_frame[15] = {0};
+				ebus_frame[0] = 0x85;
+				ebus_frame[1] = 0xA3;
+				
+				int16_t *p = (int16_t*)(ebus_frame+2);
+				
+				rcin->get_channel_data(p, 0, 6);
+				
+				for(int i=0; i<6; i++)
+					p[i] = (limit(p[i], 1000, 2000) - 1000) * 4096 / 1000;
+				
+				
+				ebus_frame[14] = crc32(0, ebus_frame+2, 12);
+				
+				f4uart1.write(ebus_frame, sizeof(ebus_frame));				
+			}
+		}
+	}
+	
 	
 	/*
 	HAL::IStorage * bl_storage = get_bootloader_storage();

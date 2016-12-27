@@ -17,7 +17,7 @@ public:
 	~pos_estimator2();
 
 	int reset();		// mainly for after GPS glitch handling
-	int update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt, bool armed = false, bool airborne = true);
+	int update(const float q[4], const float acc_body[3], devices::gps_data gps, sensors::flow_data flow, float sonar, float baro, float dt, bool armed = false, bool airborne = true);
 	void set_gps_latency(int new_latency){latency = new_latency;}
 	int state();
 
@@ -45,7 +45,6 @@ public:
 
 	float gyro[3];
 	float local[2];
-	sensors::px4flow_frame frame;
 	float vx;
 	float vy;
 	float vx_lpf;

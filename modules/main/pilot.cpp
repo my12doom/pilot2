@@ -516,7 +516,7 @@ int yet_another_pilot::handle_acrobatic()
 
 			float slew =  t > 0.001f ? velocity_abs/t : 0;
 			float velocity_top = slew * (t+latency);
-			float total_distance = 0.5*(t+latency)*velocity_top* (1+braking_factor);
+			float total_distance = 0.5f*(t+latency)*velocity_top* (1+braking_factor);
 
 			LOGE("dis=%.3f\n", total_distance * 180 / PI);
 
@@ -735,7 +735,6 @@ int yet_another_pilot::save_logs()
 		{mag.array[0] * 10, mag.array[1] * 10, mag.array[2] * 10},
 	};
 	log(&imu, TAG_IMU_DATA, systime);
-	log(&frame, TAG_PX4FLOW_DATA, systime);	
 
 	pilot_data pilot = 
 	{
@@ -846,7 +845,7 @@ int yet_another_pilot::save_logs()
 		yaw_launch * 18000 / PI,
 		euler[2] * 18000 / PI,
 		alt_controller.get_throttle_hover()*1000,
-		0,//sonar_result(),
+		sonar_distance * 1000,
 		alt_controller.accel_error_pid[1]*1000,
 	};
 
@@ -919,6 +918,7 @@ int yet_another_pilot::read_sensors()
 {	
 	if (range_finder)
 	{
+		LOGE("range_finder=%08x", range_finder);
 		range_finder->trigger();
 		float distance = 0;
 		if (0 == range_finder->read(&distance))
@@ -1148,45 +1148,6 @@ int yet_another_pilot::read_imu_and_filter()
 			mag.V.z /= healthy_mag_count;
 		}
 
-		if (vcp && (usb_data_publish & data_publish_imu))
-		{
-			gyro_data gyro2 = {0};
-			accelerometer_data acc2 = {0};
-
-			if (manager.get_accelerometer_count()>=2)
-				manager.get_accelerometer(1)->read(&acc2);
-			if (manager.get_gyroscope_count()>=2)
-				manager.get_gyroscope(1)->read(&gyro2);
-
-			if (usb_data_publish & data_publish_binary)
-			{
-				usb_imu_data data = 
-				{
-					systimer->gettime(),
-					{accel_uncalibrated.V.x * 1000, accel_uncalibrated.V.y * 1000, accel_uncalibrated.V.z * 1000,},
-					{gyro_uncalibrated.V.x * 18000 / PI, gyro_uncalibrated.V.y * 18000 / PI, gyro_uncalibrated.V.z * 18000 / PI,},
-					{acc2.x * 1000, acc2.y * 1000, acc2.z * 1000,},
-					{gyro2.x * 18000 / PI, gyro2.y * 18000 / PI, gyro2.z * 18000 / PI,},
-					{mag.V.x, mag.V.y, mag.V.z,},
-				};
-
-				send_package(&data, sizeof(data), data_publish_imu, vcp);
-			}
-			else
-			{
-				char tmp[200];
-				sprintf(tmp, 
-					"imu:%.4f"
-					",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f"
-					",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", systimer->gettime()/1000000.0f,
-				accel_uncalibrated.V.x, accel_uncalibrated.V.y, accel_uncalibrated.V.z, gyro_uncalibrated.V.x, gyro_uncalibrated.V.y, gyro_uncalibrated.V.z, mag.V.x, mag.V.y, mag.V.z, mpu6050_temperature,
-				acc2.x, acc2.y, acc2.z, gyro2.x, gyro2.y, gyro2.z);
-				
-				vcp->write(tmp, strlen(tmp));
-			}
-		}
-
-
 		// read barometers
 		int healthy_baro_count = 0;
 		for(int i=0; i<min(manager.get_barometer_count(), 1); i++)
@@ -1217,28 +1178,7 @@ int yet_another_pilot::read_imu_and_filter()
 			{
 				b_raw_pressure = data.pressure;
 			}
-		}
-		
-		if (vcp && (usb_data_publish & data_publish_baro) && new_baro_data)
-		{
-			if (usb_data_publish & data_publish_binary)
-			{
-				usb_baro_data data =
-				{
-					systimer->gettime(),
-					a_raw_pressure,
-					a_raw_temperature*100
-				};
-
-				send_package(&data, sizeof(data), data_publish_baro, vcp);
-			}
-			else
-			{
-				char tmp[200];
-				sprintf(tmp, "baro:%.3f,%.0f,%.3f\n", systimer->gettime()/1000000.0f, a_raw_pressure, a_raw_temperature);
-				vcp->write(tmp, strlen(tmp));
-			}
-		}
+		}		
 	}
 	
 	// bias and scale calibrating
@@ -1284,49 +1224,10 @@ int yet_another_pilot::read_imu_and_filter()
 	{
 		last_flow_reading = systimer->gettime();
 
-		sensors::IFlow *flow = manager.get_flow(0);
+		sensors::IFlow *pflow = manager.get_flow(0);
 
-		if (flow->read_flow(&frame) < 0)
-			sonar_distance = NAN;
-		else
-		{
-			static int last_frame_count = 0;
-			if (last_frame_count != frame.frame_count && vcp && (usb_data_publish & data_publish_flow))
-			{
-				last_frame_count = frame.frame_count;
-
-				if (usb_data_publish & data_publish_binary)
-				{
-					usb_flow_data data = 
-					{
-						systimer->gettime(),
-						frame.pixel_flow_x_sum,
-						frame.pixel_flow_y_sum,
-						frame.ground_distance,
-					};
-
-					send_package(&data, sizeof(data), data_publish_flow, vcp);
-				}
-				else
-				{
-					char tmp[100];
-					sprintf(tmp, "flow:%.3f,%d,%d,%f\n", systimer->gettime()/1000000.0f, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.ground_distance/1000.0f);
-					vcp->write(tmp, strlen(tmp));
-				}
-			}
-
-			sonar_distance = frame.ground_distance / 1000.0f;
-			if (sonar_distance <= SONAR_MIN || sonar_distance >= SONAR_MAX)
-				sonar_distance = NAN;
-
-			//float flowx = frame.pixel_flow_x_sum - body_rate.array[0] * 18000/PI * 0.006f;
-			//float floay = frame.pixel_flow_y_sum - body_rate.array[1] * 18000/PI * 0.006f;
-
-			//frame.gyro_x_rate = flowx;
-			//frame.gyro_y_rate = floay;
-		}
-	}
-	
+		pflow->read(&flow);
+	}	
 	
 	// log unfiltered imu data
 	int16_t data[6] = {acc.V.x * 100, acc.V.y * 100, acc.V.z * 100,
@@ -1427,18 +1328,18 @@ int yet_another_pilot::calculate_state()
 		}
 		else
 		{	
-			float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0028f;
-			float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0028f;
+			float wx = flow.x - body_rate.array[0];
+			float wy = flow.y - body_rate.array[1];
 
-			float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
-			float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
+			float vx = wx * isnan(sonar_distance) ? 1 : sonar_distance;
+			float vy = wy * isnan(sonar_distance) ? 1 : sonar_distance;
 			
 			float v_flow_body[3];
-			v_flow_body[0] = wy * frame.ground_distance/1000.0f;//black magic
-			v_flow_body[1] = -wx * frame.ground_distance/1000.0f;
+			v_flow_body[0] = vy;//black magic
+			v_flow_body[1] = -vx;
 			v_flow_body[2] = 0;
 
-			if (yap.frame.qual < 100)
+			if (flow.quality < 0.45f)
 			{
 				v_flow_body[0] = v_flow_body[1] = 0;
 				ekf_est.set_mesurement_R(1E20,1E-2);
@@ -1472,10 +1373,9 @@ int yet_another_pilot::calculate_state()
 		float acc[3] = {-accel.array[0], -accel.array[1], -accel.array[2]};
 
 		memcpy(estimator2.gyro, body_rate.array, sizeof(estimator2.gyro));
-		memcpy(&estimator2.frame, &frame, sizeof(frame));
 
 		int64_t t = systimer->gettime();
-		estimator2.update(q, acc, gps, a_raw_altitude, interval, armed, airborne);
+		estimator2.update(q, acc, gps, flow, sonar_distance, a_raw_altitude, interval, armed, airborne);
 		t = systimer->gettime() - t;
 		//LOGE("estimator2 cost %d us", int(t));
 		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
@@ -2819,7 +2719,10 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 int yet_another_pilot::read_rc()
 {
 	if (!rcin)
+	{
+		critical_errors |= error_RC;
 		return -1;
+	}
 
 	rcin->get_channel_data(g_pwm_input, 0, 8);
 	rcin->get_channel_update_time(g_pwm_input_update, 0, 8);
@@ -3518,10 +3421,10 @@ int yet_another_pilot::setup(void)
 	// check flow
 	do 
 	{
-		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read_flow(&frame) == 0 && frame.frame_count > 0 && yap.frame.cmos_version == 0x76)
+		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read(&flow) == 0)
 			break;
 		systimer->delayms(10);
-		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read_flow(&frame) == 0 && frame.frame_count > 0 && yap.frame.cmos_version == 0x76)
+		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read(&flow) == 0)
 			break;
 		
 		LOGE("flow error\n");

@@ -84,7 +84,7 @@ int pos_estimator2::state()
 }
 
 
-int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, float baro, float dt, bool armed, bool airborne)			// unit: meter/s
+int pos_estimator2::update(const float q[4], const float acc_body[3], devices::gps_data gps, sensors::flow_data flow, float sonar, float baro, float dt, bool armed, bool airborne)			// unit: meter/s
 {
 	// 	DCM
 	float q0q0 = q[0] * q[0];
@@ -116,7 +116,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	Q(5,5) = armed ? 1e-6 : 1e-3;
 
 	// flow switching
-	bool use_flow = last_valid_sonar < 3.5f && (frame.ground_distance > 0) && (frame.qual > 133) && r[8] > 0.7f;		// note:0.7 ~= cos(30deg), use flow in less than 30degree flight
+	bool use_flow = last_valid_sonar < 3.5f && !isnan(sonar) && (flow.quality > 0.5f) && r[8] > 0.7f;		// note:0.7 ~= cos(30deg), use flow in less than 30degree flight
 	if (!flow_healthy && use_flow)
 	{
 		flow_ticker += dt;
@@ -143,7 +143,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	}
 
 	// sonar switching
-	if (!sonar_healthy && frame.ground_distance > 0)
+	if (!sonar_healthy && !isnan(sonar))
 	{
 		sonar_ticker += dt;
 
@@ -152,11 +152,11 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 			LOGE("pos_estimator2: using sonar\n");
 			sonar_healthy = true;
 			P[12*14] = 10.0;
-			x[12] = x.data[2] - frame.ground_distance/1000.0f;
+			x[12] = x.data[2] - sonar;
 		}
 	}
 
-	else if (sonar_healthy && frame.ground_distance <= 0)
+	else if (sonar_healthy && isnan(sonar))
 	{
 		sonar_ticker += dt;
 
@@ -387,8 +387,6 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	}
 	else
 	{
-		float pixel_compensated_x = frame.pixel_flow_x_sum;
-		float pixel_compensated_y = frame.pixel_flow_y_sum;
 
 		if (fabs(gyro[0]) > 60 * PI / 180 || fabs(gyro[1]) > 60 * PI / 180)
 			saturation_timeout = 0.3f;
@@ -397,15 +395,13 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 		bool saturation = saturation_timeout > 0;
 
 		
- 		if (/*fabs(pixel_compensated_x) > 5 && */fabs(pixel_compensated_x) < 35 /*&& fabs(pixel_compensated_y)>5 */&& fabs(pixel_compensated_y)<35 && !saturation)
+		float wx = flow.x;
+		float wy = flow.y;
+ 		if (/*fabs(pixel_compensated_x) > 5 && */fabs(flow.x) < PI/2 /*&& fabs(pixel_compensated_y)>5 */&& fabs(flow.y) < PI/2 && !saturation)
  		{
-			 pixel_compensated_x -= gyro[0] * 18000 / PI * 0.0028f;
-			 pixel_compensated_y -= gyro[1] * 18000 / PI * 0.0028f;
+			 wx -= gyro[0];
+			 wy -= gyro[1];
  		}
-		
-
-		float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
-		float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
 
 		vx = wx * last_valid_sonar;
 		vy = wy * last_valid_sonar;
@@ -456,9 +452,9 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	if (sonar_healthy)
 	{
 
-		if (frame.ground_distance > 0)
+		if (!isnan(sonar))
 		{
-			float new_sonar = frame.ground_distance/1000.0f;
+			float new_sonar = sonar;
 			float predicted_sonar = x1[2] - x1[12];
 
 			if (fabs(new_sonar-predicted_sonar) > sonar_step_threshold)

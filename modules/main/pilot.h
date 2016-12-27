@@ -199,7 +199,9 @@ public:
 	float mpu6050_temperature;
 	vector imu_statics[3][4];// = {0};		//	[accel, gyro, mag][min, current, max, avg]
 	int avg_count;// = 0;
-	sensors::px4flow_frame frame;
+// 	sensors::px4flow_frame frame;
+	sensors::flow_data flow;
+
 	float v_flow_ned[3];//ned flow velocity
 	int loop_hz;// = 0;
 	vector acc_calibrator[6];						// accelerometer calibration data array.

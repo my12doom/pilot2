@@ -2,6 +2,8 @@
 #include <string.h>
 #include <Protocol/common.h>
 
+
+
 int PX4FLOW_ADDRESS = 0x84;
 extern int I2C_speed;// = 5;
 namespace sensors
@@ -45,16 +47,17 @@ namespace sensors
 		return init(I2C) == 0;
 	}
 
-	int PX4Flow::read(float *x, float *y, float *quality)
+	int PX4Flow::read(sensors::flow_data *out)
 	{
 		px4flow_frame frame= {0};
 		int res = read_flow(&frame);
 		if (res != 0)
 			return res;
 
-		*x = frame.pixel_flow_x_sum * cx / 28.0f * 100 * PI / 180;
-		*y = frame.pixel_flow_x_sum * cy / 28.0f * 100 * PI / 180;
-		*quality = (float)frame.qual / 255;
+		out->x = frame.pixel_flow_x_sum * cx;
+		out->y = frame.pixel_flow_y_sum * cy;
+		out->quality = (float)frame.qual / 255;
+		out->timestamp = 0;
 
 		return 0;
 	}
@@ -66,7 +69,8 @@ namespace sensors
 			return res;
 		
 		*out = frame.ground_distance / 1000.0f * 1.15f;
-		*timestamp = systimer->gettime() - frame.sonar_timestamp * 1000;
+		if (timestamp)
+			*timestamp = systimer->gettime() - frame.sonar_timestamp * 1000;
 
 		return 0;
 	}
