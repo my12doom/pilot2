@@ -89,6 +89,7 @@ int attitude_controller::set_quaternion_target(const float *quaternion)
 
 	memcpy(quaternion_sp, quaternion, sizeof(float)*4);
 	yaw_braking = false;
+	yaw_requested_rate = 0;
 	return 0;
 }
 
@@ -123,6 +124,7 @@ int attitude_controller::set_euler_target(const float *euler)
 	}
 
 	yaw_braking = false;
+	yaw_requested_rate = 0;
 
 	return 0;
 }
