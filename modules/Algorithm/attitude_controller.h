@@ -66,4 +66,7 @@ public:
 	
 	float pid[3][3];		// [roll, pitch, yaw] [p, i, d]
 	float result[3];
+	float yaw_requested_rate;
+	bool yaw_braking;
+	float yaw_breaking_timer;
 };
