@@ -232,7 +232,12 @@ int attitude_controller::update(float dt)
 	}
 
 	// yaw rate braking handling
-	if (yaw_braking)
+	if (yaw_requested_rate != 0)
+	{
+		body_rate_sp[2] = yaw_requested_rate;
+		yaw_breaking_timer = 0;
+	}
+	else if (yaw_braking)
 	{
 		body_rate_sp[2] = 0;
 
@@ -251,10 +256,9 @@ int attitude_controller::update(float dt)
 			yaw_breaking_timer = 0;
 		}
 	}
-
-	else if (yaw_requested_rate != 0)
+	else
 	{
-		body_rate_sp[2] = yaw_requested_rate;
+		yaw_breaking_timer = 0;
 	}
 
 	// body rate override
