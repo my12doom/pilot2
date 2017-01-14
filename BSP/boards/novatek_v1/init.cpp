@@ -269,6 +269,7 @@ int init_flow()
 		px4flow.init(&i2c);
 
 		manager.register_flow(&px4flow);
+		manager.register_device("sonar", (IRangeFinder*)&px4flow);
 	}
 
 	return 0;

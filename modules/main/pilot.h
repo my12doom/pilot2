@@ -199,7 +199,9 @@ public:
 	float mpu6050_temperature;
 	vector imu_statics[3][4];// = {0};		//	[accel, gyro, mag][min, current, max, avg]
 	int avg_count;// = 0;
-	sensors::px4flow_frame frame;
+// 	sensors::px4flow_frame frame;
+	sensors::flow_data flow;
+
 	float v_flow_ned[3];//ned flow velocity
 	int loop_hz;// = 0;
 	vector acc_calibrator[6];						// accelerometer calibration data array.
@@ -234,9 +236,9 @@ public:
 	void sdcard_loop();
 	void mag_calibrating_worker();
 	static void mag_calibrating_worker_entry(int parameter){((yet_another_pilot*)parameter)->mag_calibrating_worker();}
-	static void main_loop_entry(){yap.main_loop();}
-	static void sdcard_loop_entry(){yap.sdcard_loop();}
-	static void imu_reading_entry(){yap.read_imu_and_filter();}
+	static void main_loop_entry(void *user_data){yap.main_loop();}
+	static void sdcard_loop_entry(void *user_data){yap.sdcard_loop();}
+	static void imu_reading_entry(void *user_data){yap.read_imu_and_filter();}
 	
 	// mag and accelerometer calibration
 	int sensor_calibration();

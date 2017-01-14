@@ -23,6 +23,8 @@ namespace sensors
 		
 		if (tx)
 			tx->set_mode(HAL::MODE_OUT_PushPull);
+		if (gain)
+			gain->set_mode(HAL::MODE_OUT_PushPull);
 		if (level)
 			level->set_mode(HAL::MODE_OUT_OpenDrain);
 		if (echo_int)
@@ -51,7 +53,13 @@ namespace sensors
 	{
 		// sonic wave still flying?
 		if (systimer->gettime() < send_time+TIMEOUT/* && !echo_confirmed*/)
+		{
+			// use high gain if we are far enough
+			if ((systimer->gettime() > send_time + 2500) && gain)
+				gain->write(false);
+			
 			return 1;
+		}
 		
 		// process last result
 		if (!echo_confirmed)
@@ -91,13 +99,7 @@ namespace sensors
 		// release level shifter
 		if (level)
 			level->write(true);
-		
-		// use high gain
-		systimer->delayms(1);
-		if (gain)
-			gain->write(false);
-
-		
+				
 		return 0;
 	}
 	

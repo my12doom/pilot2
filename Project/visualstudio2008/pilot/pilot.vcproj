@@ -570,11 +570,27 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\..\HAL\aux_devices\NRF24L01.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\HAL\aux_devices\NRF24L01.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\..\HAL\sensors\NX3A.cpp"
 						>
 					</File>
 					<File
 						RelativePath="..\..\..\HAL\sensors\NX3A.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\HAL\aux_devices\OLED_I2C.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\..\HAL\aux_devices\OLED_I2C.h"
 						>
 					</File>
 					<File

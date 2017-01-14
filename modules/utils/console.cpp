@@ -436,7 +436,7 @@ extern "C" int parse_command_line(const char *line, char *out)
 			"%d,%d,%d,"		// mag
 			"%d, %d\n",		// baro, baro temperature
 
-			yap.frame.ground_distance, yap.frame.pixel_flow_x_sum, yap.frame.pixel_flow_y_sum, yap.frame.qual,								// sonar, flow, flow quality
+			int(yap.sonar_distance * 1000), int(yap.flow.x * 1000), int(yap.flow.y * 1000), int(yap.flow.quality * 255),							// sonar, flow, flow quality
 			int(yap.accel.array[0]*1000), int(yap.accel.array[1]*1000), int(yap.accel.array[2]*1000),									// accel 
 			int(yap.gyro_reading.array[0]*18000/PI), int(yap.gyro_reading.array[1]*18000/PI), int(yap.gyro_reading.array[2]*18000/PI),	// gyro
 			int(yap.mag.array[0]), int(yap.mag.array[1]), int(yap.mag.array[2]),												// mag
@@ -448,7 +448,7 @@ extern "C" int parse_command_line(const char *line, char *out)
 	else if (strstr(line, "selftest") == line)
 	{
 		int flow_count = manager.get_flow_count();
-		int cmos_version_ok = (yap.frame.cmos_version == 0x1324 || yap.frame.cmos_version == 0x76) && yap.frame.frame_count;
+		int cmos_version_ok = 1;// (yap.frame.cmos_version == 0x1324 || yap.frame.cmos_version == 0x76) && yap.frame.frame_count;
 		
 		sprintf(out, "%d,%d,%d\n", yap.critical_errors, int(yap.voltage*1000), flow_count <= 0 ? -1 : (cmos_version_ok ? 0 : -2));
 		

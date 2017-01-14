@@ -88,6 +88,8 @@ int attitude_controller::set_quaternion_target(const float *quaternion)
 		return -1;		// TODO: set euler target properly
 
 	memcpy(quaternion_sp, quaternion, sizeof(float)*4);
+	yaw_braking = false;
+	yaw_requested_rate = 0;
 	return 0;
 }
 
@@ -121,6 +123,8 @@ int attitude_controller::set_euler_target(const float *euler)
 		}
 	}
 
+	yaw_braking = false;
+	yaw_requested_rate = 0;
 
 	return 0;
 }
@@ -173,7 +177,18 @@ int attitude_controller::update_target_from_stick(const float *stick, float dt)
 	// yaw
 	if (!isnan(stick[2]))
 	{
-		float delta_yaw = ((fabs(stick[2]) < yaw_dead_band) ? 0 : stick[2]) * dt * QUADCOPTER_ACRO_YAW_RATE;
+		bool dead_band = fabs(stick[2]) < yaw_dead_band;
+		float yaw_rate = dead_band ? 0 : stick[2] * QUADCOPTER_ACRO_YAW_RATE;
+		if (yaw_requested_rate != 0 && yaw_rate == 0)
+		{
+			yaw_braking = true;
+			yaw_breaking_timer = 0;
+
+			LOGE("yaw breaking start\n");
+		}
+		yaw_requested_rate = yaw_rate;
+
+		float delta_yaw =  yaw_rate * dt;
 		float new_target = radian_add(euler_sp[2], delta_yaw);
 		float old_error = fabs(radian_sub(euler_sp[2], euler[2]));
 		float new_error = fabs(radian_sub(new_target, euler[2]));
@@ -214,6 +229,36 @@ int attitude_controller::update(float dt)
 			body_rate_sp[i] = radian_sub(euler_sp[i], euler[i]) * pid_factor2[i][0];
 			body_rate_sp[i] = limit(body_rate_sp[i], -PI, PI);
 		}
+	}
+
+	// yaw rate braking handling
+	if (yaw_requested_rate != 0)
+	{
+		body_rate_sp[2] = yaw_requested_rate;
+		yaw_breaking_timer = 0;
+	}
+	else if (yaw_braking)
+	{
+		body_rate_sp[2] = 0;
+
+		if (fabs(body_rate[2]) < PI/9)
+		{
+			yaw_breaking_timer += dt;
+			if (yaw_breaking_timer > 0.2f)
+			{
+				LOGE("yaw braking done\n");
+				euler_sp[2] = euler[2];
+				yaw_braking = false;
+			}
+		}
+		else
+		{
+			yaw_breaking_timer = 0;
+		}
+	}
+	else
+	{
+		yaw_breaking_timer = 0;
 	}
 
 	// body rate override
@@ -278,6 +323,9 @@ int attitude_controller::reset()
 	}
 
 	just_reseted = true;
+	yaw_braking = false;
+	yaw_breaking_timer = 0;
+	yaw_requested_rate = 0;
 
 	return 0;
 }
