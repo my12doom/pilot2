@@ -1,66 +1,31 @@
 #include "camera.h"
 
-#include <system/camera.h>
-#include <camera/Camera.h>
-#include <camera/ICamera.h>
-#include <camera/CameraParameters.h>
-#include <camera/ICameraService.h>
-
-#include <ui/GraphicBufferAllocator.h>
-#include <gui/Surface.h>
-#include <gui/CpuConsumer.h>
-
 #include <binder/IPCThreadState.h>
 
+
+#include "camera.h"
 
 using namespace android;
 using namespace devices;
 using namespace sensors;
 
-sp<Camera> camera;
-CameraParameters params;
-sp<IGraphicBufferProducer> gbp;
-sp<IGraphicBufferConsumer> gbc;
-sp<CpuConsumer> cc;
+
 sp<ProcessState> proc(ProcessState::self());
 
-static int64_t getus()
-{    
-   struct timespec tv;  
-   clock_gettime(CLOCK_MONOTONIC, &tv);    
-   return (int64_t)tv.tv_sec * 1000000 + tv.tv_nsec/1000;    
-}
-
-int camera_init()
-{
-	// set up the thread-pool
-    ProcessState::self()->startThreadPool();
-
-
-	RK3288Camera51 c;
-
-	uint8_t *p = NULL;
-	int i;
-
-	printf("camera start\n", i++);
-
-	while(1)
-	{
-		int s = c.get_frame(&p);
-
-		if (s == 0)
-			printf("frame:%d\n", i++);
-	}
-
-	return 0;
-}
+bool thread_pool_run = false;
 
 namespace sensors
 {
 
 	RK3288Camera51::RK3288Camera51()
 	{
-		init(0);
+		tbl_count = 0;
+
+		// set up the thread-pool
+		if (!thread_pool_run)
+			ProcessState::self()->startThreadPool();
+
+		thread_pool_run = true;
 	}
 
 	RK3288Camera51::~RK3288Camera51()
@@ -87,7 +52,8 @@ namespace sensors
 		cc = new CpuConsumer(gbc, 3);
 
 		params = camera->getParameters();
-		params.setPreviewSize(1920, 1080);
+		params.setPreviewSize(640, 480);
+		//params.setPreviewSize(3120, 3120);
 		//params.setPictureSize(3120, 3120);
 		params.setPreviewFormat(CameraParameters::PIXEL_FORMAT_YUV420P);
 		camera->setParameters(params.flatten());
@@ -138,6 +104,7 @@ namespace sensors
 			if (!only_latest)
 			{
 				*pp = lb.data;
+				add_table(*pp, lb);
 				return 0;
 			}
 
@@ -148,11 +115,13 @@ namespace sensors
 			{
 				cc->unlockBuffer(lb);
 				*pp = lb2.data;
+				add_table(*pp, lb);
 				return 0;
 			}
 			else
 			{
 				*pp = lb.data;
+				add_table(*pp, lb);
 				return 0;
 			}
 		}
@@ -162,9 +131,46 @@ namespace sensors
 		}
 	}
 
+	// release one frame and add it back to camera's internal queue
+	int RK3288Camera51::release_frame(uint8_t *p)
+	{
+		CpuConsumer::LockedBuffer *lb = find_table(p);
+
+		if (!lb)
+			return -1;
+
+		cc->unlockBuffer(*lb);
+
+		return 0;
+	}
+
+	int RK3288Camera51::add_table(uint8_t *p, android::CpuConsumer::LockedBuffer lb)
+	{
+		if (tbl_count >= 16)
+			return -1;
+
+		if (find_table(p))
+			return 0;
+		
+		lb_tbl[tbl_count] = lb;
+		p_tbl[tbl_count++] = p;
+		
+		return 0;
+	}
+
+	android::CpuConsumer::LockedBuffer * RK3288Camera51::find_table(uint8_t *p)
+	{
+		for(int i=0; i<tbl_count; i++)
+			if (p_tbl[i] == p)
+				return &lb_tbl[i];
+		return NULL;
+	}
+
 	// get current frame format
 	int RK3288Camera51::get_frame_format(devices::frame_format *format)
 	{
+		params.getPreviewSize(&format->width, &format->height);
+
 		return 0;
 	}
 

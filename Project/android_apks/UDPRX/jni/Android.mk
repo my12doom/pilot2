@@ -32,6 +32,4 @@ LOCAL_STATIC_LIBRARIES :=
 LOCAL_CFLAGS := 
 LOCAL_C_INCLUDES := ../../../../modules \
 
-APP_STL := stlport_static
-
 include $(BUILD_SHARED_LIBRARY)
