@@ -5,13 +5,13 @@ include $(CLEAR_VARS)
 
 #local pilot source file
 LOCAL_SRC_FILES := \
-	camera.cpp \
 	../../../modules/main/pilot.cpp \
 	../../../BSP/boards/rk3288UAV/init.cpp \
 	../../../BSP/boards/rk3288UAV/ARCOUT.cpp \
 	../../../HAL/rk32885.1/ASPI.cpp \
 	../../../HAL/rk32885.1/AGpio.cpp \
 	../../../HAL/rk32885.1/ASysTimer.cpp \
+	../../../HAL/rk32885.1/AUIOTimer.cpp \
 	../../../HAL/rk32885.1/AUART.cpp \
 	../../../HAL/rk32885.1/AStorage.cpp \
 	../../../HAL/rk32885.1/ATimer.cpp \
@@ -68,12 +68,31 @@ LOCAL_SRC_FILES := \
 	../../../HAL/sensors/HMC5983SPI.cpp \
 	../../../HAL/sensors/UartUbloxNMEAGPS.cpp \
 	../../../HAL/sensors/EBusIn.cpp  \
+	libyuv/source/compare.cpp \
+	libyuv/source/scale.cpp \
+	libyuv/source/scale_neon.cpp \
+	libyuv/source/scale_common.cpp \
+	libyuv/source/scale_any.cpp \
+	libyuv/source/convert.cpp \
+	libyuv/source/row_neon.cpp \
+	libyuv/source/cpu_id.cpp \
+	libyuv/source/planar_functions.cpp \
+	libyuv/source/row_any.cpp \
+	libyuv/source/row_common.cpp \
+	encoder.cpp \
+	test.cpp \
+	camera.cpp \
 
-	
+
 LOCAL_C_INCLUDES :=  \
 	system/acantha \
 	system/acantha/modules \
 	system/acantha/modules/Algorithm/ekf_lib/inc \
+	system/acantha/Project/rk3288_android5.1/main_test/libyuv/include \
+	frameworks/av/media/libstagefright \
+	frameworks/av/media/libstagefright/include \
+	frameworks/av/media/libmediaplayerservice \
+	frameworks/native/include/media/openmax \	
 
 
 LOCAL_SHARED_LIBRARIES := \
@@ -84,6 +103,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libcamera_metadata \
 	libcameraservice \
 	libcamera_client \
+	libstagefright libmedia libstagefright_foundation\
 
 
 LOCAL_CFLAGS := -Wno-format -Wno-unused -Wno-unused-parameter -Wfatal-errors -Wno-non-virtual-dtor
@@ -93,6 +113,5 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE:= acantha
 LOCAL_STATIC_LIBRARIES := \
 		libc++
-
 
 include $(BUILD_EXECUTABLE)

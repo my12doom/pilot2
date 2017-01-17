@@ -3,6 +3,18 @@
 #include <HAL/Interface/ICamera.h>
 #include <stdint.h>
 
+// android headers
+#include <system/camera.h>
+#include <camera/Camera.h>
+#include <camera/ICamera.h>
+#include <camera/CameraParameters.h>
+#include <camera/ICameraService.h>
+
+#include <ui/GraphicBufferAllocator.h>
+#include <gui/Surface.h>
+#include <gui/CpuConsumer.h>
+
+
 namespace sensors
 {
 	class RK3288Camera51 : public devices::ICamera
@@ -19,6 +31,9 @@ namespace sensors
 		// only_latest: if true, discard all frame except the latest one.
 		// return: 0 if new frame retrived, 1 if no new data, negative values for error.
 		virtual int get_frame(uint8_t **pp, devices::timestamp *timestamp=NULL, bool only_latest = false);
+
+		// release one frame and add it back to camera's internal queue
+		virtual int release_frame(uint8_t *p);
 
 		// get current frame format
 		virtual int get_frame_format(devices::frame_format *format);
@@ -40,5 +55,18 @@ namespace sensors
 	protected:
 
 		bool _healthy;
+
+		android::CpuConsumer::LockedBuffer lb_tbl[16];
+		uint8_t *p_tbl[16];
+		int tbl_count;
+
+		int add_table(uint8_t *p, android::CpuConsumer::LockedBuffer lb);
+		android::CpuConsumer::LockedBuffer *find_table(uint8_t *p);
+
+		android::sp<android::Camera> camera;
+		android::CameraParameters params;
+		android::sp<android::IGraphicBufferProducer> gbp;
+		android::sp<android::IGraphicBufferConsumer> gbc;
+		android::sp<android::CpuConsumer> cc;
 	};
 }
