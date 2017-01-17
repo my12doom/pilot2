@@ -83,7 +83,7 @@ namespace sensors
 		if (gain)
 			gain->write(true);
 		
-		echo_int->disable();
+		//echo_int->disable();
 		
 		// send 8 pulses
 		for(int i=0; i<8; i++)
@@ -94,7 +94,7 @@ namespace sensors
 			systimer->delayus(12.5);
 		}
 		
-		echo_int->enable();
+		//echo_int->enable();
 		
 		// release level shifter
 		if (level)
@@ -139,6 +139,6 @@ namespace sensors
 	// return false if any error/waning
 	bool Sonar::healthy()
 	{
-		return (echo_int && tx) ? 0 : -1;
+		return echo_int && tx;
 	}
 }
