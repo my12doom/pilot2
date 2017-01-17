@@ -80,10 +80,9 @@ void init_uart()
 {
 	f4uart1.set_baudrate(115200);
 	f4uart2.set_baudrate(115200);
-	f4uart4.set_baudrate(38400);
+	f4uart4.set_baudrate(115200);
 	manager.register_UART("UART1",&f4uart1);
 	manager.register_UART("UART2",&f4uart2);
-	manager.register_UART("Wifi",&f4uart4);	
 }
 
 
@@ -153,10 +152,10 @@ extern "C" void TIM8_UP_TIM13_IRQHandler(void)
 	tim8.call_callback();
 }
 
+	static NRFIn in;
 int init_RC()
 {	
 	// NRF reciever
-	static NRFIn in;
 	static F4SPI spi2(SPI2);
 	static F4GPIO cs(GPIOB, GPIO_Pin_12);
 	static F4GPIO ce(GPIOA, GPIO_Pin_15);
@@ -164,8 +163,8 @@ int init_RC()
 	
 	irq.init(GPIOA, GPIO_Pin_8, interrupt_falling);
 	if (in.init(&spi2, &cs, &ce, &irq, &tim8) == 0)
-		manager.register_RCIN(&in);		
-
+		manager.register_RCIN(&in);
+	
 	static dev_v2::RCOUT rcout;	
 	manager.register_RCOUT(&rcout);
 	return 0;
@@ -310,6 +309,12 @@ int out_power()
 	POUT.write(true);
 		
 	interrupt.set_callback(button_entry, NULL);
+		
+	GPIO_InitTypeDef GPIO_InitStructure = {0};
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
 
 	manager.getRGBLED("rgb")->write(0,1,0);
 	systimer->delayms(500);
@@ -324,6 +329,14 @@ int init_sonar()
 
 	static F4Interrupt echo;
 	echo.init(GPIOC, GPIO_Pin_5, interrupt_rising_or_falling);
+	
+	
+	NVIC_InitTypeDef NVIC_InitStructure;
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
 
 	static sensors::Sonar sonar;
 	sonar.init(&tx, &echo, NULL, &gain);
@@ -334,13 +347,12 @@ static param ignore_error("err",0);
 int bsp_init_all()
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-	//init_sonar();
+	init_sonar();
 	init_led();
 	init_BatteryMonitor();
 	init_uart();
 	init_VCP();
 	init_timers();
-	init_RC();
 	init_sensors();
 	init_external_compass();
 	init_asyncworker();
@@ -352,6 +364,8 @@ int bsp_init_all()
 	if (! (int(ignore_error) & error_GPS))
 		init_GPS();
 	
+	systimer->delayms(500);
+	init_RC();
 	// parameter config
 	param is_booting("boot", 1);
 	if (is_booting)
@@ -398,8 +412,10 @@ int bsp_init_all()
 	}
 	
 	IRCIN * rcin = manager.get_RCIN();
-	int64_t t = systimer->gettime();
-	while(1)
+	int64_t t = systimer->gettime();	
+	IRangeFinder * range_finder = (IRangeFinder *)manager.get_device("sonar");
+	
+	while(0)
 	{
 		if (rcin && rcin->state() == HAL::RCIN_Normal)
 		{
@@ -420,7 +436,27 @@ int bsp_init_all()
 				
 				ebus_frame[14] = crc32(0, ebus_frame+2, 12);
 				
-				f4uart1.write(ebus_frame, sizeof(ebus_frame));				
+				f4uart1.write(ebus_frame, sizeof(ebus_frame));
+				
+				in.get_latency();
+			}
+		}
+		
+		if (range_finder && range_finder->healthy())
+		{
+			range_finder->trigger();
+			float v;
+			if (0 == range_finder->read(&v))
+			{
+				printf("v=%.2f\n", v);
+				
+				uint8_t packet[10];
+				packet[0] = 0x85;
+				packet[1] = 0xA4;
+				memcpy(packet+2, &v, 4);
+				*(uint32_t*)(packet+6) = crc32(0, &v, 4);
+				
+				f4uart4.write(packet, 10);
 			}
 		}
 	}
