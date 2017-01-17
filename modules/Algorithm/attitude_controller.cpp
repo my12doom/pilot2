@@ -220,14 +220,14 @@ int attitude_controller::update(float dt)
 		quat_inverse(q_error);
 		Quaternion2BFAngle(q_error, body_frame_error);
 		for(int i=0; i<3; i++)
-			body_rate_sp[i] = limit(body_frame_error[i] * pid_factor2[i][0], -PI, PI);
+			body_rate_sp[i] = limit(body_frame_error[i] * pid_factor2[i][0], -slew_rate, slew_rate);
 	}
 	else
 	{
 		for(int i=0; i<3; i++)
 		{
 			body_rate_sp[i] = radian_sub(euler_sp[i], euler[i]) * pid_factor2[i][0];
-			body_rate_sp[i] = limit(body_rate_sp[i], -PI, PI);
+			body_rate_sp[i] = limit(body_rate_sp[i], -slew_rate, slew_rate);
 		}
 	}
 
