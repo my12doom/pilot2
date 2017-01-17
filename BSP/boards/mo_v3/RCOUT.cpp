@@ -3,8 +3,9 @@
 #include <stm32f4xx_tim.h>
 #include <stm32f4xx_rcc.h>
 #include <string.h>
+#include <utils/param.h>
 
-#define OC 12
+static param fixed_wing("fix", 0);
 
 namespace dev_v2
 {
@@ -35,8 +36,8 @@ RCOUT::RCOUT()
 	
 	// Time base configuration
 	TIM_OCInitTypeDef  TIM_OCInitStructure;
-	TIM_TimeBaseStructure.TIM_Period = 2000*OC-1;
-	TIM_TimeBaseStructure.TIM_Prescaler = 84/OC-1;
+	TIM_TimeBaseStructure.TIM_Period = (fixed_wing > 0.5f? 10000 : 2000)-1;
+	TIM_TimeBaseStructure.TIM_Prescaler = 84-1;
 	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
 
@@ -97,7 +98,7 @@ int RCOUT::write(const int16_t *data, int start_channel, int count)
 	for(int i=0; i<count; i++)
 	{
 		channel_datas[i+start_channel] = data[i];
-		registers[i+start_channel][0] = data[i] * OC;
+		registers[i+start_channel][0] = data[i];
 	}
 
 	TIM_Cmd(TIM4, ENABLE);
