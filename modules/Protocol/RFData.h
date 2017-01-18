@@ -377,6 +377,7 @@ enum EXTENDED_DATA_TYPES
 	TAG_POSC_DATA = 26,
 	TAG_ATTITUDE_CONTROLLER_DATA = 27,
 	TAG_2NDBARO = 28,
+	TAG_FLOW = 29,
 };
 
 typedef struct _posc_ext_data
