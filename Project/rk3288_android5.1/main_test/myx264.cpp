@@ -33,8 +33,8 @@ int x264::init(int width, int height, int bitrate)
 	param.i_fps_den = 1000;
 	param.i_csp = X264_CSP_I420;
 
-	param.i_keyint_max = 30;
-	//param.b_intra_refresh = 1;
+	param.i_keyint_max = 45;
+	param.b_intra_refresh = 1;
 	param.b_cabac = 1;
 	param.b_annexb = 1;
 	param.i_threads = 4;
