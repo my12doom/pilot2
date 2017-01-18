@@ -48,7 +48,7 @@ namespace androidUAV
 			else
 				usleep(1000);
 			if(cb)
-				cb();
+				cb(user_data);
 		}
 		pthread_exit(NULL);
 	}
@@ -66,10 +66,11 @@ namespace androidUAV
 		this->period = period;
 		unlock();
 	}
-	void ATimer::set_callback(HAL::timer_callback cb)
+	void ATimer::set_callback(HAL::timer_callback cb, void *user_data/* = 0*/)
 	{
 		lock();
 		this->cb = cb;
+		this->user_data = user_data;
 		unlock();
 	}
 	int ATimer::set_priority(int32_t priority)

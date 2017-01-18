@@ -9,7 +9,21 @@ LOCAL_SRC_FILES:= \
 		$(YAL_PATH)/fec/oRS.cpp \
 		$(YAL_PATH)/fec/reciever.cpp\
 		$(YAL_PATH)/fec/sender.cpp \
+		libyuv/source/compare.cpp \
+		libyuv/source/scale.cpp \
+		libyuv/source/scale_neon.cpp \
+		libyuv/source/scale_common.cpp \
+		libyuv/source/scale_any.cpp \
+		libyuv/source/convert.cpp \
+		libyuv/source/row_neon.cpp \
+		libyuv/source/cpu_id.cpp \
+		libyuv/source/planar_functions.cpp \
+		libyuv/source/row_any.cpp \
+		libyuv/source/row_common.cpp \
 		main.cpp \
+		encoder.cpp \
+
+
 
 LOCAL_C_INCLUDES := frameworks/av/media/libstagefright \
 	frameworks/av/media/libstagefright/include \
@@ -17,6 +31,7 @@ LOCAL_C_INCLUDES := frameworks/av/media/libstagefright \
 	$(TOP)/frameworks/native/include/media/openmax \
 	$(LOCAL_PATH)/../../../ \
 	$(LOCAL_PATH)/../../../modules \
+	$(LOCAL_PATH)/libyuv/include \
 
 
 LOCAL_CFLAGS := -Wno-format -Wno-unused -Wno-unused-parameter
