@@ -1,5 +1,6 @@
 
 LOCAL_PATH:= $(call my-dir)
+PROJECT_PATH:= /system/acantha
 
 include $(CLEAR_VARS)
 
@@ -82,6 +83,7 @@ LOCAL_SRC_FILES := \
 	encoder.cpp \
 	test.cpp \
 	camera.cpp \
+	myx264.cpp \
 
 
 LOCAL_C_INCLUDES :=  \
@@ -89,6 +91,7 @@ LOCAL_C_INCLUDES :=  \
 	system/acantha/modules \
 	system/acantha/modules/Algorithm/ekf_lib/inc \
 	system/acantha/Project/rk3288_android5.1/main_test/libyuv/include \
+	system/acantha/Project/rk3288_android5.1/main_test/x264 \
 	frameworks/av/media/libstagefright \
 	frameworks/av/media/libstagefright/include \
 	frameworks/av/media/libmediaplayerservice \
@@ -105,6 +108,11 @@ LOCAL_SHARED_LIBRARIES := \
 	libcamera_client \
 	libstagefright libmedia libstagefright_foundation\
 
+LOCAL_LDFLAGS	+= \
+	-Wl,--no-fatal-warnings,--start-group \
+	system/acantha/Project/rk3288_android5.1/main_test/x264/libx264.a \
+	-Wl,--end-group
+
 
 LOCAL_CFLAGS := -Wno-format -Wno-unused -Wno-unused-parameter -Wfatal-errors -Wno-non-virtual-dtor
 LOCAL_LDLIBS := -ldl -lm
@@ -112,6 +120,6 @@ LOCAL_LDLIBS := -ldl -lm
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE:= acantha
 LOCAL_STATIC_LIBRARIES := \
-		libc++
+		libc++ \
 
 include $(BUILD_EXECUTABLE)

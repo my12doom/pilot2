@@ -1,6 +1,7 @@
 #include "camera.h"
 #include "encoder.h"
 #include <libyuv.h>
+#include "myx264.h"
 
 using namespace sensors;
 using namespace devices;
@@ -46,6 +47,8 @@ int camera_init()
 	uint8_t *yuv360 = new uint8_t[640*360*3/2];
 
 	android_video_encoder enc;
+	x264 enc_soft;
+	enc_soft.init(640, 360, 250);
 	enc.init(640, 360, 250000);
 	FILE * f = fopen("/data/enc.h264", "wb");
 
@@ -62,8 +65,14 @@ int camera_init()
 
 	// low bandwidth H264 encoder test
 	FILE * fyuv = fopen("/data/640.yuv", "rb");
-	for(int i=0; i<70; i++)
+	for(int i=0; i<7000; i++)
 	{
+
+		if (i%60 == 0)
+			fseek(fyuv, 10, SEEK_SET);
+		fread(yuv360, 1, 640*360*3/2, fyuv);
+
+		/*
 		// drain encoder
 		uint8_t *ooo = NULL;
 		int encoded_size = enc.get_encoded_frame(&ooo);
@@ -71,7 +80,7 @@ int camera_init()
 		{
 			int nal_type = ooo[4] & 0x1f;
 
-			printf("live streaming: %d, %d\n", encoded_size, nal_type);
+			printf("live streaming: %d, %d\n", encoded_size, i);
 			fwrite(ooo, 1, encoded_size, f);
 			fflush(f);
 		}
@@ -83,6 +92,16 @@ int camera_init()
 			fread(live, 1, 640*360*3/2, fyuv);
 			enc.encode_next_frame();
 		}
+		*/
+
+		uint8_t nal_out[100000];
+		bool IDR = false;
+		int nal_size = enc_soft.encode_a_frame(yuv360, nal_out, &IDR);
+		int nal_type = nal_out[4] & 0x1f;
+
+		printf("live streaming: %d, %d\n", nal_size, i);
+		fwrite(nal_out, 1, nal_size, f);
+		//fwrite(yuv360, 1, 640*360*3/2, f);
 	}
 
 	fflush(f);

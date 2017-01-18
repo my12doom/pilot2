@@ -46,6 +46,7 @@ static const char *i2c2device = "/dev/mpu6050";;
 
 static const char *imufifoPath = "/data/IMU_FIFO";
 const char bsp_name[] = "androidUAV";
+int camera_init();
 
 void reset_system()
 {
@@ -70,6 +71,7 @@ EBusIN ebus;
 HMC5983 hmc5983;
 void init_sensor()
 {
+	camera_init();
 	/*if (mpu6000device.init(&i2c2,0x68) == 0)
 	{
 		mpu6000device.accelerometer_axis_config(1, 0, 2, -1, -1, +1);

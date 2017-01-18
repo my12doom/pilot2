@@ -20,6 +20,7 @@ namespace androidUAV
 			int period;
 			bool exit;
 			int policy;
+			void *user_data;
 			static void *entry(void *p);
 			void run();
 			void lock();
@@ -28,7 +29,7 @@ namespace androidUAV
 			ATimer(int priority);
 			~ATimer();
 			virtual void set_period(uint32_t period) ;// micro-second
-			virtual void set_callback(HAL::timer_callback cb);
+			virtual void set_callback(HAL::timer_callback cb, void *user_data = 0);
 			//SCHED_FIFO,SCHE_RR have a sched_priority valued in the range 1(low) to 99(high)
 			//SCHED_FIFO SCHED_RR SCHED_OTHER
 			int set_priority(int32_t priority);

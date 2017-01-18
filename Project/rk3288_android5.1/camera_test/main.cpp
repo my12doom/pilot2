@@ -47,11 +47,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <libyuv.h>
+
+#include "encoder.h"
 
 
 #include <YAL/fec/sender.h>
 
 using namespace android;
+using namespace libyuv;
 
 // global
 static const String16 processName("camera_test");
@@ -216,7 +220,8 @@ int codec_init()
 	*/
 
 	FILE * f = fopen("/data/out.h264", "wb");
-	if (!f)
+	FILE * fyuv = fopen("/data/out.yuv", "wb");
+	if (!f || !fyuv)
 	{
 		printf("error opening output file\n");
 		return -1;
@@ -241,17 +246,16 @@ int codec_init()
 	format->setInt32("width", 1920);
 	format->setInt32("height", 1080);
 	format->setString("mime", "video/avc");
-	format->setInt32("color-format", OMX_COLOR_FormatYUV420SemiPlanar);
+	format->setInt32("color-format", OMX_COLOR_FormatYUV420Planar);
 	format->setInt32("bitrate", 2500000);
 	//format->setInt32("bitrate-mode", OMX_Video_ControlRateConstant);
 	format->setFloat("frame-rate", 30);
 	format->setInt32("i-frame-interval", 1);
-	format->setInt32("profile", OMX_VIDEO_AVCProfileBaseline);
+	format->setInt32("profile", OMX_VIDEO_AVCProfileHigh);
 	format->setInt32("level", OMX_VIDEO_AVCLevel31);
 
 	err = codec->configure(format, NULL, NULL, MediaCodec::CONFIGURE_FLAG_ENCODE);
 	//codec->setParameters();
-	codec->start();
 
 	printf("err3=%d\n", err);
 
@@ -259,17 +263,15 @@ int codec_init()
 	codec->getInputFormat(&format2);
 	//printf("getInputFormat=%s\n", format2->);
 
-	/*
-	err = codec->createInputSurface(&bufferProducer);
+	//err = codec->createInputSurface(&bufferProducer);
 
-	printf("err4=%d, codec gbp = %08x\n", err, bufferProducer.get());
-	*/
+	//printf("err4=%d, codec gbp = %08x\n", err, bufferProducer.get());
+
+	codec->start();
 
 	int yuv_data_size = 1920*1080*3/2;
 	uint8_t *yuv_data = new uint8_t[yuv_data_size];
-	memset(yuv_data+1920*1080, 128, 1920*1080/2);
-	for(int i=0; i<1080; i++)
-		memset(yuv_data+1920*i, i*(235-16)/1080+16, 1920);
+	uint8_t *yuv_low = new uint8_t[640*360*3/2];
 
 	Vector<sp<ABuffer> > inputBuffers;
 	Vector<sp<ABuffer> > outputBuffers;
@@ -288,8 +290,6 @@ int codec_init()
 
 	for(int i=0; i>=0; i++)
 	{
-		for(int j=0; j<1080; j++)
-			memset(yuv_data+1920*j, j*(235-16)/1080+16+i, 1920);
 		size_t index = 0;
 		err = codec->dequeueInputBuffer(&index, -1);
 		if (err != OK)
@@ -341,11 +341,29 @@ int codec_init()
 
 		//printf("dstBuffer.capacity() = %d\n", dstBuffer->capacity());
 		dstBuffer->setRange(0, yuv_data_size);
-		memcpy(dstBuffer->data(), lb.data, 1920*1080*3/2);
+
+		// copy Y
+		memcpy(dstBuffer->data(), lb.data, 1920*1080);
+
+		// copy UV (use livyuv to split plane, due to RK3288 treat all YUV420 request as NV12 )
+		SplitUVPlane(lb.data + 1920*1080, 1920, dstBuffer->data() + 1920*1080, 960, dstBuffer->data() + 1920*1080*5/4, 960, 960, 540);
+
+		cc->unlockBuffer(lb);
+
+		// scale down to 640*360 for live streaming
+		int64_t s = getus();
+		I420Scale(dstBuffer->data(), 1920, dstBuffer->data() + 1920*1080, 960, dstBuffer->data() + 1920*1080*5/4, 960, 1920, 1080,
+			yuv_low, 640, yuv_low + 640*360, 320, yuv_low + 640*360*5/4, 320, 640, 360, kFilterBilinear);
+		s = getus() - s;
+
+		printf("scale cost %d us\n", int(s));
+		//fwrite(yuv_low, 1, 640*360*3/2, fyuv);
+
+
+		
 		//memset(dstBuffer->data()+1920*1080, 0x80, 1920*1080/2);
 		//printf("dstBuffer.size() = %d\n", dstBuffer->size());
 		//fwrite(lb.data, 1, 1920*1080*3/2, f);
-		cc->unlockBuffer(lb);
 
 
 		err = codec->queueInputBuffer(
@@ -378,7 +396,7 @@ int codec_init()
 			const sp<ABuffer> &outBuffer = outputBuffers.itemAt(info.mIndex);
 
 			printf("outBuffer = %d, %d\n", outBuffer->offset(), outBuffer->size());
-			//fwrite(outBuffer->data(), 1, outBuffer->size(), f);
+			fwrite(outBuffer->data(), 1, outBuffer->size(), f);
 
 			codec->releaseOutputBuffer(info.mIndex);
 
@@ -500,6 +518,35 @@ int main(int argc, char** argv)
 	camera->startPreview();
 
 	//printf("camera param: %s\n", params.flatten().string());
+
+	android_video_encoder enc;
+	enc.init(640, 480, 2500000);
+	uint8_t *m = new uint8_t[1920*1080*3/2];
+	memset(m, 0, 1920*1080*3/2);
+
+	FILE * f = fopen("/data/enc.h264", "wb");
+
+	while(1)
+	{
+		uint8_t *ooo = NULL;
+		int encoded_size = enc.get_encoded_frame(&ooo);
+		if (encoded_size > 0 && ooo)
+		{
+			printf("hahaha %d\n", encoded_size);
+			fwrite(ooo, 1, encoded_size, f);
+			fflush(f);
+		}
+		
+		void *p = enc.get_next_input_frame_pointer();
+		if (!p)
+		{
+			usleep(10000);
+			continue;
+		}
+
+		memcpy(p, m, 640*480*3/2);
+		enc.encode_next_frame();
+	}
 
 	codec_init();
 
