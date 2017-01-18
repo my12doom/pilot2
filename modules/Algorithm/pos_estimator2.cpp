@@ -388,7 +388,7 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 	else
 	{
 
-		if (fabs(gyro[0]) > 60 * PI / 180 || fabs(gyro[1]) > 60 * PI / 180)
+		if (fabs(gyro[0]) > 60 * PI / 180 || fabs(gyro[1]) > 60 * PI / 180 || fabs(gyro[2]) > 15 * PI / 180)
 			saturation_timeout = 0.3f;
 
 		saturation_timeout -= dt;
@@ -435,8 +435,8 @@ int pos_estimator2::update(const float q[4], const float acc_body[3], devices::g
 
 		R_count = 3;
 		R_diag[0] = R_baro;
-		R_diag[1] = (saturation?25.0f : 5.0f) * height_factor;
-		R_diag[2] = (saturation?25.0f : 5.0f) * height_factor;
+		R_diag[1] = (saturation?55.0f : 5.0f) * height_factor;
+		R_diag[2] = (saturation?55.0f : 5.0f) * height_factor;
 		R_diag[3] = 16.0f;
 
 #ifdef WIN32

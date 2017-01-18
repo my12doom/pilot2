@@ -55,6 +55,7 @@ static param selfie_mode("self", 0);
 static param rc_mode("mode", 1);
 static param low_voltage_setting1("lp1", 11.0f);
 static param low_voltage_setting2("lp2", 10.8f);
+static param fixed_wing("fix", 0);
 
 
 static param quadcopter_trim[3] = 
@@ -225,6 +226,32 @@ int yet_another_pilot::send_package(const void *data, uint16_t size, uint8_t typ
 
 void yet_another_pilot::output_rc()
 {
+	// hack: mo's fixed wing mixer
+	if (fixed_wing > 0.5f)
+	{
+		g_ppm_output[2] = g_pwm_input[2];
+		g_ppm_output[3] = g_pwm_input[3];
+
+		float v1;
+		float v2;
+		v1 = -rc[0] + rc[1];
+		v2 = -rc[0] - rc[1];
+
+		float s = fmax(fabs(v1), fabs(v2));
+		if (s>1)
+		{
+			v1 /= s;
+			v2 /= s;
+		}
+
+		v1 = limit(v1, -1, 1);
+		v2 = limit(v2, -1, 1);
+
+		g_ppm_output[0] = v1 * 500 + 1500;
+		g_ppm_output[1] = v2 * 500 + 1500;
+	}
+
+
 	if (rcout)rcout->write(g_ppm_output, 0,  min(rcout->get_channel_count(), countof(g_ppm_output)));
 }
 
@@ -785,6 +812,9 @@ int yet_another_pilot::save_logs()
 	};
 
 	log(&quad, TAG_QUADCOPTER_DATA, systime);
+
+	float flow_data[2] = {flow.x, flow.y};
+	log2(flow_data, TAG_FLOW, sizeof(flow_data));
 
 
 	quadcopter_data2 quad2 = 
@@ -1536,6 +1566,7 @@ int yet_another_pilot::sensor_calibration()
 	while(detect_acc.get_average(NULL) < calibrating_count || detect_gyro.get_average(NULL) < calibrating_count)
 	{
 		read_imu_and_filter();
+		read_rc();
 		read_sensors();
 		accel = accel_imu;
 		gyro_reading = gyro_reading_imu;
@@ -1999,7 +2030,7 @@ int yet_another_pilot::check_stick_action()
 
 			//start_acrobatic(acrobatic_move_flip, 1);
 			//start_taking_off();
-			//reset_accel_cal();
+			reset_accel_cal();
 		}
 
 		//if (ch5_flip_count > 5)
