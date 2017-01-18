@@ -110,7 +110,7 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_LDFLAGS	+= \
 	-Wl,--no-fatal-warnings,--start-group \
-	system/acantha/Project/rk3288_android5.1/main_test/x264/libx264.a \
+	system/acantha/Project/rk3288_android5.1/main_test/libx264.a \
 	-Wl,--end-group
 
 
