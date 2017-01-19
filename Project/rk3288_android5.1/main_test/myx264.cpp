@@ -24,7 +24,7 @@ int x264::init(int width, int height, int bitrate)
 	this->height = height;
 
 	x264_param_t param;
-	x264_param_default_preset(&param, "veryfast", "zerolatency");
+	x264_param_default_preset(&param, "slow", "zerolatency");
 // 	x264_param_apply_profile(&param, "baseline");
 	param.i_frame_reference = 1;
 	param.i_width = width;

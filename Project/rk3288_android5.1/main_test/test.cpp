@@ -14,6 +14,7 @@ static int64_t getus()
 }
 
 
+
 int camera_init()
 {
 	RK3288Camera51 c;
@@ -72,7 +73,7 @@ int camera_init()
 		int j = i % 120;
 		if (j>60)
 			j = 120 - j;
-		fseek(fyuv, j*640*360*3/2, SEEK_SET);
+		fseek(fyuv, j*640*360*3/2 + j*40, SEEK_SET);
 		fread(yuv360, 1, 640*360*3/2, fyuv);
 
 
@@ -100,7 +101,6 @@ int camera_init()
 			enc.encode_next_frame();
 		}
 		*/
-
 
 		uint8_t nal_out[100000];
 		bool IDR = false;

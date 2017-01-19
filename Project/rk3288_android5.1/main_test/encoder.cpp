@@ -42,13 +42,13 @@ int android_video_encoder::init(int width, int height, int bitrate, float frame_
 	format->setInt32("color-format", OMX_COLOR_FormatYUV420Planar);
 	format->setInt32("bitrate", bitrate);
 	format->setFloat("frame-rate", frame_rate);
-	format->setInt32("i-frame-interval", 10);
+	format->setInt32("i-frame-interval", 1);
 	format->setInt32("profile", OMX_VIDEO_AVCProfileHigh);
 	format->setInt32("level", OMX_VIDEO_AVCLevel4);
 	int mbs = (((width + 15) / 16) * ((height + 15) / 16) * 10) / 100;
 
-	format->setInt32("intra-refresh-mode", OMX_VIDEO_IntraRefreshCyclic);
-    format->setInt32("intra-refresh-CIR-mbs", mbs);
+	//format->setInt32("intra-refresh-mode", OMX_VIDEO_IntraRefreshCyclic);
+    //format->setInt32("intra-refresh-CIR-mbs", mbs);
 
 	status_t err = codec->configure(format, NULL, NULL, MediaCodec::CONFIGURE_FLAG_ENCODE);
 	printf("codec->configure()=%d\n", err);

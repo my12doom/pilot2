@@ -84,6 +84,10 @@ LOCAL_SRC_FILES := \
 	test.cpp \
 	camera.cpp \
 	myx264.cpp \
+	radiotap.c \
+	lib.c \
+	fec.c \
+	rx.c \
 
 
 LOCAL_C_INCLUDES :=  \
@@ -95,7 +99,8 @@ LOCAL_C_INCLUDES :=  \
 	frameworks/av/media/libstagefright \
 	frameworks/av/media/libstagefright/include \
 	frameworks/av/media/libmediaplayerservice \
-	frameworks/native/include/media/openmax \	
+	frameworks/native/include/media/openmax \
+	$(KERNEL_HEADERS) \
 
 
 LOCAL_SHARED_LIBRARIES := \
@@ -107,6 +112,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libcameraservice \
 	libcamera_client \
 	libstagefright libmedia libstagefright_foundation\
+	libpcap \
 
 LOCAL_LDFLAGS	+= \
 	-Wl,--no-fatal-warnings,--start-group \
