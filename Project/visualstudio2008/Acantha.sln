@@ -17,6 +17,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pos_simulator", "pos_simula
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SIL", "SIL\SIL.vcproj", "{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "H264Player", "H264Player\H264Player.vcproj", "{8DE615F9-A0D6-4595-A443-67BC12FBA7F9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -55,6 +57,10 @@ Global
 		{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}.Debug|Win32.Build.0 = Debug|Win32
 		{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}.Release|Win32.ActiveCfg = Release|Win32
 		{8EE6435C-851C-4BDC-BFA2-CD19D156A88C}.Release|Win32.Build.0 = Release|Win32
+		{8DE615F9-A0D6-4595-A443-67BC12FBA7F9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8DE615F9-A0D6-4595-A443-67BC12FBA7F9}.Debug|Win32.Build.0 = Debug|Win32
+		{8DE615F9-A0D6-4595-A443-67BC12FBA7F9}.Release|Win32.ActiveCfg = Release|Win32
+		{8DE615F9-A0D6-4595-A443-67BC12FBA7F9}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

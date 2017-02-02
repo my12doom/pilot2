@@ -861,6 +861,58 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="YAL"
+				>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\append.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\append.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\frame.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\frame.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\GFMath.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\GFMath.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\oRS.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\oRS.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\reciever.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\reciever.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\sender.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\..\modules\YAL\fec\sender.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="BSP"
