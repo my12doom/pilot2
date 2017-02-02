@@ -26,10 +26,11 @@ namespace SIL_WIN32
 		this->period=period;
 		LeaveCriticalSection(&cs);
 	}
-	void Win32Timer::set_callback(timer_callback cb)
+	void Win32Timer::set_callback(timer_callback cb, void *user_data)
 	{
 		EnterCriticalSection(&cs);
 		this->cb=cb;
+		this->user_data = user_data;
 		LeaveCriticalSection(&cs);
 	}
 
@@ -56,7 +57,7 @@ namespace SIL_WIN32
 			else
 				Sleep(1);
 			if (cb)
-				cb();
+				cb(user_data);
 		}
 	}
 

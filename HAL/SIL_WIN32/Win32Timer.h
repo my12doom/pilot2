@@ -14,13 +14,14 @@ namespace SIL_WIN32
 		HAL::timer_callback cb;
 		int period;
 		bool exit;
+		void *user_data;
 		static DWORD WINAPI entry(LPVOID p);
 		void run();
 	public:
 		Win32Timer();
 		~Win32Timer();
 		virtual void set_period(uint32_t period);				// micro-second
-		virtual void set_callback(HAL::timer_callback cb);	
+		virtual void set_callback(HAL::timer_callback cb, void *user_data);	
 		void set_priority(DWORD priority);
 	};
 }
