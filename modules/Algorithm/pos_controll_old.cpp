@@ -50,7 +50,8 @@ pos_controller_old::pos_controller_old()
 	release_stick_timer = 0;
 #ifdef WIN32
 	f = fopen("Z:\\log.csv", "wb");
-	fprintf(f, "time,v,tv,p,sp\r\n");
+	if(f)
+		fprintf(f, "time,v,tv,p,sp\r\n");
 	tick = GetTickCount();
 #endif
 }

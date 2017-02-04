@@ -61,7 +61,8 @@ pos_controller::pos_controller()
 	low_speed_tick = 0;
 #ifdef WIN32
 	f = fopen("Z:\\log.csv", "wb");
-	fprintf(f, "time,v,tv,p,i,roll_target,pitch_target\r\n");
+	if(f)
+		fprintf(f, "time,v,tv,p,i,roll_target,pitch_target\r\n");
 	tick = GetTickCount();
 #endif
 }
