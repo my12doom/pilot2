@@ -1,0 +1,189 @@
+#include "AUDP.h"
+#include <unistd.h>
+
+using namespace std;
+using namespace HAL;
+
+namespace androidUAV
+{
+
+AUDP_RX::AUDP_RX(const char*remote /*= INADDR_ANY*/, int port /*= 0xbbb*/)
+{
+	pthread_mutex_init(&cs, NULL);
+	worker_thread = NULL;
+	socket_descriptor = -1;
+
+	set_source(remote, port);
+}
+
+AUDP_RX::~AUDP_RX()
+{
+	clearup();
+	pthread_mutex_destroy(&cs);
+}
+
+int AUDP_RX::clearup()
+{
+	// close socket and signal the worker thread to exit
+	worker_run = false;
+	if (socket_descriptor >= 0)
+		close(socket_descriptor);
+	socket_descriptor = -1;
+	
+	// wait for thread to exit
+	if (NULL != worker_thread)
+		pthread_join(worker_thread, NULL);
+	worker_thread = NULL;
+
+	return 0;
+}
+
+int AUDP_RX::set_source(const char*remote, int port)
+{
+	clearup();
+	socket_descriptor = socket(AF_INET, SOCK_DGRAM, 0);  
+	if (socket_descriptor <0) 
+	{
+		printf("error opening udp socket");
+		return -1;
+	}
+
+	memset(&address, 0, sizeof(address));
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = htonl(INADDR_ANY);
+	address.sin_port = htons(port);
+
+	bind(socket_descriptor, (struct sockaddr *)&address, sizeof(address));
+
+	// create worker thread if not running
+	if (worker_thread == NULL)
+	{
+		worker_run = true;
+		pthread_create(&worker_thread, NULL, worker_entry, this);
+	}
+
+	return 0;
+}
+
+// write a block
+// class implementation is responsible for queueing blocks, or reject incoming blocks by returning an error.
+// returns num bytes written, negative values for error.
+int AUDP_RX::write(const void *buf, int block_size)
+{
+	return error_unsupported;
+}
+
+// read a block from rx queue, remove block from the queue if remove == true.
+// returns num bytes read, negative values for error.
+int AUDP_RX::read(void *buf, int max_block_size, bool remove /*= true*/)
+{
+	pthread_mutex_lock(&cs);
+
+	if (packets.size() == 0)
+	{
+		pthread_mutex_unlock(&cs);
+		return error_no_more_blocks;
+	}
+
+	packet p = packets[0];
+	if (remove)
+		packets.erase(packets.begin());
+	int size = min(max_block_size, p.size);
+	memcpy(buf, p.data, size);
+	pthread_mutex_unlock(&cs);
+
+	return size;
+}
+
+// query num available blocks in rx queue, negative values for error.
+int AUDP_RX::available()
+{
+	pthread_mutex_lock(&cs);
+
+	int count = packets.size();
+
+	pthread_mutex_unlock(&cs);
+
+	return count;
+}
+
+void* AUDP_RX::worker()
+{
+	while(worker_run)
+	{
+		packet p;
+
+		address.sin_addr.s_addr = htonl(INADDR_ANY);
+		int size_of_address = sizeof(address);
+		p.size = recvfrom(socket_descriptor, (char*)p.data, sizeof(p.data), 0, (struct sockaddr *)&address, &size_of_address);
+
+		pthread_mutex_lock(&cs);
+
+		if (p.size > 0)
+			packets.push_back(p);
+
+		pthread_mutex_unlock(&cs);
+	}
+
+	return 0;
+}
+
+
+
+AUDP_TX::AUDP_TX(const char*remote, int port)
+{
+	socket_descriptor = -1;
+
+	set_destination(remote, port);
+}
+
+AUDP_TX::~AUDP_TX()
+{
+	clearup();
+}
+
+int AUDP_TX::set_destination(const char*remote, int port)
+{
+	clearup();
+
+	memset(&address, 0, sizeof(address));
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = inet_addr(remote);
+	address.sin_port = htons(port);
+
+	socket_descriptor = socket(AF_INET, SOCK_DGRAM, 0);  
+
+	return 0;
+}
+
+int AUDP_TX::clearup()
+{
+	if (socket_descriptor > 0)
+		close(socket_descriptor);
+	socket_descriptor = -1;
+
+	return 0;
+}
+
+// write a block
+// class implementation is responsible for queueing blocks, or reject incoming blocks by returning an error.
+// returns num bytes written, negative values for error.
+int AUDP_TX::write(const void *buf, int block_size)
+{
+	int o = sendto(socket_descriptor, (char*)buf, block_size, 0, (struct sockaddr *)&address, sizeof(address));
+	return o<0 ? o : block_size;
+}
+
+int AUDP_TX::read(void *buf, int max_block_size, bool remove/* = true*/)
+{
+	return error_unsupported;
+}
+
+// query num available blocks in rx queue, negative values for error.
+int AUDP_TX::available()
+{
+	return error_unsupported;
+}
+
+
+}

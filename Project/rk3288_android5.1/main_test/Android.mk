@@ -1,6 +1,7 @@
 
 LOCAL_PATH:= $(call my-dir)
 PROJECT_PATH:= /system/acantha
+STL_PATH=/media/euler/codebase/sdk0801/prebuilts/ndk/9/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a
 
 include $(CLEAR_VARS)
 
@@ -19,6 +20,7 @@ LOCAL_SRC_FILES := \
 	../../../HAL/rk32885.1/ACriticalSection.cpp \
 	../../../HAL/rk32885.1/AIMUFIFO.cpp \
 	../../../HAL/rk32885.1/AI2C.cpp \
+	../../../HAL/rk32885.1/AUDP.cpp \
 	../../../modules/utils/param.cpp \
 	../../../modules/utils/space.cpp \
 	../../../modules/utils/gauss_newton.cpp \
@@ -100,6 +102,7 @@ LOCAL_C_INCLUDES :=  \
 	frameworks/av/media/libstagefright/include \
 	frameworks/av/media/libmediaplayerservice \
 	frameworks/native/include/media/openmax \
+	external/libcxx/include \
 	$(KERNEL_HEADERS) \
 
 
@@ -117,6 +120,7 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_LDFLAGS	+= \
 	-Wl,--no-fatal-warnings,--start-group \
 	system/acantha/Project/rk3288_android5.1/main_test/libx264.a \
+	$(STL_PATH)/libgnustl_static.a \
 	-Wl,--end-group
 
 

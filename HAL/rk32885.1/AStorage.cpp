@@ -18,7 +18,7 @@ namespace androidUAV
 		}
 		f = fopen(_filename,"rb+");
 		if(!f)
-			fopen(_filename,"wb+");
+			f = fopen(_filename,"wb+");
 	}
 	int AStorage::init()
 	{
@@ -63,7 +63,7 @@ namespace androidUAV
 		if(address<0 || address >= total_size() || size<0)
 			return -1;
 		fseek(f,address,SEEK_SET);
-		fread(data,1,size,f);
+		ret_size = fread(data,1,size,f);
 		fflush(f);
 		return ret_size;
 	}

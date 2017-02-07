@@ -45,6 +45,9 @@ namespace devices
 		// return: 0 if new frame retrived, 1 if no new data, negative values for error.
 		virtual int get_frame(uint8_t **pp, timestamp *timestamp=NULL, bool only_latest = false) = 0;
 
+		// release one frame and add it back to camera's internal queue
+		virtual int release_frame(uint8_t *p) = 0;
+
 		// get current frame format
 		virtual int get_frame_format(frame_format *format) = 0;
 
