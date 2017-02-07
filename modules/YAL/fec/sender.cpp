@@ -7,6 +7,7 @@
 FrameSender::FrameSender()
 {
 	frame_id = 0;
+	block_sender = NULL;
 	packets = new raw_packet[256];
 	config(PACKET_SIZE, 0.1);
 }
@@ -15,6 +16,13 @@ FrameSender::~FrameSender()
 {
 	delete [] packets;
 
+}
+
+int FrameSender::set_block_device(HAL::IBlockDevice *block_sender)
+{
+	this->block_sender = block_sender;
+
+	return 0;
 }
 
 int FrameSender::config(int packet_size, float parity_ratio)
@@ -38,9 +46,9 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 
 	memset(packets, 0, (slice_size) * sizeof(raw_packet));
 
-	uint8_t slice_data[256];
 	for(int i=0; i<max_packet_payload_size; i++)
 	{
+		uint8_t slice_data[256];
 		memset(slice_data, 0, slice_size);
 		
 		for(int j=0; j<payload_packet_count; j++)
@@ -81,6 +89,9 @@ FILE * f = fopen("Z:\\a.bin", "wb");
 
 int FrameSender::send_packet(const void *payload, int payload_size)
 {
+	if (block_sender)
+		block_sender->write(payload, payload_size);
+
 	fwrite(payload, 1, payload_size, f);
 	fflush(f);
 	return 0;

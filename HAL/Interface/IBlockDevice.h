@@ -21,13 +21,13 @@ namespace HAL
 		// write a block
 		// class implementation is responsible for queueing blocks, or reject incoming blocks by returning an error.
 		// returns num bytes written, negative values for error.
-		virtual int write(const void *buf, int block_size);
+		virtual int write(const void *buf, int block_size) = 0;
 
 		// read a block from rx queue, remove block from the queue if remove == true.
 		// returns num bytes read, negative values for error.
-		virtual int read(void *buf, int max_block_size, bool remove = true);
+		virtual int read(void *buf, int max_block_size, bool remove = true) = 0;
 
 		// query num available blocks in rx queue, negative values for error.
-		virtual int available() =0;
+		virtual int available() = 0;
 	};
 }

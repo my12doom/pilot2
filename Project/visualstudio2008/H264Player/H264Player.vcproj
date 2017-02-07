@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="include"
+				AdditionalIncludeDirectories="include;../../../;../../../modules/"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -170,22 +170,68 @@
 	</References>
 	<Files>
 		<Filter
-			Name="源文件"
+			Name="src"
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\x264client.cpp"
+				RelativePath=".\resource.h"
+				>
+			</File>
+			<File
+				RelativePath=".\window.cpp"
 				>
 			</File>
 		</Filter>
 		<Filter
-			Name="头文件"
-			Filter="h;hpp;hxx;hm;inl;inc;xsd"
-			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
+			Name="YAL"
 			>
 			<File
-				RelativePath=".\resource.h"
+				RelativePath="..\..\..\modules\YAL\fec\append.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\append.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\frame.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\frame.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\GFMath.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\GFMath.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\oRS.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\oRS.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\reciever.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\reciever.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\sender.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\sender.h"
 				>
 			</File>
 		</Filter>
@@ -196,6 +242,18 @@
 			>
 			<File
 				RelativePath=".\test.rc"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="HAL"
+			>
+			<File
+				RelativePath="..\..\..\HAL\SIL_WIN32\Win32UDP.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\HAL\SIL_WIN32\Win32UDP.h"
 				>
 			</File>
 		</Filter>
