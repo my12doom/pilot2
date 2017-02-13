@@ -17,6 +17,8 @@ static int64_t getus()
 
 int camera_init()
 {
+	return 0;
+
 	RK3288Camera51 c;
 	c.init(0);
 

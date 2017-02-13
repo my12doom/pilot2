@@ -69,12 +69,12 @@
  * All data in the header is little endian on all platforms.
  */
 struct ieee80211_radiotap_header {
-	u8 it_version;		/* Version 0. Only increases
+	uint8_t it_version;		/* Version 0. Only increases
 				 * for drastic changes,
 				 * introduction of compatible
 				 * new fields does not count.
 				 */
-	u8 it_pad;
+	uint8_t it_pad;
 	__le16 it_len;		/* length of the whole
 				 * header in bytes, including
 				 * it_version, it_pad,
@@ -109,7 +109,7 @@ struct ieee80211_radiotap_header {
  *      For frequency-hopping radios, the hop set (first byte)
  *      and pattern (second byte).
  *
- * IEEE80211_RADIOTAP_RATE              u8           500kb/s
+ * IEEE80211_RADIOTAP_RATE              uint8_t           500kb/s
  *
  *      Tx/Rx data rate
  *
@@ -125,12 +125,12 @@ struct ieee80211_radiotap_header {
  *      RF noise power at the antenna, decibel difference from one
  *      milliwatt.
  *
- * IEEE80211_RADIOTAP_DB_ANTSIGNAL      u8           decibel (dB)
+ * IEEE80211_RADIOTAP_DB_ANTSIGNAL      uint8_t           decibel (dB)
  *
  *      RF signal power at the antenna, decibel difference from an
  *      arbitrary, fixed reference.
  *
- * IEEE80211_RADIOTAP_DB_ANTNOISE       u8           decibel (dB)
+ * IEEE80211_RADIOTAP_DB_ANTNOISE       uint8_t           decibel (dB)
  *
  *      RF noise power at the antenna, decibel difference from an
  *      arbitrary, fixed reference point.
@@ -161,12 +161,12 @@ struct ieee80211_radiotap_header {
  *      reference). This is the absolute power level measured at
  *      the antenna port.
  *
- * IEEE80211_RADIOTAP_FLAGS             u8           bitmap
+ * IEEE80211_RADIOTAP_FLAGS             uint8_t           bitmap
  *
  *      Properties of transmitted and received frames. See flags
  *      defined below.
  *
- * IEEE80211_RADIOTAP_ANTENNA           u8           antenna index
+ * IEEE80211_RADIOTAP_ANTENNA           uint8_t           antenna index
  *
  *      Unitless indication of the Rx/Tx antenna for this packet.
  *      The first antenna is antenna 0.
@@ -179,11 +179,11 @@ struct ieee80211_radiotap_header {
  *
  *     Properties of transmitted frames. See flags defined below.
  *
- * IEEE80211_RADIOTAP_RTS_RETRIES       u8           data
+ * IEEE80211_RADIOTAP_RTS_RETRIES       uint8_t           data
  *
  *     Number of rts retries a transmitted frame used.
  *
- * IEEE80211_RADIOTAP_DATA_RETRIES      u8           data
+ * IEEE80211_RADIOTAP_DATA_RETRIES      uint8_t           data
  *
  *     Number of unicast retries a transmitted frame used.
  *
