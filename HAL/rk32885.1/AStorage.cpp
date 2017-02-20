@@ -16,9 +16,9 @@ namespace androidUAV
 			strcpy(strrchr(_filename,'/'),"/defaultstorage");
 			//printf("exe path = %s\n",_filename);
 		}
-		f = fopen(_filename,"rb+");
+		f = fopen(_filename,"r+");
 		if(!f)
-			f = fopen(_filename,"wb+");
+			f = fopen(_filename,"w+");
 	}
 	int AStorage::init()
 	{

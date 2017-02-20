@@ -23,7 +23,7 @@ namespace SIL_WIN32
 	void Win32Timer::set_period(uint32_t period)
 	{
 		EnterCriticalSection(&cs);
-// 		this->period=period;
+		this->period=period;
 		LeaveCriticalSection(&cs);
 	}
 	void Win32Timer::set_callback(timer_callback cb)
@@ -47,7 +47,10 @@ namespace SIL_WIN32
 			{
 				int64_t t = systimer->gettime();
 				while((t = systimer->gettime()) < last_call_time + period)
-					Sleep(0);
+				{
+					int left = last_call_time + period - t;
+					Sleep(left > 1100 ? 1: 0);
+				}
 				last_call_time = t;
 			}
 			else

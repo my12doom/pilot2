@@ -12,7 +12,7 @@
 #include <utils/log.h>
 #include <utils/console.h>
 #include <utils/gauss_newton.h>
-#include <protocol/crc32.h>
+#include <Protocol/crc32.h>
 #include <FileSystem/ff.h>
 #include <HAL/sensors/UartUbloxNMEAGPS.h>
 
@@ -20,6 +20,7 @@ using namespace HAL;
 using namespace devices;
 using namespace math;
 using namespace sensors;
+bool calvin = false;
 
 // constants
 #define THROTTLE_STOP ((int)(isnan((float)pwm_override_min)? max(rc_setting[2][0]-20,1000):pwm_override_min))
@@ -186,7 +187,7 @@ yet_another_pilot::yet_another_pilot()
 	memset(&v_flow_ned,0,sizeof(v_flow_ned));
 	gps_attitude_timeout = 0;
 	land_possible = false;
-	imu_data_lock = false;
+	cs_imu = HAL::create_critical_section();
 	event_count = 0;
 	home_set = false;
 	rc_fail_tick = 0;
@@ -225,6 +226,7 @@ int yet_another_pilot::send_package(const void *data, uint16_t size, uint8_t typ
 void yet_another_pilot::output_rc()
 {
 	if (rcout)rcout->write(g_ppm_output, 0,  min(rcout->get_channel_count(), countof(g_ppm_output)));
+	
 }
 
 void yet_another_pilot::STOP_ALL_MOTORS()
@@ -433,7 +435,9 @@ int yet_another_pilot::default_alt_controlling()
 
 int yet_another_pilot::run_controllers()
 {
-	attitude_controll.provide_states(euler, use_EKF ==1.0f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	float q_cf[4] = {q0,q1,q2,q3};
+
+	attitude_controll.provide_states(euler, use_EKF ==1.0f ? &ekf_est.ekf_result.q0 : q_cf, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 
 	if (use_alt_estimator2 > 0.5f)
 	{	
@@ -459,8 +463,8 @@ int yet_another_pilot::run_controllers()
 
 	// check airborne
 	if ((alt_estimator.state[0] > takeoff_ground_altitude + 1.0f) ||
-		(alt_estimator.state[0] > takeoff_ground_altitude && throttle_result > alt_controller.throttle_hover) ||
-		(throttle_result > alt_controller.throttle_hover + QUADCOPTER_THROTTLE_RESERVE))
+		(alt_estimator.state[0] > takeoff_ground_altitude && throttle_result > alt_controller.get_throttle_hover()) ||
+		(throttle_result > alt_controller.get_throttle_hover() + QUADCOPTER_THROTTLE_RESERVE))
 	{
 		if (!airborne && armed)
 		{
@@ -513,7 +517,7 @@ int yet_another_pilot::handle_acrobatic()
 
 			float slew =  t > 0.001f ? velocity_abs/t : 0;
 			float velocity_top = slew * (t+latency);
-			float total_distance = 0.5*(t+latency)*velocity_top* (1+braking_factor);
+			float total_distance = 0.5f*(t+latency)*velocity_top* (1+braking_factor);
 
 			LOGE("dis=%.3f\n", total_distance * 180 / PI);
 
@@ -558,7 +562,7 @@ float min_throttle;
 float max_throttle;
 
 int yet_another_pilot::output()
-{
+{	
 	float pid_result[3];
 	motor_saturated = false;
 	attitude_controll.get_result(pid_result);
@@ -566,8 +570,8 @@ int yet_another_pilot::output()
 	{
 		int matrix = (float)motor_matrix;
 		float motor_output[MAX_MOTOR_COUNT] = {0};
-
 		
+
 		// how many motor exists in this motor matrix?
 		static int motor_count = 0;
 		if(0==motor_count)
@@ -678,6 +682,8 @@ int yet_another_pilot::output()
 			g_ppm_output[i] = limit(THROTTLE_IDLE + motor_output[i]*(THROTTLE_MAX-THROTTLE_IDLE), THROTTLE_IDLE, THROTTLE_MAX);
 		}
 		throttle_real /= motor_count;
+
+		//printf("\rout=%d,%d,%d,%d        ", g_ppm_output[0], g_ppm_output[1], g_ppm_output[2], g_ppm_output[3]);
 		
 		// placebo motor saturation detector.
 		for(int i=0; i<motor_count; i++)
@@ -685,7 +691,7 @@ int yet_another_pilot::output()
 			if (g_ppm_output[i] <= THROTTLE_IDLE+20 || g_ppm_output[i] >= THROTTLE_MAX-20)
 				motor_saturated = true;
 		}
-
+		
 	}
 
 	else
@@ -732,7 +738,6 @@ int yet_another_pilot::save_logs()
 		{mag.array[0] * 10, mag.array[1] * 10, mag.array[2] * 10},
 	};
 	log(&imu, TAG_IMU_DATA, systime);
-	log(&frame, TAG_PX4FLOW_DATA, systime);	
 
 	pilot_data pilot = 
 	{
@@ -842,8 +847,8 @@ int yet_another_pilot::save_logs()
 		throttle_result*1000,
 		yaw_launch * 18000 / PI,
 		euler[2] * 18000 / PI,
-		alt_controller.throttle_hover*1000,
-		0,//sonar_result(),
+		alt_controller.get_throttle_hover()*1000,
+		sonar_distance * 1000,
 		alt_controller.accel_error_pid[1]*1000,
 	};
 
@@ -916,6 +921,7 @@ int yet_another_pilot::read_sensors()
 {	
 	if (range_finder)
 	{
+		//LOGE("range_finder=%08x", range_finder);
 		range_finder->trigger();
 		float distance = 0;
 		if (0 == range_finder->read(&distance))
@@ -928,8 +934,8 @@ int yet_another_pilot::read_sensors()
 		
 		if (isnan(sonar_distance))
 			printf("\rNAN     ");
-		else
-			printf("\r%.3f", sonar_distance);
+		//else
+			//printf("\r%.3f", sonar_distance);
 	}
 	
 
@@ -939,12 +945,10 @@ int yet_another_pilot::read_sensors()
 	for(int i=0; i<manager.get_GPS_count(); i++)
 	{
 		IGPS *gps = manager.get_GPS(i);
-		IRawDevice *raw = dynamic_cast<IRawDevice*> (gps);
 		if (!gps->healthy())
 			continue;
 
-		if (raw)
-			raw->ioctl((rc_fail || flight_mode == RTL) ? IOCTL_SAT_MINIMUM : IOCTL_SAT_NORMAL, NULL);
+		gps->ioctl((rc_fail || flight_mode == RTL) ? IOCTL_SAT_MINIMUM : IOCTL_SAT_NORMAL, NULL);
 
 		devices::gps_data data;
 		int res = gps->read(&data);
@@ -1110,12 +1114,14 @@ int yet_another_pilot::read_imu_and_filter()
 		acc.V.y /= healthy_acc_count;
 		acc.V.z /= healthy_acc_count;
 	}
-	
+	//
+	/*float imudata[3] = {acc.V.x,acc.V.y,acc.V.z};
+	log2(imudata,100,sizeof(imudata));*/
 	// read magnetometer and barometer since we don't have lock support and it is connected to same SPI bus with gyro and acceleromter
 	// at lower rate (50hz)
 	static int64_t last_mag_read = 0;
 	bool got_mag = false;
-	if (!imu_data_lock && systimer->gettime() - last_mag_read > 20000)
+	if (systimer->gettime() - last_mag_read > 20000)
 	{
 		last_mag_read = systimer->gettime();
 		got_mag = true;
@@ -1144,46 +1150,6 @@ int yet_another_pilot::read_imu_and_filter()
 			mag.V.y /= healthy_mag_count;
 			mag.V.z /= healthy_mag_count;
 		}
-
-		if (vcp && (usb_data_publish & data_publish_imu))
-		{
-			gyro_data gyro2 = {0};
-			accelerometer_data acc2 = {0};
-
-			if (manager.get_accelerometer_count()>=2)
-				manager.get_accelerometer(1)->read(&acc2);
-			if (manager.get_gyroscope_count()>=2)
-				manager.get_gyroscope(1)->read(&gyro2);
-
-			if (usb_data_publish & data_publish_binary)
-			{
-				usb_imu_data data = 
-				{
-					systimer->gettime(),
-					{accel_uncalibrated.V.x * 1000, accel_uncalibrated.V.y * 1000, accel_uncalibrated.V.z * 1000,},
-					{gyro_uncalibrated.V.x * 18000 / PI, gyro_uncalibrated.V.y * 18000 / PI, gyro_uncalibrated.V.z * 18000 / PI,},
-					{acc2.x * 1000, acc2.y * 1000, acc2.z * 1000,},
-					{gyro2.x * 18000 / PI, gyro2.y * 18000 / PI, gyro2.z * 18000 / PI,},
-					{mag.V.x, mag.V.y, mag.V.z,},
-				};
-
-				send_package(&data, sizeof(data), data_publish_imu, vcp);
-			}
-			else
-			{
-				char tmp[200];
-				sprintf(tmp, 
-					"imu:%.4f"
-					",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f"
-					",%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", systimer->gettime()/1000000.0f,
-				accel_uncalibrated.V.x, accel_uncalibrated.V.y, accel_uncalibrated.V.z, gyro_uncalibrated.V.x, gyro_uncalibrated.V.y, gyro_uncalibrated.V.z, mag.V.x, mag.V.y, mag.V.z, mpu6050_temperature,
-				acc2.x, acc2.y, acc2.z, gyro2.x, gyro2.y, gyro2.z);
-				
-				vcp->write(tmp, strlen(tmp));
-			}
-		}
-
-
 		// read barometers
 		int healthy_baro_count = 0;
 		for(int i=0; i<min(manager.get_barometer_count(), 1); i++)
@@ -1215,27 +1181,6 @@ int yet_another_pilot::read_imu_and_filter()
 				b_raw_pressure = data.pressure;
 			}
 		}
-		
-		if (vcp && (usb_data_publish & data_publish_baro) && new_baro_data)
-		{
-			if (usb_data_publish & data_publish_binary)
-			{
-				usb_baro_data data =
-				{
-					systimer->gettime(),
-					a_raw_pressure,
-					a_raw_temperature*100
-				};
-
-				send_package(&data, sizeof(data), data_publish_baro, vcp);
-			}
-			else
-			{
-				char tmp[200];
-				sprintf(tmp, "baro:%.3f,%.0f,%.3f\n", systimer->gettime()/1000000.0f, a_raw_pressure, a_raw_temperature);
-				vcp->write(tmp, strlen(tmp));
-			}
-		}
 	}
 	
 	// bias and scale calibrating
@@ -1257,29 +1202,22 @@ int yet_another_pilot::read_imu_and_filter()
 		acc.array[i] *= acc_scale[i];
 		mag.array[i] += mag_bias[i];
 		mag.array[i] *= mag_scale[i];
-		gyro_reading.array[i] += gyro_bias[i];
+		gyro.array[i] += gyro_bias[i];
 	}	
 	
-	// copy mag
-	if (!imu_data_lock && got_mag)
-	{
-		this->mag = mag;
-	}
 
-	// apply a 40hz 2nd order LPF to accelerometer readings
-	// stop overwriting target data if imu data lock acquired
-	if (!imu_data_lock)
-	{
-// 		float alpha = 0.001f / (0.001f + 1.0f/(2*PI * 20.0f));
-		for(int i=0; i<3; i++)
-			this->accel.array[i] = accel_lpf2p[i].apply(acc.array[i]);
-//  			this->accel.array[i] = acc.array[i]*alpha + this->accel.array[i] * (1-alpha);
-	}
-	else
-	{
-		for(int i=0; i<3; i++)
-			accel_lpf2p[i].apply(acc.array[i]);
-	}
+	// apply a 40hz 2nd order LPF to accelerometer and gyro readings
+	if (cs_imu)
+		cs_imu->enter();
+	for(int i=0; i<3; i++)
+		this->accel_imu.array[i] = accel_lpf2p[i].apply(acc.array[i]);
+	for(int i=0; i<3; i++)
+		this->gyro_reading_imu.array[i] = gyro_lpf2p[i].apply(gyro.array[i]);
+	// copy mag
+	if (got_mag)
+		this->mag_imu = mag;
+	if (cs_imu)
+		cs_imu->leave();
 
 
 	// read optical flow @ 100hz
@@ -1287,64 +1225,16 @@ int yet_another_pilot::read_imu_and_filter()
 	if (manager.get_flow_count() && systimer->gettime() - last_flow_reading > 10000)
 	{
 		last_flow_reading = systimer->gettime();
-
-		sensors::IFlow *flow = manager.get_flow(0);
-
-		if (flow->read_flow(&frame) < 0)
-			sonar_distance = NAN;
-		else
-		{
-			static int last_frame_count = 0;
-			if (last_frame_count != frame.frame_count && vcp && (usb_data_publish & data_publish_flow))
-			{
-				last_frame_count = frame.frame_count;
-
-				if (usb_data_publish & data_publish_binary)
-				{
-					usb_flow_data data = 
-					{
-						systimer->gettime(),
-						frame.pixel_flow_x_sum,
-						frame.pixel_flow_y_sum,
-						frame.ground_distance,
-					};
-
-					send_package(&data, sizeof(data), data_publish_flow, vcp);
-				}
-				else
-				{
-					char tmp[100];
-					sprintf(tmp, "flow:%.3f,%d,%d,%f\n", systimer->gettime()/1000000.0f, frame.pixel_flow_x_sum, frame.pixel_flow_y_sum, frame.ground_distance/1000.0f);
-					vcp->write(tmp, strlen(tmp));
-				}
-			}
-
-			sonar_distance = frame.ground_distance / 1000.0f;
-			if (sonar_distance <= SONAR_MIN || sonar_distance >= SONAR_MAX)
-				sonar_distance = NAN;
-
-			//float flowx = frame.pixel_flow_x_sum - body_rate.array[0] * 18000/PI * 0.006f;
-			//float floay = frame.pixel_flow_y_sum - body_rate.array[1] * 18000/PI * 0.006f;
-
-			//frame.gyro_x_rate = flowx;
-			//frame.gyro_y_rate = floay;
-		}
+		sensors::IFlow *pflow = manager.get_flow(0);
+		sensors::flow_data out;
+		pflow->read(&flow);
+		
+		float f4[5] = {flow.x, flow.y, body_rate.array[0],body_rate.array[1],flow.quality};
+		//printf("read T %lld \n",flow.timestamp,gettime());
+		//printf("info %.2f %.2f %.2f\n",flow.x, flow.y, body_rate.array[0]);
+		log2(f4,TAG_FLOW_LOG,sizeof(f4));
 	}
 	
-	
-	// apply a 2nd order LPF to gyro readings
-	// stop overwriting target data if imu data lock acquired
-	if (!imu_data_lock)
-	{
-		for(int i=0; i<3; i++)
-			this->gyro_reading.array[i] = gyro_lpf2p[i].apply(gyro.array[i]);
-	}
-	else
-	{
-		for(int i=0; i<3; i++)
-			gyro_lpf2p[i].apply(gyro.array[i]);
-	}
-
 	// log unfiltered imu data
 	int16_t data[6] = {acc.V.x * 100, acc.V.y * 100, acc.V.z * 100,
 						gyro.V.x * 1800 / PI, gyro.V.y * 1800 / PI, gyro.V.z * 1800 / PI,};
@@ -1444,18 +1334,18 @@ int yet_another_pilot::calculate_state()
 		}
 		else
 		{	
-			float pixel_compensated_x = frame.pixel_flow_x_sum - body_rate.array[0] * 18000 / PI * 0.0028f;
-			float pixel_compensated_y = frame.pixel_flow_y_sum - body_rate.array[1] * 18000 / PI * 0.0028f;
-
-			float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
-			float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
+			float wx = flow.x - body_rate.array[0];
+			float wy = flow.y - body_rate.array[1];
+			
+			float vx = wx * isnan(sonar_distance) ? 1 : sonar_distance;
+			float vy = wy * isnan(sonar_distance) ? 1 : sonar_distance;
 			
 			float v_flow_body[3];
-			v_flow_body[0] = wy * frame.ground_distance/1000.0f;//black magic
-			v_flow_body[1] = -wx * frame.ground_distance/1000.0f;
+			v_flow_body[0] = vy;//black magic
+			v_flow_body[1] = -vx;
 			v_flow_body[2] = 0;
 
-			if (yap.frame.qual < 100)
+			if (flow.quality < 0.45f)
 			{
 				v_flow_body[0] = v_flow_body[1] = 0;
 				ekf_est.set_mesurement_R(1E20,1E-2);
@@ -1485,15 +1375,13 @@ int yet_another_pilot::calculate_state()
 	}
 	else if (use_EKF == 2.0f)
 	{
-		float q[4];
-		memcpy(q, &q0, sizeof(q));
+		float q[4] = {q0,q1,q2,q3};
 		float acc[3] = {-accel.array[0], -accel.array[1], -accel.array[2]};
 
 		memcpy(estimator2.gyro, body_rate.array, sizeof(estimator2.gyro));
-		memcpy(&estimator2.frame, &frame, sizeof(frame));
 
 		int64_t t = systimer->gettime();
-		estimator2.update(q, acc, gps, a_raw_altitude, interval, armed, airborne);
+		estimator2.update(q, acc, gps, flow, sonar_distance, a_raw_altitude, interval, armed, airborne);
 		t = systimer->gettime() - t;
 		//LOGE("estimator2 cost %d us", int(t));
 		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
@@ -1655,6 +1543,10 @@ int yet_another_pilot::sensor_calibration()
 	{
 		read_imu_and_filter();
 		read_sensors();
+		accel = accel_imu;
+		gyro_reading = gyro_reading_imu;
+		mag = mag_imu;
+
 		if ((critical_errors & (~int(ignore_error))) & (error_baro | error_gyro | error_magnet | error_accelerometer))
 			return -2;
 		if (detect_gyro.new_data(gyro_reading))
@@ -1818,7 +1710,8 @@ int yet_another_pilot::arm(bool arm /*= true*/, bool forced /*= false*/)
 		}
 	}
 
-	attitude_controll.provide_states(euler, use_EKF == 1.0f ? &ekf_est.ekf_result.q0 : &q0, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
+	float q_cf[4] = {q0,q1,q2,q3};
+	attitude_controll.provide_states(euler, use_EKF == 1.0f ? &ekf_est.ekf_result.q0 : q_cf, body_rate.array, motor_saturated ? LIMIT_ALL : LIMIT_NONE, airborne);
 	attitude_controll.reset();
 	if (use_alt_estimator2 > 0.5f)
 	{	
@@ -2109,7 +2002,7 @@ int yet_another_pilot::check_stick_action()
 			if (flashlight)
 				flashlight->toggle();
 
-			start_acrobatic(acrobatic_move_flip, 4);
+			//start_acrobatic(acrobatic_move_flip, 1);
 			//start_taking_off();
 			//reset_accel_cal();
 		}
@@ -2256,7 +2149,7 @@ void yet_another_pilot::handle_takeoff()
 				LOGE("throw go\n");
 				arm(true, true);
 				airborne = true;
-				alt_controller.throttle_hover = limit(alt_controller.throttle_hover * 1.25f, 0.2f, 0.8f);
+				//alt_controller.throttle_hover = limit(alt_controller.throttle_hover * 1.25f, 0.2f, 0.8f);
 				alt_controller.start_braking();
 			}
 		}
@@ -2831,8 +2724,10 @@ int yet_another_pilot::handle_wifi_controll(IUART *uart)
 int yet_another_pilot::read_rc()
 {
 	if (!rcin)
+	{
+		critical_errors |= error_RC;
 		return -1;
-
+	}
 	rcin->get_channel_data(g_pwm_input, 0, 8);
 	rcin->get_channel_update_time(g_pwm_input_update, 0, 8);
 	TRACE("\rRC");
@@ -2842,7 +2737,7 @@ int yet_another_pilot::read_rc()
 		rc[i] = ppm2rc(g_pwm_input[i], rc_setting[i][0], rc_setting[i][1], rc_setting[i][2], rc_setting[i][3] > 0);
 		TRACE("%.2f,", rc[i]);
 	}
-	
+	//printf("%.2f,\n", rc[4]);
 	rc[2] = (rc[2]+1)/2;
 	
 	// check rf fail
@@ -3078,7 +2973,43 @@ int yet_another_pilot::light_words()
 
 	
 	if (!rgb)
-		return -1;
+		return -1;	
+	
+	if (calvin)
+	{
+		detect_gyro.new_data(gyro_reading);
+		detect_acc.new_data(accel);
+		
+		static bool last_static = false;
+		bool current_is_static = detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100;
+		
+		if (!current_is_static && last_static)
+		{
+			/*
+			flashlight->on();
+			systimer->delayms(50);
+			flashlight->off();
+			systimer->delayms(50);
+			*/
+				
+			for(int i=0; i<10; i++)
+			{
+				for(int j=0; j<16; j++)
+					g_ppm_output[j] = (i < 2) ? (THROTTLE_IDLE) : (THROTTLE_STOP);
+				output_rc();
+				flashlight->on();
+				systimer->delayms(50);
+				flashlight->off();
+				systimer->delayms(50);
+				for(int j=0; j<16; j++)
+					g_ppm_output[j] = THROTTLE_STOP;
+				output_rc();
+			}
+		}
+		
+		last_static = current_is_static;
+		LOGE("calvin");
+	}
 
 	if (mag_calibration_state)
 	{
@@ -3264,6 +3195,17 @@ void yet_another_pilot::mag_calibrating_worker()
 
 void yet_another_pilot::main_loop(void)
 {
+	// load latest data from imu thread
+	if (cs_imu)
+		cs_imu->enter();
+
+	accel = accel_imu;
+	gyro_reading = gyro_reading_imu;
+	mag = mag_imu;
+
+	if (cs_imu)
+		cs_imu->leave();
+
 	// calculate systime interval
 	static int64_t tic = 0;
 	int64_t round_start_tick = systimer->gettime();
@@ -3296,7 +3238,6 @@ void yet_another_pilot::main_loop(void)
 
 	// read sensors
 	int64_t read_sensor_cost = systimer->gettime();
-	//read_sensors();
 	read_sensors();
 	read_sensor_cost = systimer->gettime() - read_sensor_cost;
 
@@ -3364,9 +3305,6 @@ void yet_another_pilot::main_loop(void)
 			SAFE_OFF(SD_led);
 		}
 	}
-
-	// unlock imu data
-	imu_data_lock = false;
 
 	// update home once position ready
 	if (!home_set && get_estimator_state() == fully_ready)
@@ -3487,10 +3425,10 @@ int yet_another_pilot::setup(void)
 	// check flow
 	do 
 	{
-		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read_flow(&frame) == 0 && frame.frame_count > 0 && yap.frame.cmos_version == 0x76)
+		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read(&flow) == 0)
 			break;
 		systimer->delayms(10);
-		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read_flow(&frame) == 0 && frame.frame_count > 0 && yap.frame.cmos_version == 0x76)
+		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read(&flow) == 0)
 			break;
 
 		// flash the rgb light to indicate a error
@@ -3516,6 +3454,7 @@ int yet_another_pilot::setup(void)
 	
 	return 0;
 }
+
 
 int main()
 {

@@ -12,7 +12,7 @@
 #include <Algorithm/motion_detector.h>
 #include <HAL/Interface/IFlow.h>
 #include <math/quaternion.h>
-
+#include <HAL/sensors/PX4Flow.h>
 
 enum EKFINS_healthy
 {

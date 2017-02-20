@@ -33,7 +33,6 @@ namespace androidUAV
 	void ATimer::run()
 	{
 		int64_t last_call_time = systimer->gettime();
-		struct timeval delay;
 		while(!exit)
 		{
 			lock();
@@ -45,9 +44,6 @@ namespace androidUAV
 				while((t = systimer->gettime()) < last_call_time + period)
 					usleep(100);
 				last_call_time = t;
-				/*delay.tv_sec = 0;
-				delay.tv_usec = period; // 20 ms
-				select(0, NULL, NULL, NULL, &delay);*/
 			}
 			else
 				usleep(1000);

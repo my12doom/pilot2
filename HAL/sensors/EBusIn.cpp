@@ -114,6 +114,10 @@ void sensors::EBusIN::read_uart()
 				rc_static[1][i] = max(rc_static[1][i], last_frame.data[i]);
 			}
 		}
+		else
+		{
+			printf("crc error\n");
+		}
 	}
 }
 

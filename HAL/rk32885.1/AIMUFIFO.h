@@ -38,12 +38,14 @@ namespace androidUAV
 		public:
 			AFIFO(const char* fifopath=NULL);
 			~AFIFO();
-			int open(const char* path);
+			int open(const char* path,int mode);
 			int close();
 			int create(const char* path,int mode);
 			virtual int read(void *data,int count);
 			virtual int write(void *data,int count);
 			int is_file_exist(const char *filePath);
+			// return false if any error/waning
+			virtual bool healthy();
 		protected:
 			int fifofd;
 			imu_data_t imudata;

@@ -41,13 +41,15 @@ static param slew_rate("slew", PI*2);
 
 attitude_controller::attitude_controller()
 {
-        euler_sp[0] = 0;
+	euler_sp[0] = 0;
 	euler_sp[1] = 0;
 	euler_sp[2] = NAN;
 	last_set_euler_sp_time = 0;
 	just_reseted = true;
+
 	for(int i=0; i<3; i++)
 		body_rate_sp_override[i] = NAN;
+
 	reset();
 }
 attitude_controller::~attitude_controller()
@@ -204,10 +206,6 @@ int attitude_controller::update(float dt)
 		Quaternion2BFAngle(q_error, body_frame_error);
 		for(int i=0; i<3; i++)
 			body_rate_sp[i] = limit(body_frame_error[i] * pid_factor2[i][0], -PI, PI);
-
-		//printf("br_sp:%.1f,%.1f,%.1f\n", body_rate_sp[0]*180/PI, body_rate_sp[1]*180/PI, body_rate_sp[2]*180/PI);
-
-		//printf("Q:%f, %.3f,%.3f,%.3f,%.3f\n", body_rate_sp[0], quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
 	}
 	else
 	{
@@ -224,8 +222,6 @@ int attitude_controller::update(float dt)
 		if (!isnan(body_rate_sp_override[i]))
 			body_rate_sp[i] = body_rate_sp_override[i];
 	}
-
-	//printf("euler_sp:%.1f, rate:%.1f/%.1f\n", euler_sp[0]*180/PI, body_rate[0]*180/PI, body_rate_sp[0]*180/PI);
 
 	//float dbg[4] = {euler_sp[1], body_rate_sp[1], euler[1], body_rate[1]};
 	//log2(dbg, TAG_ATTITUDE_CONTROLLER_DATA, sizeof(dbg));
@@ -262,7 +258,7 @@ int attitude_controller::update(float dt)
 	}
 
 	just_reseted = false;
-	//printf(", pid=%.2f, %.2f, %.2f\n", result[0], result[1], result[2]);
+	TRACE(", pid=%.2f, %.2f, %.2f\n", pid_result[0], pid_result[1], pid_result[2]);
 	
 	
 	return 0;
@@ -272,17 +268,18 @@ int attitude_controller::update(float dt)
 // call this if the controller has just been engaged
 int attitude_controller::reset()
 {
-    memcpy(euler_sp, euler, sizeof(euler));
-    memcpy(body_rate_sp, body_rate, sizeof(body_rate_sp));
-    for(int i=0; i<3; i++)
-    {
-        pid[i][1] = rate_trim[i];
-        pid[i][0] = 0;
-        pid[i][2] = 0;
-    }
-    just_reseted = true;
+	memcpy(euler_sp, euler, sizeof(euler));
+	memcpy(body_rate_sp, body_rate, sizeof(body_rate_sp));
+	for(int i=0; i<3; i++)
+	{
+		pid[i][1] = rate_trim[i];
+		pid[i][0] = 0;
+		pid[i][2] = 0;
+	}
 
-    return 0;
+	just_reseted = true;
+
+	return 0;
 }
 
 // torque in body frame, axis: [0-2] -> [roll, pitch, yaw]

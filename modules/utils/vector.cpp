@@ -103,25 +103,77 @@ float vector_angle(vector *v1, vector *v2)
 	return (v1->V.x * v2->V.x + v1->V.y * v2->V.y + v1->V.z * v2->V.z)/vector_length(v1)/vector_length(v2);
 }
 
-int accel_vector_to_euler_angle(vector accel, vector *ouler)		// ouler angle roll, pitch are stored in ouler->array[0,1], yaw not calculated
+void vector::operator +=(const union _vector &v)
 {
-	ouler->array[0] = radian_add(atan2(accel.V.x, accel.V.z), PI);
-	ouler->array[1] = atan2(accel.V.y, (accel.V.z > 0 ? 1 : -1) * sqrt(accel.V.x*accel.V.x + accel.V.z * accel.V.z));
-	ouler->array[1] = radian_add(ouler->array[1], PI);
-
-	return 0;
+	array[0] += v.array[0];
+	array[1] += v.array[1];
+	array[2] += v.array[2];
 }
 
-vector vector_delta_angle(vector v1, vector v2)
+union _vector vector::operator +(const union _vector &v)
 {
-	vector o;
-
-	vector_normalize(&v1);
-	vector_normalize(&v2);
-
-	o.V.y = asin(v1.V.y * v2.V.z - v1.V.z * v2.V.y);
-	o.V.x = asin(v1.V.x * v2.V.z - v1.V.z * v2.V.x);
-	o.V.z = asin(v1.V.y * v2.V.x - v1.V.x * v2.V.y);
-
+	vector o = *this;
+	o += v;
 	return o;
+}
+
+void vector::operator -=(const union _vector &v)
+{
+	array[0] -= v.array[0];
+	array[1] -= v.array[1];
+	array[2] -= v.array[2];
+}
+
+union _vector vector::operator -(const union _vector &v)
+{
+	vector o = *this;
+	o -= v;
+	return o;
+}
+
+void vector::operator *=(const float &v)
+{
+	array[0] *= v;
+	array[1] *= v;
+	array[2] *= v;
+}
+union _vector vector::operator *(const float &v)
+{
+	vector o = *this;
+	o *= v;
+	return o;
+}
+void vector::operator /=(const float &v)
+{
+	array[0] /= v;
+	array[1] /= v;
+	array[2] /= v;
+}
+union _vector vector::operator /(const float &v)
+{
+	vector o = *this;
+	o /= v;
+	return o;
+}
+
+float vector::length()
+{
+	return sqrt(array[0]*array[0] + array[1]*array[1] + array[2]*array[2]);
+}
+float vector::dot(const union _vector &v)
+{
+	return array[0]*v.array[0] + array[1]*v.array[1] + array[2]*v.array[2];
+}
+float vector::angle(const union _vector &v)
+{
+	vector vv = v;
+	return dot(vv)/length()/vv.length();
+
+}
+void vector::normalize()
+{
+	float len = 1.0f/length();
+	array[0] *= len;
+	array[1] *= len;
+	array[2] *= len;
 }

@@ -34,27 +34,19 @@ int flight_mode_of_loiter::loop(float dt)
 		float att[2];
 		yap.attitude_controll.get_attitude_from_stick(yap.rc, att);
 
-
-		float flow_roll = -yap.frame.flow_comp_m_x/1000.0f * 10;
-		float flow_pitch = -yap.frame.flow_comp_m_y/1000.0f * 10;
-
-		float pixel_compensated_x = yap.frame.pixel_flow_x_sum - yap.body_rate.array[0] * 18000 / PI * 0.0028f;
-		float pixel_compensated_y = yap.frame.pixel_flow_y_sum - yap.body_rate.array[1] * 18000 / PI * 0.0028f;
-
-		float wx = pixel_compensated_x / 28.0f * 100 * PI / 180;
-		float wy = pixel_compensated_y / 28.0f * 100 * PI / 180;
-
-		float vx = wx * yap.frame.ground_distance/1000.0f;
-		float vy = wy * yap.frame.ground_distance/1000.0f;
-
-
+		float wx = yap.flow.x - yap.body_rate.array[0];
+		float wy = yap.flow.y - yap.body_rate.array[1];
+		
+		float vx = wx * isnan(yap.sonar_distance) ? 1 : yap.sonar_distance;
+		float vy = wy * isnan(yap.sonar_distance) ? 1 : yap.sonar_distance;
+		
 		//transform fused velocity from ned to body 
 		float v_flow_body[3];
 		yap.ekf_est.tf_ned2body(yap.v_flow_ned,v_flow_body);
 		//vx=-v_flow_body[1];
 		//vy=v_flow_body[0];
 
-		if (yap.frame.qual < 100)
+		if (yap.flow.quality < 0.45)
 		{
 			vx = vy = 0;
 		}
@@ -63,9 +55,6 @@ int flight_mode_of_loiter::loop(float dt)
 		float euler_target[3] = {0,0, NAN};
 		yap.of_controller.get_result(&euler_target[0], &euler_target[1]);
 		yap.attitude_controll.set_euler_target(euler_target);
-
-		float pixel_compensated[6] = {pixel_compensated_x, pixel_compensated_y, wx, wy, vx, vy};
-		log2(pixel_compensated, 10, sizeof(pixel_compensated));
 
 		// yaw
 		float stick[3] = {NAN, NAN, yap.rc[3]};

@@ -12,7 +12,7 @@ protected:
 	void init();
 	int assemble_and_out();
 
-	raw_packet *packets;
+	raw_packet packets[256];
 	int current_frame_id;
 	int current_packet_count;
 	IFrameReciever *cb;

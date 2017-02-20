@@ -7,15 +7,15 @@ int name_arrEuler[] = {115200,38400, 19200, 9600, 4800, 2400, 1200, 300, 38400, 
 volatile int cnt = 0;
 namespace androidUAV
 {
-	AUART::AUART(const char* uartPath):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),ongoing_rx_start(0),ongoing_rx_size(0)
+	AUART::AUART(const char* uartPath):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),ongoing_rx_start(0),ongoing_rx_size(0),buffer_pos(0)
 	{
 		exit = false;
 		readThreadId = 0;
-		policy = get_thread_policy (&attr);
+		//policy = get_thread_policy (&attr);
 		//Only before pthread_create excuted ,can we set thread parameters
-		set_thread_policy(&attr,SCHED_FIFO);
+		//set_thread_policy(&attr,SCHED_FIFO);
 		//update thread pilicy after set thread policy
-		policy = get_thread_policy (&attr);
+		//policy = get_thread_policy (&attr);
 		//set_priority(95);
 		pthread_mutex_init(&mutex,NULL);
 		if(!uartPath)
@@ -73,32 +73,32 @@ namespace androidUAV
 		tcflush(uartFd,TCIFLUSH);
 		tcsetattr(uartFd,TCSANOW,&newtio);
 		//fcntl(uartFd,F_SETFL,FNDELAY);
+
+		return 0;
 	}
 	int AUART::update_buffer()
 	{
 		int ret = -1;
 		int buffer_left = (sizeof(buffer)-buffer_pos)/2;
 		if(buffer_left <= 0)
+		{
 			return 0;
-		//if(select(uartFd+1,&rd,NULL,NULL,NULL) < 0)
-		{
-			//printf("error\n");
+			/*buffer_pos = 0;
+			buffer_left = (sizeof(buffer)-buffer_pos)/2;*/
 		}
-		//else
-		{
-			//pthread_mutex_lock(&mutex);
-			ret = ::read(uartFd,buffer+buffer_pos,buffer_left);
-			//pthread_mutex_unlock(&mutex);
-			if(ret > 0)
-			{
-				buffer_pos+=ret;
-				return ret;
-			}
-			else
-			{
 
-			}
+		ret = ::read(uartFd,buffer+buffer_pos,buffer_left);
+		
+		if(ret > 0)
+		{
+			buffer_pos+=ret;
+			return ret;
 		}
+		else
+		{
+			
+		}
+		
 		return ret;
 	}
 	int AUART::set_baudrate(int baudrate)
@@ -110,13 +110,18 @@ namespace androidUAV
 	}
 	int AUART::peak(void *data, int max_count)
 	{
+		pthread_mutex_lock(&mutex);
 		update_buffer();
+		
 		if(max_count >= buffer_pos)
 			max_count = buffer_pos;
 		if(max_count <= 0)
+		{
+			pthread_mutex_unlock(&mutex);
 			return 0;
+		}
 		memcpy(data,buffer,max_count);
-
+		pthread_mutex_unlock(&mutex);
 		return max_count;
 	}
 	int AUART::write(const void *data, int count)
@@ -134,18 +139,24 @@ namespace androidUAV
 	}
 	int AUART::read(void *data, int max_count)
 	{
+		pthread_mutex_lock(&mutex);
 		update_buffer();
 		if(max_count >= buffer_pos)
 			max_count = buffer_pos;
 		if(max_count <= 0)
+		{
+			pthread_mutex_unlock(&mutex);
 			return 0;
+		}
 		memcpy(data,buffer,max_count);
 		memmove(buffer,buffer+max_count,buffer_pos-max_count);
 		buffer_pos-=max_count;
+		pthread_mutex_unlock(&mutex);
 		return max_count;
 	}
 	int AUART::readline(void *data, int max_count)
 	{
+		pthread_mutex_lock(&mutex);
 		update_buffer();
 		int line_end = -1;
 		for(int i=0;i<buffer_pos;i++)
@@ -157,15 +168,21 @@ namespace androidUAV
 			}
 		}
 		if(line_end <= 0 || line_end > max_count)
+		{
+			pthread_mutex_unlock(&mutex);
 			return 0;
+		}
 		memcpy(data,buffer,line_end);
 		memmove(buffer,buffer+line_end,buffer_pos-line_end);
 		buffer_pos+=line_end;
+		pthread_mutex_unlock(&mutex);
 		return line_end;
 	}
 	int AUART::available()
 	{
+		pthread_mutex_lock(&mutex);
 		update_buffer();
+		pthread_mutex_unlock(&mutex);
 		return buffer_pos;
 	}
 	void *AUART::read_thread(void *p)
@@ -183,16 +200,10 @@ namespace androidUAV
 		int cnt2 = 0;
 		while(exit)
 		{
-
+			pthread_mutex_lock(&mutex);
 			ret = update_buffer();
+			pthread_mutex_unlock(&mutex);
 			usleep(100);
-			/*if(ret > 0)
-			{
-				cnt+=ret;
-				if(cnt>1998)
-					printf("cnt = %d ret %d\n",cnt,ret);
-			}*/
-
 		}
 	}
 	void *AUART::send_thread(void *p)
@@ -204,6 +215,8 @@ namespace androidUAV
 			_this->write(send,1);
 			usleep(100);
 		}
+
+		return NULL;
 	}
 	int AUART::set_priority(int32_t priority)
 	{

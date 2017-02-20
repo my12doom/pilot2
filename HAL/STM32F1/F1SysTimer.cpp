@@ -46,7 +46,11 @@ namespace STM32F1
 	
 	void F1SysTimer::delayus(float us)
 	{
-		static const float overhead = 0.37f;
+		#ifdef __OPTIMIZE__
+		static const float overhead = 2.87f;
+		#else
+		static const float overhead = 4.35f;
+		#endif
 		if (us < overhead)
 			return;
 		us -= overhead;

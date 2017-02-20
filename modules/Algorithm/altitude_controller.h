@@ -57,7 +57,6 @@ public:
 	void set_climbrate_override(float new_ovverride) {climb_rate_override = new_ovverride;}
 
 	// estimated hover throttle
-	float throttle_hover;
 	float get_throttle_hover();
 
 	float m_baro_states[3];
@@ -90,6 +89,7 @@ public:
 	float m_braking_timer;
 
 protected:
+	float throttle_hover;
 	float feed_forward_factor;
 	float calc_leash_length(float speed, float accel, float kP);
 };

@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <Windows.h>
 #include "log.h"
 
 #include <Protocol/RFData.h>

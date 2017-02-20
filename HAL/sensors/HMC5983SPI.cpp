@@ -4,6 +4,7 @@
 #include <Protocol/common.h>
 
 //#define	HMC5883SlaveAddress 0x3C
+//slave address android
 #define	HMC5883SlaveAddress 0x1E
 
 #define HMC58X3_R_CONFA 0

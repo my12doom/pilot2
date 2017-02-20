@@ -5,7 +5,7 @@
 class flight_mode_poshold : public IFlightMode
 {
 public:
-        flight_mode_poshold(){}
+	flight_mode_poshold(){}
 	~flight_mode_poshold(){}
 
 	virtual bool is_ready();

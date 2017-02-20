@@ -123,13 +123,6 @@ float altitude_controller::get_altitude_state()
 	return alt_state;
 }
 
-float altitude_controller::get_throttle_hover()
-{
-	if (throttle_hover <= 0.01f || isnan(throttle_hover))
-		throttle_hover = default_throttle_hover;
-	return throttle_hover;
-}
-
 // update the controller
 // dt: time dt
 // user_rate: user desired climb rate, usually from stick.
@@ -404,6 +397,13 @@ float altitude_controller::get_result()
 bool altitude_controller::sonar_actived()
 {
 	return !isnan(m_sonar_target);
+}
+
+float altitude_controller::get_throttle_hover()
+{
+	if (throttle_hover <= 0.01f || isnan(throttle_hover))
+		throttle_hover = default_throttle_hover;
+	return throttle_hover;	
 }
 
 /// calc_leash_length - calculates the horizontal leash length given a maximum speed, acceleration and position kP gain

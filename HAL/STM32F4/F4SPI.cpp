@@ -137,4 +137,14 @@ namespace STM32F4
 		//printf("spi:%02x - %02x\n", data, o);
 		return o;
 	}
+	uint8_t F4SPI::txrx2(const uint8_t *tx, uint8_t *rx, int len)
+	{
+		for(int i=0; i<len; i++)
+		{
+			while (!(SPIx->SR & SPI_I2S_FLAG_TXE));
+			SPIx->DR = tx[i];
+			while (!(SPIx->SR & SPI_I2S_FLAG_RXNE));
+			rx[i] = SPIx->DR;
+		}
+	}
 }

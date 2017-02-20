@@ -7,18 +7,18 @@ namespace HAL
 {
 	class ICriticalSection
 	{
-		public:
+	public:
 		// waits (forever) for ownership of the critical section.
 		virtual void enter() = 0;
 
- 		// release the ownership of critical section.
+		// release the ownership of critical section.
 		virtual void leave() = 0;
 
- 		// return true if the critical section is successfully entered or current thread already owns the critical section
- 		// return false if another thread already owns the critical section.
+		// return true if the critical section is successfully entered or current thread already owns the critical section
+		// return false if another thread already owns the critical section.
 		virtual bool try_enter() = 0;
 	};
-	
+
 	// platform specified implementation
 	// return NULL if run out of resources
 	ICriticalSection * create_critical_section();

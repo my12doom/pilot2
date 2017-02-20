@@ -35,8 +35,6 @@ namespace HAL
             return -1;
         }
         openStatus = 1;
-        //just for test
-        //setIoID(228);
         return 0;
     }
     int AGPIO::fdClose()
@@ -70,7 +68,7 @@ namespace HAL
                     //ret = ioctl(fdGpio,1,&ioData);
                     break;
                 case IO_SET_OUT_MODE:
-                    ioData.status = 0;
+                    ioData.status = 1;
                     ioData.cmd = IO_SET_OUT_MODE;
                     ret = ioctl(fdGpio,1,&ioData);
                     break;

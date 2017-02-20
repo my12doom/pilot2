@@ -365,6 +365,7 @@ typedef struct SAT_header_struct
 enum EXTENDED_DATA_TYPES
 {
 	TAG_TEXT_LOG = 2,
+	TAG_FLOW_LOG = 10,
 	TAG_BATT = 17,
 	TAG_RTL_STATE = 18,
 	TAG_ACC_DATA = 19,

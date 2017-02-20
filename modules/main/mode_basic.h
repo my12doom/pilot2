@@ -5,7 +5,7 @@
 class flight_mode_basic : public IFlightMode
 {
 public:
-        flight_mode_basic(){}
+	flight_mode_basic(){}
 	~flight_mode_basic(){}
 
 	virtual int setup();

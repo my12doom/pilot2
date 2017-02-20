@@ -53,7 +53,6 @@ namespace androidUAV
 				int cntTmp = 0;
 				int startEvent = 0;
 				int currentEvent = 0;
-				
 				int ret = read(uio_fd,&currentEvent,sizeof(currentEvent));
 				cntTmp++;
 				if(ret < 0)

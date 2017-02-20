@@ -1,6 +1,7 @@
 #include "MPU6000.h"
 #include <stdio.h>
 #include <Protocol/common.h>
+#include <string.h>
 
 // Gyro and accelerator registers
 #define	SMPLRT_DIV		0x19
@@ -70,7 +71,6 @@ int MPU6000::read_reg(uint8_t reg, void *out, int count)
 			spi->txrx2(tx_buf, rx_buf, 15);
 			memcpy(out, rx_buf+1, 14);
 
-
 			systimer->delayus(1);
 			CS->write(true);
 			systimer->delayus(1);
@@ -82,11 +82,7 @@ int MPU6000::read_reg(uint8_t reg, void *out, int count)
 			systimer->delayus(1);
 
 			spi->txrx((reg&0x7f) | 0x80);
-			for(i=0; i<count; i++)
-				    p[i] = spi->txrx(0);
-
-			//spi->txrx((reg&0x7f) | 0x80);
-			//spi->txrx2(NULL,(uint8_t*)out,14);
+			p[0] = spi->txrx(0);
 			systimer->delayus(1);
 			CS->write(true);
 			systimer->delayus(1);
@@ -163,7 +159,7 @@ int MPU6000::init(HAL::ISPI *SPI, HAL::IGPIO *CS)
 
 	// MPU6000 can handle 1mhz max for configuration register accessing
 	// 20mhz for data output and interrupt accesss
-	    spi->set_speed(1000000);
+    spi->set_speed(1000000);
 	spi->set_mode(1, 1);
 	CS->set_mode(HAL::MODE_OUT_PushPull);
 	CS->write(true);

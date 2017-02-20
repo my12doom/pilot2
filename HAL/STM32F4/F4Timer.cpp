@@ -14,7 +14,7 @@ namespace STM32F4
 		NVIC_InitTypeDef NVIC_InitStructure;
 		if(TIM1==TIMx)
 		{	
-			NVIC_InitStructure.NVIC_IRQChannel = TIM1_UP_TIM10_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM1_UP_TIM10_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -22,7 +22,7 @@ namespace STM32F4
 		}
 		else if(TIM2==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM2_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -30,7 +30,7 @@ namespace STM32F4
 		}
 		else if(TIM3==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM3_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -38,7 +38,7 @@ namespace STM32F4
 		}
 		else if(TIM4==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = TIM4_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM4_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -46,7 +46,7 @@ namespace STM32F4
 		}
 		else if(TIM5==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = TIM5_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM5_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 7;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -65,7 +65,7 @@ namespace STM32F4
 		}
 		else if(TIM7==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = TIM7_IRQn;		// TODO: IRQ?
+			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM7_IRQn;		// TODO: IRQ?
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -107,6 +107,39 @@ namespace STM32F4
 	{		
 		this->cb=cb;
 	}
+	
+	void F4Timer::restart()
+	{
+		TIMx->CNT = 0;
+		if(TIM1==TIMx)
+			TIM_ClearITPendingBit(TIM1 , TIM_FLAG_Update);
+		else if(TIM2==TIMx)
+			TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);
+		else if(TIM3==TIMx)
+			TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
+		else if(TIM4==TIMx)
+			TIM_ClearITPendingBit(TIM4 , TIM_FLAG_Update);
+		else if(TIM5==TIMx)
+			TIM_ClearITPendingBit(TIM5 , TIM_FLAG_Update);
+		else if(TIM6==TIMx)
+			TIM_ClearITPendingBit(TIM6 , TIM_FLAG_Update);
+		else if(TIM7==TIMx)
+			TIM_ClearITPendingBit(TIM7 , TIM_FLAG_Update);
+		else if(TIM8==TIMx)
+			TIM_ClearITPendingBit(TIM8 , TIM_FLAG_Update);
+	}
+	void F4Timer::enable_cb()
+	{
+		NVIC_EnableIRQ(IRQn);
+		TIM_Cmd(TIMx,ENABLE);
+	}
+	
+	void F4Timer::disable_cb()
+	{
+		TIM_Cmd(TIMx,DISABLE);
+		NVIC_DisableIRQ(IRQn);
+	}
+	
 	void F4Timer::call_callback()
 	{
 		if(TIM1==TIMx)

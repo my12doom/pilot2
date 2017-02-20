@@ -11,6 +11,7 @@
  ******************************/
 
 #include <stdlib.h>
+#include <string.h>
 #include "GFMath.h"
 
 /* This is one of 14 irreducible polynomials

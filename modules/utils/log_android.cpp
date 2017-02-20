@@ -136,7 +136,12 @@ int log_write(const void *data, int size)
 	return log(data, size);
 }
 
-
+static int64_t gettime()
+{
+	struct timespec tv;
+	clock_gettime(CLOCK_MONOTONIC, &tv);
+	return (int64_t)((tv.tv_sec) * 1000000 + (tv.tv_nsec)/1000);
+}
 int log2(const void *packet, uint16_t tag, uint16_t size)
 {	
 	if(buffer_locked)
@@ -151,6 +156,7 @@ int log2(const void *packet, uint16_t tag, uint16_t size)
 	}
 
 	int64_t timestamp = systimer->gettime();
+	//int64_t timestamp = gettime();
 	timestamp &= ~((uint64_t)0xff << 56);
 	timestamp |= (uint64_t)TAG_EXTENDED_DATA << 56;
 

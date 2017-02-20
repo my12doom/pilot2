@@ -40,12 +40,12 @@ enum pos_estimator_state
 	fully_ready = 3,		// GPS
 };
 
-static const char * pos_estimator_state_str[] =
+static const char * pos_estimator_state_str[] = 
 {
-    "none",
-    "velocity_and_local",
-    "transiting",
-    "fully_ready",
+	"none",
+	"velocity_and_local",
+	"transiting",
+	"fully_ready",
 };
 
 enum acrobatic_moves_state
@@ -97,8 +97,8 @@ public:
 	int64_t g_pwm_input_update[16];//
 	int16_t g_ppm_output[16];//
 	int16_t g_pwm_input[16];//
-
-
+	
+	
 	// states
 	int mag_calibration_state;// = 0;			// 0: not running, 1: collecting data, 2: calibrating
 	int last_mag_calibration_result;// = 0xff;	// 0xff: not calibrated at all, other values from mag calibration.
@@ -140,13 +140,13 @@ public:
 	math::LowPassFilter2p accel_lpf2p[3];// = {LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40), LowPassFilter2p(1000, 40)};	// 2nd order low pass filter for gyro.
 	vector body_rate;				// body rate, with all compensation applied
 
-	//data fro main loop use,update at the beginning of main loop
+	// data for main loop use, updated at the beginning of main loop
 	vector accel;
-	vector gyro_reading;
+	vector gyro_reading;			// gyro reading with temperature compensation and LPF, without AHRS bias estimating
 	vector mag;
-	//latest data from imu thread
+	// latest data from imu thread
 	vector accel_imu;
-	vector gyro_reading_imu;
+	vector gyro_reading_imu;		// gyro reading with temperature compensation and LPF, without AHRS bias estimating
 	vector mag_imu;
 
 	vector gyro_uncalibrated;
@@ -167,7 +167,7 @@ public:
 	OpticalFlowController2 of_controller;
 	ekf_estimator ekf_est;
 	battery_estimator batt;
-
+	
 	float ground_speed_north;		// unit: m/s
 	float ground_speed_east;		// unit: m/s
 	float ground_accel_north;		// unit: m/s/s
@@ -199,7 +199,9 @@ public:
 	float mpu6050_temperature;
 	vector imu_statics[3][4];// = {0};		//	[accel, gyro, mag][min, current, max, avg]
 	int avg_count;// = 0;
-	sensors::px4flow_frame frame;
+//	sensors::px4flow_frame frame;
+	sensors::flow_data flow;
+	
 	float v_flow_ned[3];//ned flow velocity
 	int loop_hz;// = 0;
 	vector acc_calibrator[6];						// accelerometer calibration data array.
@@ -227,7 +229,7 @@ public:
 	// constructor
 	yet_another_pilot();
 	~yet_another_pilot(){}
-
+	
 	// setup and loop functions
 	int setup();
 	void main_loop();
@@ -237,19 +239,19 @@ public:
 	static void main_loop_entry(){yap.main_loop();}
 	static void sdcard_loop_entry(){yap.sdcard_loop();}
 	static void imu_reading_entry(){yap.read_imu_and_filter();}
-
+	
 	// mag and accelerometer calibration
 	int sensor_calibration();
 	int finish_accel_cal();
 	void reset_accel_cal();
 	void reset_mag_cal();
 	void cancel_mag_cal();
-
+	
 	// automated functions
 	int prepare_for_throw() { pending_throwgo = true; return 0;}
 	int start_taking_off();
 	int start_acrobatic(acrobatic_moves move, int arg);
-
+	
 	// main loop sub routines.
 	int read_rc();
 	int light_words();
@@ -280,7 +282,7 @@ public:
 	// event handling
 	int new_event(int event, int arg);
 	int handle_events();
-
+	
 	// UART functions
 	int handle_cli(HAL::IUART *uart);
 	int handle_uart4_controll();
@@ -289,7 +291,7 @@ public:
 	//fifo function
 	int handle_fifo_controll(HAL::IFIFO *fifo);
 	// helper functions
-	float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert);
+	float ppm2rc(float ppm, float min_rc, float center_rc, float max_rc, bool revert);	
 	static int min(int a, int b){return a>b?b:a;}
 	static int max(int a, int b){return a<b?b:a;}
 	static float fmin(float a, float b){return a > b ? b : a;}
@@ -305,7 +307,7 @@ public:
 	int set_home_LLH(const float *LLH);
 	pos_estimator_state get_estimator_state();
 
-
+	
 //protected:
 };
 

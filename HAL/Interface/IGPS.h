@@ -53,5 +53,7 @@ namespace devices
 
 		// return false for hardware error(still return true for signal lost)
 		virtual bool healthy() = 0;
+
+		virtual int ioctl(int request, void *data){return -1;}
 	};
 }

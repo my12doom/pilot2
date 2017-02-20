@@ -2,7 +2,7 @@
 #define __VECTOR_H__
 
 
-typedef union
+typedef union _vector
 {
 	float array[3];
 	struct
@@ -11,6 +11,21 @@ typedef union
 		float y;
 		float z;
 	}V;
+
+	float & operator [](int index){return array[index];}
+	void operator +=(const union _vector &v);
+	union _vector operator +(const union _vector &v);
+	void operator -=(const union _vector &v);
+	union _vector operator -(const union _vector &v);
+	void operator *=(const float &v);
+	union _vector operator *(const float &v);
+	void operator /=(const float &v);
+	union _vector operator /(const float &v);
+
+	float length();
+	float dot(const union _vector &v);
+	float angle(const union _vector &v);
+	void normalize();
 }vector;
 	
 void vector_add(vector *a, vector *b);		// a = a+b
@@ -22,7 +37,5 @@ void vector_rotate2(vector *v, float *delta);
 float vector_length(vector *v);
 float vector_angle(vector *v1, vector *v2);	// return cos(angle(v1, v2))
 void vector_normalize(vector *v);
-int accel_vector_to_euler_angle(vector accel, vector *ouler);		// ouler angle roll, pitch are stored in ouler->array[0,1], yaw not calculated
-vector vector_delta_angle(vector v1, vector v2);
 
 #endif

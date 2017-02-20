@@ -15,7 +15,7 @@ typedef struct
 class flight_mode_RTL : public IFlightMode
 {
 public:
-        flight_mode_RTL(){}
+	flight_mode_RTL(){}
 	~flight_mode_RTL(){}
 
 	virtual bool is_ready();

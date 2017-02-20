@@ -48,7 +48,7 @@ int bsp_init_all()
 	timer[1].set_period(THREAD_PRIORITY_IDLE);
 	timer[2].set_period(THREAD_PRIORITY_HIGHEST);
 
-	param("time", 3000)=1000;
+	param("time", 3000)=3000;
 	param("ekf", 0)=2;
 
 	return 0;

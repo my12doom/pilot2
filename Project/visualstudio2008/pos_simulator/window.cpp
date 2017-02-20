@@ -3,13 +3,15 @@
 #include <Windows.h>
 #include "resource.h"
 #include <math.h>
+#include <Protocol/common.h>
 
 HWND wnd;
-static float PI = acos(-1.0);
 
 HPEN pen = CreatePen(PS_SOLID, 28, RGB(255, 0, 0));
 HPEN green_pen = CreatePen(PS_SOLID, 28, RGB(0, 255, 0));
 HPEN blue_pen = CreatePen(PS_SOLID, 28, RGB(0, 0, 255));
+HPEN purple_pen = CreatePen(PS_SOLID, 50, RGB(255, 0, 255));
+HPEN target_pen = CreatePen(PS_SOLID, 50, RGB(255, 0, 255));
 DWORD CALLBACK remote_update_thread(LPVOID p)
 {
 	while(true)
@@ -60,6 +62,27 @@ DWORD CALLBACK remote_update_thread(LPVOID p)
 		LineTo(memDC, x+dx, y+dy);
 
 
+		// target and virtual vision
+		float target_ne[2] = {5, -8};					// position in meter
+		float x_target = rect.right/2 + target_ne[1] * 25;	// position in window 
+		float y_target = rect.bottom/2 - target_ne[0] * 25;
+		SelectObject(memDC, purple_pen);
+		MoveToEx(memDC, x_target, y_target, NULL);
+		LineTo(memDC, x_target, y_target);
+
+		float bearing_north = target_ne[0] - pos[0];
+		float bearing_east = target_ne[1] - pos[1];
+		float distance = sqrt(bearing_north * bearing_north + bearing_east * bearing_east);
+		float bearing = atan2(bearing_east, bearing_north);
+		float yaw_delta = radian_sub(bearing, euler[2]);
+		float pos_x = rect.right/2 + yaw_delta * rect.right/2 / (PI/3);
+		SelectObject(memDC, target_pen);
+		MoveToEx(memDC, pos_x, rect.bottom/2, NULL);
+		LineTo(memDC, pos_x, rect.bottom/2);
+
+
+
+
 		BitBlt(hdc, 0, 0, rect.right, rect.bottom, memDC, 0, 0, SRCCOPY);
 		DeleteDC(memDC);
 		ReleaseDC(graph_wnd, hdc);
@@ -71,6 +94,7 @@ DWORD CALLBACK remote_update_thread(LPVOID p)
 		sprintf(tmp, "roll:%.0f/%.0f, pitch:%.0f/%.0f, %s", euler[0] * 180 / PI, target_euler[0] * 180 / PI, euler[1] * 180 / PI, target_euler[1] * 180 / PI, use_pos_controller ? "U" : "X");
 		SetWindowTextA(graph_wnd, tmp);
 		Sleep(17);
+
 	}
 
 	return 0;

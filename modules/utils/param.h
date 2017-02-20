@@ -3,7 +3,6 @@
 #define MAX_PARAM_COUNT 256
 
 #ifdef __cplusplus
-#define WIN32
 class param
 {
 public:
@@ -14,24 +13,19 @@ public:
 
 	inline operator float()
 	{
-#ifdef WIN32
 		if(pv)
-#endif
-		return *pv;
+			return *pv;
+		return 0;
 	}
 	float* operator& ()
 	{
-#ifdef WIN32
 		if(pv)
-#endif
 			return pv;
+		return 0;
 	}
 	inline float& operator= (float in)		// ram operation only
 	{
-#ifdef WIN32
-		if(pv)
-#endif
-			return *pv = in;
+		return *pv = in;		
 	}
 	void save();						// save to eeprom
 
@@ -47,7 +41,7 @@ protected:
 private:
 	void init_all();
 };
-#undef WIN32
+
 extern "C"
 {
 #endif

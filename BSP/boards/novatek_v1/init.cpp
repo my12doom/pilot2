@@ -15,6 +15,7 @@
 #include <HAL\Interface\ILED.h>
 #include <HAL/sensors/PX4Flow.h>
 #include <HAL/sensors/BM1383.h>
+#include <HAL/sensors/SPL06.h>
 #include <utils/param.h>
 #include "RGBLED.h"
 #include "TLC59208F.h"
@@ -293,7 +294,7 @@ int iTLC59208F()
 
 int init_1383()
 {
-	static BM1383 bm1383;
+	static SPL06 bm1383;
 	static F4GPIO SCL(GPIOC, GPIO_Pin_13);
 	static F4GPIO SDA(GPIOC, GPIO_Pin_14);
 	static I2C_SW i2c(&SCL, &SDA);
@@ -305,7 +306,7 @@ int init_1383()
 		{
 			manager.register_barometer(&bm1383);
 			
-			LOGE("found BM1383\n");
+			LOGE("found SPL06\n");
 			
 			return 0;
 		}

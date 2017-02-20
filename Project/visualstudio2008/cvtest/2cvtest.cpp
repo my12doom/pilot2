@@ -7,14 +7,18 @@
 #include <opencv/highgui.h>
 #include <math.h>
 #include <Windows.h>
+#include <atlbase.h>
+#include <conio.h>
 #include "feature.h"
 #include "flow.h"
+#include "avisynth.h"
 
 
-#pragma comment(lib, "opencv_highgui243d.lib")
-#pragma comment(lib, "opencv_core243d.lib")
-#pragma comment(lib, "opencv_video243d.lib")
-#pragma comment(lib, "opencv_imgproc243d.lib")
+#pragma comment(lib, "opencv_highgui243.lib")
+#pragma comment(lib, "opencv_core243.lib")
+#pragma comment(lib, "opencv_video243.lib")
+#pragma comment(lib, "opencv_imgproc243.lib")
+#pragma comment(lib, "winmm.lib")
 
 static const double pi = 3.14159265358979323846;
 static LONGLONG total_flow_time = 0;
@@ -66,11 +70,402 @@ inline static void allocateOnDemand( IplImage **img, CvSize size, int depth, int
 	}
 }
 
+
+bool is_avs(const wchar_t *file)
+{
+	int len = wcslen(file);
+	wchar_t tmp[1024];
+	wcscpy(tmp, file + len - 3);
+	for(int i=0; i<3; i++)
+		tmp[i] = towlower(tmp[i]);
+
+	return wcscmp(tmp, L"avs") == 0;
+}
+
+void draw_arrow(IplImage *img, CvPoint from, CvPoint to, CvScalar line_color, int line_thickness)
+{
+	CvPoint p = from , q = to;
+
+	double angle;		angle = atan2( (double) p.y - q.y, (double) p.x - q.x );
+	double hypotenuse;	hypotenuse = sqrt( square(p.y - q.y) + square(p.x - q.x) );
+
+	/* Here we lengthen the arrow by a factor of three. */
+	q.x = (int) (p.x - 3 * hypotenuse * cos(angle));
+	q.y = (int) (p.y - 3 * hypotenuse * sin(angle));
+
+	/* Now we draw the main line of the arrow. */
+	/* "frame1" is the frame to draw on.
+	 * "p" is the point where the line begins.
+	 * "q" is the point where the line stops.
+	 * "CV_AA" means antialiased drawing.
+	 * "0" means no fractional bits in the center cooridinate or radius.
+	 */
+	cvLine( img, p, q, line_color, line_thickness, CV_AA, 0 );
+	/* Now draw the tips of the arrow.  I do some scaling so that the
+	 * tips look proportional to the main line of the arrow.
+	 */			
+	p.x = (int) (q.x + 9 * cos(angle + pi / 4));
+	p.y = (int) (q.y + 9 * sin(angle + pi / 4));
+	cvLine( img, p, q, line_color, line_thickness, CV_AA, 0 );
+	p.x = (int) (q.x + 9 * cos(angle - pi / 4));
+	p.y = (int) (q.y + 9 * sin(angle - pi / 4));
+	cvLine( img, p, q, line_color, line_thickness, CV_AA, 0 );
+}
+
+int32_t dxdy[1024][1024][3];
+int eigen[1024][1024];
+
+int sqrti(float x)
+{
+	union { float f; int x; } v; 
+
+	// convert to float
+	v.f = (float)x;
+
+	// fast aprox sqrt
+	//  assumes float is in IEEE 754 single precision format 
+	//  assumes int is 32 bits
+	//  b = exponent bias
+	//  m = number of mantissa bits
+	v.x  -= 1 << 23; // subtract 2^m 
+	v.x >>= 1;       // divide by 2
+	v.x  += 1 << 29; // add ((b + 1) / 2) * 2^m
+
+	// convert to int
+	return (int)v.f;
+}
+
+void find_feature_eigen(uint8_t *img, uint8_t *out, int width, int height, int stride)
+{
+	for(int y=1; y<height-1; y++)
+	{
+		for(int x=1; x<width-1; x++)
+		{
+			int a0 = img[(y-1)*stride+(x-1)];
+			int a1 = img[(y-1)*stride+(x+0)];
+			int a2 = img[(y-1)*stride+(x+1)];
+			int a3 = img[(y+0)*stride+(x-1)];
+			int a4 = img[(y+0)*stride+(x+0)];
+			int a5 = img[(y+0)*stride+(x+1)];
+			int a6 = img[(y+1)*stride+(x-1)];
+			int a7 = img[(y+1)*stride+(x+0)];
+			int a8 = img[(y+1)*stride+(x+1)];
+
+			
+			int dy			=	(a0*-1 + a1*-2 + a2 *-1 +
+								a3* 0 + a4* 0 + a5 * 0 +
+								a6*1  + a7* 2 + a8 * 1);
+
+			int dx			=	(a0*-1 + a1*-0 + a2 * 1 +
+								a3*-2 + a4* 0 + a5 * 2 +
+								a6*-1 + a7* 0 + a8 * 1);
+
+			dxdy[y][x][0] = dx * dx;
+			dxdy[y][x][1] = dy * dy;
+			dxdy[y][x][2] = dx * dy;
+		}
+	}
+
+	int global_max = 1;
+
+	for(int y=1; y<height-1; y++)
+	{
+		for(int x=1; x<width-1; x++)
+		{
+// 			int dx[9] = {dxdy[y-1][x-1][0], dxdy[y-1][x+0][0], dxdy[y-1][x+1][0], 
+// 						 dxdy[y+0][x-1][0], dxdy[y+0][x+0][0], dxdy[y+0][x+1][0], 
+// 						 dxdy[y+1][x-1][0], dxdy[y+1][x+0][0], dxdy[y+1][x+1][0], };
+// 
+// 			int dy[9] = {dxdy[y-1][x-1][1], dxdy[y-1][x+0][1], dxdy[y-1][x+1][1], 
+// 						 dxdy[y+0][x-1][1], dxdy[y+0][x+0][1], dxdy[y+0][x+1][1], 
+// 						 dxdy[y+1][x-1][1], dxdy[y+1][x+0][1], dxdy[y+1][x+1][1], };
+
+			int dx2 = 0;
+			int dy2 = 0;
+			int dx_dy = 0;
+
+			dx2 += dxdy[y-1][x-1][0];
+			dx2 += dxdy[y-1][x+0][0];
+			dx2 += dxdy[y-1][x+1][0];
+			dx2 += dxdy[y+0][x-1][0];
+			dx2 += dxdy[y+0][x+0][0];
+			dx2 += dxdy[y+0][x+1][0];
+			dx2 += dxdy[y+1][x-1][0];
+			dx2 += dxdy[y+1][x+0][0];
+			dx2 += dxdy[y+1][x+1][0];
+
+			dy2 += dxdy[y-1][x-1][1];
+			dy2 += dxdy[y-1][x+0][1];
+			dy2 += dxdy[y-1][x+1][1];
+			dy2 += dxdy[y+0][x-1][1];
+			dy2 += dxdy[y+0][x+0][1];
+			dy2 += dxdy[y+0][x+1][1];
+			dy2 += dxdy[y+1][x-1][1];
+			dy2 += dxdy[y+1][x+0][1];
+			dy2 += dxdy[y+1][x+1][1];
+
+			dx_dy += dxdy[y-1][x-1][2];
+			dx_dy += dxdy[y-1][x+0][2];
+			dx_dy += dxdy[y-1][x+1][2];
+			dx_dy += dxdy[y+0][x-1][2];
+			dx_dy += dxdy[y+0][x+0][2];
+			dx_dy += dxdy[y+0][x+1][2];
+			dx_dy += dxdy[y+1][x-1][2];
+			dx_dy += dxdy[y+1][x+0][2];
+			dx_dy += dxdy[y+1][x+1][2];
+
+// 			int a11 = dx2;
+// 			int a22 = dy2;
+			int a12 = dx_dy;
+			int a21 = dx_dy;
+			float t2 = sqrt(float(int64_t(4*a12*a21)+int64_t(dx2-dy2)*int64_t(dx2-dy2)));
+			eigen[y][x] = (int64_t(dx2+dy2)-t2)/2;
+
+			global_max = max(global_max, eigen[y][x]);
+		}
+	}
+
+	for(int y=1; y<height-1; y++)
+	{
+		for(int x=1; x<width-1; x++)
+		{
+			out[y*stride+x] = (eigen[y][x] << 8) / global_max;
+		}
+	}
+}
+
+int main2()
+{
+	timeBeginPeriod(1);
+
+	FILE * f = fopen("out.csv", "wb");
+	fprintf(f, "n,vx,vy,x,y\n");
+	float ix = 0;
+	float iy = 0;
+
+	int re_w = 0;
+	int re_h = 0;
+	wchar_t msg[2048];
+	wchar_t video[] = L"optical_flow_input.avi";
+
+	IplImage *frame1 = NULL;
+	IplImage *frame1Y = NULL;
+	IplImage *frame2 = NULL;
+	IplImage *frame2Y = NULL;
+	IplImage *pyramid1 = NULL;
+	IplImage *pyramid2 = NULL;
+	IplImage *eig_image = NULL;
+	IplImage *eig_imageY = NULL;
+	IplImage *temp_image = NULL;
+
+	try 
+	{
+		HMODULE avsdll = LoadLibrary(_T("avisynth.dll"));
+		if(!avsdll)
+		{
+			wcscpy(msg, L"failed to load avisynth.dll\n");
+			return -1;
+		}
+		IScriptEnvironment*  (__stdcall* CreateScriptEnvironment)(int version) = (IScriptEnvironment*(__stdcall*)(int)) GetProcAddress(avsdll, "CreateScriptEnvironment");
+		if(!CreateScriptEnvironment)
+		{
+			wcscpy(msg, L"failed to load CreateScriptEnvironment()\n");
+			return -2;
+		}
+
+		USES_CONVERSION;
+		fprintf(stderr, "Loading file %s...", W2A(video));
+		IScriptEnvironment* env = CreateScriptEnvironment(AVISYNTH_INTERFACE_VERSION);
+		AVSValue arg[2] = {W2A(video), 24.0f};
+
+		AVSValue res;
+		if (is_avs(video))
+			res = env->Invoke("Import", AVSValue(arg, 1));
+		else
+			res = env->Invoke("DirectShowSource", AVSValue(arg, 1));
+
+		if(!res.IsClip())
+		{swprintf(msg, L"Error: '%s' didn't return a video clip.\n", video); return E_FAIL;}
+
+		PClip clip = res.AsClip();
+		VideoInfo inf = clip->GetVideoInfo();
+		if(!inf.HasVideo())
+		{swprintf(msg, L"Error: '%s' didn't return a video clip.\n", video); return E_FAIL;}
+
+		fprintf(stderr, "OK\n");
+
+		if (inf.pixel_type != VideoInfo::CS_BGR24)
+		{
+			fprintf(stderr, "Converting to RGB32....");
+			res = env->Invoke("ConvertToRGB24", res);
+			clip = res.AsClip();
+			inf = clip->GetVideoInfo();
+		}
+
+		if (inf.pixel_type != VideoInfo::CS_BGR24)
+		{
+			fprintf(stderr, "FAILED\n");
+			{wcscpy(msg, L"FAILED Converting to RGB32"); return E_FAIL;}
+		}
+		else
+		{
+			fprintf(stderr, "OK\n");
+		}
+
+		// resize
+		if (re_w !=0 && re_h != 0)
+		{
+			AVSValue args[3];
+			args[0] = res;
+			args[1] = AVSValue(re_w);
+			args[2] = AVSValue(re_h);
+			res = env->Invoke("LanczosResize", AVSValue(args, 3));
+			clip = res.AsClip();
+			inf = clip->GetVideoInfo();
+		}
+
+		CvSize frame_size;
+		frame_size.height = inf.height;
+		frame_size.width = inf.width;
+		allocateOnDemand(&frame1, frame_size, IPL_DEPTH_8U, 3 );
+		allocateOnDemand(&frame2, frame_size, IPL_DEPTH_8U, 3 );
+		allocateOnDemand(&frame1Y, frame_size, IPL_DEPTH_8U, 1 );
+		allocateOnDemand(&frame2Y, frame_size, IPL_DEPTH_8U, 1 );
+		allocateOnDemand( &pyramid1, frame_size, IPL_DEPTH_8U, 1 );
+		allocateOnDemand( &pyramid2, frame_size, IPL_DEPTH_8U, 1 );
+		allocateOnDemand( &eig_image, frame_size, IPL_DEPTH_32F, 1 );
+		allocateOnDemand( &eig_imageY, frame_size, IPL_DEPTH_8U, 1 );
+		allocateOnDemand( &temp_image, frame_size, IPL_DEPTH_32F, 1 );
+
+
+		int width = clip->GetVideoInfo().width;
+		int height = clip->GetVideoInfo().height;
+		RGBQUAD *data = (RGBQUAD*) malloc(width * (height+32) * sizeof(RGBQUAD));
+		int t = GetTickCount();
+		int lt = t;
+		CvScalar red = CV_RGB(255,0,0);
+		CvScalar blue = CV_RGB(0,0,255);
+		CvScalar green = CV_RGB(0,255,0);
+		CvScalar yellow = CV_RGB(255,255,0);
+		for(int i=0; i< clip->GetVideoInfo().num_frames; i= i++/*getch() == 'p' ? i+1 : i-1*/)
+		{
+			PVideoFrame aframe1 = clip->GetFrame(i, env);
+			PVideoFrame aframe2 = clip->GetFrame(i+1, env);
+			RGBQUAD* src_data = (RGBQUAD*) aframe1->GetReadPtr();
+			int pitch_avisynth = aframe1->GetPitch();
+			int pitch_cv = frame1->widthStep;
+
+			printf("\rdecoding %d/%d frames", i, inf.num_frames);
+
+			RGBQUAD * tmp = data;
+			for (int j=0; j< inf.height; j++)
+			{
+				//memcpy(tmp + j*height, src_data + j*inf.height, sizeof(RGBQUAD) * inf.width);
+
+				int width_step = min(pitch_avisynth, pitch_cv);
+				memcpy(frame1->imageData + pitch_cv * j, aframe1->GetReadPtr() + pitch_avisynth * j, width_step);
+				memcpy(frame2->imageData + pitch_cv * j, aframe2->GetReadPtr() + pitch_avisynth * j, width_step);
+			}
+
+			cvConvertImage(frame1, frame1Y);
+			cvConvertImage(frame2, frame2Y);
+
+			int number_of_features = 400;
+			CvPoint2D32f frame1_features[400];
+			CvPoint2D32f frame2_features[400];
+
+
+			cvGoodFeaturesToTrack(frame1Y, eig_image, temp_image, frame1_features, &number_of_features, .01, 25, NULL);
+
+			CvSize optical_flow_window = cvSize(3,3);
+			char optical_flow_found_feature[400];
+			float optical_flow_feature_error[400];
+			CvTermCriteria optical_flow_termination_criteria = cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3 );
+
+
+
+			float vx = 0;
+			float vy = 0;
+
+			for(int j=0; j<number_of_features; j++)
+			{
+				CvPoint p = {frame1_features[j].x, frame1_features[j].y};
+// 				cvCircle(frame1, p, 10, red, 3);
+
+				//frame1_1C->imageData[int(frame1_features[i].x + frame1_features->y * pitch_frame)] ^= 0xff;
+				xy diff = fit((uint8_t*)frame1Y->imageData, (uint8_t*)frame2Y->imageData, width, height, frame1Y->widthStep, p.x, p.y);
+				CvPoint p2 = {frame1_features[j].x+diff.x, frame1_features[j].y + diff.y};
+				draw_arrow(frame1, p, p2, green, 5);
+
+				xy diff2 = fit2((uint8_t*)frame1Y->imageData, (uint8_t*)frame2Y->imageData, width, height, frame1Y->widthStep, p.x, p.y);
+				CvPoint p3 = {frame1_features[j].x+diff2.x, frame1_features[j].y + diff2.y};
+				draw_arrow(frame1, p, p3, blue, 3);
+
+				vx += diff2.x;
+				vy += diff2.y;
+			}
+
+			vx /= number_of_features;
+			vy /= number_of_features;
+
+			ix += vx / 30;
+			iy += vy / 30;
+
+			fprintf(f, "%d,%f,%f,%f,%f\n", i, vx, vy, ix, iy);
+
+			cvCalcOpticalFlowPyrLK(frame1Y, frame2Y, pyramid1, pyramid2, frame1_features, frame2_features, number_of_features, optical_flow_window, 5, optical_flow_found_feature, optical_flow_feature_error, optical_flow_termination_criteria, 0 );
+ 			for(int j=0; j<number_of_features; j++)
+			{
+				if ( optical_flow_found_feature[i] == 0 )	continue;
+
+				CvPoint p = {frame1_features[j].x, frame1_features[j].y};
+				CvPoint q = {frame2_features[j].x, frame2_features[j].y};
+
+				draw_arrow(frame2, p, q, yellow, 1);
+			}
+
+			lt = timeGetTime();
+			find_feature_eigen((uint8_t*)frame1Y->imageData, (uint8_t*)frame2Y->imageData, width, height, frame1Y->widthStep);
+			printf("%d/%d ms\n", timeGetTime()-t, timeGetTime()-lt);
+
+// 			cvCornerMinEigenVal(frame1Y, eig_image, 3);
+// 
+// 			float * p = (float*)eig_image->imageData;
+// 			uint8_t * p2 = (uint8_t*)eig_imageY->imageData;
+// 			int global_max = 0;
+// 			for(int i=0; i<eig_image->widthStep/4*eig_image->height; i++)
+// 				global_max = max(global_max, p[i]);
+// 			for(int i=0; i<eig_image->widthStep/4*eig_image->height; i++)
+// 				p2[i] = p[i]*255/global_max;
+
+			cvShowImage("input", frame2Y);
+			cvShowImage("input2", frame1Y);
+			DoEvents();
+		}
+
+		free(data);
+
+		return 0;
+	}
+
+	catch(AvisynthError err) 
+	{
+		fprintf(stderr, err.msg);
+
+		return -3;
+	}
+
+	return -4;
+}
+
 int main(void)
 {
+
+	main2();
+
 	/* Create an object that decodes the input video stream. */
 	CvCapture *input_video = cvCaptureFromFile(
-		"optical_flow_input.avi"
+		"b.avi"
 		);
 	if (input_video == NULL)
 	{

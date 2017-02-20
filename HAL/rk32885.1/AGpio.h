@@ -23,7 +23,7 @@ namespace HAL
     {
         IO_REQUEST = 0,//request an io device
         IO_SET_OUT_MODE = 1,//set to output mode and set it's status
-        IO_SET_VAL = 2,//set value ...(need fix up here 0926)
+        IO_SET_VAL = 2,//set value ...
         IO_SET_IN_MODE = 3,//set as input mode
         IO_READ_STATUS = 4,//read io status
         IO_FREE = 5,// free io device
