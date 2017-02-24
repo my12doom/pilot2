@@ -86,10 +86,8 @@ LOCAL_SRC_FILES := \
 	test.cpp \
 	camera.cpp \
 	myx264.cpp \
-	radiotap.c \
-	lib.c \
-	fec.c \
-	rx.c \
+	tx.cpp \
+	wifibroadcast/radiotap.c \
 
 
 LOCAL_C_INCLUDES :=  \

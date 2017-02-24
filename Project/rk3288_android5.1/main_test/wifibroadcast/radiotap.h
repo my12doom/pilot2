@@ -14,20 +14,20 @@
  * @this_arg: pointer to current radiotap arg
  * @arg_index: internal next argument index
  * @arg: internal next argument pointer
- * @next_bitmap: internal pointer to next present u32
- * @bitmap_shifter: internal shifter for curr u32 bitmap, b0 set == arg present
+ * @next_bitmap: internal pointer to next present uint32_t
+ * @bitmap_shifter: internal shifter for curr uint32_t bitmap, b0 set == arg present
  */
 typedef unsigned long  ulong;
 struct ieee80211_radiotap_iterator {
 	struct ieee80211_radiotap_header *rtheader;
 	int max_length;
 	int this_arg_index;
-	u8 *this_arg;
+	uint8_t *this_arg;
 
 	int arg_index;
-	u8 *arg;
+	uint8_t *arg;
 	__le32 *next_bitmap;
-	u32 bitmap_shifter;
+	uint32_t bitmap_shifter;
 };
 
 extern int ieee80211_radiotap_iterator_init(
