@@ -88,8 +88,13 @@ void init_uart()
 	
 	while(0)
 	{
-		f4uart4.write("hello", 5);
+		f4uart1.write("hello", 5);
 		systimer->delayms(500);
+		
+		char tmp[1000];
+		int o = f4uart1.read(tmp, 1000);
+		for(int i = 0; i<o; i++)
+			fputc(tmp[i], NULL);
 	}
 		
 }
@@ -111,8 +116,10 @@ void init_sensors()
 	
 	if (mpu6000device.init(&spi1, &cs_mpu) == 0)
 	{
-		mpu6000device.accelerometer_axis_config(1, 0, 2, -1, -1, +1);
-		mpu6000device.gyro_axis_config(1, 0, 2, +1, +1, -1);
+		//mpu6000device.accelerometer_axis_config(1, 0, 2, -1, -1, +1);
+		//mpu6000device.gyro_axis_config(1, 0, 2, +1, +1, -1);
+		mpu6000device.accelerometer_axis_config(1, 0, 2, -1, +1, -1);		// up side down
+		mpu6000device.gyro_axis_config(1, 0, 2, +1, -1, +1);				// up side down
 		manager.register_accelerometer(&mpu6000device);
 		manager.register_gyroscope(&mpu6000device);
 	}
@@ -138,7 +145,8 @@ int init_external_compass()
 		static I2C_SW i2c(&SCL, &SDA);
 		static sensors::HMC5983 hmc5983;
 		hmc5983.init(&i2c);
-		hmc5983.axis_config(0, 2, 1, +1, +1, +1);
+		//hmc5983.axis_config(0, 2, 1, +1, +1, +1);							
+		hmc5983.axis_config(2, 0, 1, -1, +1, +1);							// rotated magneto
 
 		manager.register_magnetometer(&hmc5983);
 	}
@@ -276,6 +284,8 @@ int init_VCP()
 static param ignore_error("err",0);
 int bsp_init_all()
 {
+	param("fix", 0) = 1.5;
+
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	//init_sonar();
 	init_led();
@@ -337,6 +347,7 @@ int bsp_init_all()
 	printf("erase:%d, program:%d\n", erase_time, program_time);
 	*/
 	
+
 	return 0;
 }
 

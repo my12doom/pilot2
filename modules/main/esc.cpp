@@ -12,6 +12,7 @@
 #include <stm32f4xx_tim.h>
 #include <stm32f4xx_rcc.h>
 #include <HAL/sensors/MPU6000.h>
+#include <Protocol/common.h>
 
 using namespace HAL;
 using namespace devices;
@@ -26,7 +27,6 @@ struct __FILE { int handle; /* Add whatever you need here */ };
 #define TRCENA          0x01000000
 
 
-	float PI = acos(-1.0);
 
 extern "C" int fputc(int ch, FILE *f)
 {
@@ -36,18 +36,6 @@ extern "C" int fputc(int ch, FILE *f)
 		ITM_Port8(0) = ch;
 	}
 	return (ch);
-}
-
-static void swap(void *buf, int size)
-{
-	char *p = (char*)buf;
-	int i;
-	for(i=0; i<size/2; i++)
-	{
-		char t = p[i];
-		p[i] = p[size-1-i];
-		p[size-1-i] = t;
-	}
 }
 
 int init_tim1()
@@ -109,7 +97,7 @@ int init_tim1()
 	TIM_BDTRInitStructure.TIM_AutomaticOutput = TIM_AutomaticOutput_Enable;
 	TIM_BDTRConfig(TIM1, &TIM_BDTRInitStructure);
 	*/
-	TIM1->BDTR |= 1<<15 | 150;
+	TIM1->BDTR |= 1<<15 | 75;
 
 
 	TIM_ARRPreloadConfig(TIM1, ENABLE);
@@ -129,6 +117,191 @@ int init_tim1()
 	
 	return 0;
 }
+
+uint16_t adc[6];
+
+int init_adc()
+{
+	// power
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+	
+	
+	// GPIO
+	GPIO_InitTypeDef GPIO_InitStructure;
+	
+	/* Configure PA.06  as analog input */
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AIN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	
+	
+	// ADC1 configuration	
+	ADC_CommonInitTypeDef ADC_CommonInitStructure;
+	ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
+	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
+	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
+	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
+	ADC_CommonInit(&ADC_CommonInitStructure);
+
+	ADC_InitTypeDef ADC_InitStructure;
+	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+	ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
+	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_Rising;
+	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_NbrOfConversion = 1;
+
+	ADC_Init(ADC1, &ADC_InitStructure);
+	ADC_EOCOnEachRegularChannelCmd(ADC1,DISABLE);
+	
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_3Cycles);
+	ADC_DMARequestAfterLastTransferCmd(ADC1, ENABLE);
+	
+	/* Enable ADC1 DMA */
+	ADC_DMACmd(ADC1, ENABLE);
+	
+	/* Enable ADC1 */
+	ADC_Cmd(ADC1, ENABLE);
+	
+	
+	
+	
+	
+		// DMA channel1 configuration 
+	NVIC_InitTypeDef   NVIC_InitStructure;
+
+	// Enable the DMA2_Stream0 global Interrupt
+	NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream0_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x06;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+	
+	// DMA2 Stream0 channel0 configuration
+	DMA_InitTypeDef DMA_InitStructure;
+	DMA_InitStructure.DMA_Channel = DMA_Channel_0;
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);
+	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)&adc[0];
+	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+	DMA_InitStructure.DMA_BufferSize = 1;
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+	DMA_InitStructure.DMA_MemoryDataSize = DMA_PeripheralDataSize_HalfWord;
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+	DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;         
+	DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;
+	DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+	DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+	DMA_DeInit(DMA2_Stream0);
+	DMA_Init(DMA2_Stream0, &DMA_InitStructure);
+	DMA_Cmd(DMA2_Stream0, ENABLE);
+	DMA_ClearFlag(DMA2_Stream0,DMA_FLAG_TCIF0);
+	//DMA_ITConfig(DMA2_Stream0,DMA_IT_TC,ENABLE);
+}
+
+int init_adc2()
+{
+	// power
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+	
+	
+	// GPIO
+	GPIO_InitTypeDef GPIO_InitStructure;
+	
+	/* Configure PA.06  as analog input */
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AIN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	
+	
+	// ADC1 configuration	
+	ADC_CommonInitTypeDef ADC_CommonInitStructure;
+	ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
+	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
+	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
+	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
+	ADC_CommonInit(&ADC_CommonInitStructure);
+
+	ADC_InitTypeDef ADC_InitStructure;
+	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+	ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
+	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_Rising;
+	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC2;
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_NbrOfConversion = 1;
+
+	ADC_Init(ADC2, &ADC_InitStructure);
+	ADC_EOCOnEachRegularChannelCmd(ADC2,DISABLE);
+	
+	ADC_RegularChannelConfig(ADC2, ADC_Channel_2, 1, ADC_SampleTime_3Cycles);
+	ADC_DMARequestAfterLastTransferCmd(ADC2, ENABLE);
+	
+	/* Enable ADC1 DMA */
+	ADC_DMACmd(ADC2, ENABLE);
+	
+	/* Enable ADC1 */
+	ADC_Cmd(ADC2, ENABLE);
+	
+	
+	
+	
+	
+		// DMA channel1 configuration 
+	NVIC_InitTypeDef   NVIC_InitStructure;
+
+	// Enable the DMA2_Stream0 global Interrupt
+	NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream2_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x06;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+	
+	// DMA2 Stream0 channel0 configuration
+	DMA_InitTypeDef DMA_InitStructure;
+	DMA_InitStructure.DMA_Channel = DMA_Channel_1;
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC2->DR);
+	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)&adc[1];
+	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+	DMA_InitStructure.DMA_BufferSize = 1;
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+	DMA_InitStructure.DMA_MemoryDataSize = DMA_PeripheralDataSize_HalfWord;
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+	DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;         
+	DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;
+	DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+	DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+	DMA_DeInit(DMA2_Stream2);
+	DMA_Init(DMA2_Stream2, &DMA_InitStructure);
+	DMA_Cmd(DMA2_Stream2, ENABLE);
+	DMA_ClearFlag(DMA2_Stream2,DMA_FLAG_TCIF0);
+	//DMA_ITConfig(DMA2_Stream0,DMA_IT_TC,ENABLE);
+}
+
+void DMA2_Stream0_IRQHandler(void)
+{
+	//ADC1_Convert_End();
+	DMA_ClearITPendingBit(DMA2_Stream0,DMA_IT_TCIF0);	
+}
+
 
 void CalcTimes_C(float &T1, float &T2, uint16_t &Ta, uint16_t &Tb, uint16_t &Tc)
 {
@@ -357,6 +530,8 @@ int main()
 	*/
 	
 	init_tim1();
+	init_adc();
+	init_adc2();
 		
 	F4GPIO led(GPIOC, GPIO_Pin_4);
 	led.set_mode(MODE_OUT_PushPull);
@@ -368,8 +543,22 @@ int main()
 	F4GPIO scl(GPIOB, GPIO_Pin_13);
 	F4GPIO sda(GPIOB, GPIO_Pin_15);
 	I2C_SW i2c(&scl, &sda);
+	
+	F4GPIO scl2(GPIOC, GPIO_Pin_6);
+	F4GPIO sda2(GPIOC, GPIO_Pin_7);
+	I2C_SW i2c2(&scl2, &sda2);
+	
 	MPU6000 mpu;
-	printf("MPU init=%d\n", mpu.init(&i2c, 0xd0));
+	for(int i=0; i<10; i++)
+		if (mpu.init(&i2c2, 0xd0) == 0)
+			break;
+		else
+			systimer->delayms(10);
+	//printf("MPU init=%d\n", mpu.init(&i2c2, 0xd0));
+	mpu.accelerometer_axis_config(0, 1, 2, +1, +1, +1);
+	mpu.gyro_axis_config(0, 1, 2, +1, +1, +1);
+
+	
 	mpu.gyro_axis_config(0, 1, 2, 1, 1, 1);
 	
 	F4GPIO pa0(GPIOA, GPIO_Pin_0);
@@ -385,7 +574,7 @@ int main()
 	
 	
 	float phase = 0;
-	int power = 250;
+	int power = 550;
 	int range = 4096;
 	devices::gyro_data gyro = {0};
 	
@@ -413,9 +602,10 @@ int main()
 	TIM1->CCR2 = B;
 	TIM1->CCR3 = C;
 	systimer->delayms(200);
-	
-	// ramp up	
 	int64_t last_t = systimer->gettime();
+	
+	// ramp up
+	/*
 	
 	for(int64_t t=systimer->gettime(); t<500000; t = systimer->gettime())
 	{
@@ -436,31 +626,46 @@ int main()
 			pos -= 2*PI;
 		
 	}
+	*/
 	
 	pos = 0;
 	//v = 2 * PI;
+	
+	int i = 0;
+	while(0)
+	{
+		double phase = systimer->gettime() / 1000000.0f * PI * 3;
+		phase = pos;
+		pos += 0.002;
+		double a = sin(phase + PI * 0 / 3) * 0.15f;
+		double b = sin(phase + PI * 2 / 3) * 0.15f;
+		double c = sin(phase + PI * 4 / 3) * 0.15f;
+		int A = power * sin(phase + PI * 0 / 3) + range/2;
+		int B = power * sin(phase + PI * 2 / 3) + range/2;
+		int C = power * sin(phase + PI * 4 / 3) + range/2;
+		
+		apply_power(a,b,c);
+		DACWrite1(adc[0]);
+		DACWrite2(adc[1]);
+		//TIM1->CCR1 = A;
+		//TIM1->CCR2 = B;
+		//TIM1->CCR3 = C;
+		
+		//systimer->delayms(1);
+	}
 	
 	while(1)
 	{
 		int64_t t=systimer->gettime();
 		float dt = (t-last_t)/1000000.0f;
-		last_t = t;
-		pos += v * dt;
-		if (pos >= 2 * PI)
-			pos -= 2*PI;
-				
-		/*
+		last_t = t;	
 		
-		int A = power * sin(pos + PI * 0 / 3) + range/2;
-		int B = power * sin(pos + PI * 2 / 3) + range/2;
-		int C = power * sin(pos + PI * 4 / 3) + range/2;
-		TIM1->CCR1 = A;
-		TIM1->CCR2 = B;
-		TIM1->CCR3 = C;
-		*/
+		float ts = (systimer->gettime() % 450000)/150000.0f;
 		
-		//pos = 0;
-		
+		if (ts > 2)
+			ts = 0;
+		else if (ts > 1)
+			ts = 2-ts;
 		
 		uint8_t state = 0;
 		uint16_t value = 0;
@@ -471,35 +676,40 @@ int main()
 		bool mag_detected = state & 0x20;
 		bool mag_too_strong = state & 0x08;
 		bool mag_too_weak = state & 0x10;
-		phase = norm_radian(-(value*360.0f/4095*4-206 + 120)*PI/180);
+
+		phase = norm_radian(-(value*360.0f/4095*4 - 26 - 35 - 19)*PI/180);
 		
 		if (phase < 0)
 			phase += 2* PI;
+		float phase_hall = phase;
+		float phase_drive = phase + 0.5 * PI;
+		phase_drive = ts * PI;
 		
-#if 0
-		float a = sin(pos + PI * 0 / 3) * 0.15f;
-		float b = sin(pos + PI * 2 / 3) * 0.15f;
-		float c = sin(pos + PI * 4 / 3) * 0.15f;
-#else
-		float a = sin(phase + 0.5*PI + PI * 0 / 3) * 0.15f;
-		float b = sin(phase + 0.5*PI + PI * 2 / 3) * 0.15f;
-		float c = sin(phase + 0.5*PI + PI * 4 / 3) * 0.15f;
-#endif
+		if (!mag_detected || mag_too_strong || mag_too_weak)
+			printf("\ras5600 magnet error");
+		else
+			printf("\ras5600: phase=%.3f", phase_hall * 180 / PI);
+		
+		mpu.read(&gyro);
+		printf(",gyro:%f    ", gyro.x * 180 / PI);
+		
+		float a = sin(phase_drive + PI * 0 / 3) * 0.05f;
+		float b = sin(phase_drive + PI * 2 / 3) * 0.05f;
+		float c = sin(phase_drive + PI * 4 / 3) * 0.05f;
 
+		//DACWrite1(adc[0]);
+		//DACWrite2(adc[1]);
+		
+		DACWrite2(phase_hall * 4096 / 2 / PI);
+		DACWrite1(phase_drive * 4096 / 2 / PI);
+		
+		//DACWrite1(limit((-gyro.x + 2*PI) * 4096 / (4*PI), 0, 4095) );
 		
 		led.write(true);
 		apply_power(a,b,c);
 		//apply_power(0,0,0);
 		led.write(false);
 		
-		DACWrite2(4096 * phase / (2*PI));
-		DACWrite1(4096 * pos / (2*PI));
-		//DACWrite1(T1);
-		//DACWrite1(Tb);
-		if (!mag_detected || mag_too_strong || mag_too_weak)
-			printf("\ras5600 magnet error    ");
-		else
-			printf("\ras5600: phase=%.3f   ", phase * 180 / PI);
 	}
 	
 	while(1)
@@ -507,10 +717,7 @@ int main()
 		//float phase2 = int(phase / (PI*2/8)) * (PI*2/8);
 		//phase = 0;
 		
-		//mpu.read(&gyro);
-		
-		//printf("\rgyro:%f    ", gyro.z * 180 / PI);
-		
+
 		uint8_t state = 0;
 		uint16_t value = 0;
 

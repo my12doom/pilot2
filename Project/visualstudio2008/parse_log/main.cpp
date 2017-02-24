@@ -240,6 +240,7 @@ int main(int argc, char* argv[])
 	quadcopter_data5 quad5 = {0};
 	pilot_data pilot = {0};
 	bool sensor_valid = false;
+	bool sensor2_valid = false;
 	bool imu_valid = false;
 	bool gps_valid = true;
 	bool home_set = false;
@@ -249,7 +250,7 @@ int main(int argc, char* argv[])
 	double lon_meter = 0;
 	double speed_north = 0;
 	double speed_east = 0;
-	float on_pos2[12] = {0};
+	float on_pos2[13] = {0};
 	px4flow_frame frame = {0};
 	rc_mobile_data mobile = {0};
 	float gyro[3] = {0};
@@ -265,6 +266,8 @@ int main(int argc, char* argv[])
 	float avg_cno = 0;
 	float top6_cno = 0;
 	posc_ext_data posc = {0};
+	float batt_state_on[2] = {0};
+
 
 	while (fread(&time, 1, 8, in) == 8)
 	{
@@ -299,6 +302,12 @@ int main(int argc, char* argv[])
 		{
 			memcpy(&mobile, data, sizeof(mobile));
 		}
+
+		if (tag_ex == 17 && size == 8)
+		{
+			memcpy(batt_state_on, data, 8);
+		}
+
 
 		if (tag_ex == TAG_EXTRA_GPS_DATA)
 		{
@@ -347,6 +356,8 @@ int main(int argc, char* argv[])
 		}
 		if (tag_ex == 5)
 		{
+			sensor2_valid = true;
+
 			int16_t *p = (int16_t*) data;
 			for(int i=0; i<3; i++)
 				gyro[i] = lpf2p[i].apply(p[i+3]) * PI / 1800;
@@ -389,7 +400,7 @@ int main(int argc, char* argv[])
 				int throttle = (ppm.out[0] + ppm.out[1] + ppm.out[2] + ppm.out[3])/4;
 				static int power_id = 0;
 				if (power_id++ % 10 == 0)
-					fprintf(out, "CURR, %d, %d, %f, %f, %f, %f, %f,%d,\r\n", int(time/1000), throttle, sensor.voltage/1000.0f, sensor.current/1000.0f, imu.temperature/1.0f, batt_est.get_internal_voltage(), batt_est.get_internal_resistance()*1000, pilot.mah_consumed);
+					fprintf(out, "CURR, %d, %d, %f, %f, %f, %f, %f,%d,\r\n", int(time/1000), throttle, sensor.voltage/1000.0f, sensor.current/1000.0f, imu.temperature/1.0f, batt_state_on[0], batt_state_on[1]*1000, pilot.mah_consumed);
 			}
 		}
 		else if (tag == TAG_IMU_DATA)
@@ -402,7 +413,7 @@ int main(int argc, char* argv[])
 
 			float acc[3] = {-imu.accel[0]/100.0f, -imu.accel[1]/100.0f, -imu.accel[2]/100.0f};
 			float mag[3] = {-imu.mag[0]/10.0f, -imu.mag[1]/10.0f, imu.mag[2]/10.0f};
-			float gyro[3] = {sensor.gyro[0]*PI/18000, sensor.gyro[1]*PI/18000, sensor.gyro[2]*PI/18000};
+// 			float gyro[3] = {sensor.gyro[0]*PI/18000, sensor.gyro[1]*PI/18000, sensor.gyro[2]*PI/18000};
 
 			static FILE * facc = NULL;
 			if (!facc)
@@ -454,7 +465,7 @@ int main(int argc, char* argv[])
 			}
 
 
-			if (!imu_valid && sensor_valid)
+			if (!imu_valid && sensor_valid && sensor2_valid)
 			{
 				imu_valid = true;
 
@@ -462,7 +473,7 @@ int main(int argc, char* argv[])
 				ekf_est.init(acc[0], acc[1], acc[2], mag[0], mag[1], mag[2], gyro[0], gyro[1], gyro[2]);
 			}
 
-			if (imu_valid && sensor_valid && gps_valid && dt < 1)
+			if (imu_valid && sensor_valid && sensor2_valid && gps_valid && dt < 1)
 			{
 
 				// lon/lat to meter
@@ -609,7 +620,7 @@ int main(int argc, char* argv[])
 				fprintf(out, "FMT, 9, 23, P_INS, Ihhhhhhhhh, TimeMS, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15], vbias[0],vbias[1],vbias[2]\r\n");
 				fprintf(out, "FMT, 9, 23, P_EKF, Ihhhhhhhhh, TimeMS, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15], vbias[0],vbias[1],vbias[2]\r\n");
 				fprintf(out, "FMT, 9, 23, Motor, Ihhhh, TimeMS, m[0], m[1], m[2], m[3]\r\n");
-				fprintf(out, "FMT, 9, 23, GPS, Ihhhhh, TimeMS, v[0], v[1], v[2], HDOP, acc_horizontal, acc_vel_hori, NSat\r\n");
+				fprintf(out, "FMT, 9, 23, GPS, Ihhhhh, TimeMS, v[0], v[1], v[2], HDOP, acc_horizontal, acc_vel_hori, NSat, v_horizontal\r\n");
 				fprintf(out, "FMT, 9, 23, VerticalLoop, Ihhhhh, TimeMS,desZAcc,DesCLimb,ZAcc,Climb\r\n");
 				fprintf(out, "FMT, 9, 23, PosControl, Ihhhhhhhh, TimeMS,Pos[0],Pos[1],velocity[0],velocity[1],setpoint[0],setpoint[1],velocity_setpoint[0],velocity_setpoint[1],accel_taget[0],accel_taget[1], I[0], I[1]\r\n");
 				fprintf(out, "FMT, 9, 23, POS2_P, Ihhhhhhhh, TimeMS,p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7],p[8],p[9],p[10],p[11],p[12]\r\n");
@@ -665,7 +676,7 @@ int main(int argc, char* argv[])
 
 				fprintf(out, "COVAR_OFF_EKF, %d, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.P[6*14], ekf_est.P[7*14], ekf_est.P[8*14], ekf_est.P[9*14], sqrt(ekf_est.P[0*14]), sqrt(ekf_est.P[4*14]), 0, 0);
 				fprintf(out, "IMU, %d, %f, %f, %f, %f, %f, %f,%f,%f\r\n", int(time/1000), acc[0], acc[1], acc[2], gyro[0]*180/PI, gyro[1]*180/PI, gyro[2]*180/PI, az_raw, az);
-				if(ekf_est.ekf_is_ready())
+// 				if(ekf_est.ekf_is_ready())
 				{
 					fprintf(out, "POSITION, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), lat_meter, lon_meter, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_y, speed_east, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps.DOP[1]/100.0f, 0, 0);
 					fprintf(out, "ALT, %d, %f, %f, %f, %f,%f,%f,%f,%f\r\n", int(time/1000), quad2.altitude_baro_raw/100.0f, ekf_est.ekf_result.Pos_z, quad2.altitude_kalman/100.0f, quad3.altitude_target/100.0f, quad3.ultrasonic/1000.0f, quad4.sonar_target/100.0f, quad2.climb_rate_kalman/100.0f, quad3.climb_target/100.0f);
@@ -677,7 +688,7 @@ int main(int argc, char* argv[])
 				if (home_set)
 				fprintf(out, "LatLon, %d, %f, %f, %f, %f, %d, %f, %f\r\n", int(time/1000), gps_extra.latitude, gps_extra.longitude, 0.0005 * gps_extra.position_accuracy_horizontal * gps_extra.position_accuracy_horizontal, 0.02 * gps_extra.velocity_accuracy_horizontal * gps_extra.velocity_accuracy_horizontal, gps.satelite_in_use, avg_cno, top6_cno);
 				fprintf(out, "Motor,%d,%d,%d,%d,%d\r\n", int(time/1000), ppm.out[0], ppm.out[1], ppm.out[2], ppm.out[3]);
-				fprintf(out, "GPS,%d,%f,%f,%f,%f,%f,%f,%d\r\n", int(time/1000), speed_north, speed_east, gps_extra.climb_rate, gps_extra.DOP[1]/100.0f, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps_extra.satelite_in_use);
+				fprintf(out, "GPS,%d,%f,%f,%f,%f,%f,%f,%d,%f\r\n", int(time/1000), speed_north, speed_east, gps_extra.climb_rate, gps_extra.DOP[1]/100.0f, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps_extra.satelite_in_use, sqrt(speed_north*speed_north+speed_east*speed_east));
 				fprintf(out, "VerticalLoop,%d,%f,%f,%f,%f\r\n", int(time/1000), (float)quad3.accel_target/100.0f, (float)quad3.climb_target/100.0f, pos2.acc_ned[2], pos2.x[5]);
 				fprintf(out, "PosControl,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", int(time/1000), posc.pos[0], posc.pos[1], posc.velocity[0], posc.velocity[1], posc.setpoint[0], posc.setpoint[1],posc.velocity_setpoint[0], posc.velocity_setpoint[1], posc.accel_target[0], posc.accel_target[1], (float)posc.pid[0][1]), (float)posc.pid[1][1];
 				fprintf(out, "RC,%d,%d,%d,%d,%d,%d,%d\r\n", int(time/1000), ppm.in[0], ppm.in[1], ppm.in[2], ppm.in[3], ppm.in[4], ppm.in[5]);

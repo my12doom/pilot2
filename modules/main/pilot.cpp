@@ -948,7 +948,6 @@ int yet_another_pilot::read_sensors()
 {	
 	if (range_finder)
 	{
-		LOGE("range_finder=%08x", range_finder);
 		range_finder->trigger();
 		float distance = 0;
 		if (0 == range_finder->read(&distance))
@@ -1408,7 +1407,7 @@ int yet_another_pilot::calculate_state()
 		estimator2.update(q, acc, gps, flow, sonar_distance, a_raw_altitude, interval, armed, airborne);
 		t = systimer->gettime() - t;
 		//LOGE("estimator2 cost %d us", int(t));
-		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*12);
+		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*estimator2.x.m);
 	}
 
 	else
