@@ -1,7 +1,7 @@
 
 LOCAL_PATH:= $(call my-dir)
 PROJECT_PATH:= /system/acantha
-STL_PATH=/media/euler/codebase/sdk0801/prebuilts/ndk/9/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a
+STL_PATH=prebuilts/ndk/9/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a
 
 include $(CLEAR_VARS)
 
