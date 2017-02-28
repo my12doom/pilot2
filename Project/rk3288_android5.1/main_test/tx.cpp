@@ -289,6 +289,8 @@ int open_and_configure_interface(const char *name, int port, monitor_interface_t
 	}
 
 	interface->selectable_fd = pcap_get_selectable_fd(interface->ppcap);
+
+	return 0;
 }
 
 void process_packet(monitor_interface_t *interface) {
