@@ -71,24 +71,23 @@ PPMOUT::PPMOUT()
 	TIM_ClearITPendingBit(TIM3, TIM_FLAG_Update);
 	TIM_ITConfig(TIM3,TIM_IT_Update,ENABLE);
 	NVIC_Init(&NVIC_InitStructure);
+	
+
 }
 
 int PPMOUT::send()
 {
-	TIM3->ARR = sending_data[sending];
-	TIM3->CCR3 = 300;
+	int c = 350;
+	if (sending > 0)
+	{
+		c = sending_data[sending-1];
+		GPIO_ToggleBits(GPIOB, GPIO_Pin_1);
+	}
+		
 	
-	/* Reset the Output Polarity level */
-	uint16_t tmpccer = TIM3->CCER;
-	tmpccer &= (uint16_t)~TIM_CCER_CC3P;
-	
-	/* Set the Output Compare Polarity */
-	tmpccer |= (uint16_t)(TIM_OCPolarity_Low << 8);
-	TIM3->CCER = tmpccer;
-	TIM_Cmd(TIM3, ENABLE);
-	GPIO_ToggleBits(GPIOB, GPIO_Pin_1);
-	
-	//printf("sending:%d\n", sending);
+	TIM3->ARR = c;
+	TIM3->CCR3 = c-300;	
+	TIM_Cmd(TIM3, ENABLE);	
 	
 	return 0;
 }
@@ -100,19 +99,6 @@ int PPMOUT::enable()
 
 int PPMOUT::disable()
 {
-	systimer->delayus(300);
-	TIM_Cmd(TIM3, DISABLE);
-	//TIM3->CNT = TIM3->ARR-1;
-	sending = -1;
-	
-	// Reset the Output Polarity level 
-	uint16_t tmpccer = TIM3->CCER;
-	tmpccer &= (uint16_t)~TIM_CCER_CC3P;
-	
-	// Set the Output Compare Polarity
-	tmpccer |= (uint16_t)(TIM_OCPolarity_High << 8);
-	TIM3->CCER = tmpccer;
-	
 	
 	return 0;
 }
@@ -121,9 +107,9 @@ int PPMOUT::cb()
 {
 	//printf("cb:%d\n", sending);
 	
-	if (sending >= channel_count-1)
+	if (sending >= channel_count)
 	{
-		disable();
+		sending = -1;
 	}
 	
 	else
