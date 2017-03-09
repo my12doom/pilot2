@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <HAL/aux_devices/NRF24L01.h>
 #include <HAL/aux_devices/OLED_I2C.h>
 #include "randomizer.h"
@@ -14,7 +15,7 @@ using namespace devices;
 
 NRF24L01 nrf;
 
-uint8_t data[32];
+uint8_t valid_data[32];
 randomizer<128, 512> rando;
 uint64_t seed = 0x1234567890345678;
 OLED96 oled;
@@ -24,6 +25,7 @@ int hoop_id = 0;
 int miss = 99999;
 int maxmiss = 0;
 uint16_t hoop_interval = 1000;
+HAL::IRCOUT *ppm = NULL;
 
 int hoop_to(int next_hoop_id)
 {
@@ -52,6 +54,7 @@ void nrf_irq_entry(void *parameter, int flags)
 	
 	int fifo_state = nrf.read_reg(FIFO_STATUS);
 	int next_hoop_id = -1;
+	uint8_t data[32];
 	while ((fifo_state&1) == 0)
 	{
 		nrf.read_rx(data, 32);
@@ -60,6 +63,7 @@ void nrf_irq_entry(void *parameter, int flags)
 		o++;
 		
 		next_hoop_id = *(uint16_t*)data;
+		memcpy(valid_data, data, 32);
 	}
 	
 	if (next_hoop_id >= 0)
@@ -136,15 +140,35 @@ int main()
 		
 	while(1)
 	{
+		if (ppm)
+		{
+			static int64_t last_out = systimer->gettime();
+			
+			int16_t data[6];
+			for(int i=0; i<6; i++)
+				data[i] = ((int16_t *)valid_data)[i+1]* 1000 / 4096 + 1000;
+			
+			if (systimer->gettime() - last_out > 20000)
+			{
+				last_out = systimer->gettime();
+				
+				if (miss > 200)
+					data[2] = 800;
+				ppm->write(data, 6, 0);
+			}
+			
+			continue;
+		}
+		
 		char tmp[100];
-		sprintf(tmp, "%dp, pos=%d    ", o, *(uint16_t*)data);
+		sprintf(tmp, "%dp, pos=%d    ", o, *(uint16_t*)valid_data);
 		oled.show_str(0, 0, tmp);
 		sprintf(tmp, "rdp=%d,%dp/s, %dms    ", rdp, lp, maxmiss * hoop_interval / 1000);
 		oled.show_str(0, 1, tmp);
 		
 		int64_t current = systimer->gettime();
 		
-		int16_t *channel = (int16_t *)(data+2);
+		int16_t *channel = (int16_t *)(valid_data+2);
 		
 		sprintf(tmp, "%04d,%04d,%04d ", channel[0], channel[1], channel[2]);
 		oled.show_str(0, 2, tmp);
