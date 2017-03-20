@@ -38,7 +38,6 @@ namespace androidUAV
 		protected:
 			int update_buffer();
 			char buffer[20*1024];
-			char dataTmp[100];
 			fd_set rd;
 			int buffer_pos;
 

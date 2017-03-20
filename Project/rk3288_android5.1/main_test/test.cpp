@@ -14,6 +14,40 @@ static int64_t getus()
 }
 
 
+#include <HAL/rk32885.1/Apcap.h>
+using namespace androidUAV;
+
+int test_pcap_block_device()
+{	
+	printf("test_pcap_block_device\n");
+
+	int64_t t = getus();
+	int i = 0;
+	APCAP_RX rx("wlan0", 0);
+	while(1)
+	{
+		usleep(10000);
+	}
+	APCAP_TX tx("wlan0", 0);
+	while(1)
+	{
+		uint8_t data[1024];
+		for(int i=0; i<sizeof(data); i++)
+			data[i] = rand();
+		tx.write(data, sizeof(data));
+		usleep(100);
+		i++;
+		if (getus() - t > 1000000)
+		{
+			printf("payload %dKBytes(%d Kbps)/s\n", i, i*8);
+			i = 0;
+			t = getus();
+		}
+	}
+
+	return 0;
+}
+
 
 int camera_init()
 {
@@ -70,7 +104,7 @@ int camera_init()
 	FILE * fyuv = fopen("/data/640.yuv", "rb");
 
 	int64_t t = getus();
-	for(int i=0; i<7000; i++)
+	for(int i=0; i<0; i++)
 	{
 		int j = i % 120;
 		if (j>60)
@@ -115,9 +149,9 @@ int camera_init()
 		printf("live streaming: %d, %d, %dus\n", nal_size, i, int(getus() - t));
 	}
 
-	fflush(f);
-	fclose(f);
-	exit(1);
+	//fflush(f);
+	//fclose(f);
+	//exit(1);
 
 	while(1)
 	{

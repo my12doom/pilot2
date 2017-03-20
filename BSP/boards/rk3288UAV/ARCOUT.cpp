@@ -99,7 +99,7 @@ namespace androidUAV
 			return -1;
 		if((ioctl(pwmFd,PWMCONFIG,data) < 0))
 		{
-			LOG2("error config\n");
+			//LOG2("error config\n");
 			return -1;
 		}
 		return 0;

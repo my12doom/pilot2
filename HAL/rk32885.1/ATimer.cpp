@@ -2,11 +2,15 @@
 #include <HAL/Interface/ISysTimer.h>
 #include <stdio.h>
 #include <unistd.h>
+#define _GNU_SOURCE
+#include <pthread.h>
+
 namespace androidUAV
 {
     ATimer::ATimer(int priority)
 	{
 		pthread_attr_init (&attr);
+		fprintf(stdout, "No. of clock ticks per sec : %ld\n",sysconf(_SC_CLK_TCK));
 
 		policy = get_thread_policy (&attr);
 		//Only before pthread_create excuted ,can we set thread parameters
@@ -41,8 +45,11 @@ namespace androidUAV
 			if(period)
 			{
 				int64_t t = systimer->gettime();
+				while((t = systimer->gettime()) < last_call_time + period - 100)
+					//sched_yield();
+					usleep((last_call_time + period - systimer->gettime())*8/10);
 				while((t = systimer->gettime()) < last_call_time + period)
-					usleep(100);
+					sched_yield();
 				last_call_time = t;
 			}
 			else

@@ -3521,6 +3521,8 @@ int main()
 	{
 		systimer->delayms(1);
 	}
+
+	return 0;
 }
 
 FASTMEM yet_another_pilot yap;

@@ -1,5 +1,6 @@
 #include <HAL/Resources.h>
 #include <HAL/rk32885.1/ATimer.h>
+#include <HAL/rk32885.1/AUIOTimer.h>
 #include <HAL/rk32885.1/AGpio.h>
 #include <HAL/rk32885.1/ASPI.h>
 #include <HAL/rk32885.1/AUART.h>
@@ -55,8 +56,9 @@ void reset_system()
 }
 
 ASPI spi1(spidevice);
-AGPIO cs_mpu(gpiodevice,228);
-AGPIO cs_ms5611(gpiodevice,230);
+AGPIO cs_mpu(gpiodevice,230);	//GPIO7_A6
+AGPIO cs_ms5611(gpiodevice,228);//GPIO7_A4
+AGPIO cs_hmc5983(gpiodevice,237);//GPIO7_B5
 AUART uart3(uart3device);
 AUART uart4(uart4device);
 ARCOUT rcout(pwmdevice);
@@ -79,8 +81,12 @@ void init_sensor()
 		manager.register_accelerometer(&mpu6000device);
 		manager.register_gyroscope(&mpu6000device);
 	}*/
-	cs_mpu.set_status(1);
-	cs_ms5611.set_status(1);
+	cs_mpu.set_mode(MODE_OUT_PushPull);
+	cs_ms5611.set_mode(MODE_OUT_PushPull);
+	cs_hmc5983.set_mode(MODE_OUT_PushPull);
+	cs_mpu.write(true);
+	cs_ms5611.write(true);
+	cs_hmc5983.write(true);
 	//spi1.setSpeed(10000000);
 	if (mpu6000device.init(&spi1, &cs_mpu) == 0)
 	{
@@ -89,9 +95,10 @@ void init_sensor()
 		manager.register_accelerometer(&mpu6000device);
 		manager.register_gyroscope(&mpu6000device);
 	}
-	if(hmc5983.init(&i2c2) == 0)
+	if(hmc5983.init(&spi1,&cs_hmc5983) == 0)
 	{
-		LOG2("androidUAV:found HMC5983 on I2C4\n");
+		LOG2("androidUAV:found HMC5983 on spi1\n");
+		hmc5983.axis_config(0, 2, 1, +1, -1, -1);
 		manager.register_magnetometer(&hmc5983);
 	}
 	if(ms5611device.init(&spi1,&cs_ms5611) == 0)
@@ -127,10 +134,6 @@ int init_RC()
 
 	return 0;
 }
-void init_external_compass()
-{
-	sensors::HMC5983 hmc5983;
-}
 int init_imufifo()
 {
 	manager.register_FIFO("imu_FIFO",&imufifo);
@@ -149,6 +152,11 @@ int bsp_init_all()
 	static androidUAV::ATimer timer1(98);
 	static androidUAV::ATimer timer2(97);
 	static androidUAV::ATimer timer3(96);
+
+	//static androidUAV::AUIOTimer timer1(98);
+	//static androidUAV::AUIOTimer timer2(97);
+	//static androidUAV::AUIOTimer timer3(96);
+
 	manager.register_Timer("mainloop", &timer1);
 	manager.register_Timer("log", &timer2);
 	manager.register_Timer("imu", &timer3);
@@ -156,11 +164,11 @@ int bsp_init_all()
 	timer2.set_period(0);
 	timer3.set_period(0);
 	param bsp_parameter("BSP",1);
-	if(bsp_parameter)
+	if(1)
 	{
 		param("time", 3000)=3000;
 		param("ekf", 0)=2;
-		param("err",0) = error_magnet|error_GPS;
+		param("err",0) = error_GPS;
 		//
 		
 		param("mat", 1)=1;

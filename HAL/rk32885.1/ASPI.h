@@ -6,8 +6,6 @@
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
 
-#define READ 1
-#define WRITE 0
 #define DEFAULTSPEED 1000000
 #define DEFAULTBITS 8
 #define DEFFAULTDELAY 0

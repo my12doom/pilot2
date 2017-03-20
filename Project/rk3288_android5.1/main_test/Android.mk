@@ -21,6 +21,7 @@ LOCAL_SRC_FILES := \
 	../../../HAL/rk32885.1/AIMUFIFO.cpp \
 	../../../HAL/rk32885.1/AI2C.cpp \
 	../../../HAL/rk32885.1/AUDP.cpp \
+	../../../HAL/rk32885.1/Apcap.cpp \
 	../../../modules/utils/param.cpp \
 	../../../modules/utils/space.cpp \
 	../../../modules/utils/gauss_newton.cpp \

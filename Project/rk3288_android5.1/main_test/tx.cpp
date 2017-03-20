@@ -69,9 +69,10 @@ static const uint8_t uint8_taRadiotapHeader[] = {
 	0x00, 0x00, // <-- radiotap version
 	0x0c, 0x00, // <- radiotap header lengt
 	0x04, 0x80, 0x00, 0x00, // <-- bitmap
-	0x22, 
-	0x0, 
-	0x18, 0x00 
+	0x22, 		// rate
+	0x0, 		// txpower
+	0x18,		// rtx_retries
+	0x00,		// data_retries
 };
 
 /* Penumbra IEEE80211 header */
@@ -81,11 +82,12 @@ static const uint8_t uint8_taRadiotapHeader[] = {
 #define DST_MAC_LASTBYTE 21
 
 static uint8_t uint8_taIeeeHeader[] = {
-	0x08, 0x01, 0x00, 0x00,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0x13, 0x22, 0x33, 0x44, 0x55, 0x66,
-	0x13, 0x22, 0x33, 0x44, 0x55, 0x66,
-	0x10, 0x86,
+	0x08, 0x01, 		// FC: frame control
+	0x00, 0x00,			// DID: duration or ID
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// address1
+	0x13, 0x22, 0x33, 0x44, 0x55, 0x66,	// address2
+	0x13, 0x22, 0x33, 0x44, 0x55, 0x66,	// address3
+	0x10, 0x86,			// SC: Sequence control
 };
 
 
@@ -401,7 +403,7 @@ extern "C" int rx(int argc, char *argv[])
 {
 	monitor_interface_t minterface;
 
-	open_and_configure_interface(argv[1], 0, &minterface);
+	open_and_configure_interface(argv[1], 0x66, &minterface);
 	
 	for(;;) { 
 		fd_set readset;
@@ -427,9 +429,13 @@ extern "C" int rx(int argc, char *argv[])
 
 /////////////////////
 /////////////////////
+
+int test_pcap_block_device();
+
 extern "C" int
-main2(int argc, char *argv[])
+main(int argc, char *argv[])
 {
+	
 	printf("main2\n");
 	for(int i=0; i<argc; i++)
 	{
@@ -442,6 +448,11 @@ main2(int argc, char *argv[])
 		{
 			printf("main2: RX\n");
 			return rx(argc, argv);
+		}
+		if (strcmp("-arx", argv[i]) == 0)
+		{
+			printf("main2: ARX\n");
+			return test_pcap_block_device();
 		}
 	}
 	printf("main2: main\n");

@@ -35,8 +35,6 @@ namespace HAL
             return -1;
         }
         openStatus = 1;
-        //just for test
-        setIoID(228);
         return 0;
     }
     int AGPIO::fdClose()
@@ -53,7 +51,7 @@ namespace HAL
         ioData.gpio = ioID;
     }
     /*IO_REQUEST = 0,//request an io device
-    IO_SET_STATUS = 1,//set to output mode and set it's status
+    IO_SET_OUT_MODE = 1,//set to output mode and set it's status
     IO_SET_SET_VAL = 2,//set value ...(need fix up here 0926)
     IO_SET_IN_MODE = 3,//set as input mode
     IO_READ_STATUS = 4,//read io status
@@ -69,17 +67,18 @@ namespace HAL
                 case IO_REQUEST:
                     //ret = ioctl(fdGpio,1,&ioData);
                     break;
-                case IO_SET_STATUS:
+                case IO_SET_OUT_MODE:
                     ioData.status = 1;
-                    ret = ioctl(fdGpio,IO_SET_STATUS,&ioData);
+                    ioData.cmd = IO_SET_OUT_MODE;
+                    ret = ioctl(fdGpio,1,&ioData);
                     break;
                 case IO_SET_VAL:
                     //ret = ioctl(fdGpio,1,&ioData);
                     break;
                 case IO_SET_IN_MODE:
-                    //ret = ioctl(fdGpio,1,&ioData);
-                    break;
-                case IO_READ_STATUS:
+                    ioData.status = 0;
+                    ioData.cmd = IO_SET_IN_MODE;
+                    ret = ioctl(fdGpio,1,&ioData);
                     break;
                 case IO_FREE:
                     break;
@@ -88,7 +87,8 @@ namespace HAL
             }
             if(ret < 0)
             {
-                LOG2("androidUAV:Iocontrol error\n");
+                LOG2("androidUAV:Io control error\n");
+                LOG2("androidUAV io number %d\n",ioData.gpio);
                 return ret;
             }
         }
@@ -99,13 +99,15 @@ namespace HAL
     {
         int ret;
         ioData.status = status;
-        ret = ioctl(fdGpio,IO_SET_STATUS,&ioData);
+        ioData.cmd = IO_SET_VAL;
+        ret = ioctl(fdGpio,1,&ioData);
         return ret;
     }
 
     int AGPIO::read_status()
     {
-        return ioctl(fdGpio,IO_READ_STATUS,&ioData);
+    	ioData.cmd = IO_READ_STATUS;
+        return ioctl(fdGpio,1,&ioData);
     }
     //MODE_IN = 0,
     //MODE_OUT_PushPull = 1,
@@ -118,7 +120,7 @@ namespace HAL
                     setmode(IO_SET_IN_MODE);
                 break;
             case MODE_OUT_PushPull:
-                    setmode(IO_SET_STATUS);
+                    setmode(IO_SET_OUT_MODE);
                 break;
             case MODE_OUT_OpenDrain:
                     ;

@@ -13,7 +13,7 @@ namespace Android_TIME
 	{
 		struct timespec tv;
 		clock_gettime(CLOCK_MONOTONIC, &tv);
-		return (int64_t)((tv.tv_sec-start.tv_sec) * 1000000 + (tv.tv_nsec-start.tv_nsec)/1000);
+		return (((int64_t)tv.tv_sec-start.tv_sec) * 1000000 + ((int64_t)tv.tv_nsec-start.tv_nsec)/1000);
 	}
 	void ASysTimer::delayms(float ms)
 	{
