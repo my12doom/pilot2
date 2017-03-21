@@ -135,7 +135,7 @@ namespace androidUAV
 		ret = ioctl(spiFd, SPI_IOC_MESSAGE(1), &tr);
 		if(ret < 0)// Need fix here.....
 		{
-			LOG2("androidUAV:transfer failed\n");
+			//LOG2("androidUAV:transfer failed\n");
 			return ret;
 		}
 		return recvData;

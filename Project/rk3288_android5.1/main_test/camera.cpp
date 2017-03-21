@@ -43,13 +43,15 @@ namespace sensors
 			camera_id = 1;
 		}
 
+		printf("Camera::getNumberOfCameras() = %d\n", count);
+
 		camera = Camera::connect(camera_id, String16("YetAnotherPilot"), Camera::USE_CALLING_UID);
 
 		if (!camera.get())
 			return -2;
 
 		BufferQueue::createBufferQueue(&gbp, &gbc);
-		cc = new CpuConsumer(gbc, 3);
+		cc = new CpuConsumer(gbc, 1);
 
 		params = camera->getParameters();
 		params.setPreviewSize(640, 480);
@@ -139,6 +141,17 @@ namespace sensors
 		if (!lb)
 			return -1;
 
+		for(int i=0; i<tbl_count; i++)
+		{
+			if (p_tbl[i] == p)
+			{
+				p_tbl[i] = NULL;
+				memmove(p_tbl+i, p_tbl+i+1, (tbl_count-i-1) * sizeof(uint8_t*));
+				memmove(lb_tbl+i, lb_tbl+i+1, (tbl_count-i-1) * sizeof(CpuConsumer::LockedBuffer *));
+
+				tbl_count --;
+			}
+		}
 		cc->unlockBuffer(*lb);
 
 		return 0;

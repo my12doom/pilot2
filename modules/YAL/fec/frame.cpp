@@ -1,5 +1,6 @@
 #include "frame.h"
 #include <stdlib.h>
+#include <string.h>
 
 void release_frame(frame *f)
 {

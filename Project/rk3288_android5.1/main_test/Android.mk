@@ -22,6 +22,12 @@ LOCAL_SRC_FILES := \
 	../../../HAL/rk32885.1/AI2C.cpp \
 	../../../HAL/rk32885.1/AUDP.cpp \
 	../../../HAL/rk32885.1/Apcap.cpp \
+	../../../modules/YAL/fec/GFMath.cpp \
+	../../../modules/YAL/fec/append.cpp \
+	../../../modules/YAL/fec/frame.cpp \
+	../../../modules/YAL/fec/oRS.cpp \
+	../../../modules/YAL/fec/reciever.cpp \
+	../../../modules/YAL/fec/sender.cpp \
 	../../../modules/utils/param.cpp \
 	../../../modules/utils/space.cpp \
 	../../../modules/utils/gauss_newton.cpp \

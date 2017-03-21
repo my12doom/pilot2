@@ -4,7 +4,6 @@
  * Copyright 2007		Andy Green <andy@warmcat.com>
  */
 
-#include "wifibroadcast.h"
 #include "radiotap.h"
 
 /**
@@ -57,15 +56,15 @@ int ieee80211_radiotap_iterator_init(
 	iterator->max_length = le16_to_cpu(radiotap_header->it_len);
 	iterator->arg_index = 0;
 	iterator->bitmap_shifter = le32_to_cpu(radiotap_header->it_present);
-	iterator->arg = (u8 *)radiotap_header + sizeof(*radiotap_header);
+	iterator->arg = (uint8_t *)radiotap_header + sizeof(*radiotap_header);
 	iterator->this_arg = 0;
 
 	/* find payload start allowing for extended bitmap(s) */
 
 	if (unlikely(iterator->bitmap_shifter & (1<<IEEE80211_RADIOTAP_EXT))) {
-		while (le32_to_cpu(*((u32 *)iterator->arg)) &
+		while (le32_to_cpu(*((uint32_t *)iterator->arg)) &
 				   (1<<IEEE80211_RADIOTAP_EXT)) {
-			iterator->arg += sizeof(u32);
+			iterator->arg += sizeof(uint32_t);
 
 			/*
 			 * check for insanity where the present bitmaps
@@ -78,7 +77,7 @@ int ieee80211_radiotap_iterator_init(
 				return -EINVAL;
 		}
 
-		iterator->arg += sizeof(u32);
+		iterator->arg += sizeof(uint32_t);
 
 		/*
 		 * no need to check again for blowing past stated radiotap
@@ -129,7 +128,7 @@ int ieee80211_radiotap_iterator_next(
 	 * lower nybble: content length for arg
 	 */
 
-	static const u8 rt_sizes[] = {
+	static const uint8_t rt_sizes[] = {
 		[IEEE80211_RADIOTAP_TSFT] = 0x88,
 		[IEEE80211_RADIOTAP_FLAGS] = 0x11,
 		[IEEE80211_RADIOTAP_RATE] = 0x11,
@@ -212,10 +211,10 @@ int ieee80211_radiotap_iterator_next(
 	next_entry:
 		iterator->arg_index++;
 		if (unlikely((iterator->arg_index & 31) == 0)) {
-			/* completed current u32 bitmap */
+			/* completed current uint32_t bitmap */
 			if (iterator->bitmap_shifter & 1) {
 				/* b31 was set, there is more */
-				/* move to next u32 bitmap */
+				/* move to next uint32_t bitmap */
 				iterator->bitmap_shifter =
 				    le32_to_cpu(*iterator->next_bitmap);
 				iterator->next_bitmap++;

@@ -2,6 +2,7 @@
 #include "encoder.h"
 #include <libyuv.h>
 #include "myx264.h"
+#include <YAL/fec/sender.h>
 
 using namespace sensors;
 using namespace devices;
@@ -21,28 +22,79 @@ int test_pcap_block_device()
 {	
 	printf("test_pcap_block_device\n");
 
-	int64_t t = getus();
-	int i = 0;
-	APCAP_RX rx("wlan0", 0);
-	while(1)
-	{
-		usleep(10000);
-	}
+
 	APCAP_TX tx("wlan0", 0);
+	FrameSender sender;
+	sender.set_block_device(&tx);
+	sender.config(1400, 1.0);
+
+	printf("31\n");
+	RK3288Camera51 c;
+	int frame_count = 0;
+	c.init(0);
+	printf("33\n");
+	android_video_encoder enc;
+	enc.init(640, 360, 250000);
+	x264 enc_soft;
+	enc_soft.init(640, 360, 250);
+	uint8_t * yv12 = new uint8_t[640*480*3/2];
+	memset(yv12, 0x80, 640*480*3/2);	// grey, UV=0x80=neutual
+	uint8_t * frame_with_size = new uint8_t[1024*1024]; 	// 1Mbyte ought to be enough
+
+	FILE * f = fopen("/data/on.h264", "wb");
+
+	printf("streaming start\n");
+	int64_t t = getus();
 	while(1)
 	{
-		uint8_t data[1024];
-		for(int i=0; i<sizeof(data); i++)
-			data[i] = rand();
-		tx.write(data, sizeof(data));
-		usleep(100);
-		i++;
-		if (getus() - t > 1000000)
+		// drain live streaming
+		uint8_t *ooo = NULL;
+		int encoded_size = enc.get_encoded_frame(&ooo);
+		if (encoded_size > 0 && ooo)
 		{
-			printf("payload %dKBytes(%d Kbps)/s\n", i, i*8);
-			i = 0;
-			t = getus();
+			int nal_type = ooo[4] & 0x1f;
+
+			//printf("live streaming: %d, %d\n", encoded_size, nal_type);
+			memcpy(frame_with_size+4, ooo, encoded_size);
+			*(int*)frame_with_size = encoded_size;
+			sender.send_frame(frame_with_size, encoded_size+4);
+
+			fwrite(ooo, 1, encoded_size, f);
 		}
+
+		// capture new frames
+		uint8_t *p = NULL;
+		int s = c.get_frame(&p);
+		if (s == 0)
+		{
+			// got frame, copy it out
+			if (frame_count == 0)
+				t = getus();
+			printf("frame:%d, %dfps\n", frame_count, int64_t(frame_count)*1000000/(getus()-t));
+			frame_count++;
+			memcpy(yv12, p, 640*360);			
+			c.release_frame(p);
+
+			// feed live streaming encoder
+			void *live = enc.get_next_input_frame_pointer();
+			if (live)
+			{
+				memcpy(live, yv12, 640*360*3/2);
+				enc.encode_next_frame();
+			}
+		}
+		else
+		{
+			usleep(10000);
+		}
+	}
+
+	while(1)
+	{
+		uint8_t data[10240];
+
+
+		sender.send_frame(data, sizeof(data));
 	}
 
 	return 0;

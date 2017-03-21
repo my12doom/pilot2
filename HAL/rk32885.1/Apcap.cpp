@@ -1,9 +1,7 @@
 #include "Apcap.h"
 #include <unistd.h>
-extern "C" 
-{
+#include <string.h>
 #include "radiotap.h"
-}
 
 using namespace std;
 using namespace HAL;
@@ -19,16 +17,6 @@ static const uint8_t uint8_taRadiotapHeader[] = {			// radiotap TX header
 };
 
 
-// BYTE ORDER
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define	le16_to_cpu(x) (x)
-#define	le32_to_cpu(x) (x)
-#else
-#define	le16_to_cpu(x) ((((x)&0xff)<<8)|(((x)&0xff00)>>8))
-#define	le32_to_cpu(x) \
-((((x)&0xff)<<24)|(((x)&0xff00)<<8)|(((x)&0xff0000)>>8)|(((x)&0xff000000)>>24))
-#endif
-#define	unlikely(x) (x)
 
 typedef struct  {
 	int m_nChannel;
@@ -91,6 +79,7 @@ APCAP_RX::APCAP_RX(const char*interface /*= INADDR_ANY*/, int port /*= 0xbbb*/)
 	selectable_fd = pcap_get_selectable_fd(ppcap);
 
 	init_ok = true;
+	worker_run = true;
 	pthread_create(&worker_thread, NULL, worker_entry, this);
 	printf("APCAP_RX: init OK\n");
 	return;
@@ -167,7 +156,6 @@ void* APCAP_RX::worker()
 	while(worker_run)
 	{
 		// read from pcap
-		//printf("pcap_loop\n");
 
 		// timeout = 10ms
 		struct timeval timeout;
@@ -245,12 +233,12 @@ void* APCAP_RX::worker()
 					break;
 
 				case IEEE80211_RADIOTAP_FLAGS:
-					printf("flag:%d\n", *rti.this_arg);
+					//printf("flag:%d\n", *rti.this_arg);
 					prd.m_nRadiotapFlags = *rti.this_arg;
 					break;
 
 				case IEEE80211_RADIOTAP_DBM_ANTSIGNAL:
-					printf("rssi:%d\n", (int8_t)(*rti.this_arg));
+					//printf("rssi:%d\n", (int8_t)(*rti.this_arg));
 					break;
 				}
 			}
@@ -278,9 +266,6 @@ void* APCAP_RX::worker()
 			}
 
 			pthread_mutex_unlock(&cs);
-
-			static int i = 0;
-			printf("RX:%d", i++);
 		}
 	}
 

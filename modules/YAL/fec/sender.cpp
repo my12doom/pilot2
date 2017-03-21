@@ -85,14 +85,17 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 	return 0;
 }
 
-FILE * f = fopen("Z:\\a.bin", "wb");
+static FILE * f = fopen("Z:\\a.bin", "wb");
 
 int FrameSender::send_packet(const void *payload, int payload_size)
 {
 	if (block_sender)
 		block_sender->write(payload, payload_size);
 
-	fwrite(payload, 1, payload_size, f);
-	fflush(f);
+	if (f)
+	{
+		fwrite(payload, 1, payload_size, f);
+		fflush(f);
+	}
 	return 0;
 }
