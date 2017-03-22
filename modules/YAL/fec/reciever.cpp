@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "oRS.h"
+#include <stdlib.h>
 
 reciever::reciever()
 {
@@ -46,7 +47,7 @@ int reciever::put_packet(const void *packet, int size)
 	if (packets[p->packet_id].payload_packet_count)
 		printf("warning: possible duplicated packet %d\n", p->packet_id);
 
-// 	printf("rx:packet #%d of frame #%d\n", p->packet_id, p->frame_id);
+ 	//printf("rx:packet #%d of frame #%d, (%d+%d packets)\n", p->packet_id, p->frame_id, p->payload_packet_count, p->parity_packet_count);
 
 	memcpy(&packets[p->packet_id], packet, size);
 	current_packet_count ++;
@@ -90,7 +91,7 @@ int reciever::assemble_and_out()
 	}
 	
 
-	if (payload_packet_count == 0 || parity_packet_count == 0)
+	if (payload_packet_count == 0 || parity_packet_count == 0 || payload_packet_count + parity_packet_count > 255)
 		return -1;
 
 	// assemble and do FEC if needed

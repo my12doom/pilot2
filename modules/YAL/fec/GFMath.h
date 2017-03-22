@@ -15,7 +15,7 @@ extern unsigned char EKR255_table[256][256];
 #ifndef _USE_INLINE_GMULT
 #define gmult(a,b) mult_table[a][b]
 #define gmult2(a,b) mult_table2[((a)<<8) | (b)]
-#define mul_z_poly(src, size) memcpy(src+1, src, size-1);src[0]=0
+#define mul_z_poly(src, size) memmove(src+1, src, size-1);src[0]=0
 #else
 #define gmult c_gmult
 #define mul_z_poly c_mul_z_poly
