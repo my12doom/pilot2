@@ -1,3 +1,4 @@
+#include <HAL/rk32885.1/AVideo.h>
 #include "camera.h"
 #include "encoder.h"
 #include <libyuv.h>
@@ -26,15 +27,23 @@ int test_pcap_block_device()
 	APCAP_TX tx("wlan0", 0);
 	FrameSender sender;
 	sender.set_block_device(&tx);
-	sender.config(1400, 1.0);
 
 	printf("31\n");
-	RK3288Camera51 c;
-	int frame_count = 0;
-	c.init(0);
-	printf("33\n");
 	android_video_encoder enc;
 	enc.init(640, 360, 250000);
+	for(int i=0; i<10; i++)
+	{
+		uint8_t *ooo = NULL;
+		int encoded_size = enc.get_encoded_frame(&ooo);
+		printf("%d\n", i);
+		void *live = enc.get_next_input_frame_pointer();
+		printf("%d\n", __LINE__);
+		enc.encode_next_frame();
+	}
+	int frame_count = 0;
+	RK3288Video c;
+	c.init("/dev/video0");
+	printf("33\n");
 	x264 enc_soft;
 	enc_soft.init(640, 360, 250);
 	uint8_t * yv12 = new uint8_t[640*480*3/2];
@@ -44,6 +53,7 @@ int test_pcap_block_device()
 	FILE * f = fopen("/data/on.h264", "wb");
 
 	printf("streaming start\n");
+
 	int64_t t = getus();
 	while(1)
 	{
@@ -57,9 +67,7 @@ int test_pcap_block_device()
 			//printf("live streaming: %d, %d\n", encoded_size, nal_type);
 			memcpy(frame_with_size+4, ooo, encoded_size);
 			*(int*)frame_with_size = encoded_size;
-			sender.send_frame(frame_with_size, encoded_size+4);
-
-			fwrite(ooo, 1, encoded_size, f);
+			sender.send_frame(frame_with_size, encoded_size+4);			
 		}
 
 		// capture new frames
@@ -72,7 +80,7 @@ int test_pcap_block_device()
 				t = getus();
 			printf("frame:%d, %dfps\n", frame_count, int64_t(frame_count)*1000000/(getus()-t));
 			frame_count++;
-			memcpy(yv12, p, 640*360);			
+			memcpy(yv12, p, 640*360);
 			c.release_frame(p);
 
 			// feed live streaming encoder
@@ -85,7 +93,7 @@ int test_pcap_block_device()
 		}
 		else
 		{
-			usleep(10000);
+			usleep(1000);
 		}
 	}
 

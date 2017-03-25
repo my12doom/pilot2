@@ -9,7 +9,7 @@ FrameSender::FrameSender()
 	frame_id = 0;
 	block_sender = NULL;
 	packets = new raw_packet[256];
-	config(PACKET_SIZE, 0.1);
+	config(PACKET_SIZE, 0.9);
 }
 
 FrameSender::~FrameSender()
@@ -40,9 +40,13 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 	int slice_size = payload_packet_count + parity_packet_count;
 
 	if (slice_size > 255)		// too large frame
+	{
+		printf("too large frame\n");
 		return -1;
+	}
 
 	encoder.init(parity_packet_count);
+	printf("sending %d bytes frame, %d+%d packets\n", payload_size, payload_packet_count, parity_packet_count);
 
 	memset(packets, 0, (slice_size) * sizeof(raw_packet));
 

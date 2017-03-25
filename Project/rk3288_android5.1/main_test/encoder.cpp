@@ -6,6 +6,8 @@
 #include <media/stagefright/MediaCodecList.h>
 #include <gui/Surface.h>
 
+#include <binder/IPCThreadState.h>
+
 using namespace android;
 
 
@@ -23,6 +25,13 @@ android_video_encoder::~android_video_encoder()
 
 int android_video_encoder::init(int width, int height, int bitrate, float frame_rate/* = 25*/, int color_format /*= OMX_COLOR_FormatYUV420Planar*/)
 {
+	static sp<ProcessState> proc(ProcessState::self());
+	static bool thread_pool_run = false;
+	if (!thread_pool_run)
+			ProcessState::self()->startThreadPool();
+	thread_pool_run = true;
+
+
 	sp<ALooper> looper = new ALooper;
     looper->setName("codec_looper");
     looper->start();

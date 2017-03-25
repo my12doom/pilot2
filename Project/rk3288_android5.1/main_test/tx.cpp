@@ -435,8 +435,17 @@ int test_pcap_block_device();
 extern "C" int
 main(int argc, char *argv[])
 {
-	
+	usleep(10000000);
+	printf("start ifconfig config\n");
+	system("ifconfig wlan0 down");
+	system("iwconfig wlan0 mode monitor");
+	system("ifconfig wlan0 up");
+	system("iwconfig wlan0 rate 12M");
+	system("iwconfig wlan0 channel 9");
+	printf("end ifconfig config\n");
+
 	printf("main2\n");
+	return test_pcap_block_device();
 	for(int i=0; i<argc; i++)
 	{
 		if (strcmp("-tx", argv[i]) == 0)

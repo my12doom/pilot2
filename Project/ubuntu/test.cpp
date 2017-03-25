@@ -83,7 +83,7 @@ int main(int argc,char** argv)
     AVCodecContext *c = avcodec_alloc_context3(codec);
     if(codec->capabilities&CODEC_CAP_TRUNCATED)
     	c->flags|= CODEC_FLAG_TRUNCATED; /* we do not send complete frames */
-    c->thread_count = 4;
+    c->thread_count = 1;
     if (avcodec_open2(c, codec, NULL) < 0) {
         fprintf(stderr, "could not open codec\n");
         exit(1);

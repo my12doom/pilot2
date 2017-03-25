@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define PACKET_SIZE 1400
+#define PACKET_SIZE 400
 
 // frame structure for exchange data in program.
 typedef struct frame_struct

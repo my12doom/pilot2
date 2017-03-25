@@ -22,6 +22,8 @@ LOCAL_SRC_FILES := \
 	../../../HAL/rk32885.1/AI2C.cpp \
 	../../../HAL/rk32885.1/AUDP.cpp \
 	../../../HAL/rk32885.1/Apcap.cpp \
+	../../../HAL/rk32885.1/AVideo.cpp \
+	../../../HAL/rk32885.1/OV7740Control.cpp \
 	../../../modules/YAL/fec/GFMath.cpp \
 	../../../modules/YAL/fec/append.cpp \
 	../../../modules/YAL/fec/frame.cpp \
@@ -101,6 +103,7 @@ LOCAL_C_INCLUDES :=  \
 	system/acantha \
 	system/acantha/modules \
 	system/acantha/modules/Algorithm/ekf_lib/inc \
+	system/core/libion/kernel-headers/linux \
 	system/acantha/Project/rk3288_android5.1/main_test/libyuv/include \
 	system/acantha/Project/rk3288_android5.1/main_test/x264 \
 	frameworks/av/media/libstagefright \
