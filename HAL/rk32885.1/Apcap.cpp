@@ -28,6 +28,12 @@ typedef struct  {
 } __attribute__((packed)) PENUMBRA_RADIOTAP_DATA;
 
 
+static int64_t getus()
+{    
+   struct timespec tv;  
+   clock_gettime(CLOCK_MONOTONIC, &tv);    
+   return (int64_t)tv.tv_sec * 1000000 + tv.tv_nsec/1000;    
+}
 /* Penumbra IEEE80211 header */
 static uint8_t uint8_taIeeeHeader[] = {
 	0x08, 0x01, 						// FC: frame control
@@ -46,6 +52,7 @@ APCAP_RX::APCAP_RX(const char*interface /*= INADDR_ANY*/, int port /*= 0xbbb*/)
 	pthread_mutex_init(&cs, NULL);
 
 	init_ok = false;
+	byte_counter = 0;
 
 	char szErrbuf[PCAP_ERRBUF_SIZE] = {0};
 	ppcap = pcap_open_live(interface, MAX_PACKET_LENGTH, 1, -1, szErrbuf);
@@ -81,12 +88,12 @@ APCAP_RX::APCAP_RX(const char*interface /*= INADDR_ANY*/, int port /*= 0xbbb*/)
 	init_ok = true;
 	worker_run = true;
 	pthread_create(&worker_thread, NULL, worker_entry, this);
-	printf("APCAP_RX: init OK\n");
+	fprintf(stderr, "APCAP_RX: init OK\n");
 	return;
 
 fail:
 	init_ok = false;
-	printf("APCAP_RX: init failed, error=%s\n", szErrbuf);
+	fprintf(stderr, "APCAP_RX: init failed, error=%s\n", szErrbuf);
 }
 
 APCAP_RX::~APCAP_RX()
@@ -238,7 +245,7 @@ void* APCAP_RX::worker()
 					break;
 
 				case IEEE80211_RADIOTAP_DBM_ANTSIGNAL:
-					//printf("rssi:%d\n", (int8_t)(*rti.this_arg));
+					latest_rssi = (int8_t)(*rti.this_arg);
 					break;
 				}
 			}
@@ -266,6 +273,19 @@ void* APCAP_RX::worker()
 			}
 
 			pthread_mutex_unlock(&cs);
+
+			static int i = 0;
+			//printf("\rRX:%d%s", i++, checksum_correct?"OK":"NK\n");
+
+
+			byte_counter += byte_count;
+			static int64_t last_bandwidth = getus();
+			if(getus() - last_bandwidth > 1000000)
+			{
+				last_bandwidth = getus();
+				//printf("%d bytes/s\n", byte_counter);
+				byte_counter = 0;
+			}
 		}
 	}
 

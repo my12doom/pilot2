@@ -1,21 +1,21 @@
 CC=g++
-TARGET=ubuntu_rx
-FEC=../../modules/YAL/fec
-HAL3288=../../HAL/rk32885.1
-ROOT=../..
+TARGET=rx
+FEC=../../../modules/YAL/fec
+HAL3288=../../../HAL/rk32885.1
+ROOT=../../..
 
-SOURCE = test.cpp \
-		../../modules/YAL/fec/append.cpp \
-		../../modules/YAL/fec/frame.cpp \
-		../../modules/YAL/fec/GFMath.cpp \
-		../../modules/YAL/fec/oRS.cpp \
-		../../modules/YAL/fec/sender.cpp \
-		../../modules/YAL/fec/reciever.cpp \
+SOURCE = rx.cpp \
+		$(FEC)/append.cpp \
+		$(FEC)/frame.cpp \
+		$(FEC)/GFMath.cpp \
+		$(FEC)/oRS.cpp \
+		$(FEC)/sender.cpp \
+		$(FEC)/reciever.cpp \
 		$(HAL3288)/Apcap.cpp \
 		$(HAL3288)/radiotap.cpp \
 
 ## End sources definition
-INCLUDE = -I../../ -I../../modules
+INCLUDE = -I../../../ -I../../../modules
 ## end more includes
 
 LIBS = $(shell pkg-config --libs libavcodec) -lpcap

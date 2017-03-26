@@ -35,6 +35,9 @@ namespace androidUAV
 		// query num available blocks in rx queue, negative values for error.
 		virtual int available();
 
+		// return latest rssi in dbm.
+		int get_latest_rssi(){return latest_rssi;}
+
 	protected:
 		bool worker_run;
 		pthread_t worker_thread;
@@ -44,6 +47,10 @@ namespace androidUAV
 		pcap_t *ppcap;
 		int n80211HeaderLength;
 		int selectable_fd;
+		int latest_rssi;
+
+		int guard[1024];
+		int byte_counter;
 
 		int clearup();
 
