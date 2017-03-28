@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <memory.h>
+#include <string.h>
 #include "oRS.h"
 #include "append.h"
 #define NULL 0
