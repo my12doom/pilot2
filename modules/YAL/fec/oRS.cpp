@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <memory.h>
+#include <string.h>
 #include "oRS.h"
 #include "append.h"
 #define NULL 0
@@ -24,7 +25,7 @@ void rsEncoder::init(int par)
 		NPAR = par;
 
 		init_exp_table();
-		LFSR = (unsigned char*)malloc(48);
+		LFSR = (unsigned char*)malloc(MAX_NPAR);
 		resetData();
 }
 void rsEncoder::resetData()

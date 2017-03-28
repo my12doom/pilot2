@@ -1370,5 +1370,23 @@ void rs_append(unsigned char *msg, int nbytes, unsigned char *LFSR, int NPAR)
 	case 38:rs_append38(msg, nbytes, LFSR);break;
 	case 39:rs_append39(msg, nbytes, LFSR);break;
 	case 40:rs_append40(msg, nbytes, LFSR);break;
+	default:
+		{
+			unsigned char *genPoly = get_genpoly(NPAR);
+
+			for (int i=0; i<nbytes; i++)
+			{
+// 					dbyte = msg[i] ^ LFSR[0];
+// 					LFSR[0] = LFSR[1] ^ gmult(dbyte, genPoly[0]);
+// 					LFSR[1] = gmult(dbyte, genPoly[1]);
+				unsigned char dbyte = msg[i] ^ LFSR[0];
+				for (int j = 0; j < NPAR-1; j++) 
+				{
+					LFSR[j] = LFSR[j+1] ^ gmult(dbyte, genPoly[j]);
+				}
+				LFSR[NPAR-1] = gmult(dbyte, genPoly[NPAR-1]);
+			}
+		}
+		break;
 	}
 }
