@@ -116,6 +116,8 @@ int main(int argc,char** argv)
 			continue;
 		}
 
+		frame_byte_counter += f->payload_size;
+
 		if (!f->integrality)
 		{
 			invalid ++;
@@ -126,14 +128,13 @@ int main(int argc,char** argv)
 		int frame_size = *(int*)f->payload;
 		uint8_t * frame_data = (uint8_t*)f->payload+4;
 
-		//fwrite(frame_data, 1, frame_size, stdout );
+		fwrite(frame_data, 1, frame_size, stdout );
 		fflush(stdout);
 
 		if (frame_size>f->payload_size-4)
 			continue;
 
-		valid ++;
-		frame_byte_counter += f->payload_size;
+		valid ++;		
 		release_frame(f);
 	}
 

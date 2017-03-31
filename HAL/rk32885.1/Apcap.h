@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <vector>
+#include <list>
 #include <HAL/Interface/IBlockDevice.h>
 #include <pthread.h>
 #include <pcap/pcap.h>
@@ -42,7 +42,7 @@ namespace androidUAV
 		bool worker_run;
 		pthread_t worker_thread;
 		pthread_mutex_t cs;
-		std::vector<packet> packets;
+		std::list<packet> packets;
 		bool init_ok;
 		pcap_t *ppcap;
 		int n80211HeaderLength;
