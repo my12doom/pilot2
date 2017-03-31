@@ -1,7 +1,7 @@
 #ifndef GFMATH_H
 #define GFMATH_H
 
-#define MAX_NPAR 40
+#define MAX_NPAR 128
 
 // galois arithmetic tables
 void init_exp_table (void);
