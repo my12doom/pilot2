@@ -136,9 +136,9 @@ int APCAP_RX::read(void *buf, int max_block_size, bool remove /*= true*/)
 		return error_no_more_blocks;
 	}
 
-	packet p = packets[0];
+	packet p = packets.front();
 	if (remove)
-		packets.erase(packets.begin());
+		packets.pop_front();
 	int size = min(max_block_size, p.size);
 	memcpy(buf, p.data, size);
 	pthread_mutex_unlock(&cs);
