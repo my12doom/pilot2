@@ -19,7 +19,6 @@ protected:
 
 	int max_packet_payload_size;
 	float parity_ratio;
-	rsEncoder encoder;
 
 	raw_packet *packets;
 	uint8_t frame_id;

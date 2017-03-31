@@ -11,22 +11,25 @@ rsEncoder::rsEncoder()
 {LFSR = NULL;}
 rsEncoder::rsEncoder(int par)
 {
+	LFSR = NULL;
 	init(par);
 }
 
 rsEncoder::~rsEncoder()
 {
 	if (LFSR)
-	 free(LFSR);
+		free(LFSR);
 }
 
 void rsEncoder::init(int par)
 {
-		NPAR = par;
+	NPAR = par;
 
-		init_exp_table();
-		LFSR = (unsigned char*)malloc(MAX_NPAR);
-		resetData();
+	init_exp_table();
+	if (LFSR)
+		free(LFSR);
+	LFSR = (unsigned char*)malloc(MAX_NPAR);
+	resetData();
 }
 void rsEncoder::resetData()
 {
@@ -134,16 +137,16 @@ int rsDecoder::correct_errors_erasures (unsigned char codeword[],
 	int r, i, j, err;
 
 	int decode_result = decode_data(codeword, csize);
-	if (nerasures == 0 && decode_result ==0) return 1;
+	if (nerasures == 0 && decode_result ==0) return 2;
 
-	unsigned char Lambda[256];
-	unsigned char Omega[256];
-	unsigned char psi[256];
-	unsigned char psi2[256];
-	unsigned char D[256];
-	unsigned char gamma[256];
-	unsigned char tmp[256];
-	unsigned char product[512];
+	unsigned char Lambda[512];
+	unsigned char Omega[512];
+	unsigned char psi[512];
+	unsigned char psi2[512];
+	unsigned char D[512];
+	unsigned char gamma[512];
+	unsigned char tmp[512];
+	unsigned char product[1024];
 
 
 	int ErrorLocs[256];

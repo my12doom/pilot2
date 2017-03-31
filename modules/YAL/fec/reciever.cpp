@@ -3,6 +3,7 @@
 #include <string.h>
 #include "oRS.h"
 #include <stdlib.h>
+#include <assert.h>
 
 reciever::reciever()
 {
@@ -37,6 +38,13 @@ int reciever::put_packet(const void *packet, int size)
 	// reject ill conditioned packets
 	if (size > sizeof(raw_packet))
 		return -1;
+
+	// decode header and check for error
+	rsDecoder dec2;
+	dec2.init(2);
+	int g = dec2.correct_errors_erasures((unsigned char *)packet, HEADER_SIZE, 0, NULL);
+	if (!g)
+		return -2;
 
 	// check for new frame
 	raw_packet *p = (raw_packet*)packet;
@@ -88,6 +96,8 @@ int reciever::assemble_and_out()
 			memset(&packets[i], 0, sizeof(raw_packet));
 			packets[i].payload_packet_count = 0;
 		}
+
+		return -1;
 	}
 	
 
@@ -109,7 +119,7 @@ int reciever::assemble_and_out()
 	bool error = false;
 	decoder.init(parity_packet_count);
 	uint8_t slice_data[256];
-	int max_packet_payload_size = sizeof(raw_packet)-5;
+	int max_packet_payload_size = sizeof(raw_packet)-HEADER_SIZE;
 	frame * f = alloc_frame(payload_packet_count * max_packet_payload_size, current_frame_id, true);
 	for(int i=0; i<max_packet_payload_size; i++)
 	{

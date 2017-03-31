@@ -9,7 +9,7 @@ FrameSender::FrameSender()
 	frame_id = 0;
 	block_sender = NULL;
 	packets = new raw_packet[256];
-	config(PACKET_SIZE, 0.9);
+	config(PACKET_SIZE, 1.5);
 }
 
 FrameSender::~FrameSender()
@@ -27,7 +27,7 @@ int FrameSender::set_block_device(HAL::IBlockDevice *block_sender)
 
 int FrameSender::config(int packet_size, float parity_ratio)
 {
-	this->max_packet_payload_size = packet_size-5;
+	this->max_packet_payload_size = packet_size-HEADER_SIZE;
 	this->parity_ratio = parity_ratio;
 
 	return 0;
@@ -37,6 +37,8 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 {
 	int payload_packet_count = (payload_size + max_packet_payload_size - 1) / max_packet_payload_size;
 	int parity_packet_count = ceil(payload_packet_count * parity_ratio);
+	if (parity_packet_count > MAX_NPAR)
+		parity_packet_count = MAX_NPAR;
 	int slice_size = payload_packet_count + parity_packet_count;
 
 	if (slice_size > 255)		// too large frame
@@ -45,6 +47,7 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 		return -1;
 	}
 
+	rsEncoder encoder;
 	encoder.init(parity_packet_count);
 	printf("sending %d bytes frame, %d+%d packets\n", payload_size, payload_packet_count, parity_packet_count);
 
@@ -72,7 +75,9 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 			packets[j].data[i] = slice_data[j];
 	}
 
-	//send out
+	// create header rs parity and send out
+	rsEncoder header_rs_encoder;
+	header_rs_encoder.init(sizeof(packets->header_rs));
 	for(int i=0; i<slice_size; i++)
 	{
 		packets[i].frame_id = frame_id;
@@ -80,6 +85,10 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 		packets[i].packet_id = i;
 		packets[i].parity_packet_count = parity_packet_count;
 		packets[i].payload_packet_count = payload_packet_count;
+
+		header_rs_encoder.resetData();
+		header_rs_encoder.append_data((unsigned char*)&packets[i], HEADER_SIZE-sizeof(packets[i].header_rs));
+		header_rs_encoder.output(&packets[i].header_rs[0]);
 
 		send_packet(&packets[i], sizeof(raw_packet));
 	}
@@ -89,17 +98,10 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 	return 0;
 }
 
-static FILE * f = fopen("Z:\\a.bin", "wb");
-
 int FrameSender::send_packet(const void *payload, int payload_size)
 {
 	if (block_sender)
 		block_sender->write(payload, payload_size);
 
-	if (f)
-	{
-		fwrite(payload, 1, payload_size, f);
-		fflush(f);
-	}
 	return 0;
 }
