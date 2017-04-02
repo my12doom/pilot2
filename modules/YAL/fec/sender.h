@@ -14,10 +14,10 @@ public:
 	virtual int set_block_device(HAL::IBlockDevice *block_sender);
 	virtual int config(int packet_size, float residual_ratio);
 	virtual int send_frame(const void *payload, int payload_size);
-	virtual int send_packet(const void *payload, int payload_size);
+	virtual int send_packet(const void *payload, int payload_size, int c);
 protected:
 
-	int max_packet_payload_size;
+	int packet_payload_size;
 	float parity_ratio;
 
 	raw_packet *packets;

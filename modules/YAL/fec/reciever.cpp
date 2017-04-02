@@ -4,6 +4,7 @@
 #include "oRS.h"
 #include <stdlib.h>
 #include <assert.h>
+#include "cauchy_256.h"
 
 reciever::reciever()
 {
@@ -24,6 +25,7 @@ reciever::~reciever()
 
 void reciever::init()
 {
+	cauchy_256_init();
 // 	packets = new raw_packet[270];
 	memset(packets, 0, sizeof(raw_packet) * 256);
 	current_frame_id = -1;
@@ -32,8 +34,7 @@ void reciever::init()
 
 int reciever::put_packet(const void *packet, int size)
 {
-	// assume: minimum data error except packet loss
-	//		   no out of order packets
+	// assume: no out of order packets
 
 	// reject ill conditioned packets
 	if (size > sizeof(raw_packet))
@@ -104,23 +105,23 @@ int reciever::assemble_and_out()
 	if (payload_packet_count == 0 || parity_packet_count == 0 || payload_packet_count + parity_packet_count > 255)
 		return -1;
 
-	// assemble and do FEC if needed
-
-	// create erasures
+	// assemble and do FEC
 	int slice_size = payload_packet_count + parity_packet_count;
+	int max_packet_payload_size = sizeof(raw_packet)-HEADER_SIZE;
+	frame * f = alloc_frame(payload_packet_count * max_packet_payload_size, current_frame_id, true);
+	bool error = false;
+
+#if !USE_CAUCHY
+	// create erasures
 	int erasures[256];
 	int erasures_count = 0;
 	for(int i=0; i<slice_size; i++)
 		if (packets[i].payload_packet_count == 0)	// current only missing packets checked, TODO: CRC
 			erasures[erasures_count++] = i;
 
-	// decode and output
 	rsDecoder decoder;
-	bool error = false;
 	decoder.init(parity_packet_count);
 	uint8_t slice_data[256];
-	int max_packet_payload_size = sizeof(raw_packet)-HEADER_SIZE;
-	frame * f = alloc_frame(payload_packet_count * max_packet_payload_size, current_frame_id, true);
 	for(int i=0; i<max_packet_payload_size; i++)
 	{
 		for(int j=0; j<slice_size; j++)
@@ -135,6 +136,30 @@ int reciever::assemble_and_out()
 			((uint8_t*)f->payload)[j*max_packet_payload_size + i] = slice_data[j];			
 		}
 	}
+#else
+	Block blocks[256];
+	int j = 0;
+	for(int i=0; i<slice_size; i++)
+	{
+		if (packets[i].payload_packet_count)
+		{
+			blocks[j].data = packets[i].data;
+			blocks[j].row = i;
+			j++;
+		}
+	}
+
+	assert(j>=payload_packet_count);
+
+	error = cauchy_256_decode(payload_packet_count, parity_packet_count, blocks, payload_packet_count, max_packet_payload_size);
+
+// 	for(int i=0; i<payload_packet_count; i++)
+// 		assert(blocks[i].row == i);
+
+	for(int i=0; i<slice_size; i++)
+		if (blocks[i].row < payload_packet_count)
+		memcpy((uint8_t*)f->payload+blocks[i].row*max_packet_payload_size, blocks[i].data, max_packet_payload_size);
+#endif
 
 	f->integrality = !error;
 	if (cb)

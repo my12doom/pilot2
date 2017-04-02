@@ -195,6 +195,22 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\modules\YAL\fec\cauchy_256.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\cauchy_256.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\cauchy_helper.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\cauchy_tables_256.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\modules\YAL\fec\frame.cpp"
 				>
 			</File>
@@ -208,6 +224,22 @@
 			</File>
 			<File
 				RelativePath="..\..\..\modules\YAL\fec\GFMath.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\MemSwap.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\MemSwap.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\MemXOR.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\MemXOR.hpp"
 				>
 			</File>
 			<File
