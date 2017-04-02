@@ -26,6 +26,14 @@ uint8_t buffer[pixel_w*pixel_h*2] = {0};
 const int INBUF_SIZE = 4096000;
 uint8_t inbuf[INBUF_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
+
+static int64_t getus()
+{    
+   struct timespec tv;  
+   clock_gettime(CLOCK_MONOTONIC, &tv);    
+   return (int64_t)tv.tv_sec * 1000000 + tv.tv_nsec/1000;    
+}
+
 class cb : public IFrameReciever
 {
 public:
@@ -137,6 +145,13 @@ int main(int argc,char** argv)
 				//printf("\r%d", i++);
 				//fflush(stdout);
 				rec->put_packet(data, size);
+			}
+
+			static int64_t last_fps_show = getus();
+			if (getus() > last_fps_show + 1000000)
+			{
+				last_fps_show = getus();
+				fprintf(stderr, "%ddbm\n", rx.get_latest_rssi());
 			}
 
 			frame * f = frame_cache->get_frame();

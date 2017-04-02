@@ -41,8 +41,10 @@ int test_pcap_block_device()
 		enc.encode_next_frame();
 	}
 	int frame_count = 0;
-	RK3288Video c;
-	c.init("/dev/video0");
+	//RK3288Video c;
+	//c.init("/dev/video0");
+	RK3288Camera51 c;
+	c.init(0);
 	printf("33\n");
 	x264 enc_soft;
 	enc_soft.init(640, 360, 250);

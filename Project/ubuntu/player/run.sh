@@ -1,5 +1,5 @@
 ifconfig wlan0 down
-iwconfig wlan0 mode monitor
+iw dev wlan0 set monitor otherbss fcsfail
 ifconfig wlan0 up
 iwconfig wlan0 channel 9
 ./player
