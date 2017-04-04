@@ -6,6 +6,12 @@
 #define NULL 0
 #define NPAR23 23
 unsigned char genPoly23[23];
+#ifdef WIN32
+#include <intrin.h>
+#include <tmmintrin.h>
+#else
+#include "sse2neon.h"
+#endif
 
 rsEncoder::rsEncoder()
 {LFSR = NULL;}
@@ -20,6 +26,7 @@ rsEncoder::~rsEncoder()
 	if (LFSR)
 		free(LFSR);
 }
+
 
 void rsEncoder::init(int par)
 {
@@ -54,8 +61,35 @@ rsDecoder::rsDecoder(int par)
 	init(par);
 }
 
+#include <stdint.h>
+#include <assert.h>
+uint8_t tbl_h[256][16];
+uint8_t tbl_l[256][16];
 void rsDecoder::init(int par)
 {
+	for(int y=0; y<256; y++)
+	{
+		for(int i=0; i<16; i++)
+		{
+			tbl_h[y][i] = gmult(y, i<<4);
+			tbl_l[y][i] = gmult(y, i);
+		}
+	}
+
+
+	for(int y=0; y<256; y++)
+	{
+		for(int x=0; x<256; x++)
+		{
+			int ab = gmult(x, y);
+
+// 			int ab2 = gmult(y, x&0xf0) ^ gmult(y, x&0x0f);
+			int ab2 = tbl_h[y][x>>4] ^ tbl_l[y][x&0x0f];
+
+			assert(ab == ab2);
+		}
+	}
+
 	NPAR = par;
 	init_exp_table();
 	synBytes = new unsigned char[MAXDEG];
@@ -68,51 +102,18 @@ rsDecoder::~rsDecoder()
 int rsDecoder::decode_data(unsigned char *data, int cwsize)
 {
 	int i, j;
-	unsigned int sum;
 	
+	memset(synBytes, 0, NPAR);
 	
-	for (j = 0; j < NPAR;  j++) {
-		sum	= 0;
-		for (i = 0; i < cwsize; i++) {
-			sum = data[i] ^ gmult(gexp[j+1], sum);
-			//sum = data[i] ^ decode_mult_table[j][sum];
-		}
-		synBytes[j]  = sum;
-	}	
-	
-	
-
-	/*
-	memset(synBytes, 0, 23);
-	for (i=0; i<cwsize; i++)
+	for (i = 0; i < cwsize; i++)
 	{
-		synBytes[0] = data[i] ^ gmult(gexp[1],synBytes[0]);
-		synBytes[1] = data[i] ^ gmult(gexp[2],synBytes[1]);
-		synBytes[2] = data[i] ^ gmult(gexp[3],synBytes[2]);
-		synBytes[3] = data[i] ^ gmult(gexp[4],synBytes[3]);
-		synBytes[4] = data[i] ^ gmult(gexp[5],synBytes[4]);
-		synBytes[5] = data[i] ^ gmult(gexp[6],synBytes[5]);
-		synBytes[6] = data[i] ^ gmult(gexp[7],synBytes[6]);
-		synBytes[7] = data[i] ^ gmult(gexp[8],synBytes[7]);
-		synBytes[8] = data[i] ^ gmult(gexp[9],synBytes[8]);
-		synBytes[9] = data[i] ^ gmult(gexp[10],synBytes[9]);
-		synBytes[10] = data[i] ^ gmult(gexp[11],synBytes[10]);
-		synBytes[11] = data[i] ^ gmult(gexp[12],synBytes[11]);
-		synBytes[12] = data[i] ^ gmult(gexp[13],synBytes[12]);
-		synBytes[13] = data[i] ^ gmult(gexp[14],synBytes[13]);
-		synBytes[14] = data[i] ^ gmult(gexp[15],synBytes[14]);
-		synBytes[15] = data[i] ^ gmult(gexp[16],synBytes[15]);
-		synBytes[16] = data[i] ^ gmult(gexp[17],synBytes[16]);
-		synBytes[17] = data[i] ^ gmult(gexp[18],synBytes[17]);
-		synBytes[18] = data[i] ^ gmult(gexp[19],synBytes[18]);
-		synBytes[19] = data[i] ^ gmult(gexp[20],synBytes[19]);
-		synBytes[20] = data[i] ^ gmult(gexp[21],synBytes[20]);
-		synBytes[21] = data[i] ^ gmult(gexp[22],synBytes[21]);
-		synBytes[22] = data[i] ^ gmult(gexp[23],synBytes[22]);
+		for (j = 0; j < NPAR;  j++)
+		{
+			synBytes[j] = data[i] ^ gmult(gexp[j+1], synBytes[j]);
+			//sum = data[i] ^ (sum == 0 ? 0 : gexp[glog[sum]+(j+1)]);
+		}
 	}
-	*/
-	
-		
+				
 	for (int i =0 ; i < NPAR; i++) 
 	{
 		if (synBytes[i] != 0) return 1;
@@ -128,7 +129,26 @@ int rsDecoder::decode_data(unsigned char *msg, int msg_size, unsigned char *pari
 	return decode_data(data, msg_size+NPAR);
 }
 
-	
+#include <stdio.h>
+
+#ifdef WIN32
+#define _mm_shuffle2_epi8 _mm_shuffle_epi8
+#else
+FORCE_INLINE __m128i _mm_shuffle2_epi8(__m128i ia, __m128i ib)
+{
+	#define uint8x16_to_8x8x2(v) ((uint8x8x2_t) { vget_low_u8(v), vget_high_u8(v) })
+
+    uint8x8_t b_h = vget_high_u8(vreinterpretq_u8_s32(ib));
+    uint8x8_t b_l = vget_low_u8(vreinterpretq_u8_s32(ib));
+    uint8x8_t lut_h = vtbl2_u8(*(uint8x8x2_t*)&ia, b_h);
+	uint8x8_t lut_l = vtbl2_u8(*(uint8x8x2_t*)&ia, b_l);
+	uint8x16_t lut = vcombine_u8(lut_l, lut_h);
+
+	return vreinterpretq_s32_u8(lut);
+}
+#endif
+
+#include <assert.h>
 int rsDecoder::correct_errors_erasures (unsigned char codeword[], 
 			 int csize,
 			 int nerasures,
@@ -146,14 +166,12 @@ int rsDecoder::correct_errors_erasures (unsigned char codeword[],
 	unsigned char D[512];
 	unsigned char gamma[512];
 	unsigned char tmp[512];
-	unsigned char product[1024];
 
 
 	int ErrorLocs[256];
 	int NErrors;
 
 	int ErasureLocs[256];
-	int NErasures;
 
 	int ret = 0;
 
@@ -161,36 +179,40 @@ int rsDecoder::correct_errors_erasures (unsigned char codeword[],
 
 	// If you want to take advantage of erasure correction, be sure to
 	//	set NErasures and ErasureLocs[] with the locations of erasures.
-	NErasures = nerasures;
-	for (i = 0; i < NErasures; i++)
+	for (i = 0; i < nerasures; i++)
 		ErasureLocs[i] = csize - 1 - erasures[i];
 
 	////////////////////////////////////////////////////////////////////
 	//Modified_Berlekamp_Massey();
 	////////////////////////////////////////////////////////////////////
-	int n, L, L2, k, d;
+	int n, L, k, d;
 	// initialize Gamma, the erasure locator polynomial
 	int e;
 	zero_poly(gamma, MAXDEG);
-	zero_poly(tmp, MAXDEG);
 	gamma[0] = 1;
 
-	for (e = 0; e < NErasures; e++) 
+	for (e = 0; e < nerasures; e++) 
 	{
-		copy_poly(tmp, gamma, MAXDEG);
-		scale_poly(gexp[ErasureLocs[e]], tmp, MAXDEG);
-		mul_z_poly(tmp, MAXDEG);
-		add_polys(gamma, tmp, MAXDEG);
+		copy_poly(tmp, gamma, nerasures+1);
+		scale_poly(gexp[ErasureLocs[e]], tmp, nerasures+1);
+		mul_z_poly(tmp, nerasures+1);
+		add_polys(gamma, tmp, nerasures+1);
+
+		assert(gamma[0] == 1);
 	}
+
+// 	gamma[0] = 1;
+// 	for(e = 0; e<NErasures; e++)
+// 		gamma[e+1] = gmult(gamma[e], gexp[ErasureLocs[NErasures-1-e]]);
 
 	// initialize to z
 	copy_poly(D, gamma, MAXDEG);
 	mul_z_poly(D, MAXDEG);
 
 	copy_poly(psi, gamma, MAXDEG);
-	k = -1; L = NErasures;
+	k = -1; L = nerasures;
 
-	for (n = NErasures; n < NPAR; n++)
+	for (n = nerasures; n < NPAR; n++)
 	{
 		//d = compute_discrepancy(psi, synBytes, L, n);
 		d = 0;
@@ -205,7 +227,7 @@ int rsDecoder::correct_errors_erasures (unsigned char codeword[],
 				
 			if (L < (n-k)) 
 			{
-				L2 = n-k;
+				int L2 = n-k;
 				k = n-L;
 				// D = psi / ginv(d); scale_poly(ginv(d), psi);
 				for (i = 0; i < MAXDEG; i++)
@@ -225,14 +247,77 @@ int rsDecoder::correct_errors_erasures (unsigned char codeword[],
 		Lambda[i] = psi[i];
 
 	//compute_modified_omega();
-	mult_polys(product, Lambda, synBytes, MAXDEG);
+// 	mult_polys(Omega, Lambda, synBytes, NPAR);
+// 	for(i = NPAR; i < MAXDEG; i++)
+// 		Omega[i] = 0;
+
 	zero_poly(Omega, MAXDEG);
-	for(i = 0; i < NPAR; i++)
-		Omega[i] = product[i];
+	for (i = 0; i <NPAR; i++) 
+	{
+		for(j=0; j<NPAR-i; j++) 
+			Omega[j+i]^=gmult(Lambda[i], synBytes[j]);
+	}
+
 
 	//Find_Roots();
+
 	NErrors = 0;
 	
+	unsigned char sum[256];
+	memset(sum, 0, 256);
+	for(k=0; k<NPAR+1; k++)
+	{
+		__m128i mm_tbl_h = _mm_loadu_si128((__m128i*)(tbl_h[Lambda[k]]));
+		__m128i mm_tbl_l = _mm_loadu_si128((__m128i*)(tbl_l[Lambda[k]]));
+		__m128i mask_l = _mm_set1_epi8(0xf);
+		__m128i mask_h = _mm_set1_epi8(0xf0);
+		for(int i=0; i<256; i+=16)
+		{
+			__m128i m1;
+			__m128i m2;
+
+			m1 = _mm_loadu_si128((__m128i*)(sum+i));
+			m2 = _mm_loadu_si128((__m128i*)&EKR255_table[k][i]);
+
+			__m128i m2h = _mm_and_si128(m2, mask_h);
+			m2h = _mm_srli_epi64(m2h, 4);
+			__m128i m2l = _mm_and_si128(m2, mask_l);
+			m2h = _mm_shuffle2_epi8(mm_tbl_h, m2h);
+			m2l = _mm_shuffle2_epi8(mm_tbl_l, m2l);
+			m2 = _mm_xor_si128(m2h, m2l);
+			m2 = _mm_xor_si128(m2, m1);
+			_mm_storeu_si128((__m128i*)(sum+i), m2);
+
+			//sum[i] ^= gmult(Lambda[k], EKR255_table[k][i]);
+		}
+	}
+	for(r=1; r<256; r++)
+		if (sum[r] == 0)
+			ErrorLocs[NErrors++] = (255-r);
+
+	/*
+	//  original code
+	int sum;	
+	for (r = 1; r < 256; r++) 
+	{
+		sum = 0;
+		// evaluate lambda at r
+		for (k = 0; k < static_cast<int>(NPAR+1); k++) 
+		{
+			#ifdef USE_MULT
+			sum ^= gmult(gexp[(k*r)%255], Lambda[k]);
+			#else
+			sum ^= gmult(EKR255_table[r][k], Lambda[k]);
+			#endif
+		}
+		if (sum == 0)
+			ErrorLocs[NErrors++] = (255-r);
+	}
+	*/
+
+	// unrolled table lookup
+	/*
+	NErrors = 0;	
 	unsigned char sum[256];
 	memset(sum, 0, 256);
 	for(k=0; k<NPAR+1; k++)
@@ -496,25 +581,8 @@ int rsDecoder::correct_errors_erasures (unsigned char codeword[],
 	for(r=1; r<256; r++)
 		if (sum[r] == 0)
 			ErrorLocs[NErrors++] = (255-r);
-
-	/*  original code
-	int sum;	
-	for (r = 1; r < 256; r++) 
-	{
-		sum = 0;
-		// evaluate lambda at r
-		for (k = 0; k < static_cast<int>(NPAR+1); k++) 
-		{
-			#ifdef USE_MULT
-			sum ^= gmult(gexp[(k*r)%255], Lambda[k]);
-			#else
-			sum ^= gmult(EKR255_table[r][k], Lambda[k]);
-			#endif
-		}
-		if (sum == 0)
-			ErrorLocs[NErrors++] = (255-r);
-	}
 	*/
+	
 	  
 
 	if ((NErrors <= NPAR) && NErrors > 0)

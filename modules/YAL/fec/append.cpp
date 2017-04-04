@@ -1,7 +1,7 @@
 #include "GFMath.h"
 #include "append.h"
 
-#define NORMAL_INST
+// #define NORMAL_INST
 
 void rs_append1(unsigned char *msg, int nbytes, unsigned char *LFSR)
 {
@@ -520,6 +520,10 @@ void rs_append22(unsigned char *msg, int nbytes, unsigned char *LFSR)
 	}
 }
 
+#ifndef NORMAL_INST
+#include <intrin.h>
+#endif
+
 void rs_append23(unsigned char *msg, int nbytes, unsigned char *LFSR)
 {
 	int i;
@@ -559,21 +563,21 @@ void rs_append23(unsigned char *msg, int nbytes, unsigned char *LFSR)
 	{
 		dbyte = msg[i] ^ LFSR[0];
 
-		__m128i m0 = _mm_load_si128((__m128i*)(LFSR));
-		__m128i m01= _mm_load_si128((__m128i*)(LFSR+16));
+		__m128i m0 = _mm_loadu_si128((__m128i*)(LFSR));
+		__m128i m01= _mm_loadu_si128((__m128i*)(LFSR+16));
 		__m128i tmp = _mm_slli_si128(m01, 15);
 		m0 = _mm_srli_si128(m0, 1);
 		m0 = _mm_or_si128(m0, tmp);
 		m01 = _mm_srli_si128(m01, 1);
-		__m128i m1 = _mm_load_si128((__m128i*)genpoly_23_mult_cache[dbyte]);
-		__m128i m11= _mm_load_si128((__m128i*)(genpoly_23_mult_cache[dbyte]+16));
+		__m128i m1 = _mm_loadu_si128((__m128i*)genpoly_23_mult_cache[dbyte]);
+		__m128i m11= _mm_loadu_si128((__m128i*)(genpoly_23_mult_cache[dbyte]+16));
 
 
 		m0 = _mm_xor_si128(m0, m1);
 		m1 = _mm_xor_si128(m01, m11);
 
-		_mm_store_si128((__m128i*) LFSR, m0);
-		_mm_store_si128((__m128i*) (LFSR+16), m1);
+		_mm_storeu_si128((__m128i*) LFSR, m0);
+		_mm_storeu_si128((__m128i*) (LFSR+16), m1);
 	}
 #endif
 }

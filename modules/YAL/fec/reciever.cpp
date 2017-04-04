@@ -137,7 +137,7 @@ int reciever::assemble_and_out()
 		}
 	}
 #else
-	Block blocks[256];
+	Block blocks[256] = {0};
 	int j = 0;
 	for(int i=0; i<slice_size; i++)
 	{
@@ -151,14 +151,23 @@ int reciever::assemble_and_out()
 
 	assert(j>=payload_packet_count);
 
-	error = cauchy_256_decode(payload_packet_count, parity_packet_count, blocks, payload_packet_count, max_packet_payload_size);
+	error = cauchy_256_decode(payload_packet_count, parity_packet_count, blocks, j, max_packet_payload_size);
 
 // 	for(int i=0; i<payload_packet_count; i++)
 // 		assert(blocks[i].row == i);
 
-	for(int i=0; i<slice_size; i++)
-		if (blocks[i].row < payload_packet_count)
-		memcpy((uint8_t*)f->payload+blocks[i].row*max_packet_payload_size, blocks[i].data, max_packet_payload_size);
+	int copied = 0;
+
+	for(int i=0; i<j; i++)
+	{
+		if (blocks[i].row < payload_packet_count && blocks[i].data)
+		{
+			memcpy((uint8_t*)f->payload+blocks[i].row*max_packet_payload_size, blocks[i].data, max_packet_payload_size);
+			copied ++;
+		}
+	}
+
+	assert (copied == payload_packet_count);
 #endif
 
 	f->integrality = !error;
