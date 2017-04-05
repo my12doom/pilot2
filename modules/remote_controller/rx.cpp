@@ -1,4 +1,5 @@
 #include <HAL/Interface/ISysTimer.h>
+#include <HAL/Interface/IUART.h>
 #include "board.h"
 #include <utils/log.h>
 #include <stdint.h>
@@ -7,6 +8,7 @@
 #include <string.h>
 #include <HAL/aux_devices/NRF24L01.h>
 #include <HAL/aux_devices/OLED_I2C.h>
+#include <Protocol/crc32.h>
 #include "randomizer.h"
 
 // BSP
@@ -26,6 +28,7 @@ int miss = 99999;
 int maxmiss = 0;
 uint16_t hoop_interval = 1000;
 HAL::IRCOUT *ppm = NULL;
+HAL::IUART *uart = NULL;
 
 int hoop_to(int next_hoop_id)
 {
@@ -100,7 +103,7 @@ void timer_entry(void * p)
 }
 
 int main()
-{
+{		
 	board_init();
 	I2C_SW i2c(SCL, SDA);
 	oled.init(&i2c, 0x78);
@@ -155,6 +158,21 @@ int main()
 				if (miss > 200)
 					data[2] = 800;
 				ppm->write(data, 6, 0);
+				
+				if (uart)
+				{
+					int8_t ebus_frame[15] = {0};
+					ebus_frame[0] = 0x85;
+					ebus_frame[1] = 0xA3;
+					
+					int16_t *p = (int16_t*)(ebus_frame+2);
+					
+					memcpy(p, valid_data, 12);
+					
+					ebus_frame[14] = crc32(0, ebus_frame+2, 12);
+					
+					uart->write(ebus_frame, sizeof(ebus_frame));
+				}
 			}
 			
 			continue;

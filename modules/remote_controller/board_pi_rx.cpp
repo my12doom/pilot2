@@ -6,6 +6,7 @@
 #include <HAL/STM32F1/F1SysTimer.h>
 #include <misc.h>
 #include <HAL/STM32F1/F1Timer.h>
+#include <HAL/STM32F1/F1UART.h>
 #include <stm32f10x.h>
 #include <string.h>
 
@@ -24,7 +25,7 @@ HAL::IGPIO *SCL;
 HAL::IGPIO *SDA;
 HAL::IInterrupt *interrupt;
 HAL::ITimer *timer;
-
+extern HAL::IUART *uart;
 int16_t adc_data[6] = {0};
 namespace sheet1
 {
@@ -42,7 +43,9 @@ namespace sheet1
 	F1Timer timer(TIM2);
 	
 	F1GPIO pa6(GPIOA, GPIO_Pin_6);
-	
+
+
+	STM32F1::F1UART f1uart(USART1);	
 
 	
 	
@@ -167,6 +170,7 @@ namespace sheet1
 	
 		static PPMOUT ppmout;
 		::ppm = &ppmout;
+		uart = &f1uart;
 		
 		systimer->delayms(20);
 		while(0)
