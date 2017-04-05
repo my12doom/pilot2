@@ -2,7 +2,10 @@
 
 #include <stdint.h>
 
-#define PACKET_SIZE 400
+#define HEADER_SIZE 7
+#define MAX_PAYLOAD_SIZE 1408
+#define PACKET_SIZE sizeof(raw_packet)
+#define USE_CAUCHY 0
 
 // frame structure for exchange data in program.
 typedef struct frame_struct
@@ -21,7 +24,8 @@ typedef struct raw_packet_struct
 	uint8_t payload_packet_count;		// 0 means invalid packet
 	uint8_t parity_packet_count;
 	uint8_t last_frame_packet_count;
-	uint8_t data[PACKET_SIZE-5];
+	uint8_t header_rs[2];					// 2 byte reed solomon parity data for header.
+	uint8_t data[MAX_PAYLOAD_SIZE];
 } raw_packet;
 
 // interface

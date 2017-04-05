@@ -1,6 +1,7 @@
 // x264client.cpp : 定义控制台应用程序的入口点。
 //
 
+#include <assert.h>
 #ifndef UINT64_C
 #define UINT64_C unsigned __int64
 #endif
@@ -34,7 +35,7 @@ using namespace SIL_WIN32;
 using namespace std;
 
 Win32UDP_RX udp;
-Win32UDP_TX udp_tx("192.168.1.234", 0xbbb);
+Win32UDP_TX udp_tx("192.168.0.197", 0xbbb);
 
 
 HWND wnd;
@@ -227,6 +228,8 @@ int get_h264_frame_from_file(void *buf)
 	memcpy(buf, pfile+file_pos, size);
 	file_pos += size;
 
+	return size;
+
 	if (skip == 49)
 	{
 		skip = 0;
@@ -287,6 +290,7 @@ int get_h264_frame(void *buf)
 		return 0;
 	}
 
+	printf("good frame %d bytes\n", size);
 	memcpy(buf, (char*)f->payload+4, size);
 	release_frame(f);
 
@@ -436,9 +440,81 @@ INT_PTR CALLBACK about_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM l
 	return TRUE; // Handled message
 }
 
+typedef struct _pkt
+{
+	uint8_t data[400];
+} pkt;
+
+
+#include <vector>
+#include <list>
+
+using namespace std;
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+	const int msg_size = 23;
+	const int PAR = 100;
+
+	uint8_t data[msg_size];
+	uint8_t codeword[msg_size+PAR];
+	rsEncoder enc;
+	rsDecoder dec;
+	enc.init(PAR);
+	dec.init(PAR);
+
+	int t = GetTickCount();
+	for(int i=0; i<msg_size; i++)
+	{
+		data[i] = i;
+		codeword[i] = i;
+	}
+
+	printf("%d\n", GetTickCount()-t);
+
+	printf("%d\n", GetTickCount()-t);
+	for(int i=0; i<1000; i++)
+	{
+		enc.resetData();
+		enc.append_data(data, msg_size);
+		enc.output(codeword+msg_size);
+		for(int i=0; i<msg_size; i++)
+			codeword[i] = i;
+		memset(codeword, i%(PAR*2/3), PAR/3);
+
+		int v = dec.correct_errors_erasures(codeword, msg_size+PAR, 0, NULL);
+		assert(v == 1);
+	}
+
+	for(int i=0; i<msg_size; i++)
+	{
+		if (codeword[i] != i)
+		{
+			printf("err\n");
+			break;
+		}
+	}
+
+	for(int a = 0; a<256; a++)
+	{
+		for(int b=0; b<256; b++)
+		{
+			int ab = gmult(a,b);
+
+			int al = a&0xf0;
+			int ar = a&0x0f;
+
+			int ba = gmult(ar,b) ^ gmult(al, b);
+
+			if (ab != ba)
+			{
+				printf("wtf\n");
+				break;
+			}
+		}
+	}
+
+	printf("%d\n", GetTickCount()-t);
 
 	init_file();
 	init_udp();
