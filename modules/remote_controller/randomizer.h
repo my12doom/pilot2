@@ -31,6 +31,7 @@ public:
 			tbl[i].z = z;
 			tbl[i].c = c;
 		}
+		reset();
 	}
 
 	void reset(int pos = 0)

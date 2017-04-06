@@ -10,6 +10,8 @@
 #include <HAL/aux_devices/OLED_I2C.h>
 #include <Protocol/crc32.h>
 #include "randomizer.h"
+#include <utils/space.h>
+#include "binding.h"
 
 // BSP
 using namespace HAL;
@@ -102,23 +104,122 @@ void timer_entry(void * p)
 	interrupt->enable();
 }
 
+int binding_loop()
+{
+	// enable binding address and enter biding channel.
+	nrf.rf_off();
+	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
+	nrf.set_rx_address(1, (uint8_t*)BINDING_ADDRESS, 3);
+	nrf.enable_rx_address(0, true);
+	nrf.enable_rx_address(1, true);
+	nrf.set_tx_address(BINDING_ADDRESS, 3);
+	nrf.write_reg(RF_CH, BINDING_CHANNEL);
+	nrf.rf_on(true);
+	
+	int tx_channel_data = 0;
+	bool binding_done = false;
+	uint64_t new_seed = 0;
+	int64_t timeout = systimer->gettime() + 5000000;
+	while(systimer->gettime() < timeout)
+	{
+		// read new packet
+		if (irq->read() == false)
+		{
+			uint8_t data[32];
+			nrf.read_rx(data, 32);
+			
+			// version 0 binding request ?
+			binding_pkt *pkt = (binding_pkt*)data;
+			if (pkt->magic[0] == 'B' && pkt->magic[1] == 'D' && pkt->version == 0 && pkt->crc == uint8_t(crc32(0, data+3, 29)))
+			{
+				// check payload
+				binding_info_v0 *payload = (binding_info_v0 *)pkt->payload;
+				
+				if (payload->cmd == cmd_requesting_binding)
+				{
+					binding_done = true;
+					memcpy(&new_seed, payload->key, 8);
+				}
+			}
+			
+			// tx channel data ?
+			else
+			{
+				tx_channel_data ++ ;
+			}
+		}
+		
+		dbg->write(systimer->gettime() % 500000 > 2500);
+		
+		// if binding done, save seed and other settings, send ACK packets, and exit 
+		if (binding_done)
+		{
+			// save settings
+			seed = new_seed;
+			space_write("seed", 4, &seed, 8, NULL);
+			
+			// ACK packets
+			binding_pkt pkt = {{'B','D'}, 0, 0};
+			binding_info_v0 *payload = (binding_info_v0 *)pkt.payload;
+			payload->cmd = cmd_ack_binding;
+			memcpy(payload->key, &seed, 8);
+			pkt.crc = crc32(0, ((uint8_t*)&pkt)+3, 29);
+			
+			nrf.rf_off();
+			nrf.rf_on(false);
+			int64_t t = systimer->gettime();
+			dbg->write(false);
+			while(systimer->gettime() < t+500000)
+			{
+				nrf.write_tx((uint8_t*)&pkt, 32);
+				
+				systimer->delayms(2);
+			}
+			dbg->write(true);
+			
+			// clear up and exit
+			nrf.rf_off();
+			nrf.enable_rx_address(1, false);
+			return 0;
+		}
+
+		// exit if several channel data packet recieved
+		if (tx_channel_data > 3)
+		{
+			nrf.rf_off();
+			nrf.enable_rx_address(1, false);
+			return 0;
+		}
+	}
+	
+	return 0;
+}
+
+
 int main()
-{		
+{
+	space_init();
+	space_read("seed", 4, &seed, 8, NULL);
 	board_init();
+	dbg->write(true);
+	dbg2->write(true);
+	dbg->set_mode(MODE_OUT_OpenDrain);
+	dbg2->set_mode(MODE_OUT_OpenDrain);
+	
+	
 	I2C_SW i2c(SCL, SDA);
 	oled.init(&i2c, 0x78);
 	
 	oled.show_str(0, 0, "init NRF...");
 	
 	irq->set_mode(MODE_IN);
-	dbg->set_mode(MODE_OUT_OpenDrain);
-	dbg2->set_mode(MODE_OUT_OpenDrain);
-	dbg->write(true);
-	dbg2->write(true);
 	
-	rando.set_seed(seed);
 	while(nrf.init(spi, cs, ce) != 0)
 		;
+	binding_loop();
+	rando.set_seed(seed);
+	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
+	nrf.enable_rx_address(0, true);
 	nrf.write_reg(RF_CH, 95);
 	nrf.rf_on(true);
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;

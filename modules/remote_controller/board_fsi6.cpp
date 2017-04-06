@@ -39,6 +39,7 @@ namespace sheet1
 	F1Timer timer(TIM2);
 	
 	F1GPIO pa6(GPIOA, GPIO_Pin_6);
+	F1GPIO pc8(GPIOC, GPIO_Pin_8);
 
 	
 	
@@ -64,15 +65,15 @@ namespace sheet1
 		
 		/* DMA channel1 configuration */
 		DMA_DeInit(DMA1_Channel1);
-		DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);	 //ADCµØÖ·
-		DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&adc_data;//ÄÚ´æµØÖ·
+		DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);	 //ADCåœ°å€
+		DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&adc_data;//å†…å­˜åœ°å€
 		DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
 		DMA_InitStructure.DMA_BufferSize = 6;
-		DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;//ÍâÉèµØÖ·¹Ì¶¨
-		DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;  //ÄÚ´æµØÖ·¹Ì¶¨
-		DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;	//°ë×Ö
+		DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;//å¤–è®¾åœ°å€å›ºå®š
+		DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;  //å†…å­˜åœ°å€å›ºå®š
+		DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;	//åŠå­—
 		DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-		DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;		//Ñ­»·´«Êä
+		DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;		//å¾ªç¯ä¼ è¾“
 		DMA_InitStructure.DMA_Priority = DMA_Priority_High;
 		DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
 		DMA_Init(DMA1_Channel1, &DMA_InitStructure);
@@ -81,17 +82,17 @@ namespace sheet1
 		DMA_Cmd(DMA1_Channel1, ENABLE);
 		
 		/* ADC1 configuration */		
-		ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;	//¶ÀÁ¢ADCÄ£Ê½
-		ADC_InitStructure.ADC_ScanConvMode = ENABLE ; 	 //½ûÖ¹É¨ÃèÄ£Ê½£¬É¨ÃèÄ£Ê½ÓÃÓÚ¶àÍ¨µÀ²É¼¯
-		ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;	//¿ªÆôÁ¬Ğø×ª»»Ä£Ê½£¬¼´²»Í£µØ½øĞĞADC×ª»»
-		ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;	//²»Ê¹ÓÃÍâ²¿´¥·¢×ª»»
-		ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right; 	//²É¼¯Êı¾İÓÒ¶ÔÆë
-		ADC_InitStructure.ADC_NbrOfChannel = 6;	 	//Òª×ª»»µÄÍ¨µÀÊıÄ¿1
+		ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;	//ç‹¬ç«‹ADCæ¨¡å¼
+		ADC_InitStructure.ADC_ScanConvMode = ENABLE ; 	 //ç¦æ­¢æ‰«ææ¨¡å¼ï¼Œæ‰«ææ¨¡å¼ç”¨äºå¤šé€šé“é‡‡é›†
+		ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;	//å¼€å¯è¿ç»­è½¬æ¢æ¨¡å¼ï¼Œå³ä¸åœåœ°è¿›è¡ŒADCè½¬æ¢
+		ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;	//ä¸ä½¿ç”¨å¤–éƒ¨è§¦å‘è½¬æ¢
+		ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right; 	//é‡‡é›†æ•°æ®å³å¯¹é½
+		ADC_InitStructure.ADC_NbrOfChannel = 6;	 	//è¦è½¬æ¢çš„é€šé“æ•°ç›®1
 		ADC_Init(ADC1, &ADC_InitStructure);
 		
-		/*ÅäÖÃADCÊ±ÖÓ£¬ÎªPCLK2µÄ8·ÖÆµ£¬¼´9Hz*/
+		/*é…ç½®ADCæ—¶é’Ÿï¼Œä¸ºPCLK2çš„8åˆ†é¢‘ï¼Œå³9Hz*/
 		RCC_ADCCLKConfig(RCC_PCLK2_Div8); 
-		/*ÅäÖÃADC1µÄÍ¨µÀ11Îª55.	5¸ö²ÉÑùÖÜÆÚ£¬ĞòÁĞÎª1 */ 
+		/*é…ç½®ADC1çš„é€šé“11ä¸º55.	5ä¸ªé‡‡æ ·å‘¨æœŸï¼Œåºåˆ—ä¸º1 */ 
 
 // channel map:
 // PA0		throttle
@@ -114,17 +115,17 @@ namespace sheet1
 		/* Enable ADC1 */
 		ADC_Cmd(ADC1, ENABLE);
 		
-		/*¸´Î»Ğ£×¼¼Ä´æÆ÷ */   
+		/*å¤ä½æ ¡å‡†å¯„å­˜å™¨ */   
 		ADC_ResetCalibration(ADC1);
-		/*µÈ´ıĞ£×¼¼Ä´æÆ÷¸´Î»Íê³É */
+		/*ç­‰å¾…æ ¡å‡†å¯„å­˜å™¨å¤ä½å®Œæˆ */
 		while(ADC_GetResetCalibrationStatus(ADC1));
 		
-		/* ADCĞ£×¼ */
+		/* ADCæ ¡å‡† */
 		ADC_StartCalibration(ADC1);
-		/* µÈ´ıĞ£×¼Íê³É*/
+		/* ç­‰å¾…æ ¡å‡†å®Œæˆ*/
 		while(ADC_GetCalibrationStatus(ADC1));
 		
-		/* ÓÉÓÚÃ»ÓĞ²ÉÓÃÍâ²¿´¥·¢£¬ËùÒÔÊ¹ÓÃÈí¼ş´¥·¢ADC×ª»» */ 
+		/* ç”±äºæ²¡æœ‰é‡‡ç”¨å¤–éƒ¨è§¦å‘ï¼Œæ‰€ä»¥ä½¿ç”¨è½¯ä»¶è§¦å‘ADCè½¬æ¢ */ 
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 	}
 
@@ -142,6 +143,7 @@ namespace sheet1
 		::spi = &spi;
 		::interrupt = &interrupt;
 		::timer = &timer;
+		::bind_button = &pc8;
 		
 		spi.init(SPI2);
 		interrupt.init(GPIOB, GPIO_Pin_12, interrupt_falling);

@@ -4,8 +4,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <HAL/aux_devices/NRF24L01.h>
 #include "randomizer.h"
+#include "binding.h"
 
 // BSP
 using namespace HAL;
@@ -17,9 +19,9 @@ randomizer<256,256> rando;
 uint16_t hoop_id = 0;
 uint64_t seed = 0x1234567890345678;
 uint16_t hoop_interval = 1000;
-
 int64_t ts;
 int dt;
+HAL::IGPIO *bind_button = NULL;
 
 void nrf_irq_entry(void *parameter, int flags)
 {
@@ -55,9 +57,70 @@ void timer_entry(void *p)
 	dbg->write(false);
 }
 
+int binding_loop()
+{	
+	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
+	nrf.set_rx_address(1, (uint8_t*)BINDING_ADDRESS, 3);
+	nrf.enable_rx_address(0, true);
+	nrf.enable_rx_address(1, true);
+	nrf.set_tx_address(BINDING_ADDRESS, 3);
+	nrf.write_reg(RF_CH, BINDING_CHANNEL);
+	nrf.rf_on(false);
+	
+	// binding packets
+	binding_pkt pkt = {{'B','D'}, 0, 0};
+	binding_info_v0 *payload = (binding_info_v0 *)pkt.payload;
+	payload->cmd = cmd_requesting_binding;
+	memcpy(payload->key, &seed, 8);
+	pkt.crc = crc32(0, ((uint8_t*)&pkt)+3, 29);
+	
+	int64_t t = systimer->gettime() + 5000000000;
+	
+	while(systimer->gettime() < t)
+	{
+		// send all packets out
+		nrf.rf_off();
+		nrf.rf_on(false);
+		nrf.write_tx((uint8_t*)&pkt, 32);
+		systimer->delayms(3);
+		
+		// wait for ack packet
+		nrf.rf_off();
+		nrf.rf_on(true);
+		systimer->delayms(50);
+		int64_t timeout = systimer->gettime() + 50000;
+		while (systimer->gettime() < timeout)
+		{
+			if (irq->read() == false)
+			{
+				uint8_t data[32];
+				nrf.read_rx(data, 32);
+				
+				// version 0 binding request ?
+				binding_pkt *pkt = (binding_pkt*)data;
+				if (pkt->magic[0] == 'B' && pkt->magic[1] == 'D' && pkt->version == 0 && pkt->crc == uint8_t(crc32(0, data+3, 29)))
+				{
+					// check payload is ack?
+					binding_info_v0 *payload = (binding_info_v0 *)pkt->payload;
+					
+					if (payload->cmd == cmd_ack_binding)
+					{
+						dbg2->write(true);
+						return 0;
+					}
+				}				
+			}
+			dbg2->write(systimer->gettime() % 250000 < 125000);
+		}
+	}
+
+	return -1;
+}
+
 int main()
 {
 	board_init();
+	seed = board_get_seed();
 	
 	irq->set_mode(MODE_IN);
 	dbg->set_mode(MODE_OUT_PushPull);
@@ -65,7 +128,6 @@ int main()
 	dbg2->set_mode(MODE_OUT_PushPull);
 	dbg2->write(true);
 	
-	rando.reset(0);
 	hoop_id = 0;
 	int c = 1;
 	while( (c = nrf.init(spi, cs, ce)) != 0)
@@ -75,17 +137,25 @@ int main()
 		dbg2->write(true);
 		systimer->delayms(100);
 	}
-	dbg2->write(false);
+	
+	if (bind_button && bind_button->read() == false)
+		binding_loop();
+	rando.set_seed(seed);
+	rando.reset(0);
+	nrf.rf_off();
+	nrf.set_tx_address((uint8_t*)&seed, 3);
+	nrf.rf_on(false);
+	interrupt->set_callback(nrf_irq_entry, NULL);
 		
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;
 	
-	interrupt->set_callback(nrf_irq_entry, NULL);
 	timer->set_callback(timer_entry, NULL);
 	timer->set_period(hoop_interval);
 	
 	int64_t lt = systimer->gettime();
 	
 	int16_t v[6] = {0};
+	dbg2->write(false);
 	while(1)
 	{
 	}

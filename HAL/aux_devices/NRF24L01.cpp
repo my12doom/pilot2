@@ -205,6 +205,35 @@ void NRF24L01::write_reg(uint8_t cmd, uint8_t data)
 	write_cmd((cmd & 0x1f) | WRITE_REG, &data, 1);
 }
 
+int NRF24L01::set_tx_address(const uint8_t *address, int address_len/* = 5 */)
+{
+	write_cmd(TX_ADDR | WRITE_REG, address, address_len);
+	write_reg(SETUP_AW, address_len-2);
+	
+	return 0;
+}
+int NRF24L01::set_rx_address(int index, const uint8_t *address, int address_len/* = 5 */)
+{
+	write_cmd((RX_ADDR_P0+index) | WRITE_REG, address, address_len);
+	write_reg(SETUP_AW, address_len-2);
+	
+	return 0;
+}
+int NRF24L01::enable_rx_address(int index, bool enable)
+{
+	uint8_t v = read_reg(EN_RXADDR);
+	
+	if (enable)
+		v |= (1<<index);
+	else
+		v &= ~(1<<index);
+	
+	write_reg(EN_RXADDR, v);
+	
+	return 0;
+}
+
+
 // BK5811 helper functions
 void NRF24L01::SwitchCFG(bool analog)
 {

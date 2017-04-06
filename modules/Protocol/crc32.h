@@ -33,6 +33,9 @@
  * but still pretty fast: This runs about 300MB/s on my 3GHz P4
  * compared to about 800MB/s for the zlib implementation.
  */
+ 
+#pragma once
+
 static unsigned long
 crc32(unsigned long crc, const void *_p, size_t len)
 {
