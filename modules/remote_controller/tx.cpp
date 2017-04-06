@@ -113,6 +113,10 @@ int binding_loop()
 					if (payload->cmd == cmd_ack_binding)
 					{
 						dbg2->write(true);
+						
+						memcpy(&seed, payload->key, 8);
+						space_write("seed", 4, &seed, 8, NULL);
+
 						return 0;
 					}
 				}				
@@ -128,7 +132,7 @@ int main()
 {
 	space_init();	
 	board_init();
-	seed = board_get_seed();
+	space_read("seed", 4, &seed, 8, NULL);
 	
 	irq->set_mode(MODE_IN);
 	dbg->set_mode(MODE_OUT_PushPull);
@@ -146,7 +150,7 @@ int main()
 		systimer->delayms(100);
 	}
 	
-	if (bind_button && bind_button->read() == false)
+	if (seed == 0x1234567890345678 || (bind_button && bind_button->read() == false))
 		binding_loop();
 	rando.set_seed(seed);
 	rando.reset(0);

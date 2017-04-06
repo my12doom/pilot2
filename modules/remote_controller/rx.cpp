@@ -146,6 +146,7 @@ int binding_loop()
 				{
 					binding_done = true;
 					memcpy(&new_seed, payload->key, 8);
+					new_seed ^= board_get_seed();
 				}
 			}
 			
