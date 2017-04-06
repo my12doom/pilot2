@@ -120,6 +120,7 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
+				EnableEnhancedInstructionSet="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -208,6 +209,14 @@
 			</File>
 			<File
 				RelativePath="..\..\..\modules\YAL\fec\cauchy_tables_256.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\fec.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\YAL\fec\fec.h"
 				>
 			</File>
 			<File
