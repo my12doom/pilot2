@@ -544,6 +544,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F1\F1Timer.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F1UART.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F1\F1UART.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
