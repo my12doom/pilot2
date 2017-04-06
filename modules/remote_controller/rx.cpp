@@ -9,6 +9,7 @@
 #include <HAL/aux_devices/NRF24L01.h>
 #include <HAL/aux_devices/OLED_I2C.h>
 #include <Protocol/crc32.h>
+#include <utils/RIJNDAEL.h>
 #include "randomizer.h"
 #include <utils/space.h>
 #include "binding.h"
@@ -20,7 +21,8 @@ using namespace devices;
 NRF24L01 nrf;
 
 uint8_t valid_data[32];
-randomizer<128, 512> rando;
+randomizer<256, 256> rando;
+AESCryptor aes;
 uint64_t seed = 0x1234567890345678;
 OLED96 oled;
 int o = 0;
@@ -53,7 +55,6 @@ int hoop_to(int next_hoop_id)
 
 void nrf_irq_entry(void *parameter, int flags)
 {
-	dbg->write(false);
 	timer->disable_cb();
 	nrf.write_reg(7, nrf.read_reg(7));
 	
@@ -65,8 +66,14 @@ void nrf_irq_entry(void *parameter, int flags)
 		nrf.read_rx(data, 32);
 		rdp = nrf.read_reg(9);
 		fifo_state = nrf.read_reg(FIFO_STATUS);
-		o++;
 		
+		aes.decrypt(data, data);
+		aes.decrypt(data+16, data+16);
+		if ((uint16_t)crc32(0, data, 30) != *(uint16_t*)(data+30))
+			continue;
+		
+		dbg->write(false);
+		o++;		
 		next_hoop_id = *(uint16_t*)data;
 		memcpy(valid_data, data, 32);
 	}
@@ -218,6 +225,9 @@ int main()
 		;
 	binding_loop();
 	rando.set_seed(seed);
+	rando.reset(0);
+	uint64_t key4[4] = {seed, seed, seed, seed};
+	aes.set_key((uint8_t*)key4, 256);
 	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
 	nrf.enable_rx_address(0, true);
 	nrf.write_reg(RF_CH, 95);

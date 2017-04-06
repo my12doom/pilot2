@@ -4,7 +4,7 @@
 #include <stm32F10x_dma.h>
 
 #define TX_BUFFER_SIZE 200
-#define RX_BUFFER_SIZE 1536
+#define RX_BUFFER_SIZE 256
 
 namespace STM32F1
 {

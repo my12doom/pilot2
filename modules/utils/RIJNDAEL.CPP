@@ -175,7 +175,7 @@ void decrypt(const u4byte in_blk[4], u4byte out_blk[4]);
 #define BYTE_SWAP
 #define WORD_SWAP
 #endif
-#define LARGE_TABLES
+//#define LARGE_TABLES
 
 namespace
 {

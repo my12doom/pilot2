@@ -6,9 +6,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <HAL/aux_devices/NRF24L01.h>
+#include <utils/space.h>
+#include <utils/RIJNDAEL.h>
 #include "randomizer.h"
 #include "binding.h"
-
 // BSP
 using namespace HAL;
 using namespace devices;
@@ -21,6 +22,7 @@ uint64_t seed = 0x1234567890345678;
 uint16_t hoop_interval = 1000;
 int64_t ts;
 int dt;
+AESCryptor aes;
 HAL::IGPIO *bind_button = NULL;
 
 void nrf_irq_entry(void *parameter, int flags)
@@ -44,6 +46,11 @@ void timer_entry(void *p)
 	//channel = 85;
 	
 	read_channels((int16_t*)(data+2), 6);
+	
+	*(uint16_t*)(data+30) = crc32(0, data, 30);
+	
+	aes.encrypt(data, data);
+	aes.encrypt(data+16, data+16);
 	
 	if (hoop_id == 0)
 		rando.reset();
@@ -119,6 +126,7 @@ int binding_loop()
 
 int main()
 {
+	space_init();	
 	board_init();
 	seed = board_get_seed();
 	
@@ -142,6 +150,8 @@ int main()
 		binding_loop();
 	rando.set_seed(seed);
 	rando.reset(0);
+	uint64_t key4[4] = {seed, seed, seed, seed};
+	aes.set_key((uint8_t*)key4, 256);
 	nrf.rf_off();
 	nrf.set_tx_address((uint8_t*)&seed, 3);
 	nrf.rf_on(false);
