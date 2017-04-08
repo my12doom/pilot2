@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdint.h>
 #include <memory.h>
 #include <string.h>
 #include "oRS.h"
@@ -9,9 +10,57 @@ unsigned char genPoly23[23];
 #ifdef WIN32
 #include <intrin.h>
 #include <tmmintrin.h>
+#define _mm_shuffle2_epi8 _mm_shuffle_epi8
 #else
 #include "sse2neon.h"
+FORCE_INLINE __m128i _mm_shuffle2_epi8(__m128i ia, __m128i ib)
+{
+#define uint8x16_to_8x8x2(v) ((uint8x8x2_t) { vget_low_u8(v), vget_high_u8(v) })
+
+	uint8x8_t b_h = vget_high_u8(vreinterpretq_u8_s32(ib));
+	uint8x8_t b_l = vget_low_u8(vreinterpretq_u8_s32(ib));
+	uint8x8_t lut_h = vtbl2_u8(*(uint8x8x2_t*)&ia, b_h);
+	uint8x8_t lut_l = vtbl2_u8(*(uint8x8x2_t*)&ia, b_l);
+	uint8x16_t lut = vcombine_u8(lut_l, lut_h);
+
+	return vreinterpretq_s32_u8(lut);
+}
 #endif
+
+
+uint8_t tbl_h[256][16];
+uint8_t tbl_l[256][16];
+
+int init_mult_table()
+{
+	static bool init = false;
+	if (init)
+		return 0;
+	init = true;
+	for(int y=0; y<256; y++)
+	{
+		for(int i=0; i<16; i++)
+		{
+			tbl_h[y][i] = gmult(y, i<<4);
+			tbl_l[y][i] = gmult(y, i);
+		}
+	}
+
+
+	for(int y=0; y<256; y++)
+	{
+		for(int x=0; x<256; x++)
+		{
+			int ab = gmult(x, y);
+
+			// 			int ab2 = gmult(y, x&0xf0) ^ gmult(y, x&0x0f);
+			int ab2 = tbl_h[y][x>>4] ^ tbl_l[y][x&0x0f];
+
+			assert(ab == ab2);
+		}
+	}
+	return 0;
+}
 
 rsEncoder::rsEncoder()
 {LFSR = NULL;}
@@ -33,14 +82,16 @@ void rsEncoder::init(int par)
 	NPAR = par;
 
 	init_exp_table();
+	init_mult_table();
 	if (LFSR)
 		free(LFSR);
-	LFSR = (unsigned char*)malloc(MAX_NPAR);
+	LFSR = (unsigned char*)malloc(MAX_NPAR+16);
 	resetData();
+	genpoly = get_genpoly(NPAR);
 }
 void rsEncoder::resetData()
 {
-	memset(LFSR, 0, NPAR);
+	memset(LFSR, 0, NPAR+16);
 }
 void rsEncoder::output(unsigned char *dst)
 {
@@ -50,7 +101,34 @@ void rsEncoder::output(unsigned char *dst)
 
 void rsEncoder::append_data (unsigned char msg[], int nbytes)
 {
-	rs_append(msg, nbytes, LFSR, NPAR);
+#if 1
+	__m128i mask_l = _mm_set1_epi8(0x0f);
+	__m128i mask_h = _mm_set1_epi8(0xf0);
+	for (int i=0; i<nbytes; i++)
+	{
+		LFSR[NPAR] = 0;
+		unsigned char dbyte = msg[i] ^ LFSR[0];
+		__m128i mm_tbl_h = _mm_loadu_si128((__m128i*)(tbl_h[dbyte]));
+		__m128i mm_tbl_l = _mm_loadu_si128((__m128i*)(tbl_l[dbyte]));
+		for (int j = 0; j < NPAR; j+=16)
+		{
+
+			__m128i m1 = _mm_loadu_si128((__m128i*)(LFSR+j+1));
+			__m128i m2 = _mm_loadu_si128((__m128i*)&genpoly[j]);
+
+			__m128i m2h = _mm_and_si128(m2, mask_h);
+			m2h = _mm_srli_epi64(m2h, 4);
+			__m128i m2l = _mm_and_si128(m2, mask_l);
+			m2h = _mm_shuffle2_epi8(mm_tbl_h, m2h);
+			m2l = _mm_shuffle2_epi8(mm_tbl_l, m2l);
+			m2 = _mm_xor_si128(m2h, m2l);
+			m2 = _mm_xor_si128(m2, m1);
+			_mm_storeu_si128((__m128i*)(LFSR+j), m2);
+		}
+	}
+#else
+ 	rs_append(msg, nbytes, LFSR, NPAR);
+#endif
 }
 
 //rsDecoder
@@ -63,36 +141,12 @@ rsDecoder::rsDecoder(int par)
 
 #include <stdint.h>
 #include <assert.h>
-uint8_t tbl_h[256][16];
-uint8_t tbl_l[256][16];
 void rsDecoder::init(int par)
 {
-	for(int y=0; y<256; y++)
-	{
-		for(int i=0; i<16; i++)
-		{
-			tbl_h[y][i] = gmult(y, i<<4);
-			tbl_l[y][i] = gmult(y, i);
-		}
-	}
-
-
-	for(int y=0; y<256; y++)
-	{
-		for(int x=0; x<256; x++)
-		{
-			int ab = gmult(x, y);
-
-// 			int ab2 = gmult(y, x&0xf0) ^ gmult(y, x&0x0f);
-			int ab2 = tbl_h[y][x>>4] ^ tbl_l[y][x&0x0f];
-
-			assert(ab == ab2);
-		}
-	}
-
 	NPAR = par;
 	init_exp_table();
-	synBytes = new unsigned char[MAXDEG];
+	init_mult_table();
+	synBytes = new unsigned char[(MAXDEG+15)/16*16];
 }
 rsDecoder::~rsDecoder()
 {
@@ -110,7 +164,6 @@ int rsDecoder::decode_data(unsigned char *data, int cwsize)
 		for (j = 0; j < NPAR;  j++)
 		{
 			synBytes[j] = data[i] ^ gmult(gexp[j+1], synBytes[j]);
-			//sum = data[i] ^ (sum == 0 ? 0 : gexp[glog[sum]+(j+1)]);
 		}
 	}
 				
@@ -131,22 +184,6 @@ int rsDecoder::decode_data(unsigned char *msg, int msg_size, unsigned char *pari
 
 #include <stdio.h>
 
-#ifdef WIN32
-#define _mm_shuffle2_epi8 _mm_shuffle_epi8
-#else
-FORCE_INLINE __m128i _mm_shuffle2_epi8(__m128i ia, __m128i ib)
-{
-	#define uint8x16_to_8x8x2(v) ((uint8x8x2_t) { vget_low_u8(v), vget_high_u8(v) })
-
-    uint8x8_t b_h = vget_high_u8(vreinterpretq_u8_s32(ib));
-    uint8x8_t b_l = vget_low_u8(vreinterpretq_u8_s32(ib));
-    uint8x8_t lut_h = vtbl2_u8(*(uint8x8x2_t*)&ia, b_h);
-	uint8x8_t lut_l = vtbl2_u8(*(uint8x8x2_t*)&ia, b_l);
-	uint8x16_t lut = vcombine_u8(lut_l, lut_h);
-
-	return vreinterpretq_s32_u8(lut);
-}
-#endif
 
 #include <assert.h>
 int rsDecoder::correct_errors_erasures (unsigned char codeword[], 
@@ -601,31 +638,11 @@ int rsDecoder::correct_errors_erasures (unsigned char codeword[],
 		{
 			int num, denom;
 			i = ErrorLocs[r];
-			
-			/*
-			// evaluate Omega at alpha^(-i)
-			num = 0;
-			for (j = 0; j < MAXDEG; j++) 
-				#ifdef USE_MULT
-				num ^= gmult(Omega[j], gexp[((255-i)*j)%255]);
-				#else
-				num ^= gmult(Omega[j], EKR255_table[255-i][j]);
-				#endif
-
-			// evaluate Lambda' (derivative) at alpha^(-i) ; all odd powers disappear
-			denom = 0;
-			for (j = 1; j < MAXDEG; j += 2)
-				#ifdef USE_MULT
-				denom ^= gmult(Lambda[j], gexp[((255-i)*(j-1)) % 255]);
-				#else
-				denom ^= gmult(Lambda[j], EKR255_table[255-i][j-1]);
-				#endif
-			*/
-			
+						
 			num = denom = 0;
 			for (j=0; j<MAXDEG; j+=2)
 			{
-				num ^= gmult(Omega[j], EKR255_table[255-i][j]);
+				num ^= gmult(Omega[j], EKR255_table[255-i][j]);			// EKR255_table[255-i][j-1] = gexp[((255-i)*(j-1)) % 255]
 				num ^= gmult(Omega[j+1],EKR255_table[255-i][j+1]);
 				denom ^=gmult(Lambda[j+1], EKR255_table[255-i][j]);
 			}

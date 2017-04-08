@@ -32,6 +32,7 @@ public:
 	void output(unsigned char *dst);
 private:
 	unsigned char *LFSR;
+	unsigned char *genpoly;
 	int NPAR;
 };
 
