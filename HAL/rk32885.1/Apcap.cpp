@@ -67,7 +67,7 @@ APCAP_RX::APCAP_RX(const char*interface /*= INADDR_ANY*/, int port /*= 0xbbb*/)
 		struct bpf_program bpfprogram;
 		sprintf(szProgram, "ether[0x0a:4]==0x13223344 && ether[0x0e:2] == 0x55%.2x", 0x66);
 		pcap_compile(ppcap, &bpfprogram, szProgram, 1, 0);
-		pcap_setfilter(ppcap, &bpfprogram);
+		//pcap_setfilter(ppcap, &bpfprogram);
 		pcap_freecode(&bpfprogram);
 	}
 	else if (pcap_datalink(ppcap) == DLT_PRISM_HEADER)
@@ -276,6 +276,8 @@ void* APCAP_RX::worker()
 
 			static int i = 0;
 			//printf("\rRX:%d%s", i++, checksum_correct?"OK":"NK\n");
+			//if (!checksum_correct)
+			//	printf("NK\n");
 
 
 			byte_counter += byte_count;
@@ -305,7 +307,7 @@ APCAP_TX::APCAP_TX(const char *interface, int port)
 
 	if (pcap_datalink(ppcap) != DLT_IEEE802_11_RADIO)
 	{
-		strcpy(szErrbuf, "unsupported encapsulation\n");
+		sprintf(szErrbuf, "unsupported encapsulation : %d\n", pcap_datalink(ppcap));
 		goto fail;
 	}
 

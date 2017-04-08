@@ -3,12 +3,16 @@ TARGET=player
 FEC=../../../modules/YAL/fec
 HAL3288=../../../HAL/rk32885.1
 ROOT=../../..
+CFLAGS=-mssse3
 
 SOURCE = player.cpp \
 		$(FEC)/append.cpp \
 		$(FEC)/frame.cpp \
 		$(FEC)/GFMath.cpp \
 		$(FEC)/oRS.cpp \
+		$(FEC)/cauchy_256.cpp \
+		$(FEC)/MemXOR.cpp \
+		$(FEC)/MemSwap.cpp \
 		$(FEC)/sender.cpp \
 		$(FEC)/reciever.cpp \
 		$(HAL3288)/Apcap.cpp \

@@ -29,6 +29,9 @@ LOCAL_SRC_FILES := \
 	../../../modules/YAL/fec/frame.cpp \
 	../../../modules/YAL/fec/oRS.cpp \
 	../../../modules/YAL/fec/reciever.cpp \
+	../../../modules/YAL/fec/cauchy_256.cpp \
+	../../../modules/YAL/fec/MemSwap.cpp \
+	../../../modules/YAL/fec/MemXOR.cpp \
 	../../../modules/YAL/fec/sender.cpp \
 	../../../modules/utils/param.cpp \
 	../../../modules/utils/space.cpp \
@@ -132,7 +135,7 @@ LOCAL_LDFLAGS	+= \
 	-Wl,--end-group
 
 
-LOCAL_CFLAGS := -Wno-format -Wno-unused -Wno-unused-parameter -Wfatal-errors -Wno-non-virtual-dtor
+LOCAL_CFLAGS := -Wno-format -Wno-unused -Wno-unused-parameter -Wfatal-errors -Wno-non-virtual-dtor -O1
 LOCAL_LDLIBS := -ldl -lm
 #LOCAL_RTTI_FLAG := -frtti
 LOCAL_MODULE_TAGS := optional

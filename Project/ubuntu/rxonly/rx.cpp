@@ -128,7 +128,7 @@ int main(int argc,char** argv)
 		int frame_size = *(int*)f->payload;
 		uint8_t * frame_data = (uint8_t*)f->payload+4;
 
-		fwrite(frame_data, 1, frame_size, stdout );
+		//fwrite(frame_data, 1, frame_size, stdout );
 		fflush(stdout);
 
 		if (frame_size>f->payload_size-4)

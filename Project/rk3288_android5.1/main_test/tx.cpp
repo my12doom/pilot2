@@ -432,10 +432,116 @@ extern "C" int rx(int argc, char *argv[])
 
 int test_pcap_block_device();
 
+#include <time.h>
+static uint32_t GetTickCount()
+{    
+   struct timespec tv;  
+   clock_gettime(CLOCK_MONOTONIC, &tv);    
+   return (int64_t)tv.tv_sec * 1000 + tv.tv_nsec/1000000;    
+}
+static int max(int a, int b)
+{
+	return a>b?a:b;
+}
+
+#include <stdio.h>
+#include <YAL/fec/sender.h>
+int testRSSpeed()
+{
+	static bool f = false;
+	if (f)
+		return 0;
+	f = true;
+
+	const int NPAR = 23;
+
+	int erasures[NPAR];
+	int nerasures = 0;
+
+	int msg_length = NPAR * 10;
+
+	unsigned char *msg = new unsigned char[msg_length];
+	for(int i=0; i<msg_length; i++)
+	{
+		msg[i] = i;
+	}
+
+	rsEncoder enc(23);
+	int l = GetTickCount();
+	int byteDone = 0;
+	for (int i=0; i<1000000; i++)
+	{
+		byteDone += msg_length;
+		enc.resetData();
+		enc.append_data(msg, msg_length);
+
+		if (GetTickCount()-l>0 && (i % 5000 == 0) )
+		{
+			printf("\rEncode speed:%d KByte/s, %d.", byteDone/ (GetTickCount()-l), byteDone);
+			fflush(stdout);
+		}
+	}
+
+	printf("\rEncode speed:%d KByte/s.", byteDone/ max(1,(GetTickCount()-l)));
+
+	printf("\ndone\n");
+
+	//return 0;
+decode_test:
+	unsigned char parity[NPAR];
+	enc.output(parity);
+
+	unsigned char data[256];
+
+	rsDecoder dec(NPAR);
+	byteDone = 0;
+	l=GetTickCount();
+	for (int i=0; i<100000; i++)
+	{
+		byteDone += msg_length;
+		nerasures=0;
+		memcpy(data, msg, msg_length);
+		memcpy(data+msg_length, parity, NPAR);
+
+		for(int j=5; j<5+NPAR; j++)
+		{
+			data[j] ^= 0x33;
+			erasures[nerasures++] = j;
+		}
+
+		/*
+		data[9] ^= 0x33;
+		data[55] ^= 0x33;
+		data[75] ^= 0x33;
+
+		erasures[nerasures++] = 5;
+		erasures[nerasures++] = 9;
+		erasures[nerasures++] = 55;
+		erasures[nerasures++] = 75;
+		*/
+
+
+		//int result = dec.decode_data(data, msg_length+NPAR);
+		dec.correct_errors_erasures(data, NPAR+msg_length, nerasures, erasures);
+		if (memcmp(msg, data, msg_length) !=0)printf("\nsome error..\n");
+		if (GetTickCount()-l>0 && (i % 5000 == 0) )
+		{
+			printf("\rDecode speed:%d KByte/s.", byteDone/ (GetTickCount()-l));
+			fflush(stdout);
+		}
+	}
+	printf("\ndone\n");
+
+	//clear_genpoly_cache();
+	delete [] msg;
+	//getch();
+	exit(0);
+}
+
 extern "C" int
 main(int argc, char *argv[])
 {
-	usleep(10000000);
+	//usleep(10000000);
 	printf("start ifconfig config\n");
 	system("ifconfig wlan0 down");
 	system("iwconfig wlan0 mode monitor");
@@ -445,6 +551,7 @@ main(int argc, char *argv[])
 	printf("end ifconfig config\n");
 
 	printf("main2\n");
+	//testRSSpeed();
 	return test_pcap_block_device();
 	for(int i=0; i<argc; i++)
 	{

@@ -2,13 +2,18 @@
 #include <stdint.h>
 #include <memory.h>
 #include <string.h>
+#include <assert.h>
 #include "oRS.h"
 #include "append.h"
 #define NULL 0
 #define NPAR23 23
 unsigned char genPoly23[23];
-#ifdef WIN32
+
+#if defined(WIN32)
 #include <intrin.h>
+#include <tmmintrin.h>
+#elif defined(__x86_64) && defined(__linux)
+#include <x86intrin.h>
 #include <tmmintrin.h>
 #define _mm_shuffle2_epi8 _mm_shuffle_epi8
 #else

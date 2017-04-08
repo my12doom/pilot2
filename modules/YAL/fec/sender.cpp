@@ -117,7 +117,7 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 		header_rs_encoder.append_data((unsigned char*)&packets[i], HEADER_SIZE-sizeof(packets[i].header_rs));
 		header_rs_encoder.output(&packets[i].header_rs[0]);
 
-		send_packet(&packets[i], sizeof(raw_packet), slice_size);
+		send_packet(&packets[i], sizeof(raw_packet));
 	}
 
 	frame_id++;

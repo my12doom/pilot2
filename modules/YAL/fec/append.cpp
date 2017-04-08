@@ -1,7 +1,7 @@
 #include "GFMath.h"
 #include "append.h"
 
-// #define NORMAL_INST
+#define NORMAL_INST
 
 void rs_append1(unsigned char *msg, int nbytes, unsigned char *LFSR)
 {
