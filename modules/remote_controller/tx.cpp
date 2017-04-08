@@ -78,7 +78,8 @@ int binding_loop()
 	binding_pkt pkt = {{'B','D'}, 0, 0};
 	binding_info_v0 *payload = (binding_info_v0 *)pkt.payload;
 	payload->cmd = cmd_requesting_binding;
-	memcpy(payload->key, &seed, 8);
+	uint64_t board_seed = board_get_seed();
+	memcpy(payload->key, &board_seed, 8);
 	pkt.crc = crc32(0, ((uint8_t*)&pkt)+3, 29);
 	
 	int64_t t = systimer->gettime() + 5000000000;

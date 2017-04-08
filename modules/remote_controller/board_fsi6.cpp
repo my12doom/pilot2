@@ -144,6 +144,7 @@ namespace sheet1
 		::interrupt = &interrupt;
 		::timer = &timer;
 		::bind_button = &pc8;
+		pc8.set_mode(MODE_IN);
 		
 		spi.init(SPI2);
 		interrupt.init(GPIOB, GPIO_Pin_12, interrupt_falling);
