@@ -12,6 +12,7 @@ unsigned char genPoly23[23];
 #if defined(WIN32)
 #include <intrin.h>
 #include <tmmintrin.h>
+#define _mm_shuffle2_epi8 _mm_shuffle_epi8
 #elif defined(__x86_64) && defined(__linux)
 #include <x86intrin.h>
 #include <tmmintrin.h>
