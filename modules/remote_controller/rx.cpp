@@ -224,6 +224,7 @@ int main()
 	
 	while(nrf.init(spi, cs, ce) != 0)
 		;
+	oled.show_str(0, 0, "binding ...");
 	binding_loop();
 	rando.set_seed(seed);
 	rando.reset(0);
@@ -276,10 +277,8 @@ int main()
 					int8_t ebus_frame[15] = {0};
 					ebus_frame[0] = 0x85;
 					ebus_frame[1] = 0xA3;
-					
-					int16_t *p = (int16_t*)(ebus_frame+2);
-					
-					memcpy(p, valid_data, 12);
+										
+					memcpy(ebus_frame+2, valid_data+2, 12);
 					
 					ebus_frame[14] = crc32(0, ebus_frame+2, 12);
 					
