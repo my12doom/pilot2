@@ -102,10 +102,8 @@ void sensors::EBusIN::read_uart()
 		{			
 			last_frame = frame;
 			last_packet_time = systimer->gettime();
-			for(int i=0; i<4; i++)
+			for(int i=0; i<6; i++)
 				last_frame.data[i] = 1000 + last_frame.data[i] * 1000 /4096;
-			last_frame.data[4] = 1000 + last_frame.data[4]*1000;
-			last_frame.data[5] = 1000 + last_frame.data[5]*1000;
 			
 			//printf("EBUS:%d,%d,%d,%d,%d,%d %04x,%x\n", last_frame.data[0], last_frame.data[1], last_frame.data[2], last_frame.data[3],last_frame.data[4],last_frame.data[5], last_frame.startbytes,last_frame.crc32);
 			for(int i=0; i<6; i++)
@@ -114,8 +112,8 @@ void sensors::EBusIN::read_uart()
 				rc_static[1][i] = max(rc_static[1][i], last_frame.data[i]);
 			}
 		}
+		}
 	}
-}
 
 bool sensors::EBusIN::init(HAL::IUART *port)
 {

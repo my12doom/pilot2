@@ -280,6 +280,8 @@ int main()
 										
 					memcpy(ebus_frame+2, valid_data+2, 12);
 					
+					if (miss > 200)
+						((int16_t*)(ebus_frame+2))[2] = -1000;
 					ebus_frame[14] = crc32(0, ebus_frame+2, 12);
 					
 					uart->write(ebus_frame, sizeof(ebus_frame));
