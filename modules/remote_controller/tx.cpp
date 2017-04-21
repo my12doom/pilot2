@@ -151,8 +151,8 @@ int main()
 		systimer->delayms(100);
 	}
 	
-	if (seed == 0x1234567890345678 || (bind_button && bind_button->read() == false))
-		binding_loop();
+	//if (seed == 0x1234567890345678 || (bind_button && bind_button->read() == false))
+	//	binding_loop();
 	rando.set_seed(seed);
 	rando.reset(0);
 	uint64_t key4[4] = {seed, seed, seed, seed};
