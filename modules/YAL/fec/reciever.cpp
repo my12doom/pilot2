@@ -151,7 +151,7 @@ int reciever::assemble_and_out()
 
 	assert(j>=payload_packet_count);
 
-	error = cauchy_256_decode(payload_packet_count, parity_packet_count, blocks, j, max_packet_payload_size);
+	error = cauchy_256_decode(payload_packet_count, parity_packet_count, blocks, payload_packet_count, max_packet_payload_size);
 
 // 	for(int i=0; i<payload_packet_count; i++)
 // 		assert(blocks[i].row == i);
