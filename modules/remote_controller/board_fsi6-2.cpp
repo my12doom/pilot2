@@ -258,6 +258,8 @@ void button_timer_entry(void *p)
 }
 
 F1Interrupt button_int;
+uint8_t reg08;
+	uint8_t reg[10];
 int board_init()
 {
 	sheet1_init();
@@ -275,11 +277,17 @@ int board_init()
 	::dbg2->set_mode(MODE_OUT_OpenDrain);
 	
 	
+	//systimer->delayms(600);
 	i2c.init(::SCL, ::SDA);
 	i2c.set_speed(10);
-	
 	/*
-	uint8_t reg[10];
+	i2c.read_reg(0x6b<<1, 8, &reg08);
+	*/
+	i2c.write_reg(0x6b<<1, 5, 0x8C);		// disable i2c watchdog
+	i2c.write_reg(0x6b<<1, 3, 0x10);		// 256mA pre-charge, 128mA termination
+	i2c.write_reg(0x6b<<1, 2, 0xA0);		// 2.5A charge
+	i2c.write_reg(0x6b<<1, 0, 0x07);		// allow charger to pull vbus down to 3.88V, 3A max input
+	
 	for(int i=0; i<10; )
 	{
 		if (0 == i2c.read_reg(0x6b<<1, i, reg+i))
@@ -302,15 +310,28 @@ int board_init()
 		
 		::dbg->toggle();
 	}
-	*/
 	
 	while(!powerup)
 	{
-		if (systimer->gettime() > last_click + 5000000)
-			shutdown();
+		uint8_t reg8;
+		i2c.read_reg(0x6b<<1, 8, &reg8);
+		bool power_good = reg8 & (0x4);
+		bool charging = ((reg8>>4)&0x03) != 0x03 && ((reg8>>4)&0x03) != 0x00;
+		if (charging)
+		{
+			// power good and charging, show battery state, no shutting down.
+			::dbg->write(true);
+			::dbg2->write(systimer->gettime() % 200000 < 100000);
+			
+		}
+		else 
+		{
+			::dbg2->write(true);
+			::dbg->write(systimer->gettime() % 200000 < 100000);
+			if (systimer->gettime() > last_click + 5000000)
+				shutdown();
+		}
 		
-		::dbg->write(true);
-		::dbg2->write(systimer->gettime() % 200000 < 100000);
 	}
 	
 	return 0;	
