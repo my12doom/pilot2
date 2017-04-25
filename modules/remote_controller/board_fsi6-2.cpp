@@ -24,6 +24,7 @@ HAL::IGPIO *SDA;
 HAL::IInterrupt *interrupt;
 HAL::ITimer *timer;
 
+F1GPIO qon(GPIOB, GPIO_Pin_2);
 F1Timer button_timer(TIM4);
 int16_t adc_data[6] = {0};
 namespace sheet1
@@ -42,7 +43,6 @@ namespace sheet1
 	F1Timer timer(TIM2);
 	
 	F1GPIO pa6(GPIOA, GPIO_Pin_6);
-	F1GPIO pc8(GPIOC, GPIO_Pin_8);
 
 	
 	
@@ -146,8 +146,8 @@ namespace sheet1
 		::spi = &spi;
 		::interrupt = &interrupt;
 		::timer = &timer;
-		::bind_button = &pc8;
-		pc8.set_mode(MODE_IN);
+		::bind_button = &qon;
+		qon.set_mode(MODE_IN);
 		
 		spi.init(SPI2);
 		interrupt.init(GPIOB, GPIO_Pin_12, interrupt_falling);
@@ -171,7 +171,6 @@ namespace sheet1
 
 using namespace sheet1;
 
-F1GPIO qon(GPIOB, GPIO_Pin_2);
 I2C_SW i2c;
 
 int64_t last_click = -2000000;

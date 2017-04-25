@@ -122,14 +122,41 @@ int binding_loop()
 					}
 				}				
 			}
-			dbg2->write(systimer->gettime() % 250000 < 125000);
+			dbg2->write(systimer->gettime() % 500000 < 250000);
 		}
 	}
 
 	return -1;
 }
 
-int main()
+void tx_on()
+{
+	rando.set_seed(seed);
+	rando.reset(0);
+	uint64_t key4[4] = {seed, seed, seed, seed};
+	aes.set_key((uint8_t*)key4, 256);
+	nrf.rf_off();
+	nrf.set_tx_address((uint8_t*)&seed, 3);
+	nrf.rf_on(false);	
+	nrf.write_reg(7, nrf.read_reg(7));
+	interrupt->set_callback(nrf_irq_entry, NULL);	
+	timer->set_callback(timer_entry, NULL);	
+		
+	dbg2->write(false);
+}
+
+void tx_off()
+{
+	interrupt->set_callback(nrf_irq_entry, NULL);	
+	timer->set_callback(timer_entry, NULL);	
+	nrf.rf_off();
+	
+	dbg2->write(true);
+}
+
+	bool last_bind_button = false;
+bool b;
+	int main()
 {
 	space_init();	
 	board_init();
@@ -150,28 +177,43 @@ int main()
 		dbg2->write(true);
 		systimer->delayms(100);
 	}
+	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;	
+	timer->set_period(hoop_interval);
 	
 	//if (seed == 0x1234567890345678 || (bind_button && bind_button->read() == false))
 	//	binding_loop();
-	rando.set_seed(seed);
-	rando.reset(0);
-	uint64_t key4[4] = {seed, seed, seed, seed};
-	aes.set_key((uint8_t*)key4, 256);
-	nrf.rf_off();
-	nrf.set_tx_address((uint8_t*)&seed, 3);
-	nrf.rf_on(false);
-	interrupt->set_callback(nrf_irq_entry, NULL);
-		
-	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;
+	tx_on();
 	
-	timer->set_callback(timer_entry, NULL);
-	timer->set_period(hoop_interval);
-	
-	int64_t lt = systimer->gettime();
-	
-	int16_t v[6] = {0};
-	dbg2->write(false);
+	if (bind_button)
+		last_bind_button = bind_button->read();
+	int64_t last_key_down = 0;
+	int streak = 0;
 	while(1)
 	{
+		if (bind_button)
+		{
+			b = bind_button->read();
+			if (b && !last_bind_button)
+			{
+				if (systimer->gettime() - last_key_down < 500000)
+					streak ++;
+				else
+				{
+					streak = 1;
+				}
+				
+				last_key_down = systimer->gettime();
+				
+				if (streak > 5)
+				{
+					tx_off();
+					binding_loop();
+					tx_on();
+				}
+			}
+			
+			last_bind_button = b;
+		}
+		
 	}
 }
