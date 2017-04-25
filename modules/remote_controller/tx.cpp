@@ -150,8 +150,8 @@ void tx_on()
 
 void tx_off()
 {
-	interrupt->set_callback(nrf_irq_entry, NULL);	
-	timer->set_callback(timer_entry, NULL);	
+	interrupt->set_callback(NULL, NULL);	
+	timer->set_callback(NULL, NULL);	
 	nrf.rf_off();
 	
 	dbg2->write(true);
@@ -183,9 +183,9 @@ bool b;
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;	
 	timer->set_period(hoop_interval);
 	
-	//if (seed == 0x1234567890345678 || (bind_button && bind_button->read() == false))
+	//if (seed == 0x1234567890345678)
 	//	binding_loop();
-	tx_on();
+	tx_on();	
 	
 	if (bind_button)
 		last_bind_button = bind_button->read();
