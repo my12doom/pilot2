@@ -1,4 +1,5 @@
 #include <HAL/Interface/ISysTimer.h>
+#include <HAL/Interface/IUART.h>
 #include "board.h"
 #include <utils/log.h>
 #include <stdint.h>
@@ -24,6 +25,8 @@ int64_t ts;
 int dt;
 AESCryptor aes;
 HAL::IGPIO *bind_button = NULL;
+HAL::IRCOUT *ppm = NULL;
+HAL::IUART *uart = NULL;
 
 void nrf_irq_entry(void *parameter, int flags)
 {
