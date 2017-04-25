@@ -332,7 +332,7 @@ int board_init()
 		{
 			::dbg2->write(true);
 			::dbg->write(systimer->gettime() % 200000 < 100000);
-			if (systimer->gettime() > last_click + 5000000)
+			if (systimer->gettime() > last_charging_or_click + 5000000)
 				shutdown();
 		}
 		
