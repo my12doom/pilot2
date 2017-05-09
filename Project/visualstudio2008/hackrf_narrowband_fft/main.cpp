@@ -2,26 +2,26 @@
 #include <math.h>
 #include <assert.h>
 #include <stdio.h>
-#include "Fourier.h"
 #include "hackrf.h"
+#include "fftw/fftw3.h"
+#include "Fourier.h"
 
 #pragma comment(lib, "libhackrf.lib")
 #pragma comment(lib, "libusb-1.0.lib")
 #pragma comment(lib, "pthreadVSE2.lib")
+#pragma comment(lib, "fftw/libfftw3f-3.lib")
 
 hackrf_device* device = NULL;
 #define N 8192
 
-real_t real[N] = {0};
-real_t image[N] = {0};
-
-real_t real_out[N];
-real_t image_out[N];
+fftwf_complex * in = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
+fftwf_complex * out = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
+fftwf_plan p;
 
 FILE * f = fopen("Z:\\log2.pcm", "wb");
 FILE * csv = fopen("Z:\\spectrom.csv", "wb");
 
-real_t amp[N] = {0};
+float amp[N] = {0};
 int amp_counter = 0;
 int rx_callback(hackrf_transfer* transfer)
 {
@@ -32,13 +32,13 @@ int rx_callback(hackrf_transfer* transfer)
 	{
 		for(int i=0; i<N; i++)
 		{
-			real[i] = buf[i*2+1]/128.0f;
-			image[i] = buf[i*2]/128.0f;
+			in[i][0] = buf[i*2+0]/128.0f;
+			in[i][1] = buf[i*2+1]/128.0f;
 		}
- 		fft_real_t(N, false, real, image, real_out, image_out);
+		fftwf_execute(p);
 		for(int i=0; i<N; i++)
 		{
-			real_t v = sqrt(real_out[i]*real_out[i]+image_out[i]*image_out[i]);
+			float v = sqrt(out[i][0]*out[i][0] + out[i][1]*out[i][1]);
 			amp[i] += v;
 		}
 
@@ -68,12 +68,12 @@ int StartHackRF()
 	}
 	///////////////////////////////////
 	//////参数设置部分////////
-	result |= hackrf_set_amp_enable(device, 0);
+	result |= hackrf_set_amp_enable(device, 1);
 	result |= hackrf_set_sample_rate(device, 20000000);
 	result |= hackrf_set_baseband_filter_bandwidth(device, 2.0e7);
 	result |= hackrf_set_vga_gain(device, 0); // step: 2db
-	result |= hackrf_set_lna_gain(device, 0); // step: 8db
-	result |= hackrf_set_freq(device, 1410e6);
+	result |= hackrf_set_lna_gain(device, 30); // step: 8db
+	result |= hackrf_set_freq(device, 2410e6);
 
 	uint16_t v = 0;
 	LARGE_INTEGER l1,l2,freq;
@@ -90,8 +90,7 @@ int StartHackRF()
 
 int main(int argc, char* argv[])
 {
-	fprintf(csv, "N,freq,amp\n");
-
+	p = fftwf_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
 	int res = StartHackRF();
 	if (res != HACKRF_SUCCESS)
 	{
@@ -99,6 +98,7 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
+	fprintf(csv, "N,freq,amp\n");
 	int t = GetTickCount();
 	while(hackrf_is_streaming(device) == HACKRF_TRUE)
 	{
@@ -116,13 +116,18 @@ int main(int argc, char* argv[])
 	{
 		amp[i] /= amp_counter;
 		amp[i] /= N;
-		amp[i] = log10(amp[i])*10;
+		amp[i] = log10((amp[i]))*10;
 	}
 
 	for(int i=0; i<N; i++)
 	{
 		fprintf(csv, "%d,%.2f,%f\n", i, Index_to_frequency(20000000, N, i), amp[i]);
 	}
+
+	fftwf_destroy_plan(p);
+	fftwf_free(in);
+	fftwf_free(out);
+
 
 	return 0;
 }
