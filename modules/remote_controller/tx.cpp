@@ -1,4 +1,5 @@
 #include <HAL/Interface/ISysTimer.h>
+#include <HAL/Interface/IUART.h>
 #include "board.h"
 #include <utils/log.h>
 #include <stdint.h>
@@ -24,6 +25,8 @@ int64_t ts;
 int dt;
 AESCryptor aes;
 HAL::IGPIO *bind_button = NULL;
+HAL::IRCOUT *ppm = NULL;
+HAL::IUART *uart = NULL;
 
 void nrf_irq_entry(void *parameter, int flags)
 {
@@ -131,15 +134,19 @@ int binding_loop()
 
 void tx_on()
 {
+	hoop_id = 0;
 	rando.set_seed(seed);
 	rando.reset(0);
 	uint64_t key4[4] = {seed, seed, seed, seed};
 	aes.set_key((uint8_t*)key4, 256);
 	nrf.rf_off();
 	nrf.set_tx_address((uint8_t*)&seed, 3);
-	nrf.rf_on(false);	
+	nrf.write_cmd(FLUSH_TX, NOP);
+	nrf.write_cmd(FLUSH_RX, NOP);
 	nrf.write_reg(7, nrf.read_reg(7));
+	nrf.rf_on(false);
 	interrupt->set_callback(nrf_irq_entry, NULL);	
+	timer->set_period(hoop_interval);
 	timer->set_callback(timer_entry, NULL);	
 		
 	dbg2->write(false);
@@ -147,8 +154,8 @@ void tx_on()
 
 void tx_off()
 {
-	interrupt->set_callback(nrf_irq_entry, NULL);	
-	timer->set_callback(timer_entry, NULL);	
+	interrupt->set_callback(NULL, NULL);	
+	timer->set_callback(NULL, NULL);	
 	nrf.rf_off();
 	
 	dbg2->write(true);
@@ -178,11 +185,10 @@ bool b;
 		systimer->delayms(100);
 	}
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;	
-	timer->set_period(hoop_interval);
 	
-	//if (seed == 0x1234567890345678 || (bind_button && bind_button->read() == false))
-	//	binding_loop();
-	tx_on();
+	if (seed == 0x1234567890345678)
+		binding_loop();
+	tx_on();	
 	
 	if (bind_button)
 		last_bind_button = bind_button->read();

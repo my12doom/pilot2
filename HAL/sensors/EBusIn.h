@@ -3,12 +3,14 @@
 #include <stdint.h>
 #include <HAL/Interface/Interfaces.h>
 
+#pragma pack(push,1)
 typedef struct struct_ebus_data
 {
 	uint16_t startbytes;
 	int16_t data[6];
 	uint8_t crc32;
 } ebus_data;
+#pragma pack(pop)
 
 namespace sensors
 {

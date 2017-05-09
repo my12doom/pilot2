@@ -310,24 +310,29 @@ int board_init()
 		::dbg->toggle();
 	}
 	
+	int64_t last_charging_or_click = last_click;
 	while(!powerup)
 	{
 		uint8_t reg8;
 		i2c.read_reg(0x6b<<1, 8, &reg8);
 		bool power_good = reg8 & (0x4);
-		bool charging = ((reg8>>4)&0x03) != 0x03 && ((reg8>>4)&0x03) != 0x00;
+		bool charging = ((reg8>>4)&0x03) == 0x01 || ((reg8>>4)&0x03) == 0x02;
+		if (last_click > last_charging_or_click)
+			last_charging_or_click = last_click;
+		
 		if (charging)
+			last_charging_or_click = systimer->gettime();
+		if (charging || systimer->gettime() < last_charging_or_click + 500000)
 		{
 			// power good and charging, show battery state, no shutting down.
 			::dbg->write(true);
-			::dbg2->write(systimer->gettime() % 200000 < 100000);
-			
+			::dbg2->write(systimer->gettime() % 200000 < 100000);		
 		}
 		else 
 		{
 			::dbg2->write(true);
 			::dbg->write(systimer->gettime() % 200000 < 100000);
-			if (systimer->gettime() > last_click + 5000000)
+			if (systimer->gettime() > last_charging_or_click + 5000000)
 				shutdown();
 		}
 		
