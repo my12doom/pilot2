@@ -27,6 +27,9 @@ HAL::ITimer *timer;
 F1GPIO qon(GPIOB, GPIO_Pin_2);
 F1Timer button_timer(TIM4);
 int16_t adc_data[6] = {0};
+
+F1GPIO vib(GPIOA, GPIO_Pin_10);
+
 namespace sheet1
 {
 	F1GPIO cs(GPIOA, GPIO_Pin_11);
@@ -174,6 +177,7 @@ using namespace sheet1;
 I2C_SW i2c;
 
 int64_t last_click = -2000000;
+static int64_t last_key_down = -2000000;
 void on_click(int64_t click_start, int click_long)
 {
 	if (click_long < 400000)
@@ -182,12 +186,12 @@ void on_click(int64_t click_start, int click_long)
 
 void on_key_down()
 {
-	
+	vib.write(true);
 }
 
 void on_key_up()
 {
-	
+	vib.write(false);
 }
 
 void shutdown()
@@ -219,13 +223,12 @@ void on_click_and_press()
 
 void on_long_press()
 {
-	if (systimer->gettime() - last_click < 2000000)
-		on_click_and_press();	
+	if (systimer->gettime() - last_click < 1200000)
+		on_click_and_press();
 }
 
 void button_entry(void *parameter, int flags)
 {
-	static int64_t last_key_down = -2000000;
 	if (qon.read())
 	{
 		last_key_down = systimer->gettime();
@@ -254,6 +257,11 @@ void button_timer_entry(void *p)
 		calling = true;
 		on_long_press();
 	}
+	
+	if (systimer->gettime() > last_key_down + 150000)
+	{
+		vib.write(false);
+	}
 }
 
 F1Interrupt button_int;
@@ -262,6 +270,8 @@ uint8_t reg08;
 int board_init()
 {
 	sheet1_init();
+	vib.write(false);
+	vib.set_mode(MODE_OUT_PushPull);
 	button_int.init(GPIOB, GPIO_Pin_2, interrupt_rising_or_falling);
 	button_entry(NULL, 0);
 	button_int.set_callback(button_entry, NULL);
@@ -274,7 +284,6 @@ int board_init()
 	::dbg2->write(false);
 	::dbg->set_mode(MODE_OUT_OpenDrain);
 	::dbg2->set_mode(MODE_OUT_OpenDrain);
-	
 	
 	//systimer->delayms(600);
 	i2c.init(::SCL, ::SDA);
