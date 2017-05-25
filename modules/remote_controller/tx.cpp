@@ -27,6 +27,7 @@ AESCryptor aes;
 HAL::IGPIO *bind_button = NULL;
 HAL::IRCOUT *ppm = NULL;
 HAL::IUART *uart = NULL;
+HAL::IGPIO *vibrator = NULL;
 
 void nrf_irq_entry(void *parameter, int flags)
 {
@@ -98,8 +99,8 @@ int binding_loop()
 		// wait for ack packet
 		nrf.rf_off();
 		nrf.rf_on(true);
-		systimer->delayms(50);
-		int64_t timeout = systimer->gettime() + 50000;
+		systimer->delayms(5);
+		int64_t timeout = systimer->gettime() + 95000;
 		while (systimer->gettime() < timeout)
 		{
 			if (irq->read() == false)
@@ -126,7 +127,15 @@ int binding_loop()
 				}				
 			}
 			dbg2->write(systimer->gettime() % 500000 < 250000);
+			if (vibrator)
+			{
+				int frac = systimer->gettime() % 750000;
+				vibrator->write(frac<125000 || (frac > 250000 && frac < 375000));
+			}
 		}
+		
+		if (vibrator)
+			vibrator->write(false);
 	}
 
 	return -1;

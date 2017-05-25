@@ -258,7 +258,7 @@ void button_timer_entry(void *p)
 		on_long_press();
 	}
 	
-	if (systimer->gettime() > last_key_down + 150000)
+	if (systimer->gettime() > last_key_down + 150000 && qon.read())
 	{
 		vib.write(false);
 	}
@@ -284,6 +284,7 @@ int board_init()
 	::dbg2->write(false);
 	::dbg->set_mode(MODE_OUT_OpenDrain);
 	::dbg2->set_mode(MODE_OUT_OpenDrain);
+	::vibrator = &vib;
 	
 	//systimer->delayms(600);
 	i2c.init(::SCL, ::SDA);

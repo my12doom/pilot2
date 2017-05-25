@@ -21,6 +21,7 @@ extern HAL::IGPIO *bind_button;
 extern HAL::IGPIO *SCL;
 extern HAL::IGPIO *SDA;
 extern HAL::IRCOUT *ppm;
+extern HAL::IGPIO *vibrator;
 
 int board_init();
 void read_channels(int16_t *channel, int max_channel_count);

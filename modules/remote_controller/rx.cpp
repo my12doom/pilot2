@@ -21,7 +21,7 @@ using namespace devices;
 NRF24L01 nrf;
 
 uint8_t valid_data[32];
-randomizer<256, 256> rando;
+randomizer<256, 0> rando;
 AESCryptor aes;
 uint64_t seed = 0x1234567890345678;
 OLED96 oled;
