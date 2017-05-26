@@ -10,6 +10,7 @@
 #include <HAL/aux_devices/OLED_I2C.h>
 #include <Protocol/crc32.h>
 #include <utils/RIJNDAEL.h>
+#include <utils/AES.h>
 #include "randomizer.h"
 #include <utils/space.h>
 #include "binding.h"
@@ -21,8 +22,8 @@ using namespace devices;
 NRF24L01 nrf;
 
 uint8_t valid_data[32];
-randomizer<256, 256> rando;
-AESCryptor aes;
+randomizer<256, 0> rando;
+AESCryptor2 aes;
 uint64_t seed = 0x1234567890345678;
 OLED96 oled;
 int o = 0;
