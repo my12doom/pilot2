@@ -10,7 +10,7 @@ namespace STM32F1
 		F1SysTimer();
 		~F1SysTimer(){}
 		virtual int64_t gettime();		// micro-second
-		virtual void delayms(float ms);
-		virtual void delayus(float us);
+		virtual void delayms(int ms);
+		virtual void delayus(int us);
 	};
 }

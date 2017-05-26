@@ -39,12 +39,12 @@ namespace STM32F1
 			return (tick_base1 + tick1) / (SystemCoreClock / 1000000);
 	}
 	
-	void F1SysTimer::delayms(float ms)
+	void F1SysTimer::delayms(int ms)
 	{
 		delayus(ms*1000);
 	}
 	
-	void F1SysTimer::delayus(float us)
+	void F1SysTimer::delayus(int us)
 	{
 		#ifdef __OPTIMIZE__
 		static const float overhead = 2.87f;

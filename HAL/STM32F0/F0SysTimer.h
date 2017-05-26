@@ -10,7 +10,7 @@ namespace STM32F0
 		F0SysTimer();
 		~F0SysTimer(){}
 		virtual int64_t gettime();		// micro-second
-		virtual void delayms(float ms);
-		virtual void delayus(float us);
+		virtual void delayms(int ms);
+		virtual void delayus(int us);
 	};
 }

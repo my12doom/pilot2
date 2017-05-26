@@ -39,12 +39,12 @@ namespace STM32F4
 			return (tick_base1 + tick1) / (SystemCoreClock / 1000000);
 	}
 	
-	void F4SysTimer::delayms(float ms)
+	void F4SysTimer::delayms(int ms)
 	{
 		delayus(ms*1000);
 	}
 	
-	void F4SysTimer::delayus(float us)
+	void F4SysTimer::delayus(int us)
 	{
 		static const float overhead = 0.37f;
 		if (us < overhead)

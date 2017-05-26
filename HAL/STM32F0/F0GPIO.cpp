@@ -33,7 +33,7 @@ namespace STM32F0
 		{
 			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
 			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-			GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+			GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
 		}
 		GPIO_Init(this->GPIOx, &GPIO_InitStructure);
 	}

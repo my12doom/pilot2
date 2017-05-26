@@ -3483,7 +3483,7 @@ int yet_another_pilot::setup(void)
 	return 0;
 }
 
-int main3()
+int main()
 {
 	bsp_init_all();
 	

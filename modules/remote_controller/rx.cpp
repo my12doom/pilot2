@@ -35,6 +35,8 @@ int64_t last_valid_packet = -1000000;
 uint16_t hoop_interval = 1000;
 HAL::IRCOUT *ppm = NULL;
 HAL::IUART *uart = NULL;
+HAL::IGPIO *bind_button = NULL;
+HAL::IGPIO *vibrator = NULL;
 
 int hoop_to(int next_hoop_id)
 {
