@@ -30,6 +30,7 @@ int rdp;
 int hoop_id = 0;
 int miss = 99999;
 int maxmiss = 0;
+int64_t last_valid_packet = -1000000;
 uint16_t hoop_interval = 1000;
 HAL::IRCOUT *ppm = NULL;
 HAL::IUART *uart = NULL;
@@ -73,9 +74,10 @@ void nrf_irq_entry(void *parameter, int flags)
 			continue;
 		
 		dbg->write(false);
-		o++;		
+		o++;
 		next_hoop_id = *(uint16_t*)data;
 		memcpy(valid_data, data, 32);
+		last_valid_packet = systimer->gettime();
 	}
 	
 	if (next_hoop_id >= 0)
@@ -268,7 +270,7 @@ int main()
 			{
 				last_out = systimer->gettime();
 				
-				if (miss > 200)
+				if (miss > 200 || systimer->gettime() > last_valid_packet + 500000)
 					data[2] = 800;
 				ppm->write(data, 6, 0);
 				
