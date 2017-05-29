@@ -54,6 +54,7 @@ namespace STM32F0
 		
 		
 		volatile int start = reload - SysTick->VAL;
+		SystemCoreClockUpdate();
 		static int cycle_per_us = SystemCoreClock / 1000000;
 		
 		if (us < overhead)

@@ -42,23 +42,23 @@ void rijndaelDecrypt(const unsigned long *rk, int nrounds,
 class AESCryptor2// : public AES
 {
 private:
-	int keybits;
+	int nrounds;
 	unsigned long e_key[64];
 	unsigned long d_key[64];
 public:
 	void set_key(const uint8_t key[], int key_bits)
 	{
-		keybits = key_bits;
-		rijndaelSetupEncrypt(e_key, key, keybits);
-		rijndaelSetupDecrypt(d_key, key, keybits);
+		nrounds = NROUNDS(key_bits);
+		rijndaelSetupEncrypt(e_key, key, key_bits);
+		rijndaelSetupDecrypt(d_key, key, key_bits);
 	}
 	void encrypt(const uint8_t in_blk[16], uint8_t out_blk[16])
 	{
-		rijndaelEncrypt(e_key, NROUNDS(keybits), in_blk, out_blk);
+		rijndaelEncrypt(e_key, nrounds, in_blk, out_blk);
 	}
 	void decrypt(const uint8_t in_blk[16], uint8_t out_blk[16])
 	{
-		rijndaelDecrypt(d_key, NROUNDS(keybits), in_blk, out_blk);
+		rijndaelDecrypt(d_key, nrounds, in_blk, out_blk);
 	}
 };	 
 
