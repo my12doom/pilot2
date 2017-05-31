@@ -86,7 +86,7 @@ void nrf_irq_entry(void *parameter, int flags)
 	
 	if (next_hoop_id >= 0)
 	{
-		hoop_to(next_hoop_id+1);
+		hoop_to((next_hoop_id+1)&0xffff);
 		miss = 0;
 		timer->restart();
 	}
