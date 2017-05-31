@@ -29,6 +29,7 @@ int rdp;
 int hoop_id = 0;
 int miss = 99999;
 int maxmiss = 0;
+bool ignore_first_packet = true;
 int64_t last_valid_packet = -1000000;
 uint16_t hoop_interval = 1000;
 HAL::IRCOUT *ppm = NULL;
@@ -77,11 +78,18 @@ void nrf_irq_entry(void *parameter, int flags)
 		if ((uint16_t)crc32(0, data, 30) != *(uint16_t*)(data+30))
 			continue;
 		
-		dbg->write(false);
-		o++;
-		next_hoop_id = *(uint16_t*)data;
-		memcpy(valid_data, data, 32);
-		last_valid_packet = systimer->gettime();
+		if (!ignore_first_packet)
+		{
+			dbg->write(false);
+			o++;
+			next_hoop_id = *(uint16_t*)data;
+			memcpy(valid_data, data, 32);
+			last_valid_packet = systimer->gettime();
+		}
+		else
+		{
+			ignore_first_packet = false;
+		}
 	}
 	
 	if (next_hoop_id >= 0)
@@ -101,7 +109,7 @@ void timer_entry(void * p)
 	
 	miss ++;
 	
-	if (miss < 200)
+	if (miss < 2000)
 	{
 		dbg2->write(false);
 		hoop_to((hoop_id+1)&0xffff);
@@ -191,12 +199,14 @@ int binding_loop()
 			// clear up and exit
 			nrf.rf_off();
 			nrf.enable_rx_address(1, false);
+			ignore_first_packet = true;
 			return 0;
 		}
 
 		// exit if several channel data packet recieved
 		if (tx_channel_data > 3)
 		{
+			ignore_first_packet = true;
 			nrf.rf_off();
 			nrf.enable_rx_address(1, false);
 			return 0;
@@ -234,27 +244,23 @@ int main()
 	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
 	nrf.enable_rx_address(0, true);
 	nrf.write_reg(RF_CH, 95);
-	nrf.rf_on(true);
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;
 	
-	for(int i=0; i<30; i++)
-	{
-		printf("reg(%d)=%02x\n", i, nrf.read_reg(i));
-	}
 	
 	int lo = 0;
 	int64_t t = systimer->gettime();
 	int64_t lt = t;
 	int lp = 0;
 	
-	nrf.write_cmd(FLUSH_RX, NOP);
-	nrf.write_reg(STATUS, nrf.read_reg(STATUS));
-	dbg->write(true);
-	
 	interrupt->set_callback(nrf_irq_entry, NULL);
 	timer->set_callback(timer_entry, NULL);
 	timer->set_period(hoop_interval);
 		
+	nrf.write_cmd(FLUSH_RX, NOP);
+	nrf.write_reg(STATUS, nrf.read_reg(STATUS));
+	dbg->write(true);	
+	nrf.rf_on(true);
+	
 	while(1)
 	{
 		if (ppm)
