@@ -15,7 +15,7 @@
         <TargetCommonOption>
           <Device>STM32F030C8</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32F0xx_DFP.1.5.0</PackID>
+          <PackID>Keil.STM32F0xx_DFP.1.4.0</PackID>
           <PackURL>http://www.keil.com/pack/</PackURL>
           <Cpu>IRAM(0x20000000,0x2000) IROM(0x08000000,0x10000) CPUTYPE("Cortex-M0") CLOCK(12000000) ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -333,7 +333,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls>--diag_suppress 177,550,1,1295,1299,611,1300 --gnu</MiscControls>
-              <Define>USE_STDPERIPH_DRIVER STM32F0XX</Define>
+              <Define>USE_STDPERIPH_DRIVER STM32F0XX,HSE_VALUE=8000000</Define>
               <Undefine></Undefine>
               <IncludePath>..\..\HAL\STM32F0\FWlib\;..\..\;..\..\modules</IncludePath>
             </VariousControls>
@@ -463,6 +463,11 @@
               <FileName>space.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\utils\space.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>SWO.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\main\SWO.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -708,7 +713,7 @@
               <RVCTZI>0</RVCTZI>
               <RVCTOtherData>0</RVCTOtherData>
               <ModuleSelection>0</ModuleSelection>
-              <IncludeInBuild>0</IncludeInBuild>
+              <IncludeInBuild>1</IncludeInBuild>
               <AlwaysBuild>2</AlwaysBuild>
               <GenerateAssemblyFile>2</GenerateAssemblyFile>
               <AssembleAssemblyFile>2</AssembleAssemblyFile>

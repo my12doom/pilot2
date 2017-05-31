@@ -9,6 +9,7 @@
 #include <HAL/aux_devices/NRF24L01.h>
 #include <utils/space.h>
 #include <utils/RIJNDAEL.h>
+#include <utils/AES.h>
 #include "randomizer.h"
 #include "binding.h"
 // BSP
@@ -17,13 +18,13 @@ using namespace devices;
 
 NRF24L01 nrf;
 uint8_t data[32];
-randomizer<256,256> rando;
+randomizer<256,0> rando;
 uint16_t hoop_id = 0;
 uint64_t seed = 0x1234567890345678;
 uint16_t hoop_interval = 1000;
 int64_t ts;
 int dt;
-AESCryptor aes;
+AESCryptor2 aes;
 HAL::IGPIO *bind_button = NULL;
 HAL::IRCOUT *ppm = NULL;
 HAL::IUART *uart = NULL;
@@ -44,7 +45,7 @@ void timer_entry(void *p)
 	*(uint16_t*)data = hoop_id;
 	hoop_id ++;
 	
-	int channel = (int64_t)rando.next() * 100 / 0xffffffff;
+	int channel = ((rando.next() & 0xffff) * 100) >> 16;
 	data[2] = channel;
 	
 	//channel = 85;

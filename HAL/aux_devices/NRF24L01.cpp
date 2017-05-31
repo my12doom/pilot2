@@ -174,8 +174,8 @@ int NRF24L01::read_cmd(uint8_t cmd, uint8_t *data, int count)
 {
 	cs->write(false);
 	spi->txrx(cmd);
-	for(int i=0; i<count; i++)
-		data[i] = spi->txrx(0);
+	uint8_t tx[32];
+	spi->txrx2(tx, data, count);
 	cs->write(true);
 
 	return 0;

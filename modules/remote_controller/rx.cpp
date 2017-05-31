@@ -47,8 +47,7 @@ int hoop_to(int next_hoop_id)
 	
 	hoop_id = next_hoop_id;
 	
-
-	int channel = (int64_t)rando.next() * 100 / 0xffffffff;
+	int channel = ((rando.next() & 0xffff) * 100) >> 16;
 	
 	nrf.write_reg(RF_CH, channel);
 	

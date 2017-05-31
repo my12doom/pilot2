@@ -7,6 +7,7 @@ namespace STM32F0
 	int64_t base = 0;
 	int reload;
 	
+	static int cycle_per_us = -1;
 	extern "C" void SysTick_Handler()
 	{
 		base += reload;
@@ -17,6 +18,9 @@ namespace STM32F0
 		reload = 0x80000;		// ~ 10ms reload period
 		SysTick_Config(reload);
 		NVIC_SetPriority(SysTick_IRQn, 0x0);
+		
+		SystemCoreClockUpdate();
+		cycle_per_us = SystemCoreClock / 1000000;
 	}
 	
 	
@@ -34,9 +38,11 @@ namespace STM32F0
 		tick2 = reload - tick2;
 		
 		if (tick2 < tick1)
-			return (tick_base2 + tick2) / (SystemCoreClock / 1000000);
+			return (tick_base2 + tick2) / (cycle_per_us);
 		else
-			return (tick_base1 + tick1) / (SystemCoreClock / 1000000);
+			return (tick_base1 + tick1) / (cycle_per_us);
+		
+		return 0;
 	}
 	
 	void F0SysTimer::delayms(int ms)
@@ -47,15 +53,19 @@ namespace STM32F0
 	void F0SysTimer::delayus(int us)
 	{
 		#ifdef __OPTIMIZE__
-		static const int overhead = 0;
+		static const int overhead = 34;
 		#else
-		static const int overhead = 0;
+		static const int overhead = 35;
 		#endif
 		
 		
 		volatile int start = reload - SysTick->VAL;
-		SystemCoreClockUpdate();
-		static int cycle_per_us = SystemCoreClock / 1000000;
+		
+		if (cycle_per_us < 0)
+		{
+			SystemCoreClockUpdate();
+			cycle_per_us = SystemCoreClock / 1000000;
+		}
 		
 		if (us < overhead)
 			us = 0;

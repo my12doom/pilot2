@@ -12,7 +12,7 @@ namespace STM32F0
 		uint32_t buffer_size;
 		uint32_t start_address;
 	public:
-		F0Storage(uint32_t page__size=1024,uint32_t buffer_size=4096,uint32_t start_address=0x08007000);
+		F0Storage(uint32_t page__size=1024,uint32_t buffer_size=4096,uint32_t start_address=0x0800F000);
 		~F0Storage(){};
 		virtual int init();
 		virtual int total_size();

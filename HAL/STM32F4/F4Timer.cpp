@@ -101,7 +101,7 @@ namespace STM32F4
 		TIM_TimeBaseStructure.TIM_Prescaler = (TIMx == TIM1 || TIMx == TIM8) ? 167: 83;//1Mhz 1us 65536
 		TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
 		TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
-		TIM_TimeBaseStructure.TIM_Period=period;
+		TIM_TimeBaseStructure.TIM_Period=period-1;
 		TIM_TimeBaseStructure.TIM_RepetitionCounter = 0x0;
 		TIM_TimeBaseInit(TIMx,&TIM_TimeBaseStructure);
 		TIM_ClearFlag(TIMx,TIM_FLAG_Update);

@@ -60,6 +60,7 @@ namespace STM32F0
 	F0Timer::F0Timer(TIM_TypeDef* TIMx)
 	{	
 		this->TIMx=TIMx;
+		cb = NULL;
 		TimerInit(TIMx);
 	}
 	void F0Timer::TimerInit(TIM_TypeDef* TIMx)
@@ -160,10 +161,11 @@ namespace STM32F0
 		TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 		TIM_DeInit(TIMx);
 		TIM_InternalClockConfig(TIMx);
-		TIM_TimeBaseStructure.TIM_Prescaler= 48-1;
+		SystemCoreClockUpdate();
+		TIM_TimeBaseStructure.TIM_Prescaler= SystemCoreClock / 1000000-1;
 		TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
 		TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
-		TIM_TimeBaseStructure.TIM_Period=period;
+		TIM_TimeBaseStructure.TIM_Period=period-1;
 		TIM_TimeBaseStructure.TIM_RepetitionCounter = 0x0;
 		TIM_TimeBaseInit(TIMx,&TIM_TimeBaseStructure);
 		TIM_ClearFlag(TIMx,TIM_FLAG_Update);
