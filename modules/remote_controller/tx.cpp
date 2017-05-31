@@ -10,7 +10,6 @@
 #include <utils/space.h>
 #include <utils/RIJNDAEL.h>
 #include <utils/AES.h>
-#include "randomizer.h"
 #include "binding.h"
 // BSP
 using namespace HAL;
@@ -18,7 +17,6 @@ using namespace devices;
 
 NRF24L01 nrf;
 uint8_t data[32];
-randomizer<256,0> rando;
 uint16_t hoop_id = 0;
 uint64_t seed = 0x1234567890345678;
 uint16_t hoop_interval = 1000;
@@ -29,6 +27,13 @@ HAL::IGPIO *bind_button = NULL;
 HAL::IRCOUT *ppm = NULL;
 HAL::IUART *uart = NULL;
 HAL::IGPIO *vibrator = NULL;
+
+uint32_t pos2rando(int pos)
+{
+	uint32_t data[4] = {pos, 0, 0, 0};
+	aes.encrypt((uint8_t*)data, (uint8_t*)data);
+	return data[0];
+}
 
 void nrf_irq_entry(void *parameter, int flags)
 {
@@ -42,11 +47,9 @@ void timer_entry(void *p)
 	interrupt->disable();
 	dbg->write(true);
 	
-	*(uint16_t*)data = hoop_id;
+	*(uint16_t*)data = hoop_id;	
+	int channel = ((pos2rando(hoop_id) & 0xffff) * 100) >> 16;
 	hoop_id ++;
-	
-	int channel = ((rando.next() & 0xffff) * 100) >> 16;
-	data[2] = channel;
 	
 	//channel = 85;
 	
@@ -56,10 +59,7 @@ void timer_entry(void *p)
 	
 	aes.encrypt(data, data);
 	aes.encrypt(data+16, data+16);
-	
-	if (hoop_id == 0)
-		rando.reset();
-	
+		
 	ce->write(false);
 	nrf.write_reg(5, channel);
 	nrf.write_tx(data, 32);
@@ -145,8 +145,6 @@ int binding_loop()
 void tx_on()
 {
 	hoop_id = 0;
-	rando.set_seed(seed);
-	rando.reset(0);
 	uint64_t key4[4] = {seed, seed, seed, seed};
 	aes.set_key((uint8_t*)key4, 256);
 	nrf.rf_off();
@@ -171,9 +169,7 @@ void tx_off()
 	dbg2->write(true);
 }
 
-	bool last_bind_button = false;
-bool b;
-	int main()
+int main()
 {
 	space_init();	
 	board_init();
@@ -200,6 +196,7 @@ bool b;
 		binding_loop();
 	tx_on();	
 	
+	bool last_bind_button = false;
 	if (bind_button)
 		last_bind_button = bind_button->read();
 	int64_t last_key_down = 0;
@@ -208,7 +205,7 @@ bool b;
 	{
 		if (bind_button)
 		{
-			b = bind_button->read();
+			bool b = bind_button->read();
 			if (b && !last_bind_button)
 			{
 				if (systimer->gettime() - last_key_down < 500000)

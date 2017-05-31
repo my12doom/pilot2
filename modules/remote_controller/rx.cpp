@@ -11,7 +11,6 @@
 #include <Protocol/crc32.h>
 #include <utils/RIJNDAEL.h>
 #include <utils/AES.h>
-#include "randomizer.h"
 #include <utils/space.h>
 #include "binding.h"
 
@@ -22,7 +21,6 @@ using namespace devices;
 NRF24L01 nrf;
 
 uint8_t valid_data[32];
-randomizer<256, 0> rando;
 AESCryptor2 aes;
 uint64_t seed = 0x1234567890345678;
 OLED96 oled;
@@ -38,16 +36,20 @@ HAL::IUART *uart = NULL;
 HAL::IGPIO *bind_button = NULL;
 HAL::IGPIO *vibrator = NULL;
 
+uint32_t pos2rando(int pos)
+{
+	uint32_t data[4] = {pos, 0, 0, 0};
+	aes.encrypt((uint8_t*)data, (uint8_t*)data);
+	return data[0];
+}
+
 int hoop_to(int next_hoop_id)
 {
 	ce->write(false);
 	
-	if (next_hoop_id != hoop_id + 1)
-		rando.reset(next_hoop_id);
-	
 	hoop_id = next_hoop_id;
 	
-	int channel = ((rando.next() & 0xffff) * 100) >> 16;
+	int channel = ((pos2rando(next_hoop_id) & 0xffff) * 100) >> 16;
 	
 	nrf.write_reg(RF_CH, channel);
 	
@@ -84,7 +86,7 @@ void nrf_irq_entry(void *parameter, int flags)
 	
 	if (next_hoop_id >= 0)
 	{
-		hoop_to(next_hoop_id+2);
+		hoop_to(next_hoop_id+1);
 		miss = 0;
 		timer->restart();
 	}
@@ -102,10 +104,7 @@ void timer_entry(void * p)
 	if (miss < 200)
 	{
 		dbg2->write(false);
-		if (miss == 0)
-			hoop_to((hoop_id+2)%65536);
-		else
-			hoop_to((hoop_id+1)%65536);
+		hoop_to((hoop_id+1)&0xffff);
 		dbg2->write(true);
 	}
 	
@@ -230,8 +229,6 @@ int main()
 		;
 	oled.show_str(0, 0, "binding ...");
 	binding_loop();
-	rando.set_seed(seed);
-	rando.reset(0);
 	uint64_t key4[4] = {seed, seed, seed, seed};
 	aes.set_key((uint8_t*)key4, 256);
 	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
