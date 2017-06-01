@@ -3,8 +3,8 @@
 #include <stm32F0xx_usart.h>
 #include <stm32F0xx_dma.h>
 
-#define TX_BUFFER_SIZE 200
-#define RX_BUFFER_SIZE 256
+#define TX_BUFFER_SIZE 128
+#define RX_BUFFER_SIZE 128		// must be power of 2
 
 namespace STM32F0
 {

@@ -260,16 +260,16 @@ namespace STM32F0
 	void F0UART::usart_irq(void)
 	{
 		int c = -1;
-		if(USART_GetFlagStatus(USARTx,USART_FLAG_ORE)==SET)
-			USART_ClearFlag(USARTx,USART_FLAG_ORE);
-		if(USART_GetFlagStatus(USARTx,USART_IT_RXNE)==SET)
+		if(USART_GetFlagStatus(USARTx,USART_FLAG_RXNE)==SET)
 			c = USART_ReceiveData(USARTx);
 		
-		if (((end+1)%sizeof(rx_buffer) != start))
+		USARTx->ICR = USART_FLAG_ORE;
+		
+		if ((end+1)&(sizeof(rx_buffer)-1) != start)
 		{
 			rx_buffer[end] = c;
 			end++;
-			end %= sizeof(rx_buffer);
+			end = sizeof(rx_buffer)-1;
 		}
 	}
 	
