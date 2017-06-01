@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <HAL/Interface/ISysTimer.h>
+#include "stm32F0xx_misc.h"
 
 PPMOUT * _this;
 
@@ -35,10 +36,13 @@ PPMOUT::PPMOUT()
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
 	
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource4, GPIO_AF_1);
+	
 	// Time base configuration
 	TIM_OCInitTypeDef  TIM_OCInitStructure;
 	TIM_TimeBaseStructure.TIM_Period = 20000-1;
-	TIM_TimeBaseStructure.TIM_Prescaler = 72-1;
+	TIM_TimeBaseStructure.TIM_Prescaler = 48-1;
 	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
 

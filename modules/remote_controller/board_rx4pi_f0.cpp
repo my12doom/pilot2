@@ -6,6 +6,7 @@
 #include <HAL/STM32F0/F0SysTimer.h>
 #include <HAL/STM32F0/F0Timer.h>
 #include <string.h>
+#include "PPMOUT_f0.h"
 
 using namespace STM32F0;
 using namespace HAL;
@@ -60,6 +61,9 @@ namespace sheet1
 		NVIC_InitStructure.NVIC_IRQChannelPriority = 2;
 		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 		NVIC_Init(&NVIC_InitStructure);
+		
+		static PPMOUT ppmout;
+		::ppm = &ppmout;		
 		
 		return 0;
 	}	
