@@ -6,7 +6,7 @@
 using namespace HAL;
 
 static STM32F0::F0Timer * timer_table[8] = {0};
-
+/*
 extern "C" void TIM1_BRK_UP_TRG_COM_IRQHandler()
 {
 	if (timer_table[0])
@@ -24,7 +24,7 @@ extern "C" void TIM3_IRQHandler()
 	if (timer_table[2])
 		timer_table[2]->call_callback();
 }
-
+*/
 extern "C" void TIM6_DAC_IRQHandler()
 {
 	if (timer_table[3])

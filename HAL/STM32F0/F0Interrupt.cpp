@@ -229,7 +229,7 @@ namespace STM32F0
 
 		NVIC_InitTypeDef NVIC_InitStructure;
 		NVIC_InitStructure.NVIC_IRQChannel = pin2irqn(GPIO_Pin);
-		NVIC_InitStructure.NVIC_IRQChannelPriority = 1;
+		NVIC_InitStructure.NVIC_IRQChannelPriority = 2;
 		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 		NVIC_Init(&NVIC_InitStructure);		
 		
