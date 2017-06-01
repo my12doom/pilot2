@@ -61,7 +61,7 @@ namespace STM32F0
 			USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
 			USART_Init(USART1, &USART_InitStructure); 
 			USART_Cmd(USART1, ENABLE);
-			//USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+			USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
 
 			uart_table[0] = this;
 		}
@@ -100,7 +100,6 @@ namespace STM32F0
 		
 		DMA_InitTypeDef DMA_InitStructure = {0};
 		DMA_DeInit(DMA1_Channel2);
-		//DMA_InitStructure.DMA_Channel = tx_DMA_Channel;
 		DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(USARTx->TDR));
 		DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&tx_buffer;
 		DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
@@ -110,15 +109,7 @@ namespace STM32F0
 		DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
 		DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
 		DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-		DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-		
-		/*
-		DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
-		DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
-		DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;
-		DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-		DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-		*/
+		DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;		
 		DMA_Init(tx_DMAy_Streamx, &DMA_InitStructure);
 		
 		DMA_ITConfig(tx_DMAy_Streamx,DMA_IT_TC,ENABLE);
@@ -269,14 +260,11 @@ namespace STM32F0
 	void F0UART::usart_irq(void)
 	{
 		int c = -1;
-		if(USART_GetFlagStatus(USART1,USART_IT_RXNE)==SET || USART_GetFlagStatus(USART1,USART_IT_ORE)==SET)
-		{
-			c = USART1->ISR;
-			c = USART_ReceiveData(USART1);
-		}
+		if(USART_GetFlagStatus(USARTx,USART_FLAG_ORE)==SET)
+			USART_ClearFlag(USARTx,USART_FLAG_ORE);
+		if(USART_GetFlagStatus(USARTx,USART_IT_RXNE)==SET)
+			c = USART_ReceiveData(USARTx);
 		
-		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
-		USART1->ISR = (uint16_t)~0x20;
 		if (((end+1)%sizeof(rx_buffer) != start))
 		{
 			rx_buffer[end] = c;
