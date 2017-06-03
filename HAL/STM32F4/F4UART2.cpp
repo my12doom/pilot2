@@ -335,15 +335,18 @@ namespace STM32F4
 		
 		int n = sizeof(rx_dma_buffer) - rx_DMAy_Streamx->NDTR;
 		//printf("dma:%d bytes\n", n);
+		int m = start - end;
+		if (m>0)
+			m--;
+		else
+			m = end-start+sizeof(rx_buffer)-1;
+		if (n>m)
+			n = m;
 		
 		for(int i=0; i<n; i++)
-		{
-			if (((end+1) & (sizeof(rx_buffer)-1)) != start)
-			{
-				rx_buffer[end] = rx_dma_buffer[i];
-				end = (end+1) & (sizeof(rx_buffer)-1);
-			}
-		}
+			rx_buffer[(end+i) & (sizeof(rx_buffer)-1)] = rx_dma_buffer[i];
+		
+		end = (end+n) & (sizeof(rx_buffer)-1);
 		
 		rx_DMAy_Streamx->NDTR = sizeof(rx_dma_buffer);
 		rx_DMAy_Streamx->M0AR = (uint32_t)rx_dma_buffer;
