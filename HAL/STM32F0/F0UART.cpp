@@ -265,11 +265,11 @@ namespace STM32F0
 		
 		USARTx->ICR = USART_FLAG_ORE;
 		
-		if ((end+1)&(sizeof(rx_buffer)-1) != start)
+		if(((end+1)&(sizeof(rx_buffer)-1)) != start)
 		{
 			rx_buffer[end] = c;
 			end++;
-			end = sizeof(rx_buffer)-1;
+			end &= sizeof(rx_buffer)-1;
 		}
 	}
 	
