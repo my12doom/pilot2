@@ -10,6 +10,7 @@ namespace STM32F0
 	{
 		RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA,ENABLE);
 		RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB,ENABLE);
+		RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC,ENABLE);
 		this->GPIOx = GPIOx;
 		this->GPIO_Pin    = GPIO_Pin;
 	}
