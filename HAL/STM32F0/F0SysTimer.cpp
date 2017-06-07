@@ -5,44 +5,53 @@
 namespace STM32F0 
 {
 	int64_t base = 0;
-	int reload;
 	
-	static int cycle_per_us = -1;
-	extern "C" void SysTick_Handler()
+	extern "C" void TIM6_DAC_IRQHandler()
 	{
-		base += reload;
+		TIM_ClearITPendingBit(TIM6 , TIM_FLAG_Update);
+		base += 0x10000;
 	}
 	
 	F0SysTimer::F0SysTimer()
 	{
-		reload = 0x80000;		// ~ 10ms reload period
-		SysTick_Config(reload);
-		NVIC_SetPriority(SysTick_IRQn, 0x0);
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6,ENABLE);
+
+		NVIC_InitTypeDef NVIC_InitStructure;
+		NVIC_InitStructure.NVIC_IRQChannel = TIM6_DAC_IRQn;
+		NVIC_InitStructure.NVIC_IRQChannelPriority = 0;
+		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+		NVIC_Init(&NVIC_InitStructure);
 		
+		TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+		TIM_DeInit(TIM6);
+		TIM_InternalClockConfig(TIM6);
 		SystemCoreClockUpdate();
-		cycle_per_us = SystemCoreClock / 1000000;
+		TIM_TimeBaseStructure.TIM_Prescaler= SystemCoreClock / 1000000-1;
+		TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
+		TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
+		TIM_TimeBaseStructure.TIM_Period=0xffff;
+		TIM_TimeBaseStructure.TIM_RepetitionCounter = 0x0;
+		TIM_TimeBaseInit(TIM6,&TIM_TimeBaseStructure);
+		TIM_ClearFlag(TIM6,TIM_FLAG_Update);
+		TIM_ARRPreloadConfig(TIM6,DISABLE);
+		TIM_ITConfig(TIM6,TIM_IT_Update,ENABLE);
+		TIM_Cmd(TIM6,ENABLE);
 	}
 	
 	
 	int64_t F0SysTimer::gettime()		// micro-second
 	{
-		volatile int tick1 = SysTick->VAL;
+		volatile int tick1 = TIM6->CNT;
 		volatile int64_t tick_base1 = base;
-		volatile int tick2 = SysTick->VAL;
+		volatile int tick2 = TIM6->CNT;
 		__DSB();
 		__ISB();
 		volatile int64_t tick_base2 = base;
-
-		
-		tick1 = reload - tick1;
-		tick2 = reload - tick2;
-		
+				
 		if (tick2 < tick1)
-			return (tick_base2 + tick2) / (cycle_per_us);
+			return (tick_base2 + tick2);
 		else
-			return (tick_base1 + tick1) / (cycle_per_us);
-		
-		return 0;
+			return (tick_base1 + tick1);
 	}
 	
 	void F0SysTimer::delayms(int ms)
@@ -52,37 +61,20 @@ namespace STM32F0
 	
 	void F0SysTimer::delayus(int us)
 	{
-		#ifdef __OPTIMIZE__
-		static const int overhead = 34;
-		#else
-		static const int overhead = 35;
-		#endif
-		
-		
-		volatile int start = reload - SysTick->VAL;
-		
-		if (cycle_per_us < 0)
+		volatile int start = TIM6->CNT;
+				
+		if (us < 30000)
 		{
-			SystemCoreClockUpdate();
-			cycle_per_us = SystemCoreClock / 1000000;
-		}
-		
-		if (us < overhead)
-			us = 0;
-		else
-			us -= overhead;
-		if (us < 9000)	// ~ 9ms
-		{
-			volatile int target = int(start + us * cycle_per_us) & 0x7ffff;
+			volatile int target = int(start + us) & 0xffff;
 
 			if (start <= target)
 			{
-				while((reload - SysTick->VAL) < target && (reload - SysTick->VAL) >= start)
+				while((TIM6->CNT) < target && (TIM6->CNT) >= start)
 					;
 			}
 			else
 			{
-				while((reload - SysTick->VAL) >= start || (reload - SysTick->VAL) < target)
+				while((TIM6->CNT) >= start || (TIM6->CNT) < target)
 					;
 			}
 		}

@@ -25,11 +25,6 @@ extern "C" void TIM3_IRQHandler()
 		timer_table[2]->call_callback();
 }
 */
-extern "C" void TIM6_DAC_IRQHandler()
-{
-	if (timer_table[3])
-		timer_table[3]->call_callback();
-}
 
 extern "C" void TIM14_IRQHandler()
 {
@@ -98,17 +93,6 @@ namespace STM32F0
 			NVIC_Init(&NVIC_InitStructure);
 			
 			timer_table[2] = this;
-		}
-		else if(TIM6==TIMx)
-		{
-			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6,ENABLE);
-			
-			NVIC_InitStructure.NVIC_IRQChannel = TIM6_DAC_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPriority = 3;
-			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-			NVIC_Init(&NVIC_InitStructure);
-			
-			timer_table[3] = this;
 		}
 		else if(TIM14==TIMx)
 		{
