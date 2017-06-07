@@ -215,7 +215,21 @@ int binding_loop()
 	
 	return 0;
 }
-
+int carrier_test()
+{
+	ce->write(false);
+	nrf.rf_off();
+	systimer->delayms(2);
+	nrf.write_reg(RF_SETUP, 0x96);
+	nrf.write_reg(RF_CH, 0);
+	nrf.rf_on(false);
+	ce->write(true);
+	
+	while(1)
+	{
+	}
+	return 0;
+}
 
 int main()
 {
@@ -225,7 +239,7 @@ int main()
 	dbg->write(true);
 	dbg2->write(true);
 	dbg->set_mode(MODE_OUT_OpenDrain);
-	dbg2->set_mode(MODE_OUT_OpenDrain);
+	dbg2->set_mode(MODE_OUT_OpenDrain);	
 	
 	
 	I2C_SW i2c(SCL, SDA);
@@ -237,6 +251,7 @@ int main()
 	
 	while(nrf.init(spi, cs, ce) != 0)
 		;
+	//carrier_test();
 	oled.show_str(0, 0, "binding ...");
 	binding_loop();
 	uint64_t key4[4] = {seed, seed, seed, seed};

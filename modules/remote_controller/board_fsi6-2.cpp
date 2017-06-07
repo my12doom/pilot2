@@ -266,7 +266,8 @@ void button_timer_entry(void *p)
 
 F1Interrupt button_int;
 uint8_t reg08;
-	uint8_t reg[10];
+uint8_t reg[10];
+int cat();
 int board_init()
 {
 	sheet1_init();
@@ -292,10 +293,14 @@ int board_init()
 	/*
 	i2c.read_reg(0x6b<<1, 8, &reg08);
 	*/
+	//i2c.write_reg(0x6b<<1, 1, 0x80);		// reset registers
+	//systimer->delayms(10);
 	i2c.write_reg(0x6b<<1, 5, 0x8C);		// disable i2c watchdog
 	i2c.write_reg(0x6b<<1, 3, 0x10);		// 256mA pre-charge, 128mA termination
 	i2c.write_reg(0x6b<<1, 2, 0xA0);		// 2.5A charge
 	i2c.write_reg(0x6b<<1, 0, 0x07);		// allow charger to pull vbus down to 3.88V, 3A max input
+	i2c.write_reg(0x6b<<1, 1, 0x1B);		// default value, 3.5V minimum system voltage, charge enable.
+	i2c.write_reg(0x6b<<1, 7, 0x4B);		// default value
 	
 	for(int i=0; i<10; )
 	{
@@ -344,9 +349,11 @@ int board_init()
 			::dbg->write(systimer->gettime() % 200000 < 100000);
 			if (systimer->gettime() > last_charging_or_click + 5000000)
 				shutdown();
-		}
-		
+		}		
 	}
+	::dbg->write(true);
+	::dbg2->write(true);
+	//cat();
 	
 	return 0;	
 }
