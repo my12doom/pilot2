@@ -4,14 +4,20 @@
 #include <stm32f0xx_rcc.h>
 #include <stm32f0xx_tim.h>
 #include <HAL/Interface/ISysTimer.h>
+#include <HAL/STM32F0/F0GPIO.h>
+
+using namespace STM32F0;
+using namespace HAL;
 
 static uint8_t data[2] = {0xff};
+F0GPIO beep_en(GPIOC, GPIO_Pin_15);
 	
 int dac_run(const void *data, int data_point_count, int data_type);
-int dac_config();
-	
+
 int dac_config()
-{	
+{
+	//beep_en.set_mode(MODE_OUT_PushPull);
+	//beep_en.write(false);
  	RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
   	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
   	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA,ENABLE);
