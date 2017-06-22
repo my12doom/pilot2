@@ -10,12 +10,13 @@
 #include <stm32f10x.h>
 #include <string.h>
 
-#include "PPMOUT_f1.h"
+#include "BrushedOut.h"
 
 using namespace STM32F1;
 using namespace HAL;
 
 int16_t adc_data[6] = {0};
+
 
 F1GPIO _cs(GPIOB, GPIO_Pin_12);
 F1GPIO _ce(GPIOB, GPIO_Pin_3);
@@ -33,11 +34,6 @@ F1Timer _timer(TIM2);
 
 STM32F1::F1UART f1uart(USART1);	
 
-	
-extern "C" void TIM2_IRQHandler(void)
-{
-	_timer.call_callback();
-}
 
 int board_init()
 {
@@ -45,7 +41,6 @@ int board_init()
 	
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);		
-	
 	cs = &_cs;
 	ce = &_ce;
 	irq = &_irq;
@@ -56,28 +51,30 @@ int board_init()
 	spi = &_spi;
 	interrupt = &_interrupt;
 	timer = &_timer;
-	
 	//
 	
 	_spi.init(SPI2);
 	_interrupt.init(GPIOA, GPIO_Pin_15, interrupt_falling);
-	
 	NVIC_InitTypeDef NVIC_InitStructure;
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);	
-	
+	NVIC_Init(&NVIC_InitStructure);
+			
 
-	static PPMOUT ppmout;
-	ppm = &ppmout;
+	static BrushedOut ppmout;
+	::ppm = &ppmout;
 	uart = &f1uart;
-		
+	
 	return 0;
 }
 
 
+extern "C" void TIM2_IRQHandler(void)
+{
+	_timer.call_callback();
+}
 
 void read_channels(int16_t *channel, int max_channel_count)
 {

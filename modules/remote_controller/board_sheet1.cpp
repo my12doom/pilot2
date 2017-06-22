@@ -8,60 +8,39 @@
 using namespace STM32F4;
 using namespace HAL;
 
-HAL::ISPI *spi;
-HAL::IGPIO *cs;
-HAL::IGPIO *ce;
-HAL::IGPIO *irq;
-HAL::IGPIO *dbg;
-HAL::IGPIO *dbg2;
-HAL::IGPIO *SCL;
-HAL::IGPIO *SDA;
-HAL::IInterrupt *interrupt;
-HAL::ITimer *timer;
-
-namespace sheet1
-{
-	F4GPIO cs(GPIOC, GPIO_Pin_3);
-	F4GPIO ce(GPIOC, GPIO_Pin_2);
-	F4GPIO irq(GPIOA, GPIO_Pin_15);
-	F4GPIO dbg(GPIOC, GPIO_Pin_4);
-	F4GPIO dbg2(GPIOC, GPIO_Pin_5);
-	F4GPIO SCL(GPIOC, GPIO_Pin_13);
-	F4GPIO SDA(GPIOC, GPIO_Pin_14);
-	F4SPI spi;
-	F4Interrupt interrupt;
-	F4Timer timer(TIM2);
-	
-	int sheet1_init()
-	{		
-		NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-		
-		::cs = &cs;
-		::ce = &ce;
-		::irq = &irq;
-		::dbg = &dbg;
-		::dbg2 = &dbg2;
-		::SCL = &SCL;
-		::SDA = &SDA;
-		::spi = &spi;
-		::interrupt = &interrupt;
-		::timer = &timer;		
-		
-		spi.init(SPI1);		
-		interrupt.init(GPIOA, GPIO_Pin_15, interrupt_falling);
-		
-		return 0;
-	}
-	
-	extern "C" void TIM2_IRQHandler(void)
-	{
-		timer.call_callback();
-	}
-}
-
-using namespace sheet1;
+F4GPIO _cs(GPIOC, GPIO_Pin_3);
+F4GPIO _ce(GPIOC, GPIO_Pin_2);
+F4GPIO _irq(GPIOA, GPIO_Pin_15);
+F4GPIO _dbg(GPIOC, GPIO_Pin_4);
+F4GPIO _dbg2(GPIOC, GPIO_Pin_5);
+F4GPIO _SCL(GPIOC, GPIO_Pin_13);
+F4GPIO _SDA(GPIOC, GPIO_Pin_14);
+F4SPI _spi;
+F4Interrupt _interrupt;
+F4Timer _timer(TIM2);
 
 int board_init()
+{		
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
+	
+	cs = &_cs;
+	ce = &_ce;
+	irq = &_irq;
+	dbg = &_dbg;
+	dbg2 = &_dbg2;
+	SCL = &_SCL;
+	SDA = &_SDA;
+	spi = &_spi;
+	interrupt = &_interrupt;
+	timer = &_timer;		
+	
+	_spi.init(SPI1);		
+	_interrupt.init(GPIOA, GPIO_Pin_15, interrupt_falling);
+	
+	return 0;
+}
+
+extern "C" void TIM2_IRQHandler(void)
 {
-	return sheet1_init();
+	_timer.call_callback();
 }

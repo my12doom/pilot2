@@ -23,10 +23,6 @@ uint16_t hoop_interval = 1000;
 int64_t ts;
 int dt;
 AESCryptor2 aes;
-HAL::IGPIO *bind_button = NULL;
-HAL::IRCOUT *ppm = NULL;
-HAL::IUART *uart = NULL;
-HAL::IGPIO *vibrator = NULL;
 
 uint32_t pos2rando(int pos)
 {
@@ -50,8 +46,7 @@ void timer_entry(void *p)
 	*(uint16_t*)data = hoop_id;	
 	int channel = ((pos2rando(hoop_id) & 0xffff) * 100) >> 16;
 	hoop_id ++;
-	
-	//channel = 85;
+	//channel = 0;
 	
 	read_channels((int16_t*)(data+2), 6);
 	
@@ -192,8 +187,8 @@ int main()
 	}
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;	
 	
-	if (seed == 0x1234567890345678)
-		binding_loop();
+	//if (seed == 0x1234567890345678)
+	//	binding_loop();
 	tx_on();	
 	
 	bool last_bind_button = false;

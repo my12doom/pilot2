@@ -32,10 +32,6 @@ int maxmiss = 0;
 bool ignore_first_packet = true;
 int64_t last_valid_packet = -1000000;
 uint16_t hoop_interval = 1000;
-HAL::IRCOUT *ppm = NULL;
-HAL::IUART *uart = NULL;
-HAL::IGPIO *bind_button = NULL;
-HAL::IGPIO *vibrator = NULL;
 
 uint32_t pos2rando(int pos)
 {
@@ -241,18 +237,20 @@ int main()
 	dbg->set_mode(MODE_OUT_OpenDrain);
 	dbg2->set_mode(MODE_OUT_OpenDrain);	
 	
-	
-	I2C_SW i2c(SCL, SDA);
-	oled.init(&i2c, 0x78);
-	
-	oled.show_str(0, 0, "init NRF...");
+	if (SCL && SDA)
+	{
+		I2C_SW i2c(SCL, SDA);
+		oled.init(&i2c, 0x78);	
+		oled.show_str(0, 0, "init NRF...");
+	}
 	
 	irq->set_mode(MODE_IN);
 	
 	while(nrf.init(spi, cs, ce) != 0)
 		;
 	//carrier_test();
-	oled.show_str(0, 0, "binding ...");
+	if (SCL && SDA)
+		oled.show_str(0, 0, "binding ...");
 	binding_loop();
 	uint64_t key4[4] = {seed, seed, seed, seed};
 	aes.set_key((uint8_t*)key4, 256);
@@ -290,7 +288,7 @@ int main()
 			{
 				last_out = systimer->gettime();
 				
-				if (miss > 200 || systimer->gettime() > last_valid_packet + 500000)
+				if (miss > 2000 || systimer->gettime() > last_valid_packet + 500000)
 					data[2] = 800;
 				ppm->write(data, 6, 0);
 				
@@ -313,21 +311,25 @@ int main()
 			continue;
 		}
 		
-		char tmp[100];
-		sprintf(tmp, "%dp, pos=%d    ", o, *(uint16_t*)valid_data);
-		oled.show_str(0, 0, tmp);
-		sprintf(tmp, "rdp=%d,%dp/s, %dms    ", rdp, lp, maxmiss * hoop_interval / 1000);
-		oled.show_str(0, 1, tmp);
+		if (SCL&&SDA)
+		{
+			char tmp[100];
+			sprintf(tmp, "%dp, pos=%d    ", o, *(uint16_t*)valid_data);
+			oled.show_str(0, 0, tmp);
+			sprintf(tmp, "rdp=%d,%dp/s, %dms    ", rdp, lp, maxmiss * hoop_interval / 1000);
+			oled.show_str(0, 1, tmp);
+			
+			int64_t current = systimer->gettime();
+			
+			int16_t *channel = (int16_t *)(valid_data+2);
+			
+			sprintf(tmp, "%04d,%04d,%04d ", channel[0], channel[1], channel[2]);
+			oled.show_str(0, 2, tmp);
+			sprintf(tmp, "%04d,%04d,%04d ", channel[3], channel[4], channel[5]);
+			oled.show_str(0, 3, tmp);
+		}
 		
 		int64_t current = systimer->gettime();
-		
-		int16_t *channel = (int16_t *)(valid_data+2);
-		
-		sprintf(tmp, "%04d,%04d,%04d ", channel[0], channel[1], channel[2]);
-		oled.show_str(0, 2, tmp);
-		sprintf(tmp, "%04d,%04d,%04d ", channel[3], channel[4], channel[5]);
-		oled.show_str(0, 3, tmp);
-		
 		if (current - t > 1000000)
 		{
 			t = current;

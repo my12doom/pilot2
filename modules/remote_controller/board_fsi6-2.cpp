@@ -13,41 +13,26 @@
 using namespace STM32F1;
 using namespace HAL;
 
-HAL::ISPI *spi;
-HAL::IGPIO *cs;
-HAL::IGPIO *ce;
-HAL::IGPIO *irq;
-HAL::IGPIO *dbg;
-HAL::IGPIO *dbg2;
-HAL::IGPIO *SCL;
-HAL::IGPIO *SDA;
-HAL::IInterrupt *interrupt;
-HAL::ITimer *timer;
-
 F1GPIO qon(GPIOB, GPIO_Pin_2);
 F1Timer button_timer(TIM4);
 int16_t adc_data[6] = {0};
 
 F1GPIO vib(GPIOA, GPIO_Pin_10);
 
-namespace sheet1
-{
-	F1GPIO cs(GPIOA, GPIO_Pin_11);
-	F1GPIO ce(GPIOA, GPIO_Pin_12);
-	F1GPIO irq(GPIOB, GPIO_Pin_12);
-	F1GPIO dbg(GPIOB, GPIO_Pin_10);
+	F1GPIO _cs(GPIOA, GPIO_Pin_11);
+	F1GPIO _ce(GPIOA, GPIO_Pin_12);
+	F1GPIO _irq(GPIOB, GPIO_Pin_12);
+	F1GPIO _dbg(GPIOB, GPIO_Pin_10);
 	
-	F1GPIO dbg2(GPIOB, GPIO_Pin_11);
-	F1GPIO SCL(GPIOC, GPIO_Pin_13);
-	F1GPIO SDA(GPIOC, GPIO_Pin_14);
+	F1GPIO _dbg2(GPIOB, GPIO_Pin_11);
+	F1GPIO _SCL(GPIOC, GPIO_Pin_13);
+	F1GPIO _SDA(GPIOC, GPIO_Pin_14);
 	
-	F1SPI spi;
-	F1Interrupt interrupt;
-	F1Timer timer(TIM2);
+	F1SPI _spi;
+	F1Interrupt _interrupt;
+	F1Timer _timer(TIM2);
 	
-	F1GPIO pa6(GPIOA, GPIO_Pin_6);
-
-	
+	F1GPIO pa6(GPIOA, GPIO_Pin_6);	
 	
 	static void ADC1_Mode_Config(void)
 	{
@@ -96,9 +81,7 @@ namespace sheet1
 		ADC_InitStructure.ADC_NbrOfChannel = 6;	 	//要转换的通道数目1
 		ADC_Init(ADC1, &ADC_InitStructure);
 		
-		/*配置ADC时钟，为PCLK2的8分频，即9Hz*/
 		RCC_ADCCLKConfig(RCC_PCLK2_Div8); 
-		/*配置ADC1的通道11为55.	5个采样周期，序列为1 */ 
 
 // channel map:
 // PA0		throttle
@@ -121,58 +104,22 @@ namespace sheet1
 		/* Enable ADC1 */
 		ADC_Cmd(ADC1, ENABLE);
 		
-		/*复位校准寄存器 */   
 		ADC_ResetCalibration(ADC1);
-		/*等待校准寄存器复位完成 */
 		while(ADC_GetResetCalibrationStatus(ADC1));
-		
-		/* ADC校准 */
 		ADC_StartCalibration(ADC1);
-		/* 等待校准完成*/
 		while(ADC_GetCalibrationStatus(ADC1));
-		
-		/* 由于没有采用外部触发，所以使用软件触发ADC转换 */ 
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-	}
-
-	int sheet1_init()
-	{
-		NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-		
-		::cs = &cs;
-		::ce = &ce;
-		::irq = &irq;
-		::dbg = &dbg;
-		::dbg2 = &dbg2;
-		::SCL = &SCL;
-		::SDA = &SDA;
-		::spi = &spi;
-		::interrupt = &interrupt;
-		::timer = &timer;
-		::bind_button = &qon;
-		qon.set_mode(MODE_IN);
-		
-		spi.init(SPI2);
-		interrupt.init(GPIOB, GPIO_Pin_12, interrupt_falling);
-		
-		pa6.set_mode(MODE_IN);
-		
-		ADC1_Mode_Config();
-		
-		return 0;
 	}
 
 	
 	extern "C" void TIM2_IRQHandler(void)
 	{
-		timer.call_callback();
+		_timer.call_callback();
 	}
 	extern "C" void TIM4_IRQHandler(void)
 	{
 		button_timer.call_callback();
-	}}
-
-using namespace sheet1;
+	}
 
 I2C_SW i2c;
 
@@ -269,8 +216,30 @@ uint8_t reg08;
 uint8_t reg[10];
 int cat();
 int board_init()
-{
-	sheet1_init();
+{	
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
+	
+	::cs = &_cs;
+	::ce = &_ce;
+	::irq = &_irq;
+	::dbg = &_dbg;
+	::dbg2 = &_dbg2;
+	::SCL = &_SCL;
+	::SDA = &_SDA;
+	::spi = &_spi;
+	::interrupt = &_interrupt;
+	::timer = &_timer;
+	::bind_button = &qon;
+	qon.set_mode(MODE_IN);
+	
+	_spi.init(SPI2);
+	_interrupt.init(GPIOB, GPIO_Pin_12, interrupt_falling);
+	
+	pa6.set_mode(MODE_IN);
+	
+	ADC1_Mode_Config();
+	
+	
 	vib.write(false);
 	vib.set_mode(MODE_OUT_PushPull);
 	button_int.init(GPIOB, GPIO_Pin_2, interrupt_rising_or_falling);

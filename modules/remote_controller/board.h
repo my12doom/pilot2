@@ -5,6 +5,7 @@
 #include <HAL/Interface/IInterrupt.h>
 #include <HAL/Interface/ITimer.h>
 #include <HAL/Interface/IRCOUT.h>
+#include <HAL/Interface/IUART.h>
 #include <string.h>
 #include <Protocol/crc32.h>
 
@@ -21,6 +22,7 @@ extern HAL::IGPIO *bind_button;
 extern HAL::IGPIO *SCL;
 extern HAL::IGPIO *SDA;
 extern HAL::IRCOUT *ppm;
+extern HAL::IUART *uart;
 extern HAL::IGPIO *vibrator;
 
 int board_init();

@@ -9,17 +9,6 @@
 using namespace STM32F0;
 using namespace HAL;
 
-HAL::ISPI *spi;
-HAL::IGPIO *cs;
-HAL::IGPIO *ce;
-HAL::IGPIO *irq;
-HAL::IGPIO *dbg;
-HAL::IGPIO *dbg2;
-HAL::IGPIO *SCL;
-HAL::IGPIO *SDA;
-HAL::IInterrupt *interrupt;
-HAL::ITimer *timer;
-
 int16_t adc_data[6] = {0};
 namespace sheet1
 {

@@ -7,72 +7,92 @@
 #include <HAL/Interface/II2C.h>
 #include <HAL/Interface/ISysTimer.h>
 #include <string.h>
+#include "DAC_F0.h"
 
 using namespace STM32F0;
 using namespace HAL;
 
-HAL::ISPI *spi;
-HAL::IGPIO *cs;
-HAL::IGPIO *ce;
-HAL::IGPIO *irq;
-HAL::IGPIO *dbg;
-HAL::IGPIO *dbg2;
-HAL::IGPIO *SCL;
-HAL::IGPIO *SDA;
-HAL::IInterrupt *interrupt;
-HAL::ITimer *timer;
-
 F0GPIO qon(GPIOB, GPIO_Pin_0);
 F0Timer button_timer(TIM16);
-int16_t adc_data[6] = {0};
+int16_t adc_data[7] = {0};
 
 F0GPIO vib(GPIOB, GPIO_Pin_8);
-int dac_config();
 
-namespace sheet1
+F0GPIO _cs(GPIOB, GPIO_Pin_12);
+F0GPIO _ce(GPIOB, GPIO_Pin_11);
+F0GPIO _irq(GPIOC, GPIO_Pin_6);
+F0GPIO _dbg(GPIOC, GPIO_Pin_0);
+F0GPIO _dbg2(GPIOC, GPIO_Pin_1);
+F0GPIO _SCL(GPIOC, GPIO_Pin_13);
+F0GPIO _SDA(GPIOC, GPIO_Pin_14);
+
+F0SPI _spi;
+F0Interrupt _interrupt;
+F0Timer _timer(TIM14);
+
+F0GPIO pa6(GPIOA, GPIO_Pin_6);
+
+static void adc_config(void)
 {
-	F0GPIO cs(GPIOB, GPIO_Pin_12);
-	F0GPIO ce(GPIOB, GPIO_Pin_11);
-	F0GPIO irq(GPIOC, GPIO_Pin_6);
-	F0GPIO dbg(GPIOC, GPIO_Pin_0);
+	ADC_InitTypeDef ADC_InitStructure;
+	GPIO_InitTypeDef GPIO_InitStructure;
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA,ENABLE);
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
 	
-	F0GPIO dbg2(GPIOC, GPIO_Pin_1);
-	F0GPIO SCL(GPIOC, GPIO_Pin_13);
-	F0GPIO SDA(GPIOC, GPIO_Pin_14);
-	
-	F0SPI spi;
-	F0Interrupt interrupt;
-	F0Timer timer(TIM14);
-	
-	F0GPIO pa6(GPIOA, GPIO_Pin_6);
-
-	
-	int sheet1_init()
+	// Configure GPIO0~2 as analog input
+	for(int ADC_Channel=0; ADC_Channel<7; ADC_Channel++)
 	{
-		::cs = &cs;
-		::ce = &ce;
-		::irq = &irq;
-		::dbg = &dbg;
-		::dbg2 = &dbg2;
-		::SCL = &SCL;
-		::SDA = &SDA;
-		::spi = &spi;
-		::interrupt = &interrupt;
-		::timer = &timer;
-		::bind_button = &qon;
-		qon.set_mode(MODE_IN);
-		
-		spi.init(SPI2);
-		interrupt.init(GPIOC, GPIO_Pin_6, interrupt_falling);
-		
-		pa6.set_mode(MODE_IN);
-				
-		return 0;
+		GPIO_InitStructure.GPIO_Pin = 1 << ADC_Channel;
+		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+		GPIO_Init(GPIOA, &GPIO_InitStructure);
 	}
+	
+	DMA_InitTypeDef DMA_InitStructure;
+	DMA_DeInit(DMA1_Channel1);
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);
+	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&adc_data;
+	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
+	DMA_InitStructure.DMA_BufferSize = 7;
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+	DMA_Init(DMA1_Channel1, &DMA_InitStructure);		
+	DMA_Cmd(DMA1_Channel1, ENABLE);
+	
+	// ADC1 configuration
+	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE ;
+	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+	ADC_InitStructure.ADC_ExternalTrigConv = 0;
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_ScanDirection = ADC_ScanDirection_Upward;
+	ADC_Init(ADC1, &ADC_InitStructure);
+	
+	RCC_ADCCLKConfig(RCC_ADCCLK_PCLK_Div4); 
 
+
+	ADC_ChannelConfig(ADC1, ADC_Channel_0, ADC_SampleTime_239_5Cycles);
+	ADC_ChannelConfig(ADC1, ADC_Channel_1, ADC_SampleTime_239_5Cycles);
+	ADC_ChannelConfig(ADC1, ADC_Channel_2, ADC_SampleTime_239_5Cycles);
+	ADC_ChannelConfig(ADC1, ADC_Channel_3, ADC_SampleTime_239_5Cycles);
+	ADC_ChannelConfig(ADC1, ADC_Channel_4, ADC_SampleTime_239_5Cycles);
+	ADC_ChannelConfig(ADC1, ADC_Channel_5, ADC_SampleTime_239_5Cycles);
+	ADC_ChannelConfig(ADC1, ADC_Channel_6, ADC_SampleTime_239_5Cycles);
+	
+	ADC_OverrunModeCmd(ADC1, ENABLE);
+	ADC_GetCalibrationFactor(ADC1);
+	ADC_DMARequestModeConfig(ADC1, ADC_DMAMode_Circular);
+	ADC_DMACmd(ADC1, ENABLE);
+	ADC_Cmd(ADC1, ENABLE);
+	while(ADC_GetFlagStatus(ADC1, ADC_FLAG_ADEN) == RESET);
+	ADC_StartOfConversion(ADC1);
 }
-
-using namespace sheet1;
 
 I2C_SW i2c;
 
@@ -175,7 +195,26 @@ uint8_t reg[10];
 int cat();
 int board_init()
 {
-	sheet1_init();
+	// NRF GPIOs and interrupt 
+	::cs = &_cs;
+	::ce = &_ce;
+	::irq = &_irq;
+	::dbg = &_dbg;
+	::dbg2 = &_dbg2;
+	::SCL = &_SCL;
+	::SDA = &_SDA;
+	::spi = &_spi;
+	::interrupt = &_interrupt;
+	::timer = &_timer;
+	::bind_button = &qon;
+	qon.set_mode(MODE_IN);
+	
+	_spi.init(SPI2);
+	_interrupt.init(GPIOC, GPIO_Pin_6, interrupt_falling);
+	
+	pa6.set_mode(MODE_IN);
+			
+	
 	vib.write(false);
 	vib.set_mode(MODE_OUT_PushPull);
 	button_int.init(GPIOB, GPIO_Pin_0, interrupt_rising_or_falling);
@@ -183,7 +222,7 @@ int board_init()
 	button_int.set_callback(button_entry, NULL);
 	button_timer.set_period(10000);
 	button_timer.set_callback(button_timer_entry, NULL);
-	
+	adc_config();
 	int64_t up = systimer->gettime();
 	qon.set_mode(MODE_IN);
 	::dbg->write(false);
@@ -204,7 +243,7 @@ int board_init()
 	i2c.write_reg(0x6b<<1, 3, 0x10);		// 256mA pre-charge, 128mA termination
 	i2c.write_reg(0x6b<<1, 2, 0xA0);		// 2.5A charge
 	i2c.write_reg(0x6b<<1, 0, 0x07);		// allow charger to pull vbus down to 3.88V, 3A max input
-	i2c.write_reg(0x6b<<1, 1, 0x1B);		// default value, 3.5V minimum system voltage, charge enable.
+	i2c.write_reg(0x6b<<1, 1, 0x3B);		// default value, 3.5V minimum system voltage, charge enable, boost enable.
 	i2c.write_reg(0x6b<<1, 7, 0x4B);		// default value
 	
 	for(int i=0; i<10; )
@@ -258,7 +297,7 @@ int board_init()
 	}
 	::dbg->write(true);
 	::dbg2->write(true);
-	dac_config();
+	dac_config(NULL, false);
 	
 	return 0;	
 }
@@ -267,8 +306,19 @@ int board_init()
 
 void read_channels(int16_t *channel, int max_channel_count)
 {
-	if (max_channel_count > sizeof(adc_data)/2)
-		max_channel_count = sizeof(adc_data)/2;
+	// channel map:
+	// PA0		roll
+	// PA1		throttle
+	// PA2		rudder
+	// PA4		pitch
+	// PB0		center button
+	// PB1		left button
+	// PB2		right button
 	
-	memcpy(channel, adc_data, max_channel_count * 2);	
+	channel[0] = adc_data[0];
+	channel[1] = adc_data[3];
+	channel[2] = adc_data[1] - 300;
+	channel[3] = adc_data[2];
+	channel[4] = 0;
+	channel[5] = 0;
 }
