@@ -182,10 +182,10 @@ void on_long_press(int elapsed)
 		}
 		
 		if (!calling)
-		{
-			int n = elapsed * 4 / 750000;
+		{			
+			int n = (elapsed-250000) * 5 / 500000;
 			if (powerup)
-				n = 3 - n;
+				n = 4 - n;
 			for(int i=0; i<4; i++)
 				power_leds[i].write(i>n);
 		}
