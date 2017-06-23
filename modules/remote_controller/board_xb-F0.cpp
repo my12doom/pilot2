@@ -183,7 +183,7 @@ void on_long_press(int elapsed)
 		
 		if (!calling)
 		{
-			int n = (elapsed - 250000) * 4 / 500000;
+			int n = elapsed * 4 / 750000;
 			if (powerup)
 				n = 3 - n;
 			for(int i=0; i<4; i++)
@@ -213,7 +213,17 @@ int16_t mode = 0;
 void mode_button_entry(void *parameter, int flags)
 {
 	mode = 4095 - mode;
-	state_led[0].write(!mode);
+	if (powerup)
+	{
+		state_led[0].write(!mode);
+		state_led[1].write(false);
+	}
+	else
+	{
+		state_led[0].write(true);
+		state_led[1].write(true);
+		state_led[2].write(true);
+	}
 }
 
 void button_timer_entry(void *p)
@@ -321,8 +331,6 @@ int board_init()
 		state_led[i].set_mode(MODE_OUT_OpenDrain);
 	}
 	
-	state_led[1].write(false);
-	
 	vib.write(false);
 	vib.set_mode(MODE_OUT_PushPull);
 	adc_config();
@@ -406,7 +414,10 @@ int board_init()
 			if (systimer->gettime() > last_click + 5000000 && systimer->gettime() > last_charging + 5000000)
 				shutdown();
 		}
-	}	
+	}
+	state_led[0].write(!mode);
+	state_led[1].write(false);
+
 	::dbg->write(true);
 	::dbg2->write(true);
 	dac_config(NULL, false);
