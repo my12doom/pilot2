@@ -288,7 +288,7 @@ int main()
 			{
 				last_out = systimer->gettime();
 				
-				if (miss > 2000 || systimer->gettime() > last_valid_packet + 500000)
+				if (miss > 2000 || systimer->gettime() > last_valid_packet + 2000000)
 					data[2] = 800;
 				ppm->write(data, 6, 0);
 				

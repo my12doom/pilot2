@@ -15,14 +15,17 @@ using namespace HAL;
 F0GPIO qon(GPIOB, GPIO_Pin_0);
 F0Timer button_timer(TIM16);
 int16_t adc_data[7] = {0};
-
+bool show_charging = false;
+bool flash_battery_led = true;
+bool long_press_ing = false;
+bool calling = false;
 F0GPIO vib(GPIOB, GPIO_Pin_8);
 
 F0GPIO _cs(GPIOB, GPIO_Pin_12);
 F0GPIO _ce(GPIOB, GPIO_Pin_11);
 F0GPIO _irq(GPIOC, GPIO_Pin_6);
-F0GPIO _dbg(GPIOC, GPIO_Pin_0);
-F0GPIO _dbg2(GPIOC, GPIO_Pin_1);
+F0GPIO _dbg(GPIOC, GPIO_Pin_4);		// dummy debug output
+F0GPIO _dbg2(GPIOC, GPIO_Pin_5);	// dummy debug output
 F0GPIO _SCL(GPIOC, GPIO_Pin_13);
 F0GPIO _SDA(GPIOC, GPIO_Pin_14);
 
@@ -30,8 +33,25 @@ F0SPI _spi;
 F0Interrupt _interrupt;
 F0Timer _timer(TIM14);
 
-F0GPIO pa6(GPIOA, GPIO_Pin_6);
+F0GPIO power_leds[4] =
+{
+	F0GPIO(GPIOC, GPIO_Pin_0),
+	F0GPIO(GPIOC, GPIO_Pin_3),
+	F0GPIO(GPIOC, GPIO_Pin_2),
+	F0GPIO(GPIOC, GPIO_Pin_1),
+};
 
+F0GPIO state_led[3] =
+{
+	F0GPIO(GPIOB, GPIO_Pin_6),
+	F0GPIO(GPIOB, GPIO_Pin_5),
+	F0GPIO(GPIOB, GPIO_Pin_4),
+};
+
+int iabs(int a)
+{
+	return a>0 ? a : -a;
+}
 static void adc_config(void)
 {
 	ADC_InitTypeDef ADC_InitStructure;
@@ -112,6 +132,8 @@ void on_key_down()
 void on_key_up()
 {
 	vib.write(false);
+	long_press_ing = false;
+	calling = false;
 }
 
 void shutdown()
@@ -146,10 +168,28 @@ void on_click_and_press()
 	}
 }
 
-void on_long_press()
+void on_long_press(int elapsed)
 {
 	if (systimer->gettime() - last_click < 1200000)
-		on_click_and_press();
+	{
+		if (!calling)
+			long_press_ing = true;
+		if (elapsed > 750000 && !calling)
+		{
+			calling = true;
+			long_press_ing = false;
+			on_click_and_press();
+		}
+		
+		if (!calling)
+		{
+			int n = (elapsed - 250000) * 4 / 500000;
+			if (powerup)
+				n = 3 - n;
+			for(int i=0; i<4; i++)
+				power_leds[i].write(i>n);
+		}
+	}
 }
 
 void button_entry(void *parameter, int flags)
@@ -168,31 +208,90 @@ void button_entry(void *parameter, int flags)
 		}
 	}
 }
+
+int16_t mode = 0;
+void mode_button_entry(void *parameter, int flags)
+{
+	mode = 4095 - mode;
+	state_led[0].write(!mode);
+}
+
 void button_timer_entry(void *p)
 {
 	static int64_t up = systimer->gettime();
-	static bool calling = false;
 	if (!qon.read())
 	{
 		up = systimer->gettime();
-		calling = false;
 	}
-	if (systimer->gettime() > up + 750000 && !calling)
+	if (systimer->gettime() > up + 250000)
 	{
-		calling = true;
-		on_long_press();
+		on_long_press(systimer->gettime() - up);
 	}
 	
 	if (systimer->gettime() > last_key_down + 150000 && qon.read())
 	{
 		vib.write(false);
 	}
+	
+	
+	// power LED: 
+	// note: no division used for M0's sake
+	// <3.30V: 0 led, adc
+	// 3.300V - 3.525V: 1 led, adc > 2048
+	// 3.525V - 3.750V : 2 leds, adc > 2188
+	// 3.750V - 3.965V : 3 leds, adc > 2327
+	// 3.975V - 4.20V : 4 leds, adc > 2467
+	int num_led = 0;
+	int16_t adc = adc_data[6];
+		
+	static int16_t last_used_adc = 0;
+	if (iabs(last_used_adc - adc) < 30)		// a little hysteresis
+		adc = last_used_adc;
+	last_used_adc = adc;
+	if (adc > 2048)
+		num_led = 1;
+	if (adc > 2188)
+		num_led = 2;
+	if (adc > 2327)
+		num_led = 3;
+	if (adc > 2467)
+		num_led = 4;
+	
+	flash_battery_led = systimer->gettime() < last_click + 1000000;
+	
+	if (long_press_ing)
+	{
+		// do nothing, let on_long_press() control leds
+	}
+	
+	else if (show_charging)
+	{
+		int loop_time = (num_led+1)* 200000;
+		int c = (systimer->gettime() % loop_time) * (num_led+1) / loop_time;
+		if (num_led > c)
+			num_led = c;
+		for(int i=1; i<=4; i++)
+		{
+			power_leds[i-1].write(i>num_led);
+		}
+	}
+	
+	else
+	{
+		for(int i=1; i<=4; i++)
+		{
+			if (flash_battery_led && systimer->gettime() %500000 < 250000)
+				power_leds[i-1].write(true);
+			else
+				power_leds[i-1].write(i>num_led);
+		}
+	}
 }
 
 F0Interrupt button_int;
+F0Interrupt mode_button_int;
 uint8_t reg08;
 uint8_t reg[10];
-int cat();
 int board_init()
 {
 	// NRF GPIOs and interrupt 
@@ -208,21 +307,34 @@ int board_init()
 	::timer = &_timer;
 	::bind_button = &qon;
 	qon.set_mode(MODE_IN);
-	
+		
 	_spi.init(SPI2);
 	_interrupt.init(GPIOC, GPIO_Pin_6, interrupt_falling);
+	for(int i=0; i<4; i++)
+	{
+		power_leds[i].write(true);
+		power_leds[i].set_mode(MODE_OUT_OpenDrain);
+	}
+	for(int i=0; i<3; i++)
+	{
+		state_led[i].write(true);
+		state_led[i].set_mode(MODE_OUT_OpenDrain);
+	}
 	
-	pa6.set_mode(MODE_IN);
-			
+	state_led[1].write(false);
 	
 	vib.write(false);
 	vib.set_mode(MODE_OUT_PushPull);
+	adc_config();
 	button_int.init(GPIOB, GPIO_Pin_0, interrupt_rising_or_falling);
 	button_entry(NULL, 0);
 	button_int.set_callback(button_entry, NULL);
 	button_timer.set_period(10000);
 	button_timer.set_callback(button_timer_entry, NULL);
-	adc_config();
+	
+	mode_button_int.init(GPIOB, GPIO_Pin_1, interrupt_rising);
+	mode_button_int.set_callback(mode_button_entry, NULL);
+	
 	int64_t up = systimer->gettime();
 	qon.set_mode(MODE_IN);
 	::dbg->write(false);
@@ -269,32 +381,32 @@ int board_init()
 		::dbg->toggle();
 	}
 	
-	int64_t last_charging_or_click = last_click;
+	int64_t last_charging = -9999999;
 	while(!powerup)
 	{
 		uint8_t reg8;
 		i2c.read_reg(0x6b<<1, 8, &reg8);
 		bool power_good = reg8 & (0x4);
 		bool charging = ((reg8>>4)&0x03) == 0x01 || ((reg8>>4)&0x03) == 0x02;
-		if (last_click > last_charging_or_click)
-			last_charging_or_click = last_click;
 		
 		if (charging)
-			last_charging_or_click = systimer->gettime();
-		if (charging || systimer->gettime() < last_charging_or_click + 500000)
+			last_charging = systimer->gettime();
+		
+		show_charging = systimer->gettime() < last_charging + 500000;
+		if (show_charging || systimer->gettime() < last_click + 500000)
 		{
-			// power good and charging, show battery state, no shutting down.
+			// charging or click not timed out, no shutting down.
 			::dbg->write(true);
-			::dbg2->write(systimer->gettime() % 200000 < 100000);		
+			::dbg2->write(systimer->gettime() % 200000 < 100000);
 		}
-		else 
+		else
 		{
 			::dbg2->write(true);
 			::dbg->write(systimer->gettime() % 200000 < 100000);
-			if (systimer->gettime() > last_charging_or_click + 5000000)
+			if (systimer->gettime() > last_click + 5000000 && systimer->gettime() > last_charging + 5000000)
 				shutdown();
-		}		
-	}
+		}
+	}	
 	::dbg->write(true);
 	::dbg2->write(true);
 	dac_config(NULL, false);
@@ -319,6 +431,6 @@ void read_channels(int16_t *channel, int max_channel_count)
 	channel[1] = adc_data[3];
 	channel[2] = adc_data[1] - 300;
 	channel[3] = adc_data[2];
-	channel[4] = 0;
-	channel[5] = 0;
+	channel[4] = mode;
+	channel[5] = (GPIOB->IDR & GPIO_Pin_2) ? 4095 : 0;
 }
