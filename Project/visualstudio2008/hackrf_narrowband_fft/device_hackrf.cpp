@@ -15,7 +15,7 @@
 
 hackrf_device* device = NULL;
 static int (*rx)(void *buf, int len, int type) = NULL;
-float center_frequency = 2370.0E6;
+float center_frequency = 2410.0E6;
 
 int rx_callback(hackrf_transfer* transfer)
 {
@@ -155,7 +155,7 @@ int start_rx()
 	result |= hackrf_set_amp_enable(device, 1);
 	result |= hackrf_set_sample_rate(device, 20000000);
 	result |= hackrf_set_baseband_filter_bandwidth(device, 25e6);
-	result |= hackrf_set_vga_gain(device, 16); // step: 2db
+	result |= hackrf_set_vga_gain(device, 14); // step: 2db
 	result |= hackrf_set_lna_gain(device, 24); // step: 8db
 	result |= hackrf_set_freq(device, center_frequency);
 

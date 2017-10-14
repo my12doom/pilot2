@@ -81,6 +81,9 @@ start:
 	{
 		Sleep(100);
 		dev_handle = libusb_open_device_with_vid_pid(g_libusb_context, vendor_id, product_id);
+
+		if (!working)
+			return 0;
 	}
 
 	int rslt = libusb_kernel_driver_active(dev_handle, 1);
@@ -98,9 +101,11 @@ start:
 
 	unsigned char data[65536] = {0};
 	int actual_length = 64;
+	int actual_length2 = 64;
 
 	int c = 0;
 	int l = GetTickCount();
+	static int l2 = timeGetTime();
 
 	uint8_t bulk_cmd[1] = {0xE8};
 
@@ -113,6 +118,12 @@ start:
 	while(1)
 	{	
 		int result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, 32768, &actual_length, 16);
+//  		libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, data, actual_length, &actual_length2, 16);
+// 		libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, data, actual_length, &actual_length2, 16);
+
+		int dt = timeGetTime() - l2;
+		l2 = timeGetTime();
+
 
 		if (!working)
 			break;
@@ -135,11 +146,34 @@ start:
 			c = 0;
 		}
 
-		for(int i=0; i<actual_length/2; i++)
-			data16[i] = (data16[i]-2048)*16;
+// 		for(int i=0; i<actual_length/2; i+=2)
+// 		{
+// 			data16[i] = (data16[i]-2048)*16;
+// 			data16[i+1] = (data16[i+1]-2048)*16;
+// 
+// 		}
+// 		if (rx)
+// 			rx(data16, actual_length/2, 1);
+
+		static int tbl[4] = {0,8192,0,-8192};
+		int OSR = 1;
+		for(int i=0; i<actual_length; i+=2*OSR)
+		{
+			int o[2] = {0};
+
+			for(int j=0; j<OSR; j++)
+			{
+				o[0] += (data16[i+j*2]-2048)*16;
+				o[1] += (data16[i+j*2+1]-2048)*16;
+			}
+			data16[i/OSR] = o[0]/OSR;
+			data16[i/OSR+1] = o[1]/OSR;
+// 			data16[i/OSR] = rand() - 16384;
+// 			data16[i/OSR+1] = rand() - 16384;
+		}
 
 		if (rx)
-			rx(data16, actual_length/2, 1);
+			rx(data16, actual_length/2/OSR, 1);
 	}
 
 	libusb_release_interface(dev_handle, 0);

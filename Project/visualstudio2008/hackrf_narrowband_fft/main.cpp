@@ -43,6 +43,8 @@ float log_amp[N];
 _critical_section cs;
 
 FILE * f = fopen("Z:\\log2.pcm", "wb");
+int canvas_width = N;
+int canvas_height;
 
 // len:length in elements
 // type: 0: int8_t, 1:int16_t
@@ -52,8 +54,8 @@ int rx(void *buf, int len, int type)
 		fwrite(buf, 1, len*(1+type), f);
 
 	float dt = N/sample_rate;
-	float alpha_attack = dt / (dt + 1.0f/(2*PI * 1500.0f));
-	float alpha_release = dt / (dt + 1.0f/(2*PI * 0.25f));
+	float alpha_attack = dt / (dt + 1.0f/(1500*PI * 1));
+	float alpha_release = dt / (dt + 1.0f/(0.2*PI * 1));
 
 	__m128 mattack_a = _mm_set1_ps(alpha_attack);
 	__m128 mrelease_a = _mm_set1_ps(alpha_release);
@@ -123,7 +125,7 @@ int rx(void *buf, int len, int type)
 		memcpy(log_amp, log_amp_copy, sizeof(log_amp_copy));
 		for(int i=0; i<N; i++)
 			if (_isnan(log_amp[i]) || i == 0)		// remove DC offset and NANs from log_ps error.
-				log_amp[i] = log_amp[(i+1)%N];
+				log_amp[i] = _isnan(log_amp[(i+1)%N]) ? -999 : log_amp[(i+1)%N];
 		cs.leave();
 	}
 
@@ -132,6 +134,47 @@ int rx(void *buf, int len, int type)
 
 
 RGBQUAD canvas[1024*1024];
+
+int draw_line(int x1, int y1, int x2, int y2, RGBQUAD color)	// draw line in pixel space
+{
+	int dx = x2 - x1;
+	int dy = y2 - y1;
+	int ux = ((dx > 0) << 1) - 1;//x的增量方向，取或-1
+	int uy = ((dy > 0) << 1) - 1;//y的增量方向，取或-1
+	int x = x1, y = y1, eps;//eps为累加误差
+
+	eps = 0;dx = abs(dx); dy = abs(dy); 
+	if (dx > dy) 
+	{
+		for (x = x1; x != x2; x += ux)
+		{
+			if (y>=0 && y<canvas_height && x>=0 && x<canvas_width)
+				canvas[y*canvas_width+x] = color;
+			eps += dy;
+			if ((eps << 1) >= dx)
+			{
+				y += uy;
+				eps -= dx;
+			}
+		}
+	}
+	else
+	{
+		for (y = y1; y != y2; y += uy)
+		{
+			if (y>=0 && y<canvas_height && x>=0 && x<canvas_width)
+				canvas[y*canvas_width+x] = color;
+			eps += dx;
+			if ((eps << 1) >= dy)
+			{
+				x += ux;
+				eps -= dy;
+			}
+		}
+	}
+
+	return 0;
+}
 
 int draw(HWND drawing_hwnd)
 {
@@ -145,8 +188,11 @@ int draw(HWND drawing_hwnd)
 	// draw
 	int width = rect.right - rect.left;
 	int height = rect.bottom - rect.top;
+	canvas_width = width;
+	canvas_height = height;
 	memset(canvas, 0xff, sizeof(canvas));
 	float amp[N];
+	float amp_pixel[2048];
 	cs.enter();
 	memcpy(amp, log_amp, sizeof(log_amp));
 	cs.leave();
@@ -155,7 +201,7 @@ int draw(HWND drawing_hwnd)
 	RGBQUAD light_red = {180,180,255,255};
 
 
-	float range_low = -80;
+	float range_low = -110;
 	float range_high = 0;
 	for(int i=range_low; i<=range_high; i+=10)
 	{
@@ -163,7 +209,6 @@ int draw(HWND drawing_hwnd)
 		for(int j=0; j<width; j++)
 			canvas[y*width+j] = light_red;
 	}
-
 	for(int i=0; i<width; i++)
 	{
 		int n;
@@ -172,19 +217,19 @@ int draw(HWND drawing_hwnd)
 		else
 			n = (i-width/2-1)*(N/2-1)/(width/2-1);	// positive part
 
-		int v = 0;
 		if (amp[n] >= range_low && amp[n] <= range_high)
 		{
-			v = height * (range_high - amp[n]) / (range_high-range_low);
-
+			amp_pixel[i] = height * (range_high - amp[n]) / (range_high-range_low);
 		}
 		else if (amp[n] > range_high)
-			v = 0;
+			amp_pixel[i] = 0;
 		else if (amp[n] < range_low)
-			v = height-1;
+			amp_pixel[i] = height-1;
+	}
 
-		for(int j=v; j<height; j++)
-			canvas[j*width+i] = blue;
+	for(int i=1; i<width; i++)
+	{
+		draw_line(i-1, amp_pixel[i-1], i, amp_pixel[i], blue);
 	}
 
 	SetBitmapBits(bitmap, rect.right * rect.bottom * 4, canvas);

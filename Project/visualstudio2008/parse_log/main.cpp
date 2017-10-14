@@ -10,12 +10,18 @@
 #include <algorithm/EKFINS.h>
 #include <Windows.h>
 #include <math/LowPassFilter2p.h>
+#include <math/median_filter.h>
 #include <math/quaternion.h>
 #include <algorithm/motion_detector.h>
 #include <Algorithm/battery_estimator.h>
+#include <HAL/sensors/PX4flow.h>
+
+using namespace sensors;
 
 #define PI 3.1415926
 math::LowPassFilter2p lpf2p[3];//
+math::LowPassFilter2p lpf_ned[3];
+MedianFilter<7> mf[2];
 
 motion_detector motion_acc;
 motion_detector motion_gyro;
@@ -155,38 +161,16 @@ int test_batt2()
 	return 0;
 }
 
-int test_quaternion()
-{
-	float rpy[3] = {PI, PI/6, PI/6};
-	float q[4];
-	float rp[3];
-
-
-	RPY2Quaternion(rpy, q);
-
-	float y[3];
-	float qrp[4];
-	float qy[4];
-	Quaternion2RPY(q, y);
-	y[0] = y[1] = 0;
-	y[2] = -y[2];
-	RPY2Quaternion(y, qy);
-	quat_mult(qy, q, qrp);
-	memcpy(q, qrp, sizeof(q));
-
-
-	Quaternion2RPY(qrp, rp);
-
-	return 0;
-}
 
 int main(int argc, char* argv[])
 {
-	test_quaternion();
 
 	lpf2p[0].set_cutoff_frequency(1000, 60);
 	lpf2p[1].set_cutoff_frequency(1000, 60);
 	lpf2p[2].set_cutoff_frequency(1000, 60);
+	lpf_ned[0].set_cutoff_frequency(200, 5);
+	lpf_ned[1].set_cutoff_frequency(200, 5);
+	lpf_ned[2].set_cutoff_frequency(200, 5);
 
 	double scaling = (double)1013.26 / 1013.25;
 	double temp = ((float)40) + 273.15f;
@@ -231,6 +215,7 @@ int main(int argc, char* argv[])
 	ppm_data ppm = {0};
 	gps_data gps = {0};
 	devices::gps_data gps_extra = {0};
+	gps_extra.position_accuracy_horizontal = 1000;
 	imu_data imu = {0};
 	sensor_data sensor = {0};
 	quadcopter_data quad = {0};
@@ -239,6 +224,7 @@ int main(int argc, char* argv[])
 	quadcopter_data4 quad4 = {0};
 	quadcopter_data5 quad5 = {0};
 	pilot_data pilot = {0};
+	pilot_data2 pilot2 = {0};
 	bool sensor_valid = false;
 	bool sensor2_valid = false;
 	bool imu_valid = false;
@@ -267,7 +253,8 @@ int main(int argc, char* argv[])
 	float top6_cno = 0;
 	posc_ext_data posc = {0};
 	float batt_state_on[2] = {0};
-
+	float flow_on[3] = {0};
+	float flow_on_mf[3] = {0};
 
 	while (fread(&time, 1, 8, in) == 8)
 	{
@@ -330,6 +317,10 @@ int main(int argc, char* argv[])
 		{
 			memcpy(&pilot, data, sizeof(pilot));
 		}
+		if (tag == TAG_PILOT_DATA2)
+		{
+			memcpy(&pilot2, data, sizeof(pilot));
+		}
 		if (tag == TAG_QUADCOPTER_DATA3)
 		{
 			memcpy(&quad3, data, size);
@@ -346,13 +337,20 @@ int main(int argc, char* argv[])
 		{
 			memcpy(&quad, data, sizeof(quad));
 		}
-		if (tag_ex == TAG_POS_ESTIMATOR2 && size == 48)
+		if (tag_ex == TAG_POS_ESTIMATOR2 && (size == 48 || size == 52) )
 		{
 			memcpy(on_pos2, data, size);
 		}
 		if (tag_ex == TAG_POSC_DATA)
 		{
 			memcpy(&posc, data, size);
+		}
+		if (tag_ex == TAG_FLOW)
+		{
+			memcpy(flow_on, data, size);
+
+			flow_on_mf[0] = mf[0].apply(flow_on[0]);
+			flow_on_mf[1] = mf[1].apply(flow_on[1]);
 		}
 		if (tag_ex == 5)
 		{
@@ -402,6 +400,12 @@ int main(int argc, char* argv[])
 				if (power_id++ % 10 == 0)
 					fprintf(out, "CURR, %d, %d, %f, %f, %f, %f, %f,%d,\r\n", int(time/1000), throttle, sensor.voltage/1000.0f, sensor.current/1000.0f, imu.temperature/1.0f, batt_state_on[0], batt_state_on[1]*1000, pilot.mah_consumed);
 			}
+
+			static int ll = 0;
+			static FILE * bias = fopen("temp-bias.csv", "wb");
+			if (ll ++ % 25 == 0)
+			fprintf(bias, "%f,%f,%f,%f,%f\n", time/1000000.0f, (float)sensor.gyro[0]/100.0f, (float)sensor.gyro[1]/100.0f, 
+				(float)sensor.gyro[2]/100.0f, (sensor.temperature1+10000)/100.0f);
 		}
 		else if (tag == TAG_IMU_DATA)
 		{
@@ -411,9 +415,12 @@ int main(int argc, char* argv[])
 			float dt = (time - last_time)/1000000.0f;
 			last_time = time;
 
+			if (dt > 0.007)
+				printf("dt=%f @ %f\n", dt, time/1000000.0f);
+
 			float acc[3] = {-imu.accel[0]/100.0f, -imu.accel[1]/100.0f, -imu.accel[2]/100.0f};
 			float mag[3] = {-imu.mag[0]/10.0f, -imu.mag[1]/10.0f, imu.mag[2]/10.0f};
-// 			float gyro[3] = {sensor.gyro[0]*PI/18000, sensor.gyro[1]*PI/18000, sensor.gyro[2]*PI/18000};
+ 			float gyro[3] = {sensor.gyro[0]*PI/18000, sensor.gyro[1]*PI/18000, sensor.gyro[2]*PI/18000};
 
 			static FILE * facc = NULL;
 			if (!facc)
@@ -431,7 +438,7 @@ int main(int argc, char* argv[])
 			motion_acc.new_data(va);
 			motion_gyro.new_data(vg);
 
-			bool still = motion_acc.get_average(NULL)>400 && motion_gyro.get_average(NULL)>400;
+			bool still = motion_acc.get_average(NULL)>100 && motion_gyro.get_average(NULL)>100;
 			static bool last_still = false;
 			if (last_still && !still)
 			{
@@ -452,17 +459,22 @@ int main(int argc, char* argv[])
 			float yaw_cf = atan2f(2.f * (q1*q2 + q0*q3), q0*q0 + q1*q1 - q2*q2 - q3*q3);		//! Yaw, 0 = north, PI/-PI = south, PI/2 = east, -PI/2 = west
 			float roll_raw = atan2(-acc[1], -acc[2]) * 180 / 3.14159;
 			float pitch_raw = atan2(acc[0], (-acc[2] > 0 ? 1 : -1) * sqrt(acc[1]*acc[1] + acc[2]*acc[2])) * 180 / 3.14159;
+			float magX = mag[0] * cos(roll_cf) + mag[1] * sin(roll_cf) * sin(pitch_cf) + mag[2] * cos(roll_cf) * sin(pitch_cf);
+
+			float magY = mag[1] * cos(roll_cf) - mag[2] * sin(roll_cf);
+
+			float yaw_raw = atan2f(-magY, magX) * 180 / PI;
 
 			//
 
-			if (time < 9500000)
-				continue;
+// 			if (time < 9500000)
+// 				continue;
 
-			if (time > 215000000)
-			{
-				gyro[0] += 5.5 * PI / 180 * min(time - 215000000, 60000000) / 60000000;
-				acc[2] += 1.5* min(time - 215000000, 60000000) / 60000000;
-			}
+// 			if (time > 215000000)
+// 			{
+// 				gyro[0] += 5.5 * PI / 180 * min(time - 215000000, 60000000) / 60000000;
+// 				acc[2] += 1.5* min(time - 215000000, 60000000) / 60000000;
+// 			}
 
 
 			if (!imu_valid && sensor_valid && sensor2_valid)
@@ -502,7 +514,7 @@ int main(int argc, char* argv[])
 
 				// EKF
 				EKF_U ekf_u;
-				EKF_Mesurement ekf_mesurement;
+				EKF_Mesurement ekf_mesurement = {0};
 
 				ekf_u.accel_x=-acc[0];
 				ekf_u.accel_y=-acc[1];
@@ -568,7 +580,10 @@ int main(int argc, char* argv[])
 				float baro = quad2.altitude_baro_raw/100.0f;
 
 				static int last_state = 0;
-// 				pos2.update(quad5.q, acc, gps_extra2, baro, dt, pilot.fly_mode);
+				sensors::flow_data fdata = {flow_on_mf[0], flow_on_mf[1], flow_on[2]};
+
+				float sonar = quad3.ultrasonic / 1000.0f;
+ 				pos2.update(quad5.q, acc, gps_extra2,fdata, sonar, baro, dt, pilot.fly_mode, true, still);
 				if (last_state != pos2.state())
 				{
 					last_state = pos2.state();
@@ -577,7 +592,7 @@ int main(int argc, char* argv[])
 				}
 
 
-				ins.update(gyro, acc, mag, gps_extra, *(sensors::px4flow_frame*)&frame, baro, dt, ppm.out[0]>=1240, quad2.airborne);
+				//ins.update(gyro, acc, mag, gps_extra, *(sensors::px4flow_frame*)&frame, baro, dt, ppm.out[0]>=1240, quad2.airborne);
 
 				if (time > 12000000)
 				{
@@ -599,8 +614,9 @@ int main(int argc, char* argv[])
 				fprintf(out, "Free RAM: 990\r\n");
 				fprintf(out, "MoMo\r\n");
 				fprintf(out, "FMT, 9, 23, CURR, IhIhh, TimeMS,ThrOut,Volt,Curr,Temp,EstVol,EstRes,mah\r\n");
+				fprintf(out, "FMT, 9, 23, FLOW, Ihhh, TimeMS,flow_x,flow_y,quality\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_OFF_CF, IhIh, TimeMS,Roll,Pitch,Yaw\r\n");
-				fprintf(out, "FMT, 9, 23, ATT_DBG, IhIh, TimeMS,pitch_t,pitch_rate_t,pitch,pitch_rate\r\n");
+				fprintf(out, "FMT, 9, 23, ATT_DBG, IhIh, TimeMS,pitch_t,pitch_rate_t,pitch,pitch_rate,I_pitch\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_ON_CF, IhIh, TimeMS,RollOnCF,PitchOnCF,YawOnCF\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_OFF_EKF, IhIh, TimeMS,Roll_EKF,Pitch_EKF,Yaw_EKF\r\n");
 				fprintf(out, "FMT, 9, 23, COVAR_OFF_EKF, IhIhhhh, TimeMS,q0,q1,q2,q3,PN,PE\r\n");
@@ -610,9 +626,9 @@ int main(int argc, char* argv[])
 
 				fprintf(out, "FMT, 9, 23, ALT, Ihhhhhhh, TimeMS,BARO,ALT_EKF,ALT_ON, ALT_DST,Sonar,DesSonar,CRate,DesCRate\r\n");
 				fprintf(out, "FMT, 9, 23, IMU, Ihhhhhh, TimeMS,ACCX,ACCY,ACCZ,GYROX,GYROY,GYROZ, ACCZ_RAW,ACCZ_FIR\r\n");
-				fprintf(out, "FMT, 9, 23, POS2, Ihhhhhhhhhhhh, TimeMS,POSN,POSE,POSD,VELN,VELE,VELD, abiasx, abiasy, abiasz, vbiasx, vbiasy, vbiasz, sonar_surface, rawn, rawe,flowx,flowy,preX,preY,hx,hy\r\n");
+				fprintf(out, "FMT, 9, 23, POS2, Ihhhhhhhhhhhh, TimeMS,POSN,POSE,POSD,VELN,VELE,VELD, abiasx, abiasy, abiasz, vbiasx, vbiasy, vbiasz, sonar_surface, rawn, rawe,flowx,flowy,preX,preY,hx,hy,hz\r\n");
 				fprintf(out, "FMT, 9, 23, ON_POS2, Ihhhhhhhhhhhh, TimeMS,POSN,POSE,POSD,VELN,VELE,VELD, abiasx, abiasy, abiasz, vbiasx, vbiasy, vbiasz, rawn, rawe\r\n");
-				fprintf(out, "FMT, 9, 23, ACC_NED, Ihhh, TimeMS,ACC_N, ACC_E, ACC_D, ACC_TOTAL\r\n");
+				fprintf(out, "FMT, 9, 23, ACC_NED, Ihhh, TimeMS,ACC_N, ACC_E, ACC_D, ACC_TOTAL, ACC_N_LPF, ACC_E_LPF, ACC_D_LPF\r\n");
 				fprintf(out, "FMT, 9, 23, AHRS_SEKF, Ihhh, TimeMS,ahrs_roll, ahrs_pitch, ahrs_yaw, ahrs_gyro_bias[0], ahrs_gyro_bias[1], ahrs_gyro_bias[2]\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_OFF_INS, Ihhh, TimeMS,ins_roll, ins_pitch, ins_yaw, ins_gyro_bias[0], ins_gyro_bias[1], ins_gyro_bias[2], ins_acc_bias[0], ins_acc_bias[1], ins_acc_bias[2], ins_n, ins_e, ine_d, ins_vn, ins_ve, inv_vd, ins_vbn, ins_vbe, ins_vbd\r\n");
 				fprintf(out, "FMT, 9, 23, ATT_RAW, Ihhh, TimeMS, roll_raw, pitch_raw, yaw_raw\r\n");
@@ -633,9 +649,12 @@ int main(int argc, char* argv[])
 
 			if (frame.ground_distance)
 				last_valid_sonar = frame.ground_distance /1000.0f * 1.15f;
+			float acc_ned_lpf[3];
+			for(int i=0; i<3; i++)
+				acc_ned_lpf[i] = lpf_ned[i].apply(pos2.acc_ned[i]);
 
 			static int att_id = 0;
-			if (att_id++ % 25 == 0 && imu_valid && sensor_valid && gps_valid)
+			if (att_id++ % 5 == 0 && imu_valid && sensor_valid && gps_valid)
 			{
 				float euler_sekf[3];
 				ahrs.get_euler(euler_sekf);
@@ -644,7 +663,7 @@ int main(int argc, char* argv[])
 				ins.get_euler(euler_ins);
 				fprintf(out, "ATT_OFF_INS, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f\r\n", int(time/1000), euler_ins[0] * 180 / PI, euler_ins[1] * 180 / PI, euler_ins[2] * 180 / PI,
 					-ins.x[4] * 180 / PI, -ins.x[5] * 180 / PI, -ins.x[6] * 180 / PI, ins.x[13], ins.x[14], ins.x[15], ins.x[7], ins.x[8], ins.x[9], ins.x[10], ins.x[11], ins.x[12], ins.x[16], ins.x[17], ins.x[18]);
-				fprintf(out, "ATT_RAW, %d, %f, %f, %f\r\n", int(time/1000), roll_raw, pitch_raw, 0);
+				fprintf(out, "ATT_RAW, %d, %f, %f, %f\r\n", int(time/1000), roll_raw, pitch_raw, yaw_raw);
 				float plen = 0;
 				float pmax = 0;
 				for(int i=0; i<ahrs.P.m; i++)
@@ -654,6 +673,7 @@ int main(int argc, char* argv[])
 				}
 				plen = sqrt(plen);
 				pmax = sqrt(pmax);
+
 
 
 				fprintf(out, "P, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), sqrt(ahrs.P[0*8]), sqrt(ahrs.P[1*8]), sqrt(ahrs.P[2*8]), sqrt(ahrs.P[3*8]), sqrt(ahrs.P[4*8]), sqrt(ahrs.P[5*8]), sqrt(ahrs.P[6*8]), pmax, plen);
@@ -667,10 +687,9 @@ int main(int argc, char* argv[])
 					fprintf(out,",%f", sqrt(ekf_est.P[14*i]));
 				fprintf(out, "\r\n");
 
-				ekf_est.ekf_result.roll;
 				fprintf(out, "ATT_ON, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), quad.angle_pos[0]/100.0f, quad.angle_pos[1]/100.0f, quad.angle_pos[2]/100.0f, quad.angle_target[0]/100.0f, quad.angle_target[1]/100.0f, quad.angle_target[2]/100.0f, quad.speed[0]/100.0f, quad.speed[1]/100.0f, quad.speed[2]/100.0f, quad.speed_target[0]/100.0f, quad.speed_target[1]/100.0f, quad.speed_target[2]/100.0f);
 				fprintf(out, "ATT_OFF_CF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), euler[0] * 180 / PI, euler[1] * 180 / PI, euler[2] * 180 / PI, 0, 0);
-				fprintf(out, "ATT_DBG, %d, %f, %f, %f, %f, %d\r\n", int(time/1000), att_dbg[0] * 180 / PI, att_dbg[1] * 180 / PI, att_dbg[2] * 180 / PI, att_dbg[3]*180/PI, 0);
+				fprintf(out, "ATT_DBG, %d, %f, %f, %f, %f, %f\r\n", int(time/1000), att_dbg[0] * 180 / PI, att_dbg[1] * 180 / PI, att_dbg[2] * 180 / PI, att_dbg[3]*180/PI, pilot2.I[1]*PI/18000);
 				fprintf(out, "ATT_ON_CF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), roll_cf * 180 / PI, pitch_cf * 180 / PI, yaw_cf * 180 / PI, 0, 0);
 				fprintf(out, "ATT_OFF_EKF, %d, %f, %f, %f, %d, %d\r\n", int(time/1000), ekf_est.ekf_result.roll * 180 / PI, ekf_est.ekf_result.pitch * 180 / PI, ekf_est.ekf_result.yaw * 180 / PI, 0, 0);
 
@@ -680,20 +699,22 @@ int main(int argc, char* argv[])
 				{
 					fprintf(out, "POSITION, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, %d\r\n", int(time/1000), lat_meter, lon_meter, ekf_est.ekf_result.Pos_x, ekf_est.ekf_result.Pos_y, ekf_est.ekf_result.Vel_y, speed_east, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps.DOP[1]/100.0f, 0, 0);
 					fprintf(out, "ALT, %d, %f, %f, %f, %f,%f,%f,%f,%f\r\n", int(time/1000), quad2.altitude_baro_raw/100.0f, ekf_est.ekf_result.Pos_z, quad2.altitude_kalman/100.0f, quad3.altitude_target/100.0f, quad3.ultrasonic/1000.0f, quad4.sonar_target/100.0f, quad2.climb_rate_kalman/100.0f, quad3.climb_target/100.0f);
-					fprintf(out, "POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f, %f, %f,%f,%f,%f,%f,%f\r\n", int(time/1000), pos2.x[0], pos2.x[1], pos2.x[2], pos2.x[3], pos2.x[4], pos2.x[5], pos2.x[6], pos2.x[7], pos2.x[8], pos2.x[9], pos2.x[10], pos2.x[11], pos2.x[12], pos2.gps_north, pos2.gps_east, pos2.vx, pos2.vy, pos2.predict_flow[0], pos2.predict_flow[1], (float)frame.pixel_flow_x_sum, (float)frame.pixel_flow_y_sum);
+					fprintf(out, "POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f, %f, %f,%f,%f,%f,%f,%f,%f\r\n", int(time/1000), pos2.x[0], pos2.x[1], pos2.x[2], pos2.x[3], pos2.x[4], pos2.x[5], pos2.x[6], pos2.x[7], pos2.x[8], pos2.x[9], pos2.x[10], pos2.x[11], pos2.x[12], pos2.gps_north, pos2.gps_east, pos2.vx, pos2.vy, pos2.predict_flow[0], pos2.predict_flow[1], (float)pos2.local[0], (float)pos2.local[1], (float)pos2.local[2]);
 					fprintf(out, "POS2_P, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\r\n", int(time/1000), float(pos2.P[0*14]), float(pos2.P[1*14]), float(pos2.P[2*14]), float(pos2.P[3*14]), float(pos2.P[4*14]), float(pos2.P[5*14]), float(pos2.P[6*14]), float(pos2.P[7*14]), float(pos2.P[8*14]), float(pos2.P[9*14]), float(pos2.P[10*14]), float(pos2.P[11*14]), float(pos2.P[12*14]));
 					fprintf(out, "ON_POS2, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f,%f,%f\r\n", int(time/1000), on_pos2[0], on_pos2[1], on_pos2[2], on_pos2[3], on_pos2[4], on_pos2[5], on_pos2[6], on_pos2[7], on_pos2[8], on_pos2[9], on_pos2[10], on_pos2[11], pos2.gps_north, pos2.gps_east);
-					fprintf(out, "ACC_NED,%d,%f,%f,%f, %f\r\n", int(time/1000), pos2.acc_ned[0], pos2.acc_ned[1], pos2.acc_ned[2], pos2.co[0], sqrt(pos2.acc_ned[0]*pos2.acc_ned[0] + pos2.acc_ned[1]*pos2.acc_ned[1] + pos2.acc_ned[2]*pos2.acc_ned[2]));
+					fprintf(out, "ACC_NED,%d,%f,%f,%f, %f,%f,%f,%f\r\n", int(time/1000), pos2.acc_ned[0], pos2.acc_ned[1], pos2.acc_ned[2], sqrt(pos2.acc_ned[0]*pos2.acc_ned[0] + pos2.acc_ned[1]*pos2.acc_ned[1] + pos2.acc_ned[2]*pos2.acc_ned[2]),
+						acc_ned_lpf[0], acc_ned_lpf[1], acc_ned_lpf[2]);
 				}
 				if (home_set)
 				fprintf(out, "LatLon, %d, %f, %f, %f, %f, %d, %f, %f\r\n", int(time/1000), gps_extra.latitude, gps_extra.longitude, 0.0005 * gps_extra.position_accuracy_horizontal * gps_extra.position_accuracy_horizontal, 0.02 * gps_extra.velocity_accuracy_horizontal * gps_extra.velocity_accuracy_horizontal, gps.satelite_in_use, avg_cno, top6_cno);
 				fprintf(out, "Motor,%d,%d,%d,%d,%d\r\n", int(time/1000), ppm.out[0], ppm.out[1], ppm.out[2], ppm.out[3]);
 				fprintf(out, "GPS,%d,%f,%f,%f,%f,%f,%f,%d,%f\r\n", int(time/1000), speed_north, speed_east, gps_extra.climb_rate, gps_extra.DOP[1]/100.0f, gps_extra.position_accuracy_horizontal, gps_extra.velocity_accuracy_horizontal, gps_extra.satelite_in_use, sqrt(speed_north*speed_north+speed_east*speed_east));
 				fprintf(out, "VerticalLoop,%d,%f,%f,%f,%f\r\n", int(time/1000), (float)quad3.accel_target/100.0f, (float)quad3.climb_target/100.0f, pos2.acc_ned[2], pos2.x[5]);
-				fprintf(out, "PosControl,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", int(time/1000), posc.pos[0], posc.pos[1], posc.velocity[0], posc.velocity[1], posc.setpoint[0], posc.setpoint[1],posc.velocity_setpoint[0], posc.velocity_setpoint[1], posc.accel_target[0], posc.accel_target[1], (float)posc.pid[0][1]), (float)posc.pid[1][1];
+				fprintf(out, "PosControl,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\r\n", int(time/1000), posc.pos[0], posc.pos[1], posc.velocity[0], posc.velocity[1], posc.setpoint[0], posc.setpoint[1],posc.velocity_setpoint[0], posc.velocity_setpoint[1], posc.accel_target[0], posc.accel_target[1], (float)posc.pid[0][1], (float)posc.pid[1][1]);
 				fprintf(out, "RC,%d,%d,%d,%d,%d,%d,%d\r\n", int(time/1000), ppm.in[0], ppm.in[1], ppm.in[2], ppm.in[3], ppm.in[4], ppm.in[5]);
 				fprintf(out, "APP,%d,%d,%d,%d,%d,%d,%d\r\n", int (time/1000), mobile.latency, mobile.channel[0], mobile.channel[1], mobile.channel[2], mobile.channel[3]);
 				fprintf(out, "V_BF,%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\r\n", int (time/1000), pos2.v_bf[0], pos2.v_bf[1], pos2.v_bf[2], quad2.altitude_baro_raw/100.0f - last_valid_sonar, pos2.baro_comp, quad2.altitude_baro_raw/100.0f - pos2.baro_comp);
+				fprintf(out, "FLOW,%d,%.3f,%.3f,%.3f\r\n", int (time/1000), flow_on[0], flow_on[1], flow_on[2]);
 
 				if(excel)
 				{

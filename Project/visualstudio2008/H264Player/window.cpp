@@ -254,11 +254,21 @@ int get_h264_frame(void *buf)
 	while(udp.available())
 	{
 		int s = udp.read(pkt, sizeof(pkt));
-		if ( s> 0)
-			rec->put_packet(pkt, s);
-		else if (s < 0)
+// 		if ( s> 0)
+// 			rec->put_packet(pkt, s);
+// 		else 
+			if (s < 0)
 			break;
 	}
+
+	static FILE * fpkt = fopen("Z:\\data.pkt", "rb");
+	if (feof(fpkt))
+		fseek(fpkt, 0, SEEK_SET);
+	int pkt_size;
+	fread(&pkt_size, 1, 4, fpkt);
+	fread(pkt, 1, pkt_size, fpkt);
+	rec->put_packet(pkt+24, pkt_size-28);
+
 
 	// UDP
 	frame * f = frame_cache->get_frame();
@@ -267,11 +277,11 @@ int get_h264_frame(void *buf)
 		//Sleep(1);
 
 		// test
-		static uint8_t *frame = new uint8_t[1024*1024];
-		int frame_size = get_h264_frame_from_file(frame+4);
-		memcpy(frame, &frame_size, 4);
-
-		sender.send_frame(frame, frame_size+4);
+// 		static uint8_t *frame = new uint8_t[1024*1024];
+// 		int frame_size = get_h264_frame_from_file(frame+4);
+// 		memcpy(frame, &frame_size, 4);
+// 
+// 		sender.send_frame(frame, frame_size+4);
 
 		return 0;
 	}
@@ -283,17 +293,12 @@ int get_h264_frame(void *buf)
 		return 0;
 	}
 
-	uint32_t size = *(int*)f->payload;
-	if (size > f->payload_size-4)
-	{
-		release_frame(f);
-		return 0;
-	}
-
-	printf("good frame %d bytes\n", size);
-	memcpy(buf, (char*)f->payload+4, size);
+	printf("good frame %d bytes\n", f->payload_size);
+	memcpy(buf, (char*)f->payload+4, f->payload_size);
+	int size = f->payload_size;
 	release_frame(f);
 
+	Sleep(33);
 	return size;
 }
 
