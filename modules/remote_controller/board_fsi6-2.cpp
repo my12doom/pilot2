@@ -9,6 +9,7 @@
 #include <HAL/Interface/ISysTimer.h>
 #include <stm32f10x.h>
 #include <string.h>
+#include <stdio.h>
 
 using namespace STM32F1;
 using namespace HAL;
@@ -149,8 +150,13 @@ void shutdown()
 	i2c.write_reg(0x6b<<1, 5, v);
 	i2c.read_reg(0x6b<<1, 7, &v);
 	v |= 0x20;			
+	i2c.write_reg(0x6b<<1, 7, v);	
+	i2c.write_reg(0x6b<<1, 7, v);
 	i2c.write_reg(0x6b<<1, 7, v);
 	
+	i2c.read_reg(0x6b<<1, 7, &v);
+
+	systimer->delayms(10);
 	NVIC_SystemReset();
 }
 

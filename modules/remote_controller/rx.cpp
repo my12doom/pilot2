@@ -216,6 +216,7 @@ int carrier_test()
 	ce->write(false);
 	nrf.rf_off();
 	systimer->delayms(2);
+	nrf.bk5811_carrier_test(true);
 	nrf.write_reg(RF_SETUP, 0x96);
 	nrf.write_reg(RF_CH, 0);
 	nrf.rf_on(false);

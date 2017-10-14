@@ -359,7 +359,7 @@ int board_init()
 	// priority config
 	NVIC_InitTypeDef NVIC_InitStructure;
 	NVIC_InitStructure.NVIC_IRQChannel = TIM14_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPriority = 2;
+	NVIC_InitStructure.NVIC_IRQChannelPriority = 1;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 	NVIC_InitStructure.NVIC_IRQChannel = TIM16_IRQn;
@@ -454,8 +454,8 @@ void read_channels(int16_t *channel, int max_channel_count)
 	
 	channel[0] = adc_data[0];
 	channel[1] = adc_data[3];
-	channel[2] = adc_data[1] - 300;
-	channel[3] = adc_data[2] * 1.35f - 600;
+	channel[2] = adc_data[1];
+	channel[3] = adc_data[2];
 	channel[4] = mode;
 	channel[5] = (GPIOB->IDR & GPIO_Pin_2) ? 4095 : 0;
 }

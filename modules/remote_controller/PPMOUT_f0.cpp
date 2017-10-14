@@ -122,7 +122,7 @@ int PPMOUT::write(const int16_t *data, int count, int start_channel)
 {		
 	for(int i=0; i<count; i++)
 	{
-		channel_data[i+start_channel] = data[i];
+		channel_data[i+start_channel] = data[i] - 2;		// -2: compensate for interrupt time
 	}
 	
 	channel_count = start_channel + count;

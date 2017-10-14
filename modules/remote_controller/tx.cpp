@@ -11,6 +11,7 @@
 #include <utils/RIJNDAEL.h>
 #include <utils/AES.h>
 #include "binding.h"
+
 // BSP
 using namespace HAL;
 using namespace devices;
@@ -23,6 +24,8 @@ uint16_t hoop_interval = 1000;
 int64_t ts;
 int dt;
 AESCryptor2 aes;
+
+configure_entry config[6];
 
 uint32_t pos2rando(int pos)
 {
@@ -38,6 +41,40 @@ void nrf_irq_entry(void *parameter, int flags)
 													// delay between tx and rx is 25us max
 }
 
+static int iabs(int a)
+{
+	return a>0?a:-a;
+}
+
+void process_channels(int16_t *data, int count)
+{
+	for(int i=0; i<count; i++)
+	{
+		int16_t d = data[i];
+		if (iabs(d-config[i].middle) < config[i].dead_band)
+			d = 2048;
+		else if (d <= config[i].middle)
+		{
+			d = 2048 - (config[i].middle-d) * 2048 / (config[i].middle - config[i]._min);
+		}
+		
+		else if (d > config[i].middle)
+		{
+			d = (d-config[i].middle) * 2048 / (config[i]._max - config[i].middle) + 2048;
+		}
+		if (d > 4095)
+			d = 4095;
+		if (d < 0)
+			d = 0;
+		
+		if (config[i].reverse)
+			d = 4095-d;
+		
+		data[i] = d;
+	}
+}
+
+int dt2;
 void timer_entry(void *p)
 {
 	interrupt->disable();
@@ -49,6 +86,7 @@ void timer_entry(void *p)
 	//channel = 0;
 	
 	read_channels((int16_t*)(data+2), 6);
+	process_channels((int16_t*)(data+2), 6);
 	
 	*(uint16_t*)(data+30) = crc32(0, data, 30);
 	
@@ -169,6 +207,35 @@ int main()
 	space_init();	
 	board_init();
 	space_read("seed", 4, &seed, 8, NULL);
+	if (space_read("conf", 4, &config, sizeof(config), NULL) < 0)
+	{
+		// default configuration
+		for(int i=0; i<sizeof(config)/sizeof(config[0]); i++)
+		{
+			config[i]._min = 0;
+			config[i]._max = 4095;
+			config[i].middle = 2048;
+			config[i].reverse = 0;
+			config[i].dead_band = 0;
+		}
+
+		config[0].middle = 2157;
+		config[1].middle = 2034;
+		config[2].middle = 2174;
+		config[3].middle = 2137;
+
+		config[0]._min = 327;
+		config[1]._min = 100;
+		config[2]._min = 238;
+		config[3]._min = 318;
+
+		config[0]._max = 3946;
+		config[1]._max = 3948;
+		config[2]._max = 3975;
+		config[3]._max = 4036;
+
+		//space_write("conf", 4, &config, sizeof(config), NULL);
+	}
 	
 	irq->set_mode(MODE_IN);
 	dbg->set_mode(MODE_OUT_PushPull);
@@ -189,7 +256,8 @@ int main()
 	
 	//if (seed == 0x1234567890345678)
 	//	binding_loop();
-	tx_on();	
+	//nrf.bk5811_carrier_test(true);
+	tx_on();
 	
 	bool last_bind_button = false;
 	if (bind_button)

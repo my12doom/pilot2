@@ -25,6 +25,15 @@ extern HAL::IRCOUT *ppm;
 extern HAL::IUART *uart;
 extern HAL::IGPIO *vibrator;
 
+typedef struct 
+{
+	unsigned _min:12;
+	unsigned _max:12;
+	unsigned middle:12;
+	unsigned dead_band:7;
+	unsigned reverse:1;
+} configure_entry;
+
 int board_init();
 void read_channels(int16_t *channel, int max_channel_count);
 
