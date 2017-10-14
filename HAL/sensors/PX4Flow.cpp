@@ -1,7 +1,7 @@
 #include "PX4Flow.h"
 #include <string.h>
 #include <Protocol/common.h>
-
+#include <utils/log.h>
 
 
 int PX4FLOW_ADDRESS = 0x84;
@@ -21,6 +21,8 @@ namespace sensors
 		//read integral:
 		//px4flow_integral_frame integral_frame= {};
 		//read_integral(&integral_frame);
+		
+		_healthy = res == 0;
 		return (res == 0) ? 0 : -1;
 	}
 	int PX4Flow::read_flow(px4flow_frame *out)
@@ -44,7 +46,7 @@ namespace sensors
 	// return false if any error/waning
 	bool PX4Flow::healthy()
 	{
-		return init(I2C) == 0;
+		return _healthy;
 	}
 
 	int PX4Flow::read(sensors::flow_data *out)
@@ -58,7 +60,9 @@ namespace sensors
 		out->y = frame.pixel_flow_y_sum * cy;
 		out->quality = (float)frame.qual / 255;
 		out->timestamp = 0;
-
+		
+		log(&frame, TAG_PX4FLOW_DATA, systimer->gettime());
+		
 		return 0;
 	}
 	int PX4Flow::read(float *out, int64_t *timestamp/* = NULL*/)

@@ -65,6 +65,7 @@ public:
 	void write_cmd(uint8_t cmd, uint8_t data);
 	uint8_t read_cmd(uint8_t cmd);
 	bool is_bk5811();
+	bool bk5811_carrier_test(bool cfg);				// cfg=true: single carrier test, cfg=false: normal operation
 
 protected:
 	HAL::ISPI *spi;

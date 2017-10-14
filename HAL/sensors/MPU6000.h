@@ -46,5 +46,6 @@ namespace sensors
 
 		int axis[6];
 		int negtive[6];
+		short data[7];
 	};
 }

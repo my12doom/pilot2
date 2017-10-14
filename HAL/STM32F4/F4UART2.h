@@ -2,9 +2,9 @@
 #include <HAL/Interface/IUART.h>
 #include "stm32F4xx_usart.h"
 
-#define TX_BUFFER_SIZE 2048
+#define TX_BUFFER_SIZE 384
 #define RX_BUFFER_SIZE 1024
-#define RX_DMA_BUFFER_SIZE 1024
+#define RX_DMA_BUFFER_SIZE 512
 
 namespace STM32F4
 {

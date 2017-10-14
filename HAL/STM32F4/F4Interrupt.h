@@ -22,5 +22,5 @@ namespace STM32F4
 		virtual void set_callback(HAL::interrupt_callback cb, void *parameter);
 		virtual int enable();
 		virtual int disable();
-	};
+	};	
 }

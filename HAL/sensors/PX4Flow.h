@@ -50,6 +50,7 @@ namespace sensors
 	private:
 		HAL::II2C *I2C;
 		float cx, cy;		// fov calibration, default values came from HDF-ov7675 offline calibration.
+		bool _healthy;
 
 	public:
 		PX4Flow(){}

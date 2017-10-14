@@ -12,7 +12,7 @@ namespace sensors
 		SPL06();
 		~SPL06();
 		
-		int init(HAL::II2C *i2c);	// currently only 0x78(7bit)/0xF0(8bit) address is available
+		int init(HAL::II2C *i2c, int address = 0xEE);	// currently only 0x78(7bit)/0xF0(8bit) address is available
 
 		// IBarometer
 		virtual bool healthy();
@@ -21,6 +21,7 @@ namespace sensors
 	protected:
 		bool _healthy;
 		HAL::II2C *i2c;
+		uint8_t address;
 
 		// calibration coeff
 		int16_t c0;

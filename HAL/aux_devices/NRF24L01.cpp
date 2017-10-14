@@ -257,4 +257,24 @@ bool NRF24L01::is_bk5811()
 	return bk5811;
 }
 
+bool NRF24L01::bk5811_carrier_test(bool cfg)
+{
+	if (!is_bk5811())
+		return false;
+	
+	RegArrFSKAnalog[4] = cfg ? 0x21828EE9 : 0x1B828EE9;
+	SwitchCFG(1);
+	uint8_t WriteArr[12];
+	for(int i=0;i<=8;i++)//reverse
+	{
+		for(int j=0;j<4;j++)
+			WriteArr[j]=(RegArrFSKAnalog[i]>>(8*(j) ) )&0xff;
+
+		write_cmd((WRITE_REG|i),&(WriteArr[0]),4);
+	}
+	SwitchCFG(0);
+	
+	return true;	
+}
+
 }

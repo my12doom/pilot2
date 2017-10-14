@@ -118,7 +118,7 @@ namespace STM32F4
 		else if(USART2 == USARTx )
 		{
 			RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
-			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 			//Set Uart4 bind to GPIOD pin5|pin6
 //			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
 //			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;

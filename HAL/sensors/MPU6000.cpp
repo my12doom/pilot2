@@ -173,7 +173,7 @@ int MPU6000::init(HAL::II2C *i2c, uint8_t address)
 	this->CS = NULL;
 	this->i2c = i2c;
 	this->address = address;
-	i2c->set_speed(10);
+	i2c->set_speed(2);
 
 	return init();
 }
@@ -268,10 +268,6 @@ int MPU6000::gyro_axis_config(int x, int y, int z, int negtivex, int negtivey, i
 
 int MPU6000::read(devices::accelerometer_data *out)
 {
-	short data[7];
-	if (read(data)<0)
-		return -1;
-	
 	out->x = data[axis[0]] * negtive[0] * G_in_ms2 / 2048.0f;
 	out->y = data[axis[1]] * negtive[1] * G_in_ms2 / 2048.0f;
 	out->z = data[axis[2]] * negtive[2] * G_in_ms2 / 2048.0f;
@@ -282,7 +278,6 @@ int MPU6000::read(devices::accelerometer_data *out)
 
 int MPU6000::read(devices::gyro_data *out)
 {
-	short data[7];
 	if (read(data)<0)
 		return -1;
 	

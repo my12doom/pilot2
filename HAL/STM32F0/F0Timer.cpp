@@ -2,9 +2,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stm32F0xx_misc.h>
+#include <HAL/Interface/ISysTimer.h>
 
 using namespace HAL;
-
+	
 static STM32F0::F0Timer * timer_table[8] = {0};
 /*
 extern "C" void TIM1_BRK_UP_TRG_COM_IRQHandler()
@@ -98,7 +99,7 @@ namespace STM32F0
 		{
 			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14,ENABLE);
 			
-			NVIC_InitStructure.NVIC_IRQChannel = TIM14_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM14_IRQn;
 			NVIC_InitStructure.NVIC_IRQChannelPriority = 3;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);
@@ -167,19 +168,27 @@ namespace STM32F0
 	
 	void F0Timer::restart()
 	{
+		TIM_Cmd(TIMx,DISABLE);
 		TIMx->CNT = 0;
 		TIM_ClearITPendingBit(TIMx , TIM_FLAG_Update);
+		__DSB();
+		__ISB();
+		__DMB();
+		__NOP();__NOP();__NOP();__NOP();__NOP();
+		__NOP();__NOP();__NOP();__NOP();__NOP();
+		__NOP();__NOP();__NOP();__NOP();__NOP();
+		systimer->delayus(5);
+		TIM_Cmd(TIMx,ENABLE);
 	}
 	
+
 	void F0Timer::enable_cb()
 	{
 		NVIC_EnableIRQ(IRQn);
-		TIM_Cmd(TIMx,ENABLE);
 	}
 	
 	void F0Timer::disable_cb()
 	{
-		TIM_Cmd(TIMx,DISABLE);
 		NVIC_DisableIRQ(IRQn);
 	}
 	
