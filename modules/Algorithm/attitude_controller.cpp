@@ -15,6 +15,13 @@ static param quadcopter_range[3] =
 	param("rngY", PI / 8),			// yaw
 };
 
+static param quadcopter_trim[3] = 
+{
+	param("trmR", 0 * PI / 18),				// roll
+	param("trmP", 0 * PI / 180),			// pitch
+	param("trmY", 0.0f),					// yaw
+};
+
 static param pid_factor[3][4] = 			// pid_factor[roll,pitch,yaw][p,i,d,i_limit]
 {
 	{param("rP1",0.60), param("rI1",0.80), param("rD1",0.03),param("rM1",PI)},
@@ -107,7 +114,7 @@ int attitude_controller::set_euler_target(const float *euler)
 {
 	// smooth out minor high frequency changes from position controllers
 	float dt = limit((systimer->gettime() - last_set_euler_sp_time)/1000000.0f, 0, 1);
-	float hz = 10.0f;
+	float hz = 20.0f;
 	float threshold = 2.0f * PI / 180;
 	bool go = false;
 	for(int i=0; i<3; i++)
@@ -208,13 +215,17 @@ int attitude_controller::update(float dt)
 	delta_angle = limit(delta_angle, -QUADCOPTER_MAX_YAW_OFFSET, QUADCOPTER_MAX_YAW_OFFSET);
 	euler_sp[2] = radian_add(euler[2], delta_angle);
 
+	float euler_sp_with_trim[3];
+	for(int i=0; i<3; i++)
+		euler_sp_with_trim[i] = euler_sp[i] + quadcopter_trim[i];
+
 	// outter loop, attitude -> body frame rate
 	if (use_quaternion)
 	{
 		float q_desired[4];
 		float q_error[4];
 		float body_frame_error[3];
-		RPY2Quaternion(euler_sp, q_desired);
+		RPY2Quaternion(euler_sp_with_trim, q_desired);
 		quat_inverse(q_desired);
 		quat_mult(q_desired, quaternion, q_error);
 		quat_inverse(q_error);
@@ -226,7 +237,7 @@ int attitude_controller::update(float dt)
 	{
 		for(int i=0; i<3; i++)
 		{
-			body_rate_sp[i] = radian_sub(euler_sp[i], euler[i]) * pid_factor2[i][0];
+			body_rate_sp[i] = radian_sub(euler_sp_with_trim[i], euler[i]) * pid_factor2[i][0];
 			body_rate_sp[i] = limit(body_rate_sp[i], -slew_rate, slew_rate);
 		}
 	}

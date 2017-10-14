@@ -72,8 +72,8 @@ void NonlinearSO3AHRSinit(float ax, float ay, float az, float mx, float my, floa
 
     magY = my * cosRoll - mz * sinRoll;
 
-    initialHdg = atan2f(-magY, magX);
-
+	initialHdg = has_mag ? atan2f(-magY, magX) : 0;
+	
     cosRoll = cosf(initialRoll * 0.5f);
     sinRoll = sinf(initialRoll * 0.5f);
 

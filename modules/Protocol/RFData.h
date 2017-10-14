@@ -1,7 +1,8 @@
 #ifndef __RFDATA_H__
 #define __RFDATA_H__
 
-#include <Protocol/px4flow.h>
+//#include <Protocol/px4flow.h>
+#include <HAL/sensors/PX4flow.h>
 
 #ifdef WIN32
 typedef __int64 int64_t;
@@ -290,7 +291,7 @@ typedef struct
 		pos_controller_data pos_controller;
 		pos_controller_data2 pos_controller2;
 		double_sensor_data double_sensor;
-		px4flow_frame px4flow;
+		sensors::px4flow_frame px4flow;
 		mag_calibration_data mag_cal;
 		mag_collecting_data mag_collecting;
 		rc_mobile_data mobile;
@@ -355,13 +356,6 @@ typedef struct SAT_header_struct
 
 #define TAG_MASK		0xff
 
-#define CTRL_CMD_SET_VALUE 0
-#define CTRL_CMD_GET_VALUE 1
-#define CTRL_CMD_GO 2
-#define CTRL_CMD_FEEDBACK 3
-
-#define CTRL_REG_MAGNET 0x1000
-
 enum EXTENDED_DATA_TYPES
 {
 	TAG_TEXT_LOG = 2,
@@ -378,6 +372,7 @@ enum EXTENDED_DATA_TYPES
 	TAG_ATTITUDE_CONTROLLER_DATA = 27,
 	TAG_2NDBARO = 28,
 	TAG_FLOW = 29,
+	
 };
 
 typedef struct _posc_ext_data

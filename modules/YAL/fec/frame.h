@@ -3,9 +3,9 @@
 #include <stdint.h>
 
 #define HEADER_SIZE 7
-#define MAX_PAYLOAD_SIZE 1408
+#define MAX_PAYLOAD_SIZE 200
 #define PACKET_SIZE sizeof(raw_packet)
-#define USE_CAUCHY 0
+#define USE_CAUCHY 1
 
 // frame structure for exchange data in program.
 typedef struct frame_struct

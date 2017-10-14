@@ -58,12 +58,6 @@ static param low_voltage_setting2("lp2", 10.8f);
 static param fixed_wing("fix", 0);
 
 
-static param quadcopter_trim[3] = 
-{
-	param("trmR", 0 * PI / 18),				// roll
-	param("trmP", 0 * PI / 180),			// pitch
-	param("trmY", 0.0f),					// yaw
-};
 
 static param _gyro_bias[2][4] =	//[p1,p2][temperature,g0,g1,g2]
 {
@@ -102,7 +96,7 @@ static param mag_scale[3] =
 {
 	param("mgx", 1), param("mgy", 1), param("mgz", 1),
 };
-static float quadcopter_mixing_matrix[3][MAX_MOTOR_COUNT][4] = // the motor mixing matrix, [motor number] [roll, pitch, yaw, throttle]
+static float quadcopter_mixing_matrix[4][MAX_MOTOR_COUNT][4] = // the motor mixing matrix, [motor number] [roll, pitch, yaw, throttle]
 {
 	{							// + mode
 		{0, -1, +1, 1},			// rear, CCW
@@ -123,6 +117,13 @@ static float quadcopter_mixing_matrix[3][MAX_MOTOR_COUNT][4] = // the motor mixi
 		{-0.6934,0.8404,-0.7612,1.0712},
 		{0.6934,0.8404,0.7612,1.0712},
 		{0.6934,-0.5901,-0.6600,0.9288},
+	},
+	
+	{							// reversed X mode
+		{-0.707f,-0.707f,-0.707f, 1},				//REAR_R, CW
+		{-0.707f,+0.707f,+0.707f, 1},				//FRONT_R, CCW
+		{+0.707f,+0.707f,-0.707f, 1},				//FRONT_L, CW
+		{+0.707f,-0.707f,+0.707f, 1},				//REAR_L, CCW
 	},
 };
 
@@ -813,7 +814,7 @@ int yet_another_pilot::save_logs()
 
 	log(&quad, TAG_QUADCOPTER_DATA, systime);
 
-	float flow_data[2] = {flow.x, flow.y};
+	float flow_data[3] = {flow.x, flow.y, flow.quality};
 	log2(flow_data, TAG_FLOW, sizeof(flow_data));
 
 
@@ -1212,14 +1213,14 @@ int yet_another_pilot::read_imu_and_filter()
 	
 	// bias and scale calibrating
 	float temperature_delta = mpu6050_temperature - temperature0;
-	float gyro_bias[3] = 
+	float temperature_gyro_bias[3] = 
 	{
 		-(temperature_delta * gyro_temp_k.array[0] + gyro_temp_a.array[0]),
 		-(temperature_delta * gyro_temp_k.array[1] + gyro_temp_a.array[1]),
 		-(temperature_delta * gyro_temp_k.array[2] + gyro_temp_a.array[2]),
 	};
 	accel_uncalibrated = acc;
-	gyro_uncalibrated = gyro_reading;
+	gyro_uncalibrated = gyro;
 	if (got_mag)
 		mag_uncalibrated = mag;
 	
@@ -1229,7 +1230,7 @@ int yet_another_pilot::read_imu_and_filter()
 		acc.array[i] *= acc_scale[i];
 		mag.array[i] += mag_bias[i];
 		mag.array[i] *= mag_scale[i];
-		gyro.array[i] += gyro_bias[i];
+		gyro.array[i] += temperature_gyro_bias[i];
 	}	
 	
 
@@ -1306,11 +1307,10 @@ int yet_another_pilot::calculate_state()
 	}
 
 
+	detect_gyro.new_data(gyro_reading);
+	detect_acc.new_data(accel);
 	if (mag_reset_requested)
 	{
-		detect_gyro.new_data(gyro_reading);
-		detect_acc.new_data(accel);
-
 		if (detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100 && fabs(euler[0]) < PI/6 && fabs(euler[1]) < PI/6)
 		{
 			mag_reset_requested = false;
@@ -1319,10 +1319,23 @@ int yet_another_pilot::calculate_state()
 		}
 	}
 
+
+	bool still = detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100;
+	if (still)
+	{
+		float alpha = interval / (interval + 1.0f/(2*PI * 0.1f));	// 0.1hz LPF for gyro bias estimation
+
+		for(int i=0; i<3; i++)
+			gyro_bias[i] = gyro_bias[i] * (1-alpha) + -gyro_reading[i] * alpha;
+		
+		factor *= 10;
+	}
+
+
 	NonlinearSO3AHRSupdate(
-	-accel.array[0], -accel.array[1], -accel.array[2], 
-	-mag.array[0], -mag.array[1], mag.array[2],
-	gyro_reading.array[0], gyro_reading.array[1], gyro_reading.array[2],
+	-accel[0], -accel[1], -accel[2], 
+	-mag[0], -mag[1], mag[2],
+	gyro_reading[0], gyro_reading[1], gyro_reading[2],
 	0.15f*factor, 0.0015f*factor, 0.15f*factor_mag, 0.0015f*factor_mag, interval,
 	acc_gps_bf[0], acc_gps_bf[1], acc_gps_bf[2]);
 //	
@@ -1392,9 +1405,9 @@ int yet_another_pilot::calculate_state()
 		t = systimer->gettime() - t;
 
 //	 	printf("%f,%d\r\n",interval, int(t));
-		euler[0] = radian_add(ekf_est.ekf_result.roll, quadcopter_trim[0]);
-		euler[1] = radian_add(ekf_est.ekf_result.pitch, quadcopter_trim[1]);
-		euler[2] = radian_add(ekf_est.ekf_result.yaw, quadcopter_trim[2]);
+		euler[0] = ekf_est.ekf_result.roll;
+		euler[1] = ekf_est.ekf_result.pitch;
+		euler[2] = ekf_est.ekf_result.yaw;
 	}
 	else if (use_EKF == 2.0f)
 	{
@@ -1404,17 +1417,10 @@ int yet_another_pilot::calculate_state()
 		memcpy(estimator2.gyro, body_rate.array, sizeof(estimator2.gyro));
 
 		int64_t t = systimer->gettime();
-		estimator2.update(q, acc, gps, flow, sonar_distance, a_raw_altitude, interval, armed, airborne);
+		estimator2.update(q, acc, gps, flow, sonar_distance, a_raw_altitude, interval, armed, airborne, still);
 		t = systimer->gettime() - t;
 		//LOGE("estimator2 cost %d us", int(t));
 		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*estimator2.x.m);
-	}
-
-	else
-	{
-		euler[0] = radian_add(euler[0], quadcopter_trim[0]);
-		euler[1] = radian_add(euler[1], quadcopter_trim[1]);
-		euler[2] = radian_add(euler[2], quadcopter_trim[2]);
 	}
 	
 	body_rate.array[0] = gyro_reading.array[0] + gyro_bias[0];
@@ -2061,9 +2067,14 @@ int yet_another_pilot::check_stick_action()
 			if (flip_count == 10)
 			{
 				if (mag_calibration_state)
+				{
 					cancel_mag_cal();
+				}
 				else
+				{
 					reset_mag_cal();
+					reset_accel_cal();
+				}
 			}
 		}
 	}

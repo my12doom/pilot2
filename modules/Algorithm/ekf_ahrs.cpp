@@ -134,7 +134,8 @@ int ekf_ahrs::update(float a[3], float g[3], float mag[3], float dt, bool use_ma
 	float a_len = 1.0/sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
 
 	float mag_0z[3] = {mag[0], mag[1], mag[2]};
-	remove_mag_ned_z(mag_0z, &x[0]);
+	float q[4] = {x[0], x[1], x[2], x[3]};
+	remove_mag_ned_z(mag_0z, q);
 	float m_len = 1.0/sqrt(mag_0z[0] * mag_0z[0] + mag_0z[1] * mag_0z[1] + mag_0z[2] * mag_0z[2]);
 	zk = matrix(still?9:6,1,a[0]*a_len, a[1] * a_len, a[2] * a_len, mag_0z[0] * m_len, mag_0z[1] * m_len, mag_0z[2] * m_len, -g[0], -g[1], -g[2]);
 
@@ -264,11 +265,12 @@ void ekf_ahrs::remove_mag_ned_z(float *mag_body, float *q)
 int ekf_ahrs::get_euler(float *euler)
 {
 
-	Quaternion2RPY(&x[0], euler);
+	float q[4] = {x[0], x[1], x[2], x[3]};
+	Quaternion2RPY(q, euler);
 
 	return 0;
 }
-
+/*
 int test_ekf_ahrs()
 {
 #ifdef WIN32
@@ -315,7 +317,7 @@ int test_ekf_ahrs()
 			imu.update(a, g, m, dt, true);
 
 			static int n = 0;
-			if (f && /*i == 0 &&*/ n++ %25 == 0)
+			if (f && n++ %25 == 0)
 			{
 				matrix &x = imu.x;
 				float roll, pitch, yaw;
@@ -350,3 +352,4 @@ int test_ekf_ahrs()
 
 	return 0;
 }
+*/

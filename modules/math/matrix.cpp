@@ -31,14 +31,14 @@ matrix::matrix(const matrix &v)
 {
 	n = v.n;
 	m = v.m;
-	memcpy(data, v.data, sizeof(float)*n*m);
+	memcpy(data, v.data, sizeof(real_t)*n*m);
 }
 
-matrix::matrix(int m, int n, float data[])
+matrix::matrix(int m, int n, real_t data[])
 {
 	this->m = m;
 	this->n = n;
-	memcpy(this->data, data, sizeof(float)*n*m);
+	memcpy(this->data, data, sizeof(real_t)*n*m);
 }
 
 matrix::matrix(int m, int n, ...)
@@ -63,7 +63,7 @@ void matrix::operator =(const matrix &v)
 {
 	n = v.n;
 	m = v.m;
-	memcpy(data, v.data, sizeof(float)*n*m);
+	memcpy(data, v.data, sizeof(real_t)*n*m);
 }
 
 void matrix::operator +=(const matrix &v)
@@ -99,7 +99,7 @@ void matrix::operator *=(const matrix &v)
 	o.m = m;
 	o.n = v.n;
 
-#if 0
+#if defined(WIN32)
 
 	for(int x1 = 0; x1<v.n; x1++)
 	{
@@ -107,23 +107,24 @@ void matrix::operator *=(const matrix &v)
 		{
 			o.data[y1*v.n+x1] = 0;
 			for(int k = 0; k<n; k++)
-				o.data[y1*v.n+x1] += data[y1*n+k] * v.data[k*v.n+x1];
+				if (data[y1*n+k]!=0 && v.data[k*v.n+x1] != 0)
+					o.data[y1*v.n+x1] += data[y1*n+k] * v.data[k*v.n+x1];
 		}
 	}
 #else
-  float *pIn1 = this->data;                /* input data matrix pointer A */
-  const float *pIn2 = v.data;                /* input data matrix pointer B */
-  float *pInA = this->data;                /* input data matrix pointer A  */
-  float *pOut = o.data;                 /* output data matrix pointer */
-  float *px;                                 /* Temporary output data matrix pointer */
-  float sum;                                 /* Accumulator */
+  real_t *pIn1 = this->data;                /* input data matrix pointer A */
+  const real_t *pIn2 = v.data;                /* input data matrix pointer B */
+  real_t *pInA = this->data;                /* input data matrix pointer A  */
+  real_t *pOut = o.data;                 /* output data matrix pointer */
+  real_t *px;                                 /* Temporary output data matrix pointer */
+  real_t sum;                                 /* Accumulator */
   uint16_t numRowsA = this->m;            /* number of rows of input matrix A */
   uint16_t numColsB = v.n;            /* number of columns of input matrix B */
   uint16_t numColsA = this->n;            /* number of columns of input matrix A */
 
   /* Run the below code for Cortex-M4 and Cortex-M3 */
 
-  float in1, in2, in3, in4;
+  real_t in1, in2, in3, in4;
   uint16_t col, i = 0u, j, row = numRowsA, colCnt;      /* loop counters */
 //   arm_status status;                             /* status of matrix multiplication */
 
@@ -229,7 +230,7 @@ void matrix::operator *=(const matrix &v)
 
 	*this = o;
 }
-void matrix::operator *=(const float &v)
+void matrix::operator *=(const real_t &v)
 {
 	int count = n*m;
 	for(int i=0; i<count; i++)
@@ -241,14 +242,14 @@ matrix matrix::operator *(const matrix &v)
 	o *= v;
 	return o;
 }
-matrix matrix::operator *(const float &v)
+matrix matrix::operator *(const real_t &v)
 {
 	matrix o(*this);
 	o *= v;
 	return o;
 }
 
-float matrix::det()
+real_t matrix::det()
 {
 	if (n == 2)
 		return data[0] * data[3] - data[1] * data[2];
@@ -256,7 +257,7 @@ float matrix::det()
 	if (n == 1)
 		return data[0];
 
-	float det = 0;
+	real_t det = 0;
 	for(int i=0; i<n; i++)
 	{
 		int symbol = i % 2 == 0 ? 1 : -1;
@@ -281,9 +282,9 @@ matrix matrix::inversef()
 	int c;
 	int jBcol;
 	int ix;
-	float smax;
+	real_t smax;
 	int k;
-	float s;
+	real_t s;
 	int i;
 	int kAcol;
 	signed char p[MAX_DIMENSION];
@@ -301,10 +302,10 @@ matrix matrix::inversef()
 		c = j * (m+1);
 		jBcol = 0;
 		ix = c;
-		smax = (float)fabs(A[c]);
+		smax = (real_t)fabs(A[c]);
 		for (k = 2; k <= m - j; k++) {
 			ix++;
-			s = (float)fabs(A[ix]);
+			s = (real_t)fabs(A[ix]);
 			if (s > smax) {
 				jBcol = k - 1;
 				smax = s;
@@ -397,7 +398,7 @@ matrix matrix::inverse()
 		out.data[0] = 1/data[0];
 		return out;
 	}
-	float *o = (float*) out.data;
+	real_t *o = (real_t*) out.data;
 	for(int y=0; y<n; y++)
 		for(int x=0; x<n; x++)
 		{
@@ -418,8 +419,8 @@ matrix matrix::cofactor(int x, int y)
 	out.n = n-1;
 	out.m = m-1;
 
-	float *p = (float*) data;
-	float *o = (float*) out.data;
+	real_t *p = (real_t*) data;
+	real_t *o = (real_t*) out.data;
 
 	int yy = 0;
 	for(int iy=0; iy<n; iy++)
@@ -464,7 +465,7 @@ void matrix::identity()
 {
 	if (m!=n)
 		return;
-	memset(data, 0, m*n*sizeof(float));
+	memset(data, 0, m*n*sizeof(real_t));
 	for(int i=0; i<m; i++)
 		data[i*(m+1)] = 1;
 }
@@ -483,14 +484,14 @@ matrix matrix::operator /(const matrix &v)
 	o /= v;
 	return o;
 }
-void matrix::operator /=(const float &v)
+void matrix::operator /=(const real_t &v)
 {
 	int count = n*m;
 	for(int i=0; i<count; i++)
 		data[i] /= v;
 }
 
-matrix matrix::operator /(const float &v)
+matrix matrix::operator /(const real_t &v)
 {
 	matrix o(*this);
 	o /= v;
@@ -503,7 +504,7 @@ matrix matrix::diag(int n, ...)
 	o.n = n;
 	o.m = n;
 
-	memset(o.data, 0, n*n*sizeof(float));
+	memset(o.data, 0, n*n*sizeof(real_t));
 
 	va_list vl;
 	va_start(vl,n);
@@ -514,13 +515,13 @@ matrix matrix::diag(int n, ...)
 	return o;
 }
 
-matrix matrix::diag(int n, float data[])
+matrix matrix::diag(int n, real_t data[])
 {
 	matrix o;
 	o.n = n;
 	o.m = n;
 
-	memset(o.data, 0, n*n*sizeof(float));
+	memset(o.data, 0, n*n*sizeof(real_t));
 
 	for(int i=0; i<n; i++)
 		o.data[i*(n+1)] = data[i];

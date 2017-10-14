@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "cauchy_256.h"
+#include <Protocol/crc32.h>
 
 reciever::reciever()
 {
@@ -171,6 +172,13 @@ int reciever::assemble_and_out()
 #endif
 
 	f->integrality = !error;
+	int frame_data_size = *(int*)((uint8_t*)f->payload+4);
+	uint32_t crc = *(uint32_t*)f->payload;
+	if (frame_data_size <= f->payload_size-8 && crc == crc32(0, (uint8_t*)f->payload+4, frame_data_size+4))
+		memmove(f->payload, (uint8_t*)f->payload+4, frame_data_size+4);
+	else
+		f->integrality = false;
+
 	if (cb)
 		cb->handle_frame(*f);
 	release_frame(f);
@@ -183,6 +191,6 @@ int reciever::assemble_and_out()
 		packets[i].payload_packet_count = 0;
 		memset(&packets[i], 0, sizeof(raw_packet));
 	}
-		
+
 	return 0;
 }
