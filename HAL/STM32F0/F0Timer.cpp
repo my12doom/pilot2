@@ -171,13 +171,6 @@ namespace STM32F0
 		TIM_Cmd(TIMx,DISABLE);
 		TIMx->CNT = 0;
 		TIM_ClearITPendingBit(TIMx , TIM_FLAG_Update);
-		__DSB();
-		__ISB();
-		__DMB();
-		__NOP();__NOP();__NOP();__NOP();__NOP();
-		__NOP();__NOP();__NOP();__NOP();__NOP();
-		__NOP();__NOP();__NOP();__NOP();__NOP();
-		systimer->delayus(5);
 		TIM_Cmd(TIMx,ENABLE);
 	}
 	
@@ -194,6 +187,8 @@ namespace STM32F0
 	
 	void F0Timer::call_callback()
 	{
+		if (!(TIMx->SR&1))
+			return;
 		if(cb)
 			cb(user_data);
 		TIM_ClearITPendingBit(TIMx , TIM_FLAG_Update);

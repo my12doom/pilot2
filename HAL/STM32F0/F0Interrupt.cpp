@@ -11,7 +11,6 @@ static STM32F0::F0Interrupt *int_table[16] = {0};
 
 extern "C" void EXTI4_15_IRQHandler(void)
 {
-	int64_t t = systimer->gettime();
 	if (EXTI_GetITStatus(EXTI_Line4) != RESET)
 	{
 		if (int_table[4])
