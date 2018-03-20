@@ -36,6 +36,7 @@ typedef struct
 
 int board_init();
 void read_channels(int16_t *channel, int max_channel_count);
+void select_ant(uint32_t *randomizer, bool tx);		// 16bytes randomizer
 
 static uint64_t board_get_seed()
 {
@@ -48,3 +49,4 @@ static uint64_t board_get_seed()
 	((uint32_t*)&o)[1] = crc32(0, data+4, 8);
 	return o;
 }
+

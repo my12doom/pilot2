@@ -25,8 +25,8 @@ F0GPIO beep_en(GPIOC, GPIO_Pin_15);
 F0GPIO _cs(GPIOB, GPIO_Pin_12);
 F0GPIO _ce(GPIOB, GPIO_Pin_11);
 F0GPIO _irq(GPIOC, GPIO_Pin_6);
-F0GPIO _dbg(GPIOC, GPIO_Pin_4);		// dummy debug output
-F0GPIO _dbg2(GPIOC, GPIO_Pin_5);	// dummy debug output
+F0GPIO _dbg(GPIOB, GPIO_Pin_4);		// dummy debug output
+F0GPIO _dbg2(GPIOB, GPIO_Pin_6);	// dummy debug output
 F0GPIO _SCL(GPIOC, GPIO_Pin_13);
 F0GPIO _SDA(GPIOC, GPIO_Pin_14);
 
@@ -41,10 +41,10 @@ static const uint8_t ding[] =
 
 F0GPIO power_leds[4] =
 {
-	F0GPIO(GPIOC, GPIO_Pin_0),
 	F0GPIO(GPIOC, GPIO_Pin_3),
 	F0GPIO(GPIOC, GPIO_Pin_2),
 	F0GPIO(GPIOC, GPIO_Pin_1),
+	F0GPIO(GPIOC, GPIO_Pin_0),
 };
 
 F0GPIO state_led[3] =
@@ -52,6 +52,13 @@ F0GPIO state_led[3] =
 	F0GPIO(GPIOB, GPIO_Pin_6),
 	F0GPIO(GPIOB, GPIO_Pin_5),
 	F0GPIO(GPIOB, GPIO_Pin_4),
+};
+
+F0GPIO ants[3] =
+{
+	F0GPIO(GPIOC, GPIO_Pin_7),
+	F0GPIO(GPIOC, GPIO_Pin_8),
+	F0GPIO(GPIOC, GPIO_Pin_9),
 };
 
 int iabs(int a)
@@ -330,6 +337,11 @@ int board_init()
 		power_leds[i].write(true);
 		power_leds[i].set_mode(MODE_OUT_OpenDrain);
 	}
+	for(int i=0; i<sizeof(ants)/sizeof(ants[0]); i++)
+	{
+		ants[i].set_mode(MODE_OUT_PushPull);
+		ants[i].write(false);
+	}
 	for(int i=0; i<3; i++)
 	{
 		state_led[i].write(true);
@@ -458,4 +470,10 @@ void read_channels(int16_t *channel, int max_channel_count)
 	channel[3] = adc_data[2];
 	channel[4] = mode;
 	channel[5] = (GPIOB->IDR & GPIO_Pin_2) ? 4095 : 0;
+}
+
+void select_ant(uint32_t *randomizer, bool tx)
+{
+	for(int i=0; i<3; i++)
+		ants[i].write((randomizer[1]>>(i+(tx?0:3)))&1);
 }

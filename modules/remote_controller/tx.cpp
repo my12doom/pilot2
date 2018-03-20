@@ -16,29 +16,61 @@
 using namespace HAL;
 using namespace devices;
 
-NRF24L01 nrf;
 uint8_t data[32];
+uint8_t rx_data[32];
 uint16_t hoop_id = 0;
 uint64_t seed = 0x1234567890345678;
 uint16_t hoop_interval = 1000;
 int64_t ts;
 int dt;
+int rdp;
 AESCryptor2 aes;
-
+uint32_t randomizing[4] = {0, 0, 0, 0};
 configure_entry config[6];
+
+class NRF24L01_ANT : public NRF24L01
+{
+public:
+	int rf_on(bool rx)
+	{
+		select_ant(randomizing, true);
+		return NRF24L01::rf_on(rx);
+	}
+} nrf;
 
 uint32_t pos2rando(int pos)
 {
-	uint32_t data[4] = {pos, 0, 0, 0};
-	aes.encrypt((uint8_t*)data, (uint8_t*)data);
-	return data[0];
+	randomizing[0] = pos;
+	randomizing[1] = 0;
+	randomizing[2] = 0;
+	randomizing[3] = 0;
+	aes.encrypt((uint8_t*)randomizing, (uint8_t*)randomizing);
+	return randomizing[0];
 }
 
 void nrf_irq_entry(void *parameter, int flags)
 {
-	dt = systimer->gettime() - ts;
+	timer->disable_cb();
+	dbg2->write(false);
+		
+	// clear all interrupts
+	nrf.rf_off();
 	nrf.write_reg(7, nrf.read_reg(7));				// sending 32bytes payload with 3byte address and 2byte CRC cost ~1373us
 													// delay between tx and rx is 25us max
+		
+	// read out RX packets
+	//ts = systimer->gettime();
+	int fifo_state = nrf.read_reg(FIFO_STATUS);
+	while ((fifo_state&1) == 0)
+	{
+		nrf.read_rx(data, 32);
+		rdp = nrf.read_reg(9);
+		fifo_state = nrf.read_reg(FIFO_STATUS);
+	}
+	
+	//dt = systimer->gettime() - ts;
+	dbg2->write(true);
+	timer->enable_cb();
 }
 
 static int iabs(int a)
@@ -74,7 +106,6 @@ void process_channels(int16_t *data, int count)
 	}
 }
 
-int dt2;
 void timer_entry(void *p)
 {
 	interrupt->disable();
@@ -83,20 +114,27 @@ void timer_entry(void *p)
 	*(uint16_t*)data = hoop_id;	
 	int channel = ((pos2rando(hoop_id) & 0xffff) * 100) >> 16;
 	hoop_id ++;
-	//channel = 0;
-	
-	read_channels((int16_t*)(data+2), 6);
-	process_channels((int16_t*)(data+2), 6);
-	
-	*(uint16_t*)(data+30) = crc32(0, data, 30);
-	
-	aes.encrypt(data, data);
-	aes.encrypt(data+16, data+16);
-		
-	ce->write(false);
+	//channel = hoop_id%100;
+	nrf.rf_off();
 	nrf.write_reg(5, channel);
-	nrf.write_tx(data, 32);
-	ce->write(true);
+	if (1)
+	{		
+		read_channels((int16_t*)(data+2), 6);
+		process_channels((int16_t*)(data+2), 6);
+		
+		*(uint16_t*)(data+30) = crc32(0, data, 30);
+		
+		aes.encrypt(data, data);
+		aes.encrypt(data+16, data+16);
+			
+		nrf.write_tx(data, 32);
+		nrf.rf_on(false);
+	}
+	else
+	{
+		nrf.rf_on(true);
+	}
+	
 	interrupt->enable();
 	ts = systimer->gettime();
 	dbg->write(false);
@@ -202,6 +240,21 @@ void tx_off()
 	dbg2->write(true);
 }
 
+int carrier_test()
+{
+	nrf.rf_off();
+	systimer->delayms(2);
+	nrf.bk5811_carrier_test(true);
+	nrf.write_reg(RF_SETUP, 0x96);
+	nrf.write_reg(RF_CH, 1);
+	nrf.rf_on(false);
+	
+	while(1)
+	{
+	}
+	return 0;
+}
+
 int main()
 {
 	space_init();	
@@ -256,7 +309,7 @@ int main()
 	
 	//if (seed == 0x1234567890345678)
 	//	binding_loop();
-	//nrf.bk5811_carrier_test(true);
+	//carrier_test();
 	tx_on();
 	
 	bool last_bind_button = false;

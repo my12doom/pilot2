@@ -1,4 +1,5 @@
 #include "board.h"
+#include <Protocol/common.h>
 
 extern HAL::ISPI *spi = NULL;
 extern HAL::IGPIO *cs = NULL;
@@ -16,3 +17,7 @@ extern HAL::IGPIO *SCL = NULL;
 extern HAL::IGPIO *SDA = NULL;
 extern HAL::IRCOUT *ppm = NULL;
 HAL::IUART *uart = NULL;
+
+WEAK void select_ant(uint32_t *randomizer, bool tx)
+{
+}

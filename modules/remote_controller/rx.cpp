@@ -18,8 +18,6 @@
 using namespace HAL;
 using namespace devices;
 
-NRF24L01 nrf;
-
 uint8_t valid_data[32];
 AESCryptor2 aes;
 uint64_t seed = 0x1234567890345678;
@@ -29,20 +27,34 @@ int rdp;
 int hoop_id = 0;
 int miss = 99999;
 int maxmiss = 0;
-bool ignore_first_packet = true;
+int packet_time = 1373;		// in us
 int64_t last_valid_packet = -1000000;
 uint16_t hoop_interval = 1000;
+uint32_t randomizing[4] = {0, 0, 0, 0};
+
+class NRF24L01_ANT : public NRF24L01
+{
+public:
+	int rf_on(bool rx)
+	{
+		select_ant(randomizing, true);
+		return NRF24L01::rf_on(rx);
+	}
+} nrf;
 
 uint32_t pos2rando(int pos)
 {
-	uint32_t data[4] = {pos, 0, 0, 0};
-	aes.encrypt((uint8_t*)data, (uint8_t*)data);
-	return data[0];
+	randomizing[0] = pos;
+	randomizing[1] = 0;
+	randomizing[2] = 0;
+	randomizing[3] = 0;
+	aes.encrypt((uint8_t*)randomizing, (uint8_t*)randomizing);
+	return randomizing[0];
 }
 
 int hoop_to(int next_hoop_id)
 {
-	ce->write(false);
+	nrf.rf_off();
 	
 	hoop_id = next_hoop_id;
 	
@@ -50,14 +62,16 @@ int hoop_to(int next_hoop_id)
 	
 	nrf.write_reg(RF_CH, channel);
 	
-	ce->write(true);
+	nrf.rf_on(true);
 	
 	return 0;
 }
 
 void nrf_irq_entry(void *parameter, int flags)
 {
+	int64_t ts = systimer->gettime();
 	timer->disable_cb();
+	nrf.rf_off();
 	nrf.write_reg(7, nrf.read_reg(7));
 	
 	int fifo_state = nrf.read_reg(FIFO_STATUS);
@@ -74,24 +88,21 @@ void nrf_irq_entry(void *parameter, int flags)
 		if ((uint16_t)crc32(0, data, 30) != *(uint16_t*)(data+30))
 			continue;
 		
-		if (!ignore_first_packet)
-		{
-			dbg->write(false);
-			o++;
-			next_hoop_id = *(uint16_t*)data;
-			memcpy(valid_data, data, 32);
-			last_valid_packet = systimer->gettime();
-		}
-		else
-		{
-			ignore_first_packet = false;
-		}
+		dbg->write(false);
+		o++;
+		next_hoop_id = *(uint16_t*)data;
+		memcpy(valid_data, data, 32);
+		last_valid_packet = ts;
 	}
 	
 	if (next_hoop_id >= 0)
 	{
 		hoop_to((next_hoop_id+1)&0xffff);
 		miss = 0;
+		int dt = systimer->gettime() - ts;
+		int ss = hoop_interval - dt - packet_time-200;
+		if (ss > 0)
+			systimer->delayus(ss);
 		timer->restart();
 	}
 	
@@ -106,11 +117,12 @@ void timer_entry(void * p)
 	miss ++;
 	
 	if (miss < 2000)
-	{
 		dbg2->write(false);
+	// hoop slower when lost sync
+	if (miss < 2000 || miss % 50 == 0)
 		hoop_to((hoop_id+1)&0xffff);
+	if (miss < 2000)
 		dbg2->write(true);
-	}
 	
 	if (maxmiss < miss)
 		maxmiss = miss;
@@ -195,14 +207,12 @@ int binding_loop()
 			// clear up and exit
 			nrf.rf_off();
 			nrf.enable_rx_address(1, false);
-			ignore_first_packet = true;
 			return 0;
 		}
 
 		// exit if several channel data packet recieved
 		if (tx_channel_data > 3)
 		{
-			ignore_first_packet = true;
 			nrf.rf_off();
 			nrf.enable_rx_address(1, false);
 			return 0;
@@ -213,14 +223,12 @@ int binding_loop()
 }
 int carrier_test()
 {
-	ce->write(false);
 	nrf.rf_off();
 	systimer->delayms(2);
 	nrf.bk5811_carrier_test(true);
 	nrf.write_reg(RF_SETUP, 0x96);
 	nrf.write_reg(RF_CH, 0);
 	nrf.rf_on(false);
-	ce->write(true);
 	
 	while(1)
 	{
@@ -236,7 +244,8 @@ int main()
 	dbg->write(true);
 	dbg2->write(true);
 	dbg->set_mode(MODE_OUT_OpenDrain);
-	dbg2->set_mode(MODE_OUT_OpenDrain);	
+	dbg2->set_mode(MODE_OUT_OpenDrain);
+	crc32(0, valid_data, 30);	// to build crc32 lookup table;
 	
 	if (SCL && SDA)
 	{
@@ -253,28 +262,27 @@ int main()
 	if (SCL && SDA)
 		oled.show_str(0, 0, "binding ...");
 	binding_loop();
+	nrf.rf_off();
 	uint64_t key4[4] = {seed, seed, seed, seed};
 	aes.set_key((uint8_t*)key4, 256);
 	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
 	nrf.enable_rx_address(0, true);
 	nrf.write_reg(RF_CH, 95);
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;
+	packet_time = nrf.is_bk5811() ? 450 : 1373;
 	
+	interrupt->set_callback(nrf_irq_entry, NULL);
+	timer->set_callback(timer_entry, NULL);
+	timer->set_period(hoop_interval);
+	nrf.write_cmd(FLUSH_RX, NOP);
+	nrf.write_reg(STATUS, nrf.read_reg(STATUS));
+	dbg->write(true);
+	nrf.rf_on(true);
 	
 	int lo = 0;
 	int64_t t = systimer->gettime();
 	int64_t lt = t;
 	int lp = 0;
-	
-	interrupt->set_callback(nrf_irq_entry, NULL);
-	timer->set_callback(timer_entry, NULL);
-	timer->set_period(hoop_interval);
-		
-	nrf.write_cmd(FLUSH_RX, NOP);
-	nrf.write_reg(STATUS, nrf.read_reg(STATUS));
-	dbg->write(true);	
-	nrf.rf_on(true);
-	
 	while(1)
 	{
 		if (ppm)
