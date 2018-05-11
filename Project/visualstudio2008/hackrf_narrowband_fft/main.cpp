@@ -9,6 +9,7 @@
 #include "autolock.h"
 #include "resource.h"
 #include <float.h>
+#include <CommCtrl.h>
 
 #ifdef WIN32
 #include <Windows.h>
@@ -35,12 +36,20 @@ float sample_rate = 2E6;
 #define device_exit device_bulk_exit
 #endif
 
-#define N 1024
+#define N 2048
 fftwf_complex * in = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
 fftwf_complex * fft_out = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
 fftwf_plan p;
 float log_amp[N];
+float peaksq_amp = 0;
+float noise_floor_sq_amp = 1;
+float fft_window[N];
+float DC[2] = {0};
 _critical_section cs;
+HWND slider;
+HWND slider2;
+float phase_imba = 0.0f;
+float gain_imba = 1.0f;
 
 FILE * f = fopen("Z:\\log2.pcm", "wb");
 int canvas_width = N;
@@ -66,6 +75,8 @@ int rx(void *buf, int len, int type)
 	__m128 mff;
 	_mm_storeu_si128((__m128i*)&mff, _mm_set1_epi8(0xff));
 
+	peaksq_amp *= pow(1-alpha_release, len/2/1000);
+
 	for(int i=0; i<len/2; i+= N)
 	{
 		if (0 == type)
@@ -84,8 +95,45 @@ int rx(void *buf, int len, int type)
 			{
 				in[j][0] = p[(i+j)*2+0]/32767.0f;
 				in[j][1] = p[(i+j)*2+1]/32767.0f;
+
 			}
 		}
+
+		float alpha_DC = dt / (dt + 1.0f/(0.5f*PI * 1));
+		float DC_N[2] = {0};
+		for(int i=0; i<N; i++)
+		{
+			DC_N[0] += in[i][0];
+			DC_N[1] += in[i][1];
+
+		}
+
+		DC[0] = DC[0] * (1-alpha_DC) + DC_N[0] * alpha_DC / N;
+		DC[1] = DC[1] * (1-alpha_DC) + DC_N[1] * alpha_DC / N;
+
+		float tanm = tan(phase_imba);
+		float secm = 1.0f/cos(phase_imba);
+		for(int i=0; i<N; i++)
+		{
+			in[i][0] -= DC[0];
+			in[i][1] -= DC[1];
+
+			in[i][0] *= fft_window[i];
+			in[i][1] *= fft_window[i];
+
+			in[i][0] *= gain_imba;
+
+			// IQ phase miss-match correction, see https://wiki.analog.com/resources/eval/user-guides/ad-fmcomms1-ebz/iq_correction
+			in[i][1] = tanm * in[i][0] + secm * in[i][1];
+
+			float ampsq = in[i][0]*in[i][0]+in[i][1]*in[i][1];
+
+			peaksq_amp = max(peaksq_amp, ampsq);
+
+			// noise floor is detected by a quick decay slow attack smoothing filter
+			//noise_floor_sq_amp 
+		}
+
 		fftwf_execute(p);
 
 		float log_amp_copy[N];
@@ -123,9 +171,9 @@ int rx(void *buf, int len, int type)
 
 		cs.enter();
 		memcpy(log_amp, log_amp_copy, sizeof(log_amp_copy));
-		for(int i=0; i<N; i++)
-			if (_isnan(log_amp[i]) || i == 0)		// remove DC offset and NANs from log_ps error.
-				log_amp[i] = _isnan(log_amp[(i+1)%N]) ? -999 : log_amp[(i+1)%N];
+// 		for(int i=0; i<N; i++)
+// 			if (_isnan(log_amp[i]) || i == 0)		// remove DC offset and NANs from log_ps error.
+// 				log_amp[i] = _isnan(log_amp[(i+1)%N]) ? -999 : log_amp[(i+1)%N];
 		cs.leave();
 	}
 
@@ -197,18 +245,23 @@ int draw(HWND drawing_hwnd)
 	memcpy(amp, log_amp, sizeof(log_amp));
 	cs.leave();
 
+	RGBQUAD red = {0,0,255,255};
 	RGBQUAD blue = {255,0,0,255};
 	RGBQUAD light_red = {180,180,255,255};
 
 
-	float range_low = -110;
+	float range_low = -130;
 	float range_high = 0;
+
+	// axies
 	for(int i=range_low; i<=range_high; i+=10)
 	{
 		int y = height * (range_high - i) / (range_high-range_low);
 		for(int j=0; j<width; j++)
 			canvas[y*width+j] = light_red;
 	}
+
+	// data
 	for(int i=0; i<width; i++)
 	{
 		int n;
@@ -231,6 +284,10 @@ int draw(HWND drawing_hwnd)
 	{
 		draw_line(i-1, amp_pixel[i-1], i, amp_pixel[i], blue);
 	}
+
+	// overall amplitude
+	float peakamp_db = min(max(range_low,log10(peaksq_amp)*10), range_high);
+ 	draw_line(0, height, 0, height * (range_high - peakamp_db) / (range_high-range_low), red);
 
 	SetBitmapBits(bitmap, rect.right * rect.bottom * 4, canvas);
 
@@ -259,6 +316,16 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 	case WM_INITDIALOG:
 		window_start = GetTickCount();
 		SetTimer(hDlg, 0, 16, NULL);
+		slider = GetDlgItem(hDlg, IDC_SLIDER1);
+		slider2 = GetDlgItem(hDlg, IDC_SLIDER2);
+		SendMessage(slider, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)1000);
+		SendMessage(slider, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)500);
+		SendMessage(slider2, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)1000);
+		SendMessage(slider2, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)500);
+		break;
+	case WM_HSCROLL:
+		phase_imba = (SendMessage(slider, TBM_GETPOS, 0, 0)-500)*2*PI/180/500;
+		gain_imba = (SendMessage(slider2, TBM_GETPOS, 0, 0)-500)*0.05f/500 + 1.0f;
 		break;
 
 	case WM_CLOSE:		
@@ -266,6 +333,12 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 		break;
 	case WM_TIMER:
 		draw(GetDlgItem(hDlg, IDC_GRAPH));
+		{
+			float peakamp_db = log10(peaksq_amp)*10 -3;	// -3: 2channel
+			char tmp[30];
+			sprintf(tmp, "%.1fdbFS, 10db/div", peakamp_db);
+			SetWindowTextA(hDlg, tmp);
+		}
 		break;
 
 	default:
@@ -278,6 +351,13 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 
 int main(int argc, char* argv[])
 {
+	// simple window function
+	for(int i=0; i<N/2; i++)
+	{
+		fft_window[i] = (float)i*2/N;
+		fft_window[N-1-i] = (float)i*2/N;
+	}
+
 	for(int i=0; i<N; i++)
 		log_amp[i] = -999;
 

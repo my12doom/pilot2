@@ -48,8 +48,8 @@ public:
 	int power_on();		// power up and enter standby-I, should be called only in power down state
 	int power_off();	// power down the whole chip.
 
-	int rf_on(bool rx);	// turn on RF, enter RX or TX mode.
-	int rf_off();		// turn off RF, in TX mode RF is turned off after the current transmitting packet is sent.
+	virtual int rf_on(bool rx);	// turn on RF, enter RX or TX mode.
+	virtual int rf_off();		// turn off RF, in TX mode RF is turned off after the current transmitting packet is sent.
 
 	int write_tx(const uint8_t *data, int count);	// write a packet into FIFO.
 	int read_rx(uint8_t *data, int maxcount);		// read a packet from FIFO, return 1 if no new data available.

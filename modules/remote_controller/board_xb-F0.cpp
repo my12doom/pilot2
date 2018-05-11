@@ -14,7 +14,7 @@ using namespace HAL;
 
 F0GPIO qon(GPIOB, GPIO_Pin_0);
 F0Timer button_timer(TIM16);
-int16_t adc_data[7] = {0};
+int16_t adc_data[8] = {0};
 bool show_charging = false;
 bool flash_battery_led = true;
 bool long_press_ing = false;
@@ -74,7 +74,7 @@ static void adc_config(void)
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
 	
 	// Configure GPIO0~2 as analog input
-	for(int ADC_Channel=0; ADC_Channel<7; ADC_Channel++)
+	for(int ADC_Channel=0; ADC_Channel<8; ADC_Channel++)
 	{
 		GPIO_InitStructure.GPIO_Pin = 1 << ADC_Channel;
 		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
@@ -87,7 +87,7 @@ static void adc_config(void)
 	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);
 	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&adc_data;
 	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-	DMA_InitStructure.DMA_BufferSize = 7;
+	DMA_InitStructure.DMA_BufferSize = 8;
 	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
@@ -117,6 +117,7 @@ static void adc_config(void)
 	ADC_ChannelConfig(ADC1, ADC_Channel_4, ADC_SampleTime_239_5Cycles);
 	ADC_ChannelConfig(ADC1, ADC_Channel_5, ADC_SampleTime_239_5Cycles);
 	ADC_ChannelConfig(ADC1, ADC_Channel_6, ADC_SampleTime_239_5Cycles);
+	ADC_ChannelConfig(ADC1, ADC_Channel_7, ADC_SampleTime_239_5Cycles);
 	
 	ADC_OverrunModeCmd(ADC1, ENABLE);
 	ADC_GetCalibrationFactor(ADC1);
@@ -149,9 +150,9 @@ void on_key_up()
 	calling = false;
 }
 
+	uint8_t v;
 void shutdown()
 {
-	uint8_t v;
 	i2c.read_reg(0x6b<<1, 5, &v);
 	v &= 0xcf;
 	i2c.write_reg(0x6b<<1, 5, v);
@@ -378,14 +379,17 @@ int board_init()
 	NVIC_InitStructure.NVIC_IRQChannelPriority = 3;
 	NVIC_Init(&NVIC_InitStructure);
 	
-	//systimer->delayms(600);
 	i2c.init(::SCL, ::SDA);
 	i2c.set_speed(25);
-	/*
-	i2c.read_reg(0x6b<<1, 8, &reg08);
-	*/
-	//i2c.write_reg(0x6b<<1, 1, 0x80);		// reset registers
-	//systimer->delayms(10);
+	int64_t bq_timeout = systimer->gettime() + 500000;
+	while(systimer->gettime() < bq_timeout)
+	{
+		if (i2c.read_reg(0x6b<<1, 8, &reg08) == 0)
+			break;		
+	} 
+	systimer->delayms(600);
+	i2c.write_reg(0x6b<<1, 1, 0x80);		// reset registers
+	systimer->delayms(100);
 	i2c.write_reg(0x6b<<1, 5, 0x8C);		// disable i2c watchdog
 	i2c.write_reg(0x6b<<1, 3, 0x10);		// 256mA pre-charge, 128mA termination
 	i2c.write_reg(0x6b<<1, 2, 0xA0);		// 2.5A charge

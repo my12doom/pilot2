@@ -11,6 +11,7 @@
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <pCCUsed>5060422::V5.06 update 4 (build 422)::ARMCC</pCCUsed>
+      <uAC6>0</uAC6>
       <TargetOption>
         <TargetCommonOption>
           <Device>STM32F405RG</Device>
@@ -47,14 +48,14 @@
             <NotGenerated>0</NotGenerated>
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
-          <OutputDirectory>.\Output\RC\</OutputDirectory>
+          <OutputDirectory>.\output\F4SDR\</OutputDirectory>
           <OutputName>RC</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
-          <ListingPath>.\Output\RC\</ListingPath>
+          <ListingPath>.\output\F4SDR\</ListingPath>
           <HexFormatSelection>1</HexFormatSelection>
           <Merge32K>0</Merge32K>
           <CreateBatchFile>0</CreateBatchFile>
@@ -79,9 +80,9 @@
             <nStopB2X>0</nStopB2X>
           </BeforeMake>
           <AfterMake>
-            <RunUserProg1>1</RunUserProg1>
+            <RunUserProg1>0</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
-            <UserProg1Name>C:\Keil_v5\ARM\ARMCC\bin\fromelf.exe --bin -o ./Output/bootloader/bootloader.bin ./Output/bootloader/bootloader.axf</UserProg1Name>
+            <UserProg1Name></UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
@@ -272,7 +273,7 @@
               </OCR_RVCT3>
               <OCR_RVCT4>
                 <Type>1</Type>
-                <StartAddress>0x8008000</StartAddress>
+                <StartAddress>0x8000000</StartAddress>
                 <Size>0x100000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
@@ -333,7 +334,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls>--diag_suppress 177,550,1,1295 --gnu</MiscControls>
-              <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=8000000,__FPU_USED=0,USE_USB_OTG_FS</Define>
+              <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=8000000,__FPU_USED=0,USE_USB_OTG_HS,USE_ULPI_PHY</Define>
               <Undefine></Undefine>
               <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface;..\..\HAL\STM32F4;..\..\;..\..\modules</IncludePath>
             </VariousControls>
@@ -450,9 +451,9 @@
               <FilePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver\stm32f4xx_spi.c</FilePath>
             </File>
             <File>
-              <FileName>system_stm32f4xx_APP.c</FileName>
+              <FileName>system_stm32f4xx_24M.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\HAL\STM32F4\STMLib\system_stm32f4xx_APP.c</FilePath>
+              <FilePath>..\..\HAL\STM32F4\STMLib\system_stm32f4xx_24M.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -498,6 +499,11 @@
               <FileName>AES.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\utils\AES.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>F4HSBulk.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F4\F4HSBulk.cpp</FilePath>
             </File>
           </Files>
         </Group>
@@ -559,10 +565,81 @@
               <FileType>8</FileType>
               <FilePath>..\..\modules\F4SDR\main.cpp</FilePath>
             </File>
+            <File>
+              <FileName>i2s.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\modules\F4SDR\i2s.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>USB_HS</GroupName>
+          <Files>
+            <File>
+              <FileName>usb_bsp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usb_bsp.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usbd_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_desc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usbd_desc.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_ioreq.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usbd_ioreq.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_req.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usbd_req.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_usr.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usbd_usr.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dcd_int.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usb_dcd_int.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dcd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usb_dcd.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_cdc_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usbd_cdc_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\usb_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>interrupt.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\HAL\STM32F4\usbHSBulk\interrupt.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
     </Target>
   </Targets>
+
+  <RTE>
+    <apis/>
+    <components/>
+    <files/>
+  </RTE>
 
 </Project>

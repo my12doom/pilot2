@@ -583,6 +583,9 @@ int main(int argc, char* argv[])
 				sensors::flow_data fdata = {flow_on_mf[0], flow_on_mf[1], flow_on[2]};
 
 				float sonar = quad3.ultrasonic / 1000.0f;
+				if (sonar <= 0.01f)
+					sonar = NAN;
+
  				pos2.update(quad5.q, acc, gps_extra2,fdata, sonar, baro, dt, pilot.fly_mode, true, still);
 				if (last_state != pos2.state())
 				{
@@ -592,7 +595,7 @@ int main(int argc, char* argv[])
 				}
 
 
-				//ins.update(gyro, acc, mag, gps_extra, *(sensors::px4flow_frame*)&frame, baro, dt, ppm.out[0]>=1240, quad2.airborne);
+				ins.update(gyro, acc, mag, gps_extra, fdata, baro, sonar, dt, ppm.out[0]>=1240, quad2.airborne);
 
 				if (time > 12000000)
 				{

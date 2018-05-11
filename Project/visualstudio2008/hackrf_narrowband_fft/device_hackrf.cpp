@@ -15,7 +15,7 @@
 
 hackrf_device* device = NULL;
 static int (*rx)(void *buf, int len, int type) = NULL;
-float center_frequency = 2410.0E6;
+float center_frequency = 2800.0E6;
 
 int rx_callback(hackrf_transfer* transfer)
 {
@@ -154,8 +154,8 @@ int start_rx()
 
 	result |= hackrf_set_amp_enable(device, 1);
 	result |= hackrf_set_sample_rate(device, 20000000);
-	result |= hackrf_set_baseband_filter_bandwidth(device, 25e6);
-	result |= hackrf_set_vga_gain(device, 14); // step: 2db
+	result |= hackrf_set_baseband_filter_bandwidth(device, 7.0e6);
+	result |= hackrf_set_vga_gain(device, 14); // step: 2db, 62db max
 	result |= hackrf_set_lna_gain(device, 24); // step: 8db
 	result |= hackrf_set_freq(device, center_frequency);
 
@@ -167,7 +167,16 @@ int start_rx()
 	QueryPerformanceCounter(&l2);
 	float s = (float)(l2.QuadPart-l1.QuadPart) / (freq.QuadPart);
 
+	int lpf_band = (v>>4)&0xf;
+	char *lpf_tbl[] = {"1.75", "2.5", "3.5", "5.0", "5.5", "6.0", "7.0", "8.0", "9.0", "10.0", "12.0", "14.0", "15.0", "20.0", "24.0", "28.0"};
+	printf("LPF:%sMhz for each I/Q, %.1fMhz total\n", lpf_tbl[lpf_band], atof(lpf_tbl[lpf_band])*2);
+
 	result |= hackrf_start_rx(device, rx_callback, NULL);
+// 	for(int i=0; i<32; i++)
+// 	{
+// 		hackrf_max2837_read(device, i, &v);
+// 		printf("%d, 0x%02x\n,", i, v);
+// 	}
 	return result;
 }
 

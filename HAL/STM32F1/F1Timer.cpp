@@ -1,4 +1,5 @@
 #include "F1Timer.h"
+#include "F1SysTimer.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <misc.h>
@@ -114,33 +115,25 @@ namespace STM32F1
 	
 	void F1Timer::restart()
 	{
+		TIM_Cmd(TIMx,DISABLE);
 		TIMx->CNT = 0;
-		if(TIM1==TIMx)
-			TIM_ClearITPendingBit(TIM1 , TIM_FLAG_Update);
-		else if(TIM2==TIMx)
-			TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);
-		else if(TIM3==TIMx)
-			TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
-		else if(TIM4==TIMx)
-			TIM_ClearITPendingBit(TIM4 , TIM_FLAG_Update);
-		else if(TIM5==TIMx)
-			TIM_ClearITPendingBit(TIM5 , TIM_FLAG_Update);
-		else if(TIM6==TIMx)
-			TIM_ClearITPendingBit(TIM6 , TIM_FLAG_Update);
-		else if(TIM7==TIMx)
-			TIM_ClearITPendingBit(TIM7 , TIM_FLAG_Update);
-		else if(TIM8==TIMx)
-			TIM_ClearITPendingBit(TIM8 , TIM_FLAG_Update);
+		TIM_ClearITPendingBit(TIMx , TIM_FLAG_Update);
+		__DSB();
+		__ISB();
+		__DMB();
+		__NOP();__NOP();__NOP();__NOP();__NOP();
+		__NOP();__NOP();__NOP();__NOP();__NOP();
+		__NOP();__NOP();__NOP();__NOP();__NOP();
+		systimer->delayus(5);
+		TIM_Cmd(TIMx,ENABLE);
 	}
 	void F1Timer::enable_cb()
 	{
 		NVIC_EnableIRQ(IRQn);
-		TIM_Cmd(TIMx,ENABLE);
 	}
 	
 	void F1Timer::disable_cb()
 	{
-		TIM_Cmd(TIMx,DISABLE);
 		NVIC_DisableIRQ(IRQn);
 	}
 	
