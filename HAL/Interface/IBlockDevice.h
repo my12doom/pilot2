@@ -29,5 +29,8 @@ namespace HAL
 
 		// query num available blocks in rx queue, negative values for error.
 		virtual int available() = 0;
+
+		// device specificed control.
+		virtual int ioctl(int op, void *p, int count){return error_unsupported;};
 	};
 }
