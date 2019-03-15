@@ -611,7 +611,7 @@ namespace STM32F4
 	void F4UART::DMA2_Steam6_IRQHandler()
 	{	
 		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
-		DMA_ClearFlag(DMA2_Stream6, DMA_FLAG_TCIF5);
+		DMA_ClearFlag(DMA2_Stream6, DMA_FLAG_TCIF6);
 		tx_dma_running = false;
 		dma_handle_tx_queue();
 	}
