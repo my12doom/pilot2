@@ -50,7 +50,6 @@ extern uint32_t APP_Rx_ptr_in;    /* Increment this pointer or roll it back to
                                      in the buffer APP_Rx_Buffer. */
 
 /* Driver TX buffer */
-#define APP_TX_BUF_SIZE 128
 uint8_t APP_Tx_Buffer[APP_TX_BUF_SIZE];
 uint32_t APP_tx_ptr_head;
 uint32_t APP_tx_ptr_tail;

@@ -271,7 +271,7 @@ __ALIGN_BEGIN uint8_t usbd_cdc_CfgDesc[USB_CDC_CONFIG_DESC_SIZ]  __ALIGN_END =
 #ifdef USE_USB_OTG_HS
   0x10,                           /* bInterval: */
 #else
-  0xFF,                           /* bInterval: */
+  0x01,                           /* bInterval: */
 #endif /* USE_USB_OTG_HS */
   
   /*---------------------------------------------------------------------------*/
