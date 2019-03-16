@@ -226,6 +226,10 @@ void VCP_send_str(uint8_t* buf)
 static uint16_t VCP_DataRx (uint8_t* Buf, uint32_t Len)
 {
 	uint32_t i;
+	
+	// reject buffer for now if not enough free space
+	if (APP_TX_BUF_SIZE - VCP_available() - 1 < Len)
+		return -1;
 
 	for (i = 0; i < Len; i++)
 	{

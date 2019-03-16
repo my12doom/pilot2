@@ -655,6 +655,8 @@ static uint8_t  usbd_cdc_DataIn (void *pdev, uint8_t epnum)
   return USBD_OK;
 }
 
+int pending_rx_buffer = 0;
+
 /**
   * @brief  usbd_audio_DataOut
   *         Data received on non-control Out endpoint
@@ -671,13 +673,19 @@ static uint8_t  usbd_cdc_DataOut (void *pdev, uint8_t epnum)
   
   /* USB data will be immediately processed, this allow next USB traffic being 
      NAKed till the end of the application Xfer */
-  APP_FOPS.pIf_DataRx(USB_Rx_Buffer, USB_Rx_Cnt);
-  
-  /* Prepare Out endpoint to receive next packet */
-  DCD_EP_PrepareRx(pdev,
+  int16_t r = APP_FOPS.pIf_DataRx(USB_Rx_Buffer, USB_Rx_Cnt);
+
+  if (r != 0)
+  {
+	pending_rx_buffer = 1;
+  }
+  else
+  {
+	DCD_EP_PrepareRx(pdev,
                    CDC_OUT_EP,
                    (uint8_t*)(USB_Rx_Buffer),
                    CDC_DATA_OUT_PACKET_SIZE);
+  }
 
   return USBD_OK;
 }
@@ -692,6 +700,22 @@ static uint8_t  usbd_cdc_DataOut (void *pdev, uint8_t epnum)
 static uint8_t  usbd_cdc_SOF (void *pdev)
 {      
   static uint32_t FrameCount = 0;
+  
+	// try process pending rx buffer again
+	if (pending_rx_buffer)
+	{
+		int16_t USB_Rx_Cnt = ((USB_OTG_CORE_HANDLE*)pdev)->dev.out_ep[CDC_OUT_EP].xfer_count;
+		
+		if (APP_FOPS.pIf_DataRx(USB_Rx_Buffer, USB_Rx_Cnt) == 0)
+		{
+			DCD_EP_PrepareRx(pdev,
+                   CDC_OUT_EP,
+                   (uint8_t*)(USB_Rx_Buffer),
+                   CDC_DATA_OUT_PACKET_SIZE);
+			
+			pending_rx_buffer = 0;
+		}
+	}
   
   if (FrameCount++ == CDC_IN_FRAME_INTERVAL)
   {
