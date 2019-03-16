@@ -36,7 +36,7 @@ namespace STM32F4
 	
 	int F4VCP::available()
 	{
-		return 0;
+		return VCP_available();;
 	}
 	
 	int F4VCP::read(void *data, int max_count)

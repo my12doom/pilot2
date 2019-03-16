@@ -51,8 +51,8 @@ extern uint32_t APP_Rx_ptr_in;    /* Increment this pointer or roll it back to
 
 /* Driver TX buffer */
 uint8_t APP_Tx_Buffer[APP_TX_BUF_SIZE];
-uint32_t APP_tx_ptr_head;
-uint32_t APP_tx_ptr_tail;
+volatile uint32_t APP_tx_ptr_head;
+volatile uint32_t APP_tx_ptr_tail;
 
 static uint16_t VCP_Init     (void);
 static uint16_t VCP_DeInit   (void);
