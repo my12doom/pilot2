@@ -17,7 +17,9 @@
 #ifndef __USB_PWR_H
 #define __USB_PWR_H
 
+
 /* Includes ------------------------------------------------------------------*/
+#include "usb_type.h"
 /* Exported types ------------------------------------------------------------*/
 typedef enum _RESUME_STATE
 {
@@ -52,7 +54,7 @@ RESULT PowerOff(void);
 
 /* External variables --------------------------------------------------------*/
 extern  __IO uint32_t bDeviceState; /* USB device status */
-extern __IO bool fSuspendEnabled;  /* true when suspend is possible */
+extern __IO int fSuspendEnabled;  /* true when suspend is possible */
 
 #endif  /*__USB_PWR_H*/
 

@@ -16,6 +16,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "usb_lib.h"
 #include "usb_desc.h"
+#include "hw_config.h"
 
 /* USB Standard Device Descriptor */
 const uint8_t Virtual_Com_Port_DeviceDescriptor[] =
