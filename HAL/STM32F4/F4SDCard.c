@@ -205,7 +205,10 @@ DWORD get_fattime(void)
 }
 	*/
 
-
+__attribute__((weak)) DWORD get_fattime(void)
+{
+	return 0;
+}
 void SDIO_IRQHandler(void)
 {
   SD_ProcessIRQSrc();

@@ -82,7 +82,6 @@ extern "C" void EP3_OUT_Callback(void)
 	}
 }
 
-int i = 0;
 extern "C" void EP1_IN_Callback(void)
 {
 	if (that && GetEPTxStatus(ENDP1) != EP_TX_VALID)

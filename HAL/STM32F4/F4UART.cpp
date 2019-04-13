@@ -112,7 +112,7 @@ namespace STM32F4
 			USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
 
 			if (uart_table[0])
-				LOGE("overwriting UART1\n");
+				printf("overwriting UART1\n");
 			uart_table[0] = this;
 		}
 		else if(USART2 == USARTx )
@@ -165,7 +165,7 @@ namespace STM32F4
 			USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
 
 			if (uart_table[1])
-				LOGE("overwriting UART2\n");
+				printf("overwriting UART2\n");
 			uart_table[1] = this;
 		}
 		else if(USART3 == USARTx )
@@ -203,7 +203,7 @@ namespace STM32F4
 			USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);
 
 			if (uart_table[2])
-				LOGE("overwriting UART3\n");
+				printf("overwriting UART3\n");
 			uart_table[2] = this;
 		}
 		else if(UART4 == USARTx )	
@@ -241,7 +241,7 @@ namespace STM32F4
 			USART_ITConfig(UART4, USART_IT_RXNE, ENABLE);
 			
 			if (uart_table[3])
-				LOGE("overwriting UART4\n");
+				printf("overwriting UART4\n");
 			uart_table[3] = this;
 		}
 		else if(UART5 == USARTx )
@@ -285,7 +285,7 @@ namespace STM32F4
 			USART_ITConfig(USART6, USART_IT_RXNE, ENABLE);
 			
 			if (uart_table[5])
-				LOGE("overwriting UART4\n");
+				printf("overwriting UART4\n");
 			uart_table[5] = this;
 		}
 		else if(UART7 == USARTx )

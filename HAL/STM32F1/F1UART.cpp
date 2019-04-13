@@ -9,16 +9,35 @@ namespace STM32F1
 {
 	static F1UART * uart_table[6] = {0};
 
-	// UART1
 	extern "C" void USART1_IRQHandler(void)
 	{
 		if (uart_table[0])
-			uart_table[0]->USART1_IRQHandler();
+			uart_table[0]->RXIRQHandler();
+	}
+	extern "C" void USART2_IRQHandler(void)
+	{
+		if (uart_table[1])
+			uart_table[1]->RXIRQHandler();
+	}
+	extern "C" void USART3_IRQHandler(void)
+	{
+		if (uart_table[2])
+			uart_table[2]->RXIRQHandler();
 	}
 	extern "C" void DMA1_Channel4_IRQHandler()
 	{
 		if (uart_table[0])
-			uart_table[0]->DMA1_Channel4_IRQHandler();
+			uart_table[0]->TXIRQHandler();
+	}
+	extern "C" void DMA1_Channel7_IRQHandler()
+	{
+		if (uart_table[1])
+			uart_table[1]->TXIRQHandler();
+	}
+	extern "C" void DMA1_Channel2_IRQHandler()
+	{
+		if (uart_table[2])
+			uart_table[2]->TXIRQHandler();
 	}
 	
 	F1UART::F1UART(USART_TypeDef * USARTx):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),tx_dma_running(false),rx_dma_running(false),ongoing_rx_start(0),ongoing_rx_size(0)
@@ -50,22 +69,63 @@ namespace STM32F1
 			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
 			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-			NVIC_Init(&NVIC_InitStructure);
-			
-			
-			USART_InitStructure.USART_BaudRate = 115200;
-			USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-			USART_InitStructure.USART_StopBits = USART_StopBits_1;
-			USART_InitStructure.USART_Parity = USART_Parity_No ;
-			USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-			USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-			USART_Init(USART1, &USART_InitStructure); 
-			USART_Cmd(USART1, ENABLE);
-			USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+			NVIC_Init(&NVIC_InitStructure);			
 
 			uart_table[0] = this;
 		}
 		
+		if(USART2 == USARTx)
+		{
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO,ENABLE);
+			
+			
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;			
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+			GPIO_Init(GPIOA, &GPIO_InitStructure);
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+			GPIO_Init(GPIOA, &GPIO_InitStructure);			
+			
+			// NVIC config
+			NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+
+			uart_table[1] = this;
+		}
+		
+		if(USART3 == USARTx)
+		{
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO,ENABLE);
+			
+			
+			//Set Uart1 bind to GPIOA pin9|pin10
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;			
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+			GPIO_Init(GPIOB, &GPIO_InitStructure);
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+			GPIO_Init(GPIOB, &GPIO_InitStructure);			
+			
+			// NVIC config
+			NVIC_InitStructure.NVIC_IRQChannel = USART3_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+
+			uart_table[2] = this;
+		}
+		
+		set_baudrate(115200);
 		dma_tx_init();
 	}
 	int F1UART::set_baudrate(int baudrate)
@@ -90,6 +150,7 @@ namespace STM32F1
 		{
 			RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
 			tx_DMAy_Streamx=DMA1_Channel4;
+			tc_flag = DMA1_FLAG_TC4;
 			
 			NVIC_InitTypeDef NVIC_InitStructure;
 			NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel4_IRQn;
@@ -98,10 +159,35 @@ namespace STM32F1
 			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 			NVIC_Init(&NVIC_InitStructure);
 		}
+		if(USART2 == USARTx)
+		{
+			RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+			tx_DMAy_Streamx=DMA1_Channel7;
+			tc_flag = DMA1_FLAG_TC7;
+			
+			NVIC_InitTypeDef NVIC_InitStructure;
+			NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel7_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+		}
+		if(USART3 == USARTx)
+		{
+			RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+			tx_DMAy_Streamx=DMA1_Channel2;
+			tc_flag = DMA1_FLAG_TC2;
+			
+			NVIC_InitTypeDef NVIC_InitStructure;
+			NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel2_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);
+		}
 		
 		DMA_InitTypeDef DMA_InitStructure = {0};
-		DMA_DeInit(DMA1_Channel4);
-		//DMA_InitStructure.DMA_Channel = tx_DMA_Channel;
+		DMA_DeInit(tx_DMAy_Streamx);
 		DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(USARTx->DR));
 		DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&tx_buffer;
 		DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
@@ -113,16 +199,9 @@ namespace STM32F1
 		DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
 		DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
 		
-		/*
-		DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
-		DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
-		DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;
-		DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-		DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-		*/
 		DMA_Init(tx_DMAy_Streamx, &DMA_InitStructure);
 		
-		DMA_ITConfig(tx_DMAy_Streamx,DMA_IT_TC,ENABLE);
+		DMA_ITConfig(tx_DMAy_Streamx, DMA_IT_TC, ENABLE);
 		USART_DMACmd(USARTx, USART_DMAReq_Tx, ENABLE);
 	}
 	
@@ -260,24 +339,24 @@ namespace STM32F1
 	
 
 	//For usart1:
-	void F1UART::DMA1_Channel4_IRQHandler()
+	void F1UART::TXIRQHandler()
 	{	
 		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
-		DMA_ClearFlag(DMA1_FLAG_TC4);
+		DMA_ClearFlag(tc_flag);
 		tx_dma_running = false;
 		dma_handle_tx_queue();
 	}
-	void F1UART::USART1_IRQHandler(void)
+	void F1UART::RXIRQHandler()
 	{
 		int c = -1;
-		if(USART_GetFlagStatus(USART1,USART_IT_RXNE)==SET || USART_GetFlagStatus(USART1,USART_IT_ORE)==SET)
+		if(USART_GetFlagStatus(USARTx,USART_IT_RXNE)==SET || USART_GetFlagStatus(USARTx,USART_IT_ORE)==SET)
 		{
-			c = USART1->SR;
-			c = USART_ReceiveData(USART1);
+			c = USARTx->SR;
+			c = USART_ReceiveData(USARTx);
 		}
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
-		USART1->SR = (uint16_t)~0x20;
+		USARTx->SR = (uint16_t)~0x20;
 		if (((end+1)%sizeof(rx_buffer) != start))
 		{
 			rx_buffer[end] = c;

@@ -76,6 +76,33 @@ namespace STM32F4
 			SPI_Init(SPIx, &SPI_InitStructure);
 			SPI_Cmd(SPIx, ENABLE);
 		}
+
+		else if (SPIx == SPI3)
+		{
+			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
+			
+			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+			GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+			GPIO_Init(GPIOC, &GPIO_InitStructure);
+			GPIO_PinAFConfig(GPIOC,GPIO_PinSource10,GPIO_AF_SPI3);
+			GPIO_PinAFConfig(GPIOC,GPIO_PinSource11,GPIO_AF_SPI3);
+			GPIO_PinAFConfig(GPIOC,GPIO_PinSource12,GPIO_AF_SPI3);
+			
+			SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
+			SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
+			SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
+			SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
+			SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+			SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
+			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
+			SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
+			SPI_InitStructure.SPI_CRCPolynomial = 7;
+			SPI_Init(SPIx, &SPI_InitStructure);
+			SPI_Cmd(SPIx, ENABLE);
+		}
 		
 		return 0;
 	}
