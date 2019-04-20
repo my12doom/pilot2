@@ -75,6 +75,7 @@ typedef struct
 	float frequency;
 	int16_t power;	// 2-17,20, or 0("don't change") for TX, RSSI for rx
 	int16_t retries_left;
+	int64_t next_tx;
 	uint8_t mcs;	// not used yet
 } sx127x_packet;
 
@@ -94,6 +95,7 @@ public:
 	int cancel_current_packet();		// not supported by sx1278
 	int set_aes(uint8_t *key, int keysize){aes.set_key(key, keysize*8); return 0;}
 	void set_tx_interval(int new_tx_interval){tx_interval = new_tx_interval;}
+	bool ready_for_next_tx();
 
 protected:
 	CircularQueue<sx127x_packet, SX127xManager_TX_QUEUE> tx_queue[2];		// [0 ~ 1] : priority
@@ -115,4 +117,6 @@ protected:
 
 	bool use_aes;// = false;
 	AESCryptor2 aes;
+
+	uint8_t mode;	// cached SX127x mode register
 };

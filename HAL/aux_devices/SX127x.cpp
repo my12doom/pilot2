@@ -322,7 +322,7 @@ int SX127xManager::txqueue_space(int priority)		// remaining free space of TX qu
 }
 int SX127xManager::txqueue_total(int priority)		// total space of TX queue
 {
-	return 4;
+	return 1;
 }
 int SX127xManager::rxqueue_count()					// RX available packet count
 {
@@ -348,6 +348,12 @@ void SX127xManager::tim()
 	state_maching_go();
 	interrupt->enable();	
 }
+
+bool SX127xManager::ready_for_next_tx()
+{
+	return mode != mode_tx && mode != mode_prepare_tx && systimer->gettime() > last_tx_done_time + tx_interval;
+}
+
 void SX127xManager::state_maching_go()
 {
 	// check flag
@@ -356,7 +362,7 @@ void SX127xManager::state_maching_go()
 
 	x->self_check();
 	uint8_t flags = x->read_reg(0x12);
-	uint8_t mode = x->get_mode();
+	mode = x->get_mode();
 
 	// extract packet to rx queue.
 	if (flags&0x40)
@@ -401,7 +407,7 @@ void SX127xManager::state_maching_go()
 	else if (mode != mode_tx)
 	{
 		// tx interval passed?
-		if (systimer->gettime() < last_tx_done_time + tx_interval)
+		if (!ready_for_next_tx())
 		{
 			if (mode != mode_rx)
 				x->set_mode(mode_rx);
@@ -423,6 +429,7 @@ void SX127xManager::state_maching_go()
 			x->write_reg(0x12, 0x08);
 			x->write(p.data, p.size);
 			x->set_mode(mode_tx);
+			mode = mode_tx;
 						
 			int64_t timeout = systimer->gettime() + 1000;
 			do
