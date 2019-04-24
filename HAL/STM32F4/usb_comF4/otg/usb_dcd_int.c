@@ -202,7 +202,7 @@ uint32_t USBD_OTG_EP1IN_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
   if (diepint.b.emptyintr)
   {
     DCD_WriteEmptyTxFifo(pdev , 1);
-    CLEAR_IN_EP_INTR(1, emptyintr);
+    //CLEAR_IN_EP_INTR(1, emptyintr);	// this flag is read only ,and can only be masked in DCD_WriteEmptyTxFifo
   }
   return 1;
 }
@@ -659,6 +659,7 @@ static uint32_t DCD_WriteEmptyTxFifo(USB_OTG_CORE_HANDLE *pdev, uint32_t epnum)
   uint32_t len = 0;
   uint32_t len32b;
   txstatus.d32 = 0;
+  uint32_t fifoemptymsk;
   
   ep = &pdev->dev.in_ep[epnum];    
   
@@ -693,6 +694,14 @@ static uint32_t DCD_WriteEmptyTxFifo(USB_OTG_CORE_HANDLE *pdev, uint32_t epnum)
     ep->xfer_count += len;
     
     txstatus.d32 = USB_OTG_READ_REG32(&pdev->regs.INEP_REGS[epnum]->DTXFSTS);
+	
+	/* Mask the TxFIFOEmpty interrupt  */
+    if (ep->xfer_len == ep->xfer_count)
+    {
+      fifoemptymsk = 0x1 << ep->num;  
+      USB_OTG_MODIFY_REG32(&pdev->regs.DREGS->DIEPEMPMSK, 
+                           fifoemptymsk, 0); 
+    }
   }
   
   return 1;
