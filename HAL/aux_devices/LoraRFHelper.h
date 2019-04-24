@@ -19,7 +19,7 @@ static float lora_calc_sensitivity(int BW, int SF, float NF = 6.0f)
 
 	static const float snr[] = { -5.0f, -7.5f, -10.0f, -12.5f, -15.0f, -17.5f, -20.0f };
 
-	return -174.0f + 10 * log10(BW*1000) + NF + snr[SF-6];
+	return -174.0f + 10 * log10(BW*1000.0f) + NF + snr[SF-6];
 }
 
 

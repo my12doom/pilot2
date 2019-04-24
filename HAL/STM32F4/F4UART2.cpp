@@ -23,6 +23,23 @@ namespace STM32F4
 		if (uart_table[0])
 			uart_table[0]->rx_dma_irq();
 	}
+
+	// UART2
+	extern "C" void USART2_IRQHandler(void)
+	{
+		if (uart_table[1])
+			uart_table[1]->uart_irq();
+	}
+	extern "C" void DMA1_Stream6_IRQHandler()
+	{
+		if (uart_table[1])
+			uart_table[1]->tx_dma_irq();
+	}
+	extern "C" void DMA1_Stream5_IRQHandler()	// uart2rx
+	{
+		if (uart_table[1])
+			uart_table[1]->rx_dma_irq();
+	}
 		
 	F4UART2::F4UART2(USART_TypeDef * USARTx):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),tx_dma_running(false)
 	{		
@@ -68,9 +85,50 @@ namespace STM32F4
 			USART_ITConfig(USART1, USART_IT_IDLE, ENABLE);
 
 			if (uart_table[0])
-				LOGE("overwriting UART1\n");
+				printf("overwriting UART1\n");
 			uart_table[0] = this;
-		}		
+		}
+		
+		if(USART2 == USARTx)
+		{
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+			
+			//USART2: GPIOA pin2|pin3
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+			GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+			GPIO_Init(GPIOA, &GPIO_InitStructure);
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+			GPIO_Init(GPIOA, &GPIO_InitStructure);
+			GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2);
+			GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2);
+
+			// NVIC config
+			NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);		
+			
+			USART_InitStructure.USART_BaudRate = 115200;
+			USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+			USART_InitStructure.USART_StopBits = USART_StopBits_1;
+			USART_InitStructure.USART_Parity = USART_Parity_No ;
+			USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+			USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+			USART_Init(USART2, &USART_InitStructure); 
+			USART_Cmd(USART2, ENABLE);
+			USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+
+			if (uart_table[1])
+				printf("overwriting UART2\n");
+			uart_table[1] = this;
+		}
 		dma_init();
 	}
 	int F4UART2::set_baudrate(int baudrate)
@@ -107,6 +165,19 @@ namespace STM32F4
 			rx_dma_irqn = DMA2_Stream2_IRQn;
 			rx_DMAy_Streamx = DMA2_Stream2;
 			rx_tcif_flag = DMA_FLAG_TCIF2;
+		}
+		if(USART2 == USARTx)
+		{
+			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+			tx_DMA_Channel = DMA_Channel_4;
+			tx_dma_irqn = DMA1_Stream6_IRQn;
+			tx_DMAy_Streamx = DMA1_Stream6;
+			tx_tcif_flag = DMA_FLAG_TCIF6;
+
+			rx_DMA_Channel = DMA_Channel_4;
+			rx_dma_irqn = DMA1_Stream5_IRQn;
+			rx_DMAy_Streamx = DMA1_Stream5;
+			rx_tcif_flag = DMA_FLAG_TCIF5;
 		}
 
 		// nvic for both tx & rx.
