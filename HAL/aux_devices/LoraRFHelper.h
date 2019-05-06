@@ -52,3 +52,12 @@ static int lora_calc_airtime(int BW, int CR, int SF, int payload_bytes, int prea
 
 	return preamble_symbol_time + payload_symbol_count * symbol_time;
 }
+
+// input: rate: rate in bps
+//		  payload_bytes
+// output: air time in micro-second
+static int gfsk_calc_airtime(int rate,int payload_bytes)
+{
+	int extra_bytes = 1 + 2 + 2 + 4;	// 2byte preamble, 2byte CRC, 4byte tail(bug of SX1278), 1byte ramp
+	return (payload_bytes+extra_bytes) * 8 * 1000000 / rate;
+}

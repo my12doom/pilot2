@@ -15,7 +15,7 @@
 #define SX127xManager_RX_QUEUE 5
 
 
-class SX127x : public HAL::IBlockDevice
+class SX127x
 {
 public:
 	SX127x();
@@ -23,20 +23,31 @@ public:
 
 	// optional txen & rxen
 	int init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *txen = 0, HAL::IGPIO *rxen = 0);
+
+	// shared
 	int write_reg(uint8_t reg, uint8_t v);
 	uint8_t read_reg(uint8_t reg);
 	int config_DIO(int DIO_index, int source);		// see table 18 in datasheet for detailed mapping
-
 	int set_frequency(float MHz, float crystal=32.0f);
-	int set_rate(int BW, int CR, int SF);				// BW, CR, SF
-	int set_tx_power(int dbm);							// for PA_BOOST only(2~17dbm or 20dbm) and OCP setting
 	uint8_t get_mode();
 	void set_mode(uint8_t mode);
+	int set_tx_power(int dbm);							// for PA_BOOST only(2~17dbm or 20dbm) and OCP setting
 
+	// FSK/LORA switching
+	int set_lora_mode(bool lora);
+
+	// LORA 
+	int set_rate(int BW, int CR, int SF);				// BW, CR, SF
 	void self_check();
+
+	// FSK
+	int set_rate(int bitrate, float crystal = 32.0f);
 
 	
 	int get_rssi();										// RSSI in dbm
+	bool has_pending_rx();
+	bool tx_done();
+	void clear_tx_done_flag();
 
 	// IBlockDevice
 	virtual int write(const void *buf, int block_size);						// write FIFO!
@@ -49,11 +60,12 @@ protected:
 	HAL::IGPIO *cs;
 	HAL::IGPIO *txen;
 	HAL::IGPIO *rxen;
-
+	bool lora_mode;
 	uint8_t regs[256];
 
 	int write_fifo(const void *buf, int size);
 	int read_fifo(void *buf, int size);
+	void _set_mode(uint8_t mode);
 };
 
 enum sx127x_mode
@@ -97,6 +109,8 @@ public:
 	void set_tx_interval(int new_tx_interval){tx_interval = new_tx_interval;}
 	bool ready_for_next_tx();
 
+	int set_frequency(float tx_frequency, float rx_frequency);
+
 protected:
 	CircularQueue<sx127x_packet, SX127xManager_TX_QUEUE> tx_queue[2];		// [0 ~ 1] : priority
 	CircularQueue<sx127x_packet, SX127xManager_RX_QUEUE> rx_queue;
@@ -119,4 +133,6 @@ protected:
 	AESCryptor2 aes;
 
 	uint8_t mode;	// cached SX127x mode register
+	float tx_frequency;
+	float rx_frequency;
 };

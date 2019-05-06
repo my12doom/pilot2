@@ -1,13 +1,14 @@
 #include "SX127x.h"
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include <HAL/Interface/ISysTimer.h>
 
 using namespace HAL;
 
 SX127x::SX127x()
 {
-
+	lora_mode = true;
 }
 
 SX127x::~SX127x()
@@ -15,6 +16,7 @@ SX127x::~SX127x()
 
 }
 
+uint8_t regs[100];
 int SX127x::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *txen, HAL::IGPIO *rxen)
 {
 	this->spi = spi;
@@ -37,28 +39,60 @@ int SX127x::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *txen, HAL::IGPIO *r
 	}
 
 	// chip probe
-	char challenge[8] = {0x85, 0xa3, 0x00, 0x7b, 0x66, 0x76, 0x55, 0xaa};
-	char challenge_read[8] = {0};
-	write_reg(0x0d, 0);
-	write_fifo(challenge, sizeof(challenge));
-	write_reg(0x0d, 0);
-	read_fifo(challenge_read, sizeof(challenge));
-	if (memcmp(challenge, challenge_read, sizeof(challenge)))
+	if (lora_mode)
 	{
-		printf("SX127x probe failed\n");
-		return -1;
+		char challenge[8] = {0x85, 0xa3, 0x00, 0x7b, 0x66, 0x76, 0x55, 0xaa};
+		char challenge_read[8] = {0};
+		write_reg(0x0d, 0);
+		write_fifo(challenge, sizeof(challenge));
+		write_reg(0x0d, 0);
+		read_fifo(challenge_read, sizeof(challenge));
+		if (memcmp(challenge, challenge_read, sizeof(challenge)))
+		{
+			printf("SX127x probe failed\n");
+			return -1;
+		}
 	}
 
 	// basic configuration
-	set_mode(mode_sleep);
-	write_reg(0x01, 0x88);		// enable Lora
+	_set_mode(mode_sleep);
+	if (lora_mode)
+	{
+		write_reg(0x01, 0x88);		// enable Lora
+		set_rate(500000, 1, 7);
+	}
+	else
+	{
+		write_reg(0x01, 0x08);		// disable Lora
+		set_rate(250000);
+		write_reg(0x31, 0x40);		// packet mode
+		write_reg(0x35, 0x81);		// minimum packet size: 1byte.
+		write_reg(0x27, 0x91);		// sync on, 2byte sync
+		write_reg(0x28, 0x85);
+		write_reg(0x29, 0xA3);		// sync word: 0x85A3
+		write_reg(0x0a, 0x39);		// enable BT=0.3 shaping
+		write_reg(0x30, 0xD0);		// enable data whitening
+		write_reg(0x32, 0xff);		// max RX length: 255 bytes
+	}
+	
 	set_tx_power(20);
-	set_rate(500000, 1, 7);
-	write_reg(0x0e, 0x00);		// disable RSSI smoothing
 	set_frequency(439.0);
-	set_mode(mode_standby);
+	write_reg(0x0e, 0x00);		// disable RSSI smoothing
+	_set_mode(mode_standby);
 
 	printf("sx1278 init done\n");
+	
+	for(int i=0; i<100; i++)
+		regs[i] = read_reg(i);
+
+	return 0;
+}
+
+int SX127x::set_lora_mode(bool lora)
+{
+	lora_mode = lora;
+
+	init(spi, cs, txen, rxen);
 
 	return 0;
 }
@@ -83,9 +117,9 @@ uint8_t SX127x::read_reg(uint8_t reg)
 	return reg;
 }
 
+	uint8_t dummy[256];
 int SX127x::write_fifo(const void *buf, int size)
 {
-	uint8_t dummy[256];
 	const uint8_t *data = (const uint8_t*)buf;
 	cs->write(0);
 	systimer->delayus(10);
@@ -171,6 +205,29 @@ int SX127x::set_rate(int BW, int CR, int SF)				// BW, CR, SF
 	return 0;
 }
 
+int SX127x::set_rate(int bitrate, float crystal /* = 32.0f */)
+{
+	float n = crystal * 1e6f / bitrate;
+	uint16_t integer = floor(n);
+	uint8_t frac = n-integer;
+
+	write_reg(0x2, (integer>>8)&0xff );
+	write_reg(0x3, (integer>>0)&0xff );
+	write_reg(0x5d, frac);
+
+	// deviation
+	float fstep = crystal * 1e6f / (1<<19);
+	integer = bitrate/2/fstep;
+	write_reg(0x4, (integer>>8)&0xff );
+	write_reg(0x5, (integer>>0)&0xff );
+
+	// RX bandwidth
+	write_reg(0x12, 0x01);	// currently use a very wide setting.RxBwMant = 00(16), RxBwExp = 1
+
+	return 0;
+}
+
+
 int SX127x::set_tx_power(int dbm)			// and OCP setting
 {
 	if (dbm < 2 || (dbm > 17 && dbm != 20))
@@ -199,19 +256,22 @@ uint8_t SX127x::get_mode()
 
 int SX127x::get_rssi()
 {
-	return read_reg(0x1A)-164;
+	if (lora_mode)
+		return read_reg(0x1A)-164;
+	else
+		return -read_reg(0x11)/2;
 }
 
 void SX127x::self_check()
 {
-	if (!(read_reg(0x01)&0x80))
+	if (lora_mode && !(read_reg(0x01)&0x80))
 	{
 		init(spi, cs, txen, rxen);
 		printf("self_check reset!\n");
 	}
 }
 
-void SX127x::set_mode(uint8_t mode)
+void SX127x::_set_mode(uint8_t mode)
 {
 	if (mode == mode_tx)
 	{
@@ -220,7 +280,7 @@ void SX127x::set_mode(uint8_t mode)
 		if(txen)
 			txen->write(1);
 
-		config_DIO(0, 1);
+		config_DIO(0, lora_mode ? 1 : 0);
 	}
 
 	if (mode == mode_rx || mode == mode_rx_single || mode == mode_CAD)
@@ -236,27 +296,97 @@ void SX127x::set_mode(uint8_t mode)
 	write_reg(0x01, v);
 }
 
+void SX127x::set_mode(uint8_t mode)
+{
+	if (lora_mode)
+		_set_mode(mode);
+	else
+	{
+		if (mode == mode_tx)
+		{
+			_set_mode(mode_standby);
+			write_reg(0x36, 0x10 | 0x80);
+		}
+		else if (mode == mode_rx)
+		{
+			write_reg(0x32, 0xff);
+			write_reg(0x36, 0x10 | 0x40);
+			_set_mode(mode_rx);
+		}
+		else
+			_set_mode(mode);
+	}
+}
+
 int SX127x::write(const void *buf, int block_size)						// write FIFO!
 {
-	write_reg(0x0d, read_reg(0x0e));
-	write_fifo(buf, block_size);
-	write_reg(0x22, block_size);
+	if (lora_mode)
+	{
+		write_reg(0x0d, read_reg(0x0e));
+		write_fifo(buf, block_size);
+		write_reg(0x22, block_size);
+	}
+	else
+	{
+		uint8_t size = block_size;
+		memcpy(dummy, &size, 1);
+		memcpy(dummy+1, buf, size);
+		write_fifo(dummy, size+1);
+	}
 	return 0;
 }
 int SX127x::read(void *buf, int max_block_size, bool remove /*= true*/)	// read FIFO
 {
-	int size = read_reg(0x13);
-	if (max_block_size < size)
-		return -1;
-	write_reg(0x0d, read_reg(0x10));
-	return read_fifo(buf, size);
+	if (lora_mode)
+	{
+		int size = available();
+		if (max_block_size < size)
+			return -1;
+		write_reg(0x0d, read_reg(0x10));
+		int o = read_fifo(buf, size);
+		write_reg(0x12, 0x40);
+		return size;
+	}
+	else
+	{
+		uint8_t size;
+		read_fifo(&size, 1);
+		if (max_block_size < size)
+			return -1;
+		int o = read_fifo(buf, size);
+		return size;
+	}
 }
 int SX127x::available()
 {
-	return read_reg(0x13);
+	if (lora_mode)
+		return read_reg(0x13);
+	else
+		return (read_reg(0x31) & 0x3) << 8 | read_reg(0x32);
 }
 
+bool SX127x::has_pending_rx()
+{
+	if (lora_mode)
+		return read_reg(0x12)&0x40;
+	else
+		return read_reg(0x3f)&0x04;
+}
 
+void SX127x::clear_tx_done_flag()
+{
+	if (lora_mode)
+		write_reg(0x12, 0x08);
+		// nothing to do in fsk mode
+}
+
+bool SX127x::tx_done()
+{
+	if (lora_mode)
+		return read_reg(0x12)&0x80;
+	else
+		return read_reg(0x3f)&0x08;
+}
 
 
 SX127xManager::SX127xManager()
@@ -281,11 +411,21 @@ int SX127xManager::init(SX127x *x, HAL::IInterrupt * interrupt, HAL::ITimer *tim
 	if (timer)
 	{
 		timer->set_callback(timer_entry, this);
-		timer->set_period(2000);
+		timer->set_period(5000);
 	}
 
 	last_tx_done_time = -99999;
 	tx_interval = 1000;
+
+	set_frequency(433, 433);
+
+	return 0;
+}
+
+int SX127xManager::set_frequency(float tx_frequency, float rx_frequency)
+{
+	this->tx_frequency = tx_frequency;
+	this->rx_frequency = rx_frequency;
 
 	return 0;
 }
@@ -332,8 +472,8 @@ int SX127xManager::rxqueue_count()					// RX available packet count
 
 void SX127xManager::_int(int flags)
 {
-	//if (!(flags & interrupt_rising))
-	//	return;
+	uint8_t mode = x->get_mode();
+	uint8_t reg3f = x->read_reg(0x3f);
 
 	timer->disable_cb();
 	fromint = true;
@@ -361,11 +501,30 @@ void SX127xManager::state_maching_go()
 	// other: send next packet, if none, enter RX mode
 
 	x->self_check();
-	uint8_t flags = x->read_reg(0x12);
 	mode = x->get_mode();
 
+	
+	// clear TX done flag
+	if (x->tx_done())
+	{
+		x->clear_tx_done_flag();
+		last_tx_done_time = systimer->gettime();
+		
+		if ( tx_interval > 0)
+		{
+			x->set_frequency(rx_frequency);
+			x->set_mode(mode_rx);
+			return;
+		}
+
+		if (!fromint)
+			printf("warning: packet TX DONE not handled in interupt\n");
+		x->set_mode(mode_standby);
+		mode = x->get_mode();
+	}
+
 	// extract packet to rx queue.
-	if (flags&0x40)
+	if (x->has_pending_rx())
 	{
 		sx127x_packet p;
 		p.size = x->read(p.data, sizeof(p.data));
@@ -376,24 +535,7 @@ void SX127xManager::state_maching_go()
 		}
 
 		if (!fromint)
-			printf("warning: packet RX DONE not handled in interupt\n");
-		x->write_reg(0x12, 0x40);
-	}
-
-	// clear TX done flag
-	if (flags&0x08)
-	{
-		x->write_reg(0x12, 0x08);
-		last_tx_done_time = systimer->gettime();
-		
-		if ( tx_interval > 0)
-		{
-			x->set_mode(mode_rx);
-			return;
-		}
-
-		if (!fromint)
-			printf("warning: packet TX DONE not handled in interupt\n");
+			printf("warning: packet RX DONE not handled in interupt\n");		
 	}
 
 	stuck = (mode == mode_prepare_tx) ? stuck+1 : 0;
@@ -410,7 +552,10 @@ void SX127xManager::state_maching_go()
 		if (!ready_for_next_tx())
 		{
 			if (mode != mode_rx)
+			{
+				x->set_frequency(rx_frequency);
 				x->set_mode(mode_rx);
+			}
 			return;
 		}
 
@@ -426,8 +571,8 @@ void SX127xManager::state_maching_go()
 			// yes, go TX
 			printf("TX:%d, mode=%d, size=%d\n", int(systimer->gettime()/1000), mode, p.size);
 			x->set_mode(mode_standby);
-			x->write_reg(0x12, 0x08);
 			x->write(p.data, p.size);
+			x->set_frequency(tx_frequency);
 			x->set_mode(mode_tx);
 			mode = mode_tx;
 						
@@ -441,7 +586,10 @@ void SX127xManager::state_maching_go()
 		{
 			// no more to go, go RX
 			if (mode != mode_rx)
+			{
+				x->set_frequency(rx_frequency);
 				x->set_mode(mode_rx);
+			}
 		}
 	}	
 }
