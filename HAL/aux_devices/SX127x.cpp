@@ -76,7 +76,7 @@ int SX127x::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *txen, HAL::IGPIO *r
 	}
 	
 	set_tx_power(20);
-	set_frequency(439.0);
+	set_frequency(431.5);
 	write_reg(0x0e, 0x00);		// disable RSSI smoothing
 	_set_mode(mode_standby);
 
@@ -383,7 +383,7 @@ void SX127x::clear_tx_done_flag()
 bool SX127x::tx_done()
 {
 	if (lora_mode)
-		return read_reg(0x12)&0x80;
+		return read_reg(0x12)&0x08;
 	else
 		return read_reg(0x3f)&0x08;
 }
@@ -411,7 +411,7 @@ int SX127xManager::init(SX127x *x, HAL::IInterrupt * interrupt, HAL::ITimer *tim
 	if (timer)
 	{
 		timer->set_callback(timer_entry, this);
-		timer->set_period(5000);
+		timer->set_period(2000);
 	}
 
 	last_tx_done_time = -99999;
