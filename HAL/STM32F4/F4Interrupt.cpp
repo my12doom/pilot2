@@ -168,6 +168,7 @@ namespace STM32F4
 	
 	F4Interrupt::F4Interrupt()
 	{
+		cb = NULL;
 	}
 	
 	F4Interrupt::~F4Interrupt()

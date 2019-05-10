@@ -61,7 +61,7 @@ int ymodem_receiver::reset()
 	// clear uart buffer
 	char tmp[1024];
 	int got = 0;
-	while(got >=0)
+	while(uart->available() > 0)
 		got = uart->read(tmp, 1024);
 
 	state = ymodem_wait_file_header;
