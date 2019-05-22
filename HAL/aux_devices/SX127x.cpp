@@ -9,6 +9,7 @@ using namespace HAL;
 SX127x::SX127x()
 {
 	lora_mode = true;
+	gfsk_fifo_size = 0;
 }
 
 SX127x::~SX127x()
@@ -39,19 +40,21 @@ int SX127x::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *txen, HAL::IGPIO *r
 	}
 
 	// chip probe
-	if (lora_mode)
+	_set_mode(mode_sleep);
+	//systimer->delayms(10);
+	write_reg(0x01, 0x88);		// enable Lora
+	//systimer->delayms(10);
+	_set_mode(mode_standby);
+	char challenge[8] = {0x85, 0xa3, 0x00, 0x7b, 0x66, 0x76, 0x55, 0xaa};
+	char challenge_read[8] = {0};
+	write_reg(0x0d, 0);
+	write_fifo(challenge, sizeof(challenge));
+	write_reg(0x0d, 0);
+	read_fifo(challenge_read, sizeof(challenge));
+	if (memcmp(challenge, challenge_read, sizeof(challenge)))
 	{
-		char challenge[8] = {0x85, 0xa3, 0x00, 0x7b, 0x66, 0x76, 0x55, 0xaa};
-		char challenge_read[8] = {0};
-		write_reg(0x0d, 0);
-		write_fifo(challenge, sizeof(challenge));
-		write_reg(0x0d, 0);
-		read_fifo(challenge_read, sizeof(challenge));
-		if (memcmp(challenge, challenge_read, sizeof(challenge)))
-		{
-			printf("SX127x probe failed\n");
-			return -1;
-		}
+		printf("SX127x probe failed\n");
+		return -1;
 	}
 
 	// basic configuration
@@ -66,7 +69,7 @@ int SX127x::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *txen, HAL::IGPIO *r
 		write_reg(0x01, 0x08);		// disable Lora
 		set_rate(250000);
 		write_reg(0x31, 0x40);		// packet mode
-		write_reg(0x35, 0x81);		// minimum packet size: 1byte.
+		write_reg(0x35, 0x81);		// FIFO threshold size: 1byte.
 		write_reg(0x27, 0x91);		// sync on, 2byte sync
 		write_reg(0x28, 0x85);
 		write_reg(0x29, 0xA3);		// sync word: 0x85A3
@@ -281,6 +284,7 @@ void SX127x::_set_mode(uint8_t mode)
 			txen->write(1);
 
 		config_DIO(0, lora_mode ? 1 : 0);
+		config_DIO(1, 0);
 	}
 
 	if (mode == mode_rx || mode == mode_rx_single || mode == mode_CAD)
@@ -290,6 +294,7 @@ void SX127x::_set_mode(uint8_t mode)
 		if(rxen)
 			rxen->write(1);		
 		config_DIO(0, 0);
+		config_DIO(1, 0);
 	}
 	uint8_t v = (read_reg(0x01)&0xf8) | (mode&0x7);
 
@@ -305,13 +310,16 @@ void SX127x::set_mode(uint8_t mode)
 		if (mode == mode_tx)
 		{
 			_set_mode(mode_standby);
+			write_reg(0x35, 0x80 | (64 - GFSK_THRESHOLD));		// TX FIFO threshold size
 			write_reg(0x36, 0x10 | 0x80);
 		}
 		else if (mode == mode_rx)
 		{
 			write_reg(0x32, 0xff);
 			write_reg(0x36, 0x10 | 0x40);
-			_set_mode(mode_rx);
+			write_reg(0x35, 0x80 | GFSK_THRESHOLD);		// RX FIFO threshold size
+			gfsk_fifo_size = 0;
+			_set_mode(mode_rx);			
 		}
 		else
 			_set_mode(mode);
@@ -329,9 +337,21 @@ int SX127x::write(const void *buf, int block_size)						// write FIFO!
 	else
 	{
 		uint8_t size = block_size;
-		memcpy(dummy, &size, 1);
-		memcpy(dummy+1, buf, size);
-		write_fifo(dummy, size+1);
+		write_fifo(&size, 1);
+		write_fifo(buf, size > 63 ? 63 : size);
+
+		if (size > 63)
+		{
+			memcpy(gfsk_fifo, (uint8_t *)buf + 63, size-63);
+			gfsk_fifo_size = size-63;
+			write_reg(0x35, 0x80 | (64 - GFSK_THRESHOLD));		// TX FIFO threshold size: 1byte.
+		}
+		else
+		{
+			write_reg(0x35, 0x80 | (64 - GFSK_THRESHOLD));		// TX FIFO threshold size
+			gfsk_fifo_size = 0;
+		}
+		
 	}
 	return 0;
 }
@@ -350,13 +370,56 @@ int SX127x::read(void *buf, int max_block_size, bool remove /*= true*/)	// read 
 	else
 	{
 		uint8_t size;
-		read_fifo(&size, 1);
-		if (max_block_size < size)
-			return -1;
-		int o = read_fifo(buf, size);
+		
+		if (gfsk_fifo_size == 0)
+		{
+			read_fifo(&size, 1);
+			if (max_block_size < size)
+				return -1;
+			read_fifo(buf, size);
+		}
+		else
+		{
+			size = gfsk_fifo[0];
+			if (max_block_size < size)
+			{
+				gfsk_fifo_size = 0;
+				return -1;
+			}
+			memcpy(buf, gfsk_fifo+1, gfsk_fifo_size-1);
+			read_fifo((uint8_t*)buf+gfsk_fifo_size-1, size - gfsk_fifo_size+1);
+			gfsk_fifo_size = 0;
+		}
 		return size;
 	}
 }
+
+void SX127x::dio1_int(bool rx_mode)
+{
+	if (!lora_mode)
+	{
+		uint8_t reg3f = read_reg(0x3f);
+		if (rx_mode)
+		{
+			if ((reg3f & 0x20) && (sizeof(gfsk_fifo) - gfsk_fifo_size > GFSK_THRESHOLD))
+			{
+				read_fifo(gfsk_fifo + gfsk_fifo_size, GFSK_THRESHOLD);
+				gfsk_fifo_size += GFSK_THRESHOLD;
+			}
+		}
+		else
+		{
+			if (!(reg3f & 0x20) && gfsk_fifo_size > 0)
+			{
+				int block_size = gfsk_fifo_size > GFSK_THRESHOLD ? GFSK_THRESHOLD : gfsk_fifo_size;
+				write_fifo(gfsk_fifo, block_size);
+				memmove(gfsk_fifo, gfsk_fifo + block_size, gfsk_fifo_size - block_size);
+				gfsk_fifo_size -= block_size;
+			}
+		}
+	}
+}
+
 int SX127x::available()
 {
 	if (lora_mode)
@@ -400,14 +463,17 @@ SX127xManager::~SX127xManager()
 	timer->set_callback(NULL, NULL);
 }
 
-int SX127xManager::init(SX127x *x, HAL::IInterrupt * interrupt, HAL::ITimer *timer)
+int SX127xManager::init(SX127x *x, HAL::IInterrupt * interrupt, HAL::ITimer *timer, HAL::IInterrupt * DIO1)
 {
 	this->x = x;
 	this->interrupt = interrupt;
 	this->timer = timer;
+	this->DIO1 = DIO1;
 
 	if (interrupt)
 		interrupt->set_callback(int_entry, this);
+	if (DIO1)
+		DIO1->set_callback(int_entry_DIO1, this);
 	if (timer)
 	{
 		timer->set_callback(timer_entry, this);
@@ -476,22 +542,55 @@ void SX127xManager::_int(int flags)
 	uint8_t reg3f = x->read_reg(0x3f);
 
 	timer->disable_cb();
+	DIO1->disable();
 	fromint = true;
 	state_maching_go();
 	fromint = false;
 	timer->enable_cb();
 	timer->restart();
+	DIO1->enable();
 }
+
+void SX127xManager::_int_DIO1(int flags)
+{
+	uint8_t mode = x->get_mode();
+	uint8_t reg3f = x->read_reg(0x3f);
+
+	timer->disable_cb();
+	interrupt->disable();
+	fromint = true;
+	state_maching_go();
+	fromint = false;
+	timer->enable_cb();
+	timer->restart();
+	interrupt->enable();
+}
+
 void SX127xManager::tim()
 {
+	DIO1->disable();
 	interrupt->disable();
 	state_maching_go();
 	interrupt->enable();	
+	DIO1->enable();
 }
 
 bool SX127xManager::ready_for_next_tx()
 {
 	return mode != mode_tx && mode != mode_prepare_tx && systimer->gettime() > last_tx_done_time + tx_interval;
+}
+
+int SX127xManager::set_lora_mode(bool lora_mode)
+{
+	interrupt->disable();
+	timer->disable_cb();
+
+	int o = x->set_lora_mode(lora_mode);
+
+	timer->enable_cb();
+	interrupt->enable();
+
+	return o;
 }
 
 void SX127xManager::state_maching_go()
@@ -502,6 +601,11 @@ void SX127xManager::state_maching_go()
 
 	x->self_check();
 	mode = x->get_mode();
+	if (mode == mode_rx)
+		x->dio1_int(true);
+	if (mode == mode_tx)
+		x->dio1_int(false);
+
 
 	
 	// clear TX done flag
@@ -514,6 +618,7 @@ void SX127xManager::state_maching_go()
 		{
 			x->set_frequency(rx_frequency);
 			x->set_mode(mode_rx);
+
 			return;
 		}
 

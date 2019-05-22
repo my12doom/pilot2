@@ -13,6 +13,7 @@
 
 #define SX127xManager_TX_QUEUE 2
 #define SX127xManager_RX_QUEUE 5
+#define GFSK_THRESHOLD 48
 
 
 class SX127x
@@ -48,6 +49,7 @@ public:
 	bool has_pending_rx();
 	bool tx_done();
 	void clear_tx_done_flag();
+	void dio1_int(bool rx_mode);
 
 	// IBlockDevice
 	virtual int write(const void *buf, int block_size);						// write FIFO!
@@ -60,12 +62,17 @@ protected:
 	HAL::IGPIO *cs;
 	HAL::IGPIO *txen;
 	HAL::IGPIO *rxen;
+
+
 	bool lora_mode;
 	uint8_t regs[256];
 
 	int write_fifo(const void *buf, int size);
 	int read_fifo(void *buf, int size);
 	void _set_mode(uint8_t mode);
+
+	uint8_t gfsk_fifo[256];
+	int gfsk_fifo_size;
 };
 
 enum sx127x_mode
@@ -97,7 +104,7 @@ public:
 	SX127xManager();
 	~SX127xManager();
 
-	int init(SX127x *x, HAL::IInterrupt * interrupt, HAL::ITimer *timer);
+	int init(SX127x *x, HAL::IInterrupt * interrupt, HAL::ITimer *timer, HAL::IInterrupt * DIO1);
 	int write(sx127x_packet p, int priority);
 	int txqueue_space(int priority);		// remaining free space of TX queue
 	int txqueue_total(int priority);		// total space of TX queue
@@ -106,6 +113,7 @@ public:
 	int read(sx127x_packet *p);
 	int cancel_current_packet();		// not supported by sx1278
 	int set_aes(uint8_t *key, int keysize){aes.set_key(key, keysize*8); return 0;}
+	int set_lora_mode(bool lora_mode);
 	void set_tx_interval(int new_tx_interval){tx_interval = new_tx_interval;}
 	bool ready_for_next_tx();
 
@@ -117,12 +125,15 @@ protected:
 	SX127x *x;
 	HAL::ITimer *timer;
 	HAL::IInterrupt *interrupt;
+	HAL::IInterrupt *DIO1;
 	int tx_interval;
 	int64_t last_tx_done_time;
 
 	static void int_entry(void *parameter, int flags){((SX127xManager*)parameter)->_int(flags);}
+	static void int_entry_DIO1(void *parameter, int flags){((SX127xManager*)parameter)->_int_DIO1(flags);}
 	static void timer_entry(void *p){((SX127xManager*)p)->tim();}
 	void _int(int flags);
+	void _int_DIO1(int flags);
 	void tim();
 	void state_maching_go();
 

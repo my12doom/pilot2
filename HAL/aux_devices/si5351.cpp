@@ -106,7 +106,7 @@ int si5351::set_output_freq(int id, int freq_src, double divider)
 	if (id < 0 || id > 7)
 		return -1;
 	
-	if (id > 900 * 128)
+	if (divider > 900 * 128)
 		return -2;
 	
 	int R_DIV = 0;
