@@ -112,7 +112,7 @@ public:
 	int flush();
 	int read(sx127x_packet *p);
 	int cancel_current_packet();		// not supported by sx1278
-	int set_aes(uint8_t *key, int keysize){aes.set_key(key, keysize*8); return 0;}
+	int set_aes(uint8_t *key, int keysize);
 	int set_lora_mode(bool lora_mode);
 	void set_tx_interval(int new_tx_interval){tx_interval = new_tx_interval;}
 	bool ready_for_next_tx();
@@ -146,4 +146,5 @@ protected:
 	uint8_t mode;	// cached SX127x mode register
 	float tx_frequency;
 	float rx_frequency;
+	bool lora_mode;
 };

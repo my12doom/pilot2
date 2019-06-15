@@ -17,7 +17,6 @@ SX127x::~SX127x()
 
 }
 
-uint8_t regs[100];
 int SX127x::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *txen, HAL::IGPIO *rxen)
 {
 	this->spi = spi;
@@ -70,9 +69,10 @@ int SX127x::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *txen, HAL::IGPIO *r
 		set_rate(250000);
 		write_reg(0x31, 0x40);		// packet mode
 		write_reg(0x35, 0x81);		// FIFO threshold size: 1byte.
-		write_reg(0x27, 0x91);		// sync on, 2byte sync
+		write_reg(0x27, 0x92);		// sync on, 3byte sync
 		write_reg(0x28, 0x85);
-		write_reg(0x29, 0xA3);		// sync word: 0x85A3
+		write_reg(0x29, 0xA3);		// sync word: 0x85A3A3
+		write_reg(0x2a, 0xA3);		// sync word: 0x85A3A3
 		write_reg(0x0a, 0x39);		// enable BT=0.3 shaping
 		write_reg(0x30, 0xD0);		// enable data whitening
 		write_reg(0x32, 0xff);		// max RX length: 255 bytes
@@ -103,7 +103,7 @@ int SX127x::set_lora_mode(bool lora)
 int SX127x::write_reg(uint8_t reg, uint8_t v)
 {
 	cs->write(0);
-	systimer->delayus(10);
+	//systimer->delayus(1);
 	spi->txrx(0x80 | (reg&0x7f));
 	spi->txrx(v);
 	cs->write(1);
@@ -113,21 +113,21 @@ int SX127x::write_reg(uint8_t reg, uint8_t v)
 uint8_t SX127x::read_reg(uint8_t reg)
 {
 	cs->write(0);
-	systimer->delayus(10);
+	//systimer->delayus(10);
 	spi->txrx(reg&0x7f);
 	reg = spi->txrx(0);
 	cs->write(1);
 	return reg;
 }
 
-	uint8_t dummy[256];
+uint8_t dummy[256];
 int SX127x::write_fifo(const void *buf, int size)
 {
-	const uint8_t *data = (const uint8_t*)buf;
+	uint8_t *data = (uint8_t*)buf;
 	cs->write(0);
-	systimer->delayus(10);
+	//systimer->delayus(10);
 	spi->txrx(0x80);
-	spi->txrx2((uint8_t*)buf, dummy, size);
+	spi->txrx2(data, dummy, size);
 	cs->write(1);
 
 	return size;	
@@ -136,7 +136,7 @@ int SX127x::read_fifo(void *buf, int size)
 {
 	uint8_t *data = (uint8_t*)buf;
 	cs->write(0);
-	systimer->delayus(10);
+	//systimer->delayus(10);
 	spi->txrx(0x00);
 	spi->txrx2((uint8_t*)buf, (uint8_t*)buf, size);
 	cs->write(1);
@@ -454,7 +454,9 @@ bool SX127x::tx_done()
 
 SX127xManager::SX127xManager()
 {
+	lora_mode = true;
 	fromint = false;
+	use_aes = false;
 }
 
 SX127xManager::~SX127xManager()
@@ -498,11 +500,48 @@ int SX127xManager::set_frequency(float tx_frequency, float rx_frequency)
 
 int SX127xManager::write(sx127x_packet p, int priority)
 {
-	int o = tx_queue[priority].push(p);
+	if (p.size <= 0)
+		return -1;
 
+	if (use_aes)
+	{
+		p.size = (p.size + 15)/16*16;
+		for(int i=0; i<p.size; i+=16)
+			aes.encrypt(p.data+i, p.data+i);
+	}
+
+	int o = tx_queue[priority].push(p);
 
 	return o;
 }
+
+int SX127xManager::read(sx127x_packet *p)
+{
+	int64_t t = systimer->gettime();
+	int o = rx_queue.pop(p);
+	if (o == 0 && use_aes)
+	{
+		int size = (p->size + 15)/16*16;
+		for(int i=0; i<size; i+=16)
+			aes.decrypt(p->data+i, p->data+i);
+	}
+	return o;
+}
+
+
+int SX127xManager::set_aes(uint8_t *key, int keysize)
+{
+	if (key == NULL || keysize != 32)
+	{
+		use_aes = false;
+		return 0;
+	}
+
+	aes.set_key(key, keysize*8);
+	use_aes = true;
+	return 0;
+}
+
 
 int SX127xManager::flush()
 {
@@ -515,11 +554,6 @@ int SX127xManager::flush()
 	interrupt->enable();
 
 	return 0;
-}
-
-int SX127xManager::read(sx127x_packet *p)
-{
-	return rx_queue.pop(p);
 }
 
 int SX127xManager::txqueue_space(int priority)		// remaining free space of TX queue
@@ -582,6 +616,8 @@ bool SX127xManager::ready_for_next_tx()
 
 int SX127xManager::set_lora_mode(bool lora_mode)
 {
+	this->lora_mode = lora_mode;
+
 	interrupt->disable();
 	timer->disable_cb();
 
@@ -632,8 +668,9 @@ void SX127xManager::state_maching_go()
 	if (x->has_pending_rx())
 	{
 		sx127x_packet p;
-		p.size = x->read(p.data, sizeof(p.data));
 		p.power = x->get_rssi();
+		memset(p.data, 0, sizeof(p.data));
+		p.size = x->read(p.data, sizeof(p.data));
 		if (rx_queue.push(p) < 0)
 		{
 			printf("warning:rx buffer overflow\n");
@@ -674,18 +711,19 @@ void SX127xManager::state_maching_go()
 		if (p.size > 0)
 		{
 			// yes, go TX
-			printf("TX:%d, mode=%d, size=%d\n", int(systimer->gettime()/1000), mode, p.size);
+			//RTT_printf("TX:%d, mode=%d, size=%d\n", int(systimer->gettime()/1000), mode, p.size);
 			x->set_mode(mode_standby);
 			x->write(p.data, p.size);
 			x->set_frequency(tx_frequency);
 			x->set_mode(mode_tx);
 			mode = mode_tx;
-						
+
 			int64_t timeout = systimer->gettime() + 1000;
 			do
 			{
 				mode = x->get_mode();
 			} while (mode != mode_tx && mode != mode_prepare_tx && systimer->gettime() < timeout);
+
 		}
 		else
 		{
