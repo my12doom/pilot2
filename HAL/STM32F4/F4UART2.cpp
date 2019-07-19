@@ -123,7 +123,7 @@ namespace STM32F4
 			USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
 			USART_Init(USART2, &USART_InitStructure); 
 			USART_Cmd(USART2, ENABLE);
-			USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+			USART_ITConfig(USART2, USART_IT_IDLE, ENABLE);
 
 			if (uart_table[1])
 				printf("overwriting UART2\n");
@@ -325,7 +325,6 @@ namespace STM32F4
 		int j=0;
 		int i;
 		int size;
-		int lastR = 0;
 		if (_end == start)
 			return 0;
 		size = _end - start;
@@ -374,13 +373,13 @@ namespace STM32F4
 	{
 		if(USARTx->SR & USART_FLAG_ORE)
 		{
-			volatile int c = USART1->DR;		// strange way to clear RXNE/ORE/IDLE FLAG
+			volatile int c = USARTx->DR;		// strange way to clear RXNE/ORE/IDLE FLAG
 			printf("ORE\n");
 		}
 		if(USARTx->SR & USART_FLAG_IDLE)
 		{
 			//printf("IDLE\n");
-			volatile int c = USART1->DR;		// strange way to clear RXNE/ORE/IDLE FLAG
+			volatile int c = USARTx->DR;		// strange way to clear RXNE/ORE/IDLE FLAG
 			rx_dma_reset();
 		}
 	}
