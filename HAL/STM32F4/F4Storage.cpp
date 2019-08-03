@@ -73,7 +73,7 @@ namespace STM32F4
 	}
 
 	RCStorage::RCStorage()
-	:F4Storage(0x8000, 0x10000, 0x08008000)
+	:F4Storage(0x4000, 0x8000, 0x08008000)
 	{
 	}
 	int RCStorage::erase(int address)

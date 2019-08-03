@@ -14,7 +14,8 @@
 #define SX127xManager_TX_QUEUE 2
 #define SX127xManager_RX_QUEUE 5
 #define GFSK_THRESHOLD 48
-
+#define TX_STUCK_TIMEOUT 150000		// TX stuck timeout
+#define RX_STUCK_TIMEOUT 15000000	// RX stuck timeout
 
 class SX127x
 {
@@ -116,6 +117,7 @@ public:
 	int set_lora_mode(bool lora_mode);
 	void set_tx_interval(int new_tx_interval){tx_interval = new_tx_interval;}
 	bool ready_for_next_tx();
+	int stuck();		// stuck reason: 0: not stuck, 1: TX stuck, 2: RX stuck
 
 	int set_frequency(float tx_frequency, float rx_frequency);
 
@@ -137,7 +139,7 @@ protected:
 	void tim();
 	void state_maching_go();
 
-	int stuck;
+	int _stuck;
 	bool fromint;
 
 	bool use_aes;// = false;
@@ -147,4 +149,7 @@ protected:
 	float tx_frequency;
 	float rx_frequency;
 	bool lora_mode;
+	
+	int64_t last_rx_time;
+	int64_t last_tx_start_time;
 };

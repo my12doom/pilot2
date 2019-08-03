@@ -24,7 +24,7 @@ int SX127x::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *txen, HAL::IGPIO *r
 	this->txen = txen;
 	this->rxen = rxen;
 
-	spi->set_speed(12000000);
+	spi->set_speed(10000000);
 	spi->set_mode(0, 0);
 	cs->set_mode(MODE_OUT_PushPull);
 	if (txen)
@@ -614,9 +614,22 @@ bool SX127xManager::ready_for_next_tx()
 	return mode != mode_tx && mode != mode_prepare_tx && systimer->gettime() > last_tx_done_time + tx_interval;
 }
 
+int SX127xManager::stuck()
+{
+	int64_t t = systimer->gettime();
+
+	if (last_tx_start_time > 0 && t > (last_tx_start_time + TX_STUCK_TIMEOUT))
+		return 1;
+
+	return (t > last_rx_time + RX_STUCK_TIMEOUT) ? 2 : 0;
+}
+
 int SX127xManager::set_lora_mode(bool lora_mode)
 {
 	this->lora_mode = lora_mode;
+
+	last_tx_start_time = 0;
+	last_rx_time = systimer->gettime();
 
 	interrupt->disable();
 	timer->disable_cb();
@@ -641,6 +654,7 @@ void SX127xManager::state_maching_go()
 		x->dio1_int(true);
 	if (mode == mode_tx)
 		x->dio1_int(false);
+
 
 
 	
@@ -671,6 +685,7 @@ void SX127xManager::state_maching_go()
 		p.power = x->get_rssi();
 		memset(p.data, 0, sizeof(p.data));
 		p.size = x->read(p.data, sizeof(p.data));
+		last_rx_time = systimer->gettime();
 		if (rx_queue.push(p) < 0)
 		{
 			printf("warning:rx buffer overflow\n");
@@ -680,12 +695,17 @@ void SX127xManager::state_maching_go()
 			printf("warning: packet RX DONE not handled in interupt\n");		
 	}
 
-	stuck = (mode == mode_prepare_tx) ? stuck+1 : 0;
+	// TX stuck timeout updating
+	if (mode == mode_prepare_tx || mode == mode_tx)
+		last_tx_start_time = last_tx_start_time ? last_tx_start_time : systimer->gettime();
+	else
+		last_tx_start_time = 0;
+
+	//if (stuck())
+	//	x->set_mode(mode_standby);		// bugfix: sx127x might stuck in mode_prepare_tx
 
 	if (mode == mode_prepare_tx)
 	{
-		//if (stuck > 100)
-		//	x->set_mode(mode_tx);		// bugfix: sx127x might stuck in mode_prepare_tx
 	}
 
 	else if (mode != mode_tx)
@@ -701,6 +721,12 @@ void SX127xManager::state_maching_go()
 			return;
 		}
 
+		// TODO : do a CAD detection (and a random sleep) in LORA mode
+		if (lora_mode)
+		{
+			
+		}
+
 		// next TX packet?
 		sx127x_packet p = {0};
 		for(int i=0; i<2; i++)
@@ -711,7 +737,7 @@ void SX127xManager::state_maching_go()
 		if (p.size > 0)
 		{
 			// yes, go TX
-			//RTT_printf("TX:%d, mode=%d, size=%d\n", int(systimer->gettime()/1000), mode, p.size);
+			//printf("TX:%lld, mode=%d, size=%d\n", systimer->gettime(), mode, p.size);
 			x->set_mode(mode_standby);
 			x->write(p.data, p.size);
 			x->set_frequency(tx_frequency);
