@@ -546,11 +546,13 @@ int SX127xManager::set_aes(uint8_t *key, int keysize)
 int SX127xManager::flush()
 {
 	interrupt->disable();
+	DIO1->disable();
 	timer->disable_cb();
 
 	state_maching_go();
 
 	timer->enable_cb();
+	DIO1->enable();
 	interrupt->enable();
 
 	return 0;
@@ -617,8 +619,9 @@ bool SX127xManager::ready_for_next_tx()
 int SX127xManager::stuck()
 {
 	int64_t t = systimer->gettime();
+	int tx_timeout = lora_mode ? TX_LORA_STUCK_TIMEOUT : TX_GFSK_STUCK_TIMEOUT;
 
-	if (last_tx_start_time > 0 && t > (last_tx_start_time + TX_STUCK_TIMEOUT))
+	if (last_tx_start_time > 0 && t > (last_tx_start_time + tx_timeout))
 		return 1;
 
 	return (t > last_rx_time + RX_STUCK_TIMEOUT) ? 2 : 0;
@@ -681,6 +684,7 @@ void SX127xManager::state_maching_go()
 	// extract packet to rx queue.
 	if (x->has_pending_rx())
 	{
+		
 		sx127x_packet p;
 		p.power = x->get_rssi();
 		memset(p.data, 0, sizeof(p.data));
@@ -692,7 +696,9 @@ void SX127xManager::state_maching_go()
 		}
 
 		if (!fromint)
-			printf("warning: packet RX DONE not handled in interupt\n");		
+			printf("warning: packet RX DONE not handled in interupt\n");
+		
+		//printf("RX:%d bytes, ts=%lld\n",  p.size, systimer->gettime());
 	}
 
 	// TX stuck timeout updating

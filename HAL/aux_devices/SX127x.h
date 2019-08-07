@@ -14,8 +14,9 @@
 #define SX127xManager_TX_QUEUE 2
 #define SX127xManager_RX_QUEUE 5
 #define GFSK_THRESHOLD 48
-#define TX_STUCK_TIMEOUT 150000		// TX stuck timeout
-#define RX_STUCK_TIMEOUT 15000000	// RX stuck timeout
+#define TX_GFSK_STUCK_TIMEOUT 150000		// TX stuck timeout
+#define TX_LORA_STUCK_TIMEOUT 1500000		// TX stuck timeout
+#define RX_STUCK_TIMEOUT 15000000			// RX stuck timeout
 
 class SX127x
 {
