@@ -20,6 +20,7 @@ namespace SIL_WIN32
 		int read(void *data, int max_count);
 		int readline(void *data, int max_count);
 		int available();
+		void close();
 
 	protected:
 		int update_buffer();

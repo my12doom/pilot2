@@ -1,10 +1,12 @@
 #include "Win32UART.h"
 #include <stdio.h>
+#include <assert.h>
 
 namespace SIL_WIN32
 {
 	Win32UART::Win32UART()
 	:buffer_pos(0)
+	,port(INVALID_HANDLE_VALUE)
 	{
 	}
 
@@ -22,11 +24,14 @@ namespace SIL_WIN32
 			FILE_FLAG_NO_BUFFERING,				// default.
 			NULL);                              // default.
 
+		set_baudrate(115200);
+
 		return INVALID_HANDLE_VALUE == port ? -1 : 0;
 	}
 
 	int Win32UART::init(const char *path)
 	{
+		buffer_pos = 0;
 		port = CreateFileA(path,
 			GENERIC_READ | GENERIC_WRITE,       // Specify mode that open device.
 			0,                                  // the devide isn't shared.
@@ -34,12 +39,21 @@ namespace SIL_WIN32
 			OPEN_EXISTING,                      // Specify which action to take on file. 
 			FILE_FLAG_NO_BUFFERING,				// default.
 			NULL);                              // default.
+		set_baudrate(115200);
 		return INVALID_HANDLE_VALUE == port ? -1 : 0;
 	}
 
 	Win32UART::~Win32UART()
 	{
-		CloseHandle(port);
+		if (INVALID_HANDLE_VALUE != port)
+			CloseHandle(port);
+		port = INVALID_HANDLE_VALUE;
+	}
+	void Win32UART::close()
+	{
+		if (INVALID_HANDLE_VALUE != port)
+			CloseHandle(port);
+		port = INVALID_HANDLE_VALUE;		
 	}
 	int Win32UART::set_baudrate(int baudrate)
 	{
@@ -62,7 +76,7 @@ namespace SIL_WIN32
 		comTimeOut.ReadTotalTimeoutMultiplier = 0;
 		comTimeOut.ReadTotalTimeoutConstant = 0;
 		comTimeOut.WriteTotalTimeoutMultiplier = 3;
-		comTimeOut.WriteTotalTimeoutConstant = 200;
+		comTimeOut.WriteTotalTimeoutConstant = 0;
 		SetCommTimeouts(port,&comTimeOut);
 
 		return 0;
@@ -140,7 +154,7 @@ namespace SIL_WIN32
 
 		memcpy(data, buffer, line_end);
 		memmove(buffer, buffer+line_end, buffer_pos-line_end);
-		buffer_pos += line_end;
+		buffer_pos -= line_end;
 
 		return line_end;
 	}
@@ -154,24 +168,26 @@ namespace SIL_WIN32
 	int Win32UART::update_buffer()
 	{
 		if (INVALID_HANDLE_VALUE == port)
-			return -1;
-
-		int buffer_left = (sizeof(buffer) - buffer_pos)/2;
-		if (buffer_left <= 0)
-			return 0;
+			return -1;		
 
 		DWORD got=0;
-		BOOL b = ReadFile(port, buffer+buffer_pos, buffer_left, &got, NULL);
-		int e = GetLastError();
-
-		char msg[128];
-		if (!b && FormatMessageA(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
-			NULL, e, 0, msg, sizeof(msg)/sizeof(char), NULL))
+		do
 		{
-			printf(msg);
-		}
+			int buffer_left = (sizeof(buffer)/2 - buffer_pos);
+			if (buffer_left <= 0)
+				return 0;
+			BOOL b = ReadFile(port, buffer + buffer_pos, buffer_left, &got, NULL);
+			int e = GetLastError();
 
-		buffer_pos += got;
+			char msg[128];
+			if (!b && FormatMessageA(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
+				NULL, e, 0, msg, sizeof(msg) / sizeof(char), NULL))
+			{
+				printf(msg);
+			}
+
+			buffer_pos += got;
+		} while (got);
 
 		return 0;
 	}
