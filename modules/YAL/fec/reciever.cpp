@@ -38,15 +38,16 @@ int reciever::put_packet(const void *packet, int size)
 	// assume: no out of order packets
 
 	// reject ill conditioned packets
-	if (size > sizeof(raw_packet))
+	if (size > sizeof(raw_packet) || size < HEADER_SIZE)
 		return -1;
 
 	// decode header and check for error
-	rsDecoder dec2;
-	dec2.init(2);
-	int g = dec2.correct_errors_erasures((unsigned char *)packet, HEADER_SIZE, 0, NULL);
-	if (!g)
-		return -2;
+	uint32_t crc_calculated = crc32(0, packet, HEADER_SIZE - sizeof(raw_packet::header_crc));
+	raw_packet *raw = (raw_packet*)packet;
+	uint8_t crc0 = crc_calculated;
+	uint8_t crc1 = crc_calculated >> 8;
+	if (crc0 != raw->header_crc[0] || crc1 != raw->header_crc[1])
+		return -2; 
 
 	// check for new frame
 	raw_packet *p = (raw_packet*)packet;
@@ -65,7 +66,9 @@ int reciever::put_packet(const void *packet, int size)
 
 	// last packet?
 	if (p->packet_id == p->payload_packet_count + p->parity_packet_count - 1)
+	{
 		assemble_and_out();
+	}
 
 	return 0;
 }
@@ -77,19 +80,28 @@ int reciever::assemble_and_out()
 
 	int payload_packet_count = 0;
 	int parity_packet_count = 0;
+	int frame_id = 0;
+
 	for(int i=0; i<256; i++)
 	{
 		if (packets[i].payload_packet_count)
 		{
 			payload_packet_count = packets[i].payload_packet_count;
 			parity_packet_count = packets[i].parity_packet_count;
+			frame_id = packets[i].frame_id;
 			break;
 		}
 	}
 
+	//printf("assemble_and_out %d \n", frame_id);
+
 	// we have enough valid packets? packets properly formed?
 	if (current_packet_count < payload_packet_count || payload_packet_count <= 0 || parity_packet_count <= 0)
 	{
+		if (current_packet_count)
+		printf("not enough packets, %d/%d\n", current_packet_count, payload_packet_count);
+
+
 		// no, clear up and exit
 		current_frame_id = -1;
 		current_packet_count = 0;
@@ -99,8 +111,11 @@ int reciever::assemble_and_out()
 			packets[i].payload_packet_count = 0;
 		}
 
+
 		return -1;
 	}
+
+	//printf("assemble: %d/%d packets\n", current_packet_count, payload_packet_count);
 	
 
 	if (payload_packet_count == 0 || parity_packet_count == 0 || payload_packet_count + parity_packet_count > 255)
@@ -168,11 +183,12 @@ int reciever::assemble_and_out()
 		}
 	}
 
-	assert (copied == payload_packet_count);
+	if (copied != payload_packet_count)
+		error = true;
 #endif
 
 	f->integrality = !error;
-	int frame_data_size = *(int*)((uint8_t*)f->payload+4);
+	uint32_t frame_data_size = *(int*)((uint8_t*)f->payload+4);
 	uint32_t crc = *(uint32_t*)f->payload;
 	if (frame_data_size <= f->payload_size-8 && crc == crc32(0, (uint8_t*)f->payload+4, frame_data_size+4))
 		memmove(f->payload, (uint8_t*)f->payload+4, frame_data_size+4);

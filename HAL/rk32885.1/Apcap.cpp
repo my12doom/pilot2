@@ -6,15 +6,13 @@
 using namespace std;
 using namespace HAL;
 
-static const uint8_t uint8_taRadiotapHeader[] = {			// radiotap TX header
+static uint8_t uint8_taRadiotapHeader[] = {			// radiotap TX header
 	0x00, 0x00, // <-- radiotap version
 	0x0c, 0x00, // <- radiotap header lengt
-	0x04, 0x80, 0x00, 0x00, // <-- bitmap
-	0x22, 		// rate
-	0x0, 		// txpower
-	0x18,		// rtx_retries
-	0x00,		// data_retries
-};
+	0x00, 0x00, 0x08/*0x00*/, 0x00, 	// <-- bitmap: tx flag(15), mcs(19)
+	//0x08, 						// no retry
+	0x1f, 0x10|0x08|0x04 | 0x01, 0,		// MCS2, 20Mhz BW, short GI, LDPC, HT greenfield
+} ;
 
 
 
@@ -27,6 +25,13 @@ typedef struct  {
 	int m_rssi;
 } __attribute__((packed)) PENUMBRA_RADIOTAP_DATA;
 
+typedef union {
+	struct {
+		unsigned FragmentNumber: 4;
+		unsigned  SequenceNumber: 12;
+	};
+	uint16_t usValue;
+} DOT11_SEQUENCE_CONTROL;
 
 static int64_t getus()
 {    
@@ -38,10 +43,12 @@ static int64_t getus()
 static uint8_t uint8_taIeeeHeader[] = {
 	0x08, 0x01, 						// FC: frame control
 	0x00, 0x00,							// DID: duration or ID
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,	// address1
-	0x13, 0x22, 0x33, 0x44, 0x55, 0x66,	// address2
-	0x13, 0x22, 0x33, 0x44, 0x55, 0x66,	// address3
-	0x10, 0x86,							// SC: Sequence control
+	//0x01, 0x13, 0xef, 0xf1, 0x00, 0x06,	// address1 (RX)
+	0x13, 0x22, 0x33, 0x44, 0x55, 0x66,
+	0x13, 0x22, 0x33, 0x44, 0x55, 0x66,	// address2 (TX)
+	//0x00, 0x13, 0xef, 0xf1, 0x00, 0x06,	// address3 (DEST)
+	0x13, 0x22, 0x33, 0x44, 0x55, 0x66,
+	0x10, 0x86,							// SC: c
 };
 
 namespace androidUAV
@@ -211,7 +218,7 @@ void* APCAP_RX::worker()
 			uint16_t uint16_tHeaderLen = (puint8_tPayload[2] + (puint8_tPayload[3] << 8)); //radio tap header length field
 			if (ppcapPacketHeader->len < (uint16_tHeaderLen + n80211HeaderLength))
 			{
-				printf("ppcapPacketHeader has less than expected header length\n");
+				//printf("ppcapPacketHeader has less than expected header length\n");
 				continue;
 			}
 
@@ -298,6 +305,8 @@ void* APCAP_RX::worker()
 
 APCAP_TX::APCAP_TX(const char *interface, int port)
 {
+	uint16_t *psize = (uint16_t*)(uint8_taRadiotapHeader + 2);
+	*psize = sizeof(uint8_taRadiotapHeader);
 	init_ok = false;
 
 	char szErrbuf[PCAP_ERRBUF_SIZE] = {0};
@@ -337,6 +346,10 @@ int APCAP_TX::write(const void *buf, int block_size)
 	if (!init_ok)
 		return error_unsupported;
 
+	// update sequence_number
+	DOT11_SEQUENCE_CONTROL *sc = (DOT11_SEQUENCE_CONTROL *)(packet_transmit_buffer + sizeof(uint8_taRadiotapHeader) + 22);
+	sc->SequenceNumber ++;	
+
 	memcpy(packet_transmit_buffer + sizeof(uint8_taRadiotapHeader) + sizeof(uint8_taIeeeHeader), buf, block_size);
 	int plen = sizeof(uint8_taRadiotapHeader) + sizeof(uint8_taIeeeHeader) + block_size;
 	int r = pcap_inject(ppcap, packet_transmit_buffer, plen);
@@ -359,5 +372,15 @@ int APCAP_TX::available()
 	return error_unsupported;
 }
 
+int APCAP_TX::set_mcs_bw(int mcs, int bw)
+{
+	packet_transmit_buffer[sizeof(uint8_taRadiotapHeader)-1] = mcs;
+	packet_transmit_buffer[sizeof(uint8_taRadiotapHeader)-2] &= ~0x3;
+
+	if (bw == 40)
+		packet_transmit_buffer[sizeof(uint8_taRadiotapHeader)-2] |= 1;
+
+	return 0;
+}
 
 }

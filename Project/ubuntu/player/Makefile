@@ -22,7 +22,7 @@ SOURCE = player.cpp \
 INCLUDE = -I../../../ -I../../../modules
 ## end more includes
 
-LIBS = $(shell pkg-config --libs libavcodec) -lpcap
+LIBS = $(shell pkg-config --libs libavcodec) -lpcap -lavutil -lpthread -lSDL2
 
 VPATH=$(FEC) $(HAL3288)
 OBJ=$(join $(addsuffix ../obj/, $(dir $(SOURCE))), $(notdir $(SOURCE:.cpp=.o))) 
@@ -79,21 +79,21 @@ $(FEC)/../obj/%.o : %.cpp
 		@mkdir -p $(dir $@)
 		@echo "============="
 		@echo Building dependencies file for $*.o
-		@$(SHELL) -ec '$(CC) -M $(CFLAGS) $< | sed "s^$*.o^../obj/$*.o^" > $@'
+		@$(SHELL) -ec '$(CC) -M $(CFLAGS) $(INCLUDE) $< | sed "s^$*.o^../obj/$*.o^" > $@'
 
 ## Dependency rule for "other" directory
 $(FEC)/../.dep/%.d: %.cpp
 		@mkdir -p $(dir $@)
 		@echo "============="
 		@echo Building dependencies file for $*.o
-		@$(SHELL) -ec '$(CC) -M $(CFLAGS) $< | sed "s^$*.o^$(OTHERDIR)/../obj/$*.o^" > $@'
+		@$(SHELL) -ec '$(CC) -M $(CFLAGS) $(INCLUDE) $< | sed "s^$*.o^$(OTHERDIR)/../obj/$*.o^" > $@'
 
 ## Dependency rule for "other" directory
 $(HAL3288)/../.dep/%.d: %.cpp
 		@mkdir -p $(dir $@)
 		@echo "============="
 		@echo Building dependencies file for $*.o
-		@$(SHELL) -ec '$(CC) -M $(CFLAGS) $< | sed "s^$*.o^$(OTHERDIR)/../obj/$*.o^" > $@'
+		@$(SHELL) -ec '$(CC) -M $(CFLAGS) $(INCLUDE) $< | sed "s^$*.o^$(OTHERDIR)/../obj/$*.o^" > $@'
 
 ## Include the dependency files
 -include $(DEPENDS)

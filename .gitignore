@@ -10,6 +10,11 @@
 *.pcbdocpreview
 *.uvoptx
 *.Joy
+*.d
+*.o
+*.264
+*.h264
+.vscode/
 JLinkLog.txt
 Project/KEIL5/Listings
 Project/KEIL5/Output

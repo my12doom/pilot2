@@ -4,6 +4,7 @@
 #include <string.h>
 #include "frame.h"
 #include "cauchy_256.h"
+#include <Protocol/crc32.h>
 
 static int imax(int a, int b)
 {
@@ -16,13 +17,15 @@ FrameSender::FrameSender()
 	frame_id = 0;
 	block_sender = NULL;
 	packets = new raw_packet[256];
+	min_parity_packet_count = 20;
 	config(PACKET_SIZE, 1.5);
+	tmp = new uint8_t[256*MAX_PAYLOAD_SIZE];
 }
 
 FrameSender::~FrameSender()
 {
 	delete [] packets;
-
+	delete [] tmp;
 }
 
 int FrameSender::set_block_device(HAL::IBlockDevice *block_sender)
@@ -32,25 +35,37 @@ int FrameSender::set_block_device(HAL::IBlockDevice *block_sender)
 	return 0;
 }
 
-int FrameSender::config(int packet_size, float parity_ratio)
+int FrameSender::config(int packet_size, float parity_ratio, int min_parity_packet_count/* = 20*/)
 {
 	this->packet_payload_size = packet_size-HEADER_SIZE;
 	this->parity_ratio = parity_ratio;
+	this->min_parity_packet_count = min_parity_packet_count;
+
 
 	return 0;
 }
 
-int FrameSender::send_frame(const void *payload, int payload_size)
+int FrameSender::send_frame(const void *payloadx, int payload_size)
 {
+	uint32_t *p = (uint32_t*)tmp;
+	p[1] = payload_size;
+	memcpy(tmp+8, payloadx, payload_size);
+	p[0] = crc32(0, &p[1], payload_size+4);
+	payload_size += 8;
+
 	int payload_packet_count = (payload_size + packet_payload_size - 1) / packet_payload_size;
 	int parity_packet_count = ceil(payload_packet_count * parity_ratio);
+	if (parity_packet_count < min_parity_packet_count)
+		parity_packet_count = min_parity_packet_count;
+#if !USE_CAUCHY
 	if (parity_packet_count > MAX_NPAR)
 		parity_packet_count = MAX_NPAR;
+#endif
 	int slice_size = payload_packet_count + parity_packet_count;
 
-	if (slice_size > 255)		// too large frame
+	if (slice_size > 255)
 	{
-		printf("too large frame\n");
+		printf("too large frame (%d+%d slice, %d bytes)\n", payload_packet_count, parity_packet_count, payload_size);
 		return -1;
 	}
 
@@ -82,14 +97,13 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 		for(int j=0; j<slice_size; j++)
 			packets[j].data[i] = slice_data[j];
 	}
-#else
-	uint8_t tmp [256*MAX_PAYLOAD_SIZE];
+#else	
 	uint8_t *recovery_blocks = tmp + packet_payload_size * payload_packet_count;
 	const unsigned char *data_ptrs[256];
 	memset(packets, 0, (slice_size) * sizeof(raw_packet));
 	for(int i=0; i<payload_packet_count; i++)
 	{
-		memcpy(tmp + i*packet_payload_size, (uint8_t*)payload + i*packet_payload_size, imax(payload_size-i*packet_payload_size, packet_payload_size));
+		//memcpy(tmp + i*packet_payload_size, (uint8_t*)payload + i*packet_payload_size, imax(payload_size-i*packet_payload_size, packet_payload_size));
 		data_ptrs[i] = tmp + i*packet_payload_size;
 	}
 
@@ -99,12 +113,10 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 		memcpy(packets[i].data, tmp + i*packet_payload_size, packet_payload_size);
 	for(int i=0; i<parity_packet_count; i++)
 		memcpy(packets[i+payload_packet_count].data, tmp + (i+payload_packet_count)*packet_payload_size, packet_payload_size);
-// 	delete [] tmp;
+
 #endif
 
-	// create header rs parity and send out
-	rsEncoder header_rs_encoder;
-	header_rs_encoder.init(sizeof(packets->header_rs));
+	// create header CRC
 	for(int i=0; i<slice_size; i++)
 	{
 		packets[i].frame_id = frame_id;
@@ -113,9 +125,9 @@ int FrameSender::send_frame(const void *payload, int payload_size)
 		packets[i].parity_packet_count = parity_packet_count;
 		packets[i].payload_packet_count = payload_packet_count;
 
-		header_rs_encoder.resetData();
-		header_rs_encoder.append_data((unsigned char*)&packets[i], HEADER_SIZE-sizeof(packets[i].header_rs));
-		header_rs_encoder.output(&packets[i].header_rs[0]);
+		uint32_t crc = crc32(0, (unsigned char*)&packets[i], HEADER_SIZE-sizeof(packets[i].header_crc));
+		packets[i].header_crc[0] = crc;
+		packets[i].header_crc[1] = crc>>8;
 
 		send_packet(&packets[i], sizeof(raw_packet));
 	}
