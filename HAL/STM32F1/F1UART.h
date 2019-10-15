@@ -22,17 +22,18 @@ namespace STM32F1
 		virtual int readline(void *data, int max_count);
 		virtual int available();		
 			
-		void USART1_IRQHandler(void);
-		void DMA1_Channel4_IRQHandler();
+		void RXIRQHandler();
+		void TXIRQHandler();
 			
 		void destroy();
 
 	private:
-		USART_TypeDef * USARTx;
+		USART_TypeDef *USARTx;
 		int baudrate;
 
 		// TX DMA var:
 		DMA_Channel_TypeDef* tx_DMAy_Streamx;
+		uint32_t tc_flag; 
 		volatile bool tx_dma_running;
 		int tx_start;
 		int tx_end;

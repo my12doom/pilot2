@@ -18,7 +18,7 @@
 #define __HW_CONFIG_H
 
 /* Includes ------------------------------------------------------------------*/
-#include "../../common/mcu.h"
+#include <stm32f10x.h>
 #include "usb_type.h"
 #include <stdio.h>
 /* Exported types ------------------------------------------------------------*/

@@ -8,6 +8,7 @@ namespace STM32F4
 	F4Timer::F4Timer(TIM_TypeDef* TIMx)
 	{	
 		this->TIMx=TIMx;
+		cb = NULL;
 	}
 	void F4Timer::TimerInit(TIM_TypeDef* TIMx)
 	{

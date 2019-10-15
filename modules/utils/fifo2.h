@@ -62,6 +62,6 @@ public:
 
 protected:
 	uint8_t buffer[buffer_size];
-	int start;
-	int end;
+	volatile int start;
+	volatile int end;
 };

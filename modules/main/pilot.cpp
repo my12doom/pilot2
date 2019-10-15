@@ -1417,7 +1417,7 @@ int yet_another_pilot::calculate_state()
 		memcpy(estimator2.gyro, body_rate.array, sizeof(estimator2.gyro));
 
 		int64_t t = systimer->gettime();
-		estimator2.update(q, acc, gps, flow, sonar_distance, a_raw_altitude, interval, armed, airborne, still);
+		estimator2.update(q, acc, gps, flow, sonar_distance, a_raw_altitude, interval, armed, airborne);
 		t = systimer->gettime() - t;
 		//LOGE("estimator2 cost %d us", int(t));
 		log2(estimator2.x.data, TAG_POS_ESTIMATOR2, sizeof(float)*estimator2.x.m);

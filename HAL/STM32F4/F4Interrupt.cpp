@@ -168,6 +168,7 @@ namespace STM32F4
 	
 	F4Interrupt::F4Interrupt()
 	{
+		cb = NULL;
 	}
 	
 	F4Interrupt::~F4Interrupt()
@@ -187,12 +188,12 @@ namespace STM32F4
 		int pin_source =  Pin2PinSource(GPIO_Pin);
 		if (pin_source < 0 || port_source < 0)
 		{
-			LOGE("invalid interrupt\n");
+			printf("invalid interrupt\n");
 			return false;
 		}
 		
 		if (int_table[pin_source])
-			LOGE("warning: duplicate exti %d\n", pin_source);
+			printf("warning: duplicate exti %d\n", pin_source);
 		int_table[pin_source] = this;		
 		
 		// open everything....

@@ -20,15 +20,13 @@ namespace STM32F4
 {
 	F4VCP::F4VCP()
 	{
-	USBD_Init(&USB_OTG_dev,
-#ifdef USE_USB_OTG_HS
-		USB_OTG_HS_CORE_ID,
-#else
-		USB_OTG_FS_CORE_ID,
-#endif
-		&USR_desc,
-		&USBD_CDC_cb,
-		&USR_cb);
+		USBD_Init(&USB_OTG_dev,
+			USB_OTG_FS_CORE_ID,
+			&USR_desc,
+			&USBD_CDC_cb,
+			&USR_cb);
+		
+		*(uint32_t*)0x50000804 &= ~(0x02);	// clear USB FS device soft disconnect bit
 	}
 	
 	int F4VCP::set_baudrate(int baudrate)
@@ -38,7 +36,7 @@ namespace STM32F4
 	
 	int F4VCP::available()
 	{
-		return 0;
+		return VCP_available();;
 	}
 	
 	int F4VCP::read(void *data, int max_count)

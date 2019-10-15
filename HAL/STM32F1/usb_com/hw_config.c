@@ -14,7 +14,10 @@
 *******************************************************************************/
 
 /* Includes ------------------------------------------------------------------*/
-#include "../../common/mcu.h"
+
+#include <misc.h>
+#include <stm32f10x_rcc.h>
+
 #include "usb_lib.h"
 #include "usb_prop.h"
 #include "usb_desc.h"

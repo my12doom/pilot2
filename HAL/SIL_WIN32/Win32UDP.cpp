@@ -61,7 +61,7 @@ int Win32UDP_RX::set_source(const char*remote, int port)
 
 	memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = htonl(INADDR_ANY);
+	address.sin_addr.s_addr = htonl(remote);
 	address.sin_port = htons(port);
 
 	bind(socket_descriptor, (struct sockaddr *)&address, sizeof(address));

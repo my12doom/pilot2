@@ -1,12 +1,14 @@
 #pragma once
 
+#include <stdlib.h>
+
 template<class T, int max_elements>
 class CircularQueue
 {
 public:
 	CircularQueue():
 	start(0),
-	_count(0)
+	end(0)
 	{
 
 	}
@@ -20,11 +22,12 @@ public:
 	//        -1 on error (queue full)
 	int push(const T &v)
 	{
-		if (_count >= max_elements)
+		if (count() >= max_elements - 1)
 			return -1;
 
-		elements[(start+_count)%max_elements] = v;
-		_count++;
+		elements[(end)%max_elements] = v;
+
+		end = (end+1)%max_elements;
 
 		return 0;
 	}
@@ -34,13 +37,15 @@ public:
 	//        -1 if no element available and *out remain untouched.
 	int pop(T *out)
 	{
-		if (_count == 0)
+		if (count() == 0)
+		{
 			return -1;
+		}
 
 		if (out)
 			*out = elements[start];
+
 		start = (start+1)%max_elements;
-		_count--;
 
 		return 0;
 	}
@@ -51,8 +56,12 @@ public:
 	//        -1 if element not found and *out remain untouched or invaild out pointer.
 	int peek(int index, T*out)
 	{
-		if (index >= _count)
+		if (index >= count())
+		{
+			if (out)
+				*out = NULL;
 			return -1;
+		}
 
 		if (!out)
 			return -1;
@@ -63,18 +72,18 @@ public:
 
 	// return max continuous elements from the top of the queue, *out is modified to pointer of the first element
 	// return 0 if there is no elements left, and *out is modified to NULL
-	int peak2(int max_count, T**out)
+	int peek2(int max_count, T**out)
 	{
 		if (!out)
 			return 0;
 
-		if(_count == 0)
+		if(count() == 0)
 		{
 			*out = 0;
 			return 0;
 		}
 
-		int continuous_count = (_count + start < max_count) ? _count : (max_count - start);
+		int continuous_count = (count() + start < max_count) ? count() : (max_count - start);
 
 		*out = &elements[start];
 		return continuous_count;
@@ -85,11 +94,10 @@ public:
 	// return number of elements removed.
 	int pop_n(int count)
 	{
-		if (count>_count)
-			count = _count;
+		if (count > this->count())
+			count = this->count();
 
 		start = (start + count)%max_elements;
-		_count -= count;
 
 		return count;			
 	}
@@ -97,21 +105,24 @@ public:
 	// remove all elements
 	void clear()
 	{
-		start = _count = 0;
+		start = end = 0;
 	}
 
 	int count()
 	{
-		return _count;
+		volatile int size = end - start;
+		if (size<0)
+			size += max_elements;
+		return size;
 	}
 
 	int left()
 	{
-		return max_elements - _count;
+		return max_elements - count() - 1;
 	}
 
 protected:
 	T elements[max_elements];
-	int start;
-	int _count;
+	volatile int start;
+	volatile int end;
 };

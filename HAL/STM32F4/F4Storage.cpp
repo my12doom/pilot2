@@ -78,7 +78,7 @@ namespace STM32F4
 	}
 	int RCStorage::erase(int address)
 	{
-		FLASH_Status res = FLASH_EraseSector(address >= page__size ? FLASH_Sector_3 : FLASH_Sector_2, VoltageRange_1);
+		FLASH_Status res = FLASH_EraseSector(address >= page__size ? FLASH_Sector_3 : FLASH_Sector_2, VoltageRange_3);
 		
 		return 0;
 	}
@@ -86,13 +86,16 @@ namespace STM32F4
 
 HAL::IStorage *get_default_storage()
 {
-#ifdef STM32F446RC
-	static STM32F4::RCStorage theDefaultStorage;
-#else
-	static STM32F4::F4Storage theDefaultStorage;
-#endif
-	
-	return &theDefaultStorage;
+	if (*(uint16_t*)0x1FFF7A22 <= 256)
+	{
+		static STM32F4::RCStorage rcStorage;
+		return &rcStorage;
+	}
+	else
+	{
+		static STM32F4::F4Storage theDefaultStorage;
+		return &theDefaultStorage;
+	}
 }
 
 HAL::IStorage *get_bootloader_storage()

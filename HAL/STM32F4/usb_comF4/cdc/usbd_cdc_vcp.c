@@ -50,10 +50,9 @@ extern uint32_t APP_Rx_ptr_in;    /* Increment this pointer or roll it back to
                                      in the buffer APP_Rx_Buffer. */
 
 /* Driver TX buffer */
-#define APP_TX_BUF_SIZE 128
 uint8_t APP_Tx_Buffer[APP_TX_BUF_SIZE];
-uint32_t APP_tx_ptr_head;
-uint32_t APP_tx_ptr_tail;
+volatile uint32_t APP_tx_ptr_head;
+volatile uint32_t APP_tx_ptr_tail;
 
 static uint16_t VCP_Init     (void);
 static uint16_t VCP_DeInit   (void);
@@ -227,6 +226,10 @@ void VCP_send_str(uint8_t* buf)
 static uint16_t VCP_DataRx (uint8_t* Buf, uint32_t Len)
 {
 	uint32_t i;
+	
+	// reject buffer for now if not enough free space
+	if (APP_TX_BUF_SIZE - VCP_available() - 1 < Len)
+		return -1;
 
 	for (i = 0; i < Len; i++)
 	{

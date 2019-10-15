@@ -17,7 +17,7 @@
 #ifndef __USB_CONF_H
 #define __USB_CONF_H
 
-#include "../../common/mcu.h"
+//#include "../../common/mcu.h"
 
 /* Includes ------------------------------------------------------------------*/
 /* Exported types ------------------------------------------------------------*/
@@ -70,7 +70,7 @@
 /*#define WKUP_CALLBACK*/
 /*#define SUSP_CALLBACK*/
 /*#define RESET_CALLBACK*/
-/*#define SOF_CALLBACK*/
+#define SOF_CALLBACK
 /*#define ESOF_CALLBACK*/
 #endif /* STM32F10X_CL */
 

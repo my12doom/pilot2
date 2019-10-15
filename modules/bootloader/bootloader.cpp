@@ -21,7 +21,7 @@ using namespace STM32F4;
 dev_v2::RGBLED led;
 
 // constants
-const uint32_t ApplicationAddress = 0x8008000;
+uint32_t ApplicationAddress = 0x8008000;
 const unsigned char aes_key[32] = {0x85, 0xA3, 0x6C, 0x69, 0x76, 0x6C, 0x61, 0x76, 0xA3, 0x85};
 float color[5][3] = 
 {
@@ -120,7 +120,6 @@ void erase_rom(HAL::IUART *uart)
 	led.write(1,1,1);
 	uint32_t pages[] =
 	{
-#ifndef STM32F446RC		
 		FLASH_Sector_2,
 		FLASH_Sector_3,
 		FLASH_Sector_4,
@@ -129,12 +128,9 @@ void erase_rom(HAL::IUART *uart)
 		FLASH_Sector_7,
 		FLASH_Sector_8,
 		FLASH_Sector_9,
-#else
-		FLASH_Sector_4,
-		FLASH_Sector_5,
-#endif
 	};
 	
+
 	FLASH_Unlock();
 	rom_size = 0;
 	rom_crc = 0;
@@ -149,6 +145,13 @@ void erase_rom(HAL::IUART *uart)
 	
 	
 	int sector_count = sizeof(pages)/sizeof(pages[0]);
+	
+	if (*(uint16_t*)0x1FFF7A22 <= 256)
+	{
+		sector_count = 2;
+		pages[0] = FLASH_Sector_4;
+		pages[1] = FLASH_Sector_5;
+	}
 		
 	for(int i=0; i<sector_count; i++)
 	{
@@ -405,6 +408,10 @@ int main()
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
 	PWR_BackupAccessCmd(ENABLE);
+	
+	// update application address for <256Kbyte version F4
+	if (*(uint16_t*)0x1FFF7A22 <= 256)
+		ApplicationAddress = 0x08010000;
 
 	aes.set_key(aes_key, 256);
 	RDP();
