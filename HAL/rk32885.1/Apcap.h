@@ -75,6 +75,7 @@ namespace androidUAV
 		// query num available blocks in rx queue, negative values for error.
 		virtual int available();
 
+		int set_mcs_bw(int mcs, int bw);
 	protected:
 		bool init_ok;
 		pcap_t *ppcap;

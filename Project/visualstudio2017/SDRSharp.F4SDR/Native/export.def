@@ -1,0 +1,9 @@
+LIBRARY	"Native"
+EXPORTS
+	f4sdr_dll_version
+	f4sdr_dll_init
+	f4sdr_open
+	f4sdr_close
+	f4sdr_cmd
+	f4sdr_setcb
+	f4sdr_enum

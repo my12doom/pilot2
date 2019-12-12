@@ -17,12 +17,12 @@ extern "C"
 using namespace androidUAV;
 using namespace std;
 
-int screen_w = 640;
-int screen_h = 360;
-const int pixel_w = 640;
-const int pixel_h = 360;
+int screen_w = 960;
+int screen_h = 540;
+int pixel_w = 0;
+int pixel_h = 0;
 uint32_t pixformat= SDL_PIXELFORMAT_IYUV;
-uint8_t buffer[pixel_w*pixel_h*2] = {0};
+uint8_t buffer[1920*1080*2] = {0};
 const int INBUF_SIZE = 4096000;
 uint8_t inbuf[INBUF_SIZE + FF_INPUT_BUFFER_PADDING_SIZE];
 
@@ -113,13 +113,29 @@ int main(int argc,char** argv)
 	}
 
 	SDL_Renderer* sdlRenderer = SDL_CreateRenderer(screen, -1, 0);
-	SDL_Texture* sdlTexture = SDL_CreateTexture(sdlRenderer,pixformat, SDL_TEXTUREACCESS_STREAMING,pixel_w,pixel_h);
+	SDL_Texture* sdlTexture = NULL;
 
 
 	cb * frame_cache = new cb();
 	reciever *rec = new reciever(frame_cache);
 
-	APCAP_RX rx("wlan0", 0);
+	char interface[1024] = "wlx70f11c17eedc";
+	if (argc>1)
+		strcpy(interface, argv[1]);
+
+	char tmp[200];
+	sprintf(tmp, "service network-manager stop", interface);
+	system(tmp);
+	sprintf(tmp, "ifconfig %s down", interface);
+	system(tmp);
+	sprintf(tmp, "iw dev %s set monitor otherbss fcsfail", interface);
+	system(tmp);
+	sprintf(tmp, "ifconfig %s up", interface);
+	system(tmp);
+	sprintf(tmp, "iw dev %s set channel 100 HT40+", interface);
+	system(tmp);
+
+	APCAP_RX rx(interface, 0);
 
 	memset(buffer, 0x80, sizeof(buffer));
 	AVPacket avpkt;
@@ -185,14 +201,22 @@ int main(int argc,char** argv)
 	                break;
 	            }
 	            if (got_picture) {
+					if (frame == 0)
+					{
+						pixel_w = picture->width;
+						pixel_h = picture->height;
+						SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+						sdlTexture = SDL_CreateTexture(sdlRenderer,pixformat, SDL_TEXTUREACCESS_STREAMING,pixel_w,pixel_h);
+					}
+					//printf("resolution:%dX%d, %lld\n", picture->width, picture->height, getus());
 	                //printf("showing frame %3d\n", frame);
 	                //fflush(stdout);
 
 					//show_picture(picture);
 					SDL_Rect sdlRect = {0, 0, screen_w, screen_h};
 					memcpy(buffer, picture->data[0], pixel_w*pixel_h);
-					//memcpy(buffer+pixel_w*pixel_h, picture->data[1], pixel_w*pixel_h/4);
-					//memcpy(buffer+pixel_w*pixel_h*5/4, picture->data[2], pixel_w*pixel_h/4);
+					memcpy(buffer+pixel_w*pixel_h, picture->data[1], pixel_w*pixel_h/4);
+					memcpy(buffer+pixel_w*pixel_h*5/4, picture->data[2], pixel_w*pixel_h/4);
 
 					SDL_UpdateTexture( sdlTexture, NULL, buffer, pixel_w);
 					SDL_RenderClear( sdlRenderer );
