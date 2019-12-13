@@ -543,7 +543,7 @@ namespace STM32F4
 		if (end>=start)
 			m = rx_buffer_size-1 - (end-start);
 		else
-			m = rx_buffer_size-1 - (start-end);
+			m = start-end-1;
 
 		if (n>m)
 		{
