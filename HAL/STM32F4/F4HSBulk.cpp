@@ -30,9 +30,9 @@ int F4HSBulk::ioctl(int op, void *p, int size)
 	{
 		if (!ptr)
 		{
-			USBD_Init(&USB_OTG_dev, USB_OTG_HS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
 			ptr = this;
 			cb = (F4HSBulk_event_cb)p;
+			USBD_Init(&USB_OTG_dev, USB_OTG_HS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
 		}
 	}
 	

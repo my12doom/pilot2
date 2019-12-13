@@ -169,6 +169,7 @@ namespace STM32F4
 	F4Interrupt::F4Interrupt()
 	{
 		cb = NULL;
+		enabled = true;
 	}
 	
 	F4Interrupt::~F4Interrupt()
@@ -229,12 +230,14 @@ namespace STM32F4
 
 	int F4Interrupt::enable()
 	{
+		enabled = true;
 		NVIC_EnableIRQ(pin2irqn(GPIO_Pin));
 		return 0;
 	}
 
 	int F4Interrupt::disable()
 	{
+		enabled = false;
 		NVIC_DisableIRQ(pin2irqn(GPIO_Pin));
 		return 0;
 	}
@@ -247,7 +250,7 @@ namespace STM32F4
 	
 	void F4Interrupt::call_callback()
 	{
-		if(cb)
+		if(cb && enabled)
 			cb(parameter, flag);
 	}
 }

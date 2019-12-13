@@ -137,7 +137,7 @@
 #ifdef USB_OTG_HS_CORE
  #define RX_FIFO_HS_SIZE                          512			// 接收FIFO区大小
  #define TX0_FIFO_HS_SIZE                          64			// EP0 tx fifo size
- #define TX1_FIFO_HS_SIZE                         372//372			// EP1 tx ..		// See(vi)
+ #define TX1_FIFO_HS_SIZE                         512//372			// EP1 tx ..		// See(vi)
  #define TX2_FIFO_HS_SIZE                           0// 64			// EP2 tx ..
  #define TX3_FIFO_HS_SIZE                           0
  #define TX4_FIFO_HS_SIZE                           0
