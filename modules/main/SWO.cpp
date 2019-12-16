@@ -7,6 +7,11 @@ struct __FILE { int handle; /* Add whatever you need here */ };
 #define DEMCR           (*((volatile unsigned long *)(0xE000EDFC)))
 #define TRCENA          0x01000000
 
+extern "C"
+{
+#include <modules/utils/SEGGER_RTT.h>
+}
+
 extern "C" int fputc(int ch, FILE *f)
 {
 	if (DEMCR & TRCENA) 
@@ -14,6 +19,8 @@ extern "C" int fputc(int ch, FILE *f)
 		while (ITM_Port32(0) == 0);
 		ITM_Port8(0) = ch;
 	}
+	char _ch = ch;
+	SEGGER_RTT_Write(0, &_ch, 1);
 	return (ch);
 }
 

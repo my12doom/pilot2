@@ -107,6 +107,12 @@ lzo1x_decompress_safe   ( const lzo_bytep src, lzo_uint  src_len,
                                 lzo_block_func_t blk_cb, lzo_uint blk_size);
 
 
+/* streaming decompression */
+LZO_EXTERN(int)
+lzo1x_decompress_stream   (     lzo_bytep wrkmem, lzo_uint  wrkmem_len,
+                                lzo_block_func_t blk_cb, lzo_uint blk_size);
+
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

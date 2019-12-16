@@ -487,4 +487,21 @@ int SEGGER_RTT_ConfigDownBuffer(unsigned BufferIndex, const char* sName, char* p
   return -1;
 }
 
+#include <stdarg.h>
+#include <stdio.h>
+void RTT_printf(const char*format, ...)
+{
+	char buffer[512];
+		
+	va_list args;
+	va_start (args, format);
+	int count = vsprintf (buffer,format, args);
+	va_end (args);
+	
+	if (count < 0)
+		return;
+	
+	SEGGER_RTT_WriteString(0, buffer);	
+}
+
 /*************************** End of file ****************************/

@@ -53,5 +53,5 @@ int     SEGGER_RTT_ConfigDownBuffer (unsigned BufferIndex, const char* sName, ch
 **********************************************************************
 */
 int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
-
+void RTT_printf(const char*format, ...);
 /*************************** End of file ****************************/
