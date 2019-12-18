@@ -324,9 +324,12 @@ APCAP_TX::APCAP_TX(const char *interface, int port)
 	memcpy(packet_transmit_buffer+sizeof(uint8_taRadiotapHeader), uint8_taIeeeHeader, sizeof(uint8_taIeeeHeader));
 
 	printf("header=%d+%d bytes\n", sizeof(uint8_taRadiotapHeader), sizeof(uint8_taIeeeHeader));
-
-	pcap_setnonblock(ppcap, 0, szErrbuf);
-
+	
+	{
+	int buf_size = 0;
+	setsockopt(pcap_fileno(ppcap), SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
+	}
+	
 	init_ok = true;
 	return;
 fail:
