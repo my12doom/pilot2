@@ -31,6 +31,7 @@ void reciever::init()
 	memset(packets, 0, sizeof(raw_packet) * 256);
 	current_frame_id = -1;
 	current_packet_count = 0;
+	last_payload_size = sizeof(raw_packet) - HEADER_SIZE;
 }
 
 int reciever::put_packet(const void *packet, int size)
@@ -40,6 +41,13 @@ int reciever::put_packet(const void *packet, int size)
 	// reject ill conditioned packets
 	if (size > sizeof(raw_packet) || size < HEADER_SIZE)
 		return -1;
+
+	if (size != last_payload_size + HEADER_SIZE)
+	{
+		if (size != -1)
+			printf("payload size changed:%d to %d\n", last_payload_size, size - HEADER_SIZE);
+		last_payload_size = size - HEADER_SIZE;
+	}
 
 	// decode header and check for error
 	uint32_t crc_calculated = crc32(0, packet, HEADER_SIZE - sizeof(raw_packet::header_crc));
@@ -123,8 +131,7 @@ int reciever::assemble_and_out()
 
 	// assemble and do FEC
 	int slice_size = payload_packet_count + parity_packet_count;
-	int max_packet_payload_size = sizeof(raw_packet)-HEADER_SIZE;
-	frame * f = alloc_frame(payload_packet_count * max_packet_payload_size, current_frame_id, true);
+	frame * f = alloc_frame(payload_packet_count * last_payload_size, current_frame_id, true);
 	bool error = false;
 
 #if !USE_CAUCHY
@@ -138,7 +145,7 @@ int reciever::assemble_and_out()
 	rsDecoder decoder;
 	decoder.init(parity_packet_count);
 	uint8_t slice_data[256];
-	for(int i=0; i<max_packet_payload_size; i++)
+	for(int i=0; i<last_payload_size; i++)
 	{
 		for(int j=0; j<slice_size; j++)
 			slice_data[j] = packets[j].data[i];		
@@ -149,7 +156,7 @@ int reciever::assemble_and_out()
 
 		for(int j=0; j<payload_packet_count; j++)
 		{
-			((uint8_t*)f->payload)[j*max_packet_payload_size + i] = slice_data[j];			
+			((uint8_t*)f->payload)[j*last_payload_size + i] = slice_data[j];			
 		}
 	}
 #else
@@ -167,7 +174,7 @@ int reciever::assemble_and_out()
 
 	assert(j>=payload_packet_count);
 
-	error = cauchy_256_decode(payload_packet_count, parity_packet_count, blocks, payload_packet_count, max_packet_payload_size);
+	error = cauchy_256_decode(payload_packet_count, parity_packet_count, blocks, payload_packet_count, last_payload_size);
 
 // 	for(int i=0; i<payload_packet_count; i++)
 // 		assert(blocks[i].row == i);
@@ -178,7 +185,7 @@ int reciever::assemble_and_out()
 	{
 		if (blocks[i].row < payload_packet_count && blocks[i].data)
 		{
-			memcpy((uint8_t*)f->payload+blocks[i].row*max_packet_payload_size, blocks[i].data, max_packet_payload_size);
+			memcpy((uint8_t*)f->payload+blocks[i].row*last_payload_size, blocks[i].data, last_payload_size);
 			copied ++;
 		}
 	}

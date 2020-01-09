@@ -129,7 +129,7 @@ int FrameSender::send_frame(const void *payloadx, int payload_size)
 		packets[i].header_crc[0] = crc;
 		packets[i].header_crc[1] = crc>>8;
 
-		send_packet(&packets[i], sizeof(raw_packet));
+		send_packet(&packets[i], HEADER_SIZE + packet_payload_size);
 	}
 
 	frame_id++;

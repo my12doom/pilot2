@@ -15,6 +15,7 @@ protected:
 	raw_packet packets[256];
 	int current_frame_id;
 	int current_packet_count;
+	int last_payload_size;
 	IFrameReciever *cb;
 };
 

@@ -38,7 +38,17 @@ namespace androidUAV
 		// return latest rssi in dbm.
 		int get_latest_rssi(){return latest_rssi;}
 
+		//
+		// offset:0:center, 1:upper, 2:lower, bw: 0: 40M/20M, 1:10M, 2:5M
+		int set_rf(int frequency, uint8_t offset, uint8_t bw);
+		int set_rf2(int frequency, uint8_t offset, uint8_t bw, int8_t ant = -1);
+
+		//
+		int set_mcs_bw(int mcs, int bw);
+
+
 	protected:
+		uint8_t packet_transmit_buffer[MAX_PACKET_LENGTH];
 		bool worker_run;
 		pthread_t worker_thread;
 		pthread_mutex_t cs;
@@ -50,6 +60,7 @@ namespace androidUAV
 		int latest_rssi;
 
 		int guard[1024];
+		char ifname[100];
 		int byte_counter;
 
 		int clearup();
@@ -59,26 +70,5 @@ namespace androidUAV
 
 	};
 
-	class APCAP_TX : public HAL::IBlockDevice
-	{
-	public:
-		APCAP_TX(const char*interface, int port);
-		~APCAP_TX();
-
-		// write a block
-		// class implementation is responsible for queueing blocks, or reject incoming blocks by returning an error.
-		// returns num bytes written, negative values for error.
-		virtual int write(const void *buf, int block_size);
-
-		virtual int read(void *buf, int max_block_size, bool remove = true);
-
-		// query num available blocks in rx queue, negative values for error.
-		virtual int available();
-
-		int set_mcs_bw(int mcs, int bw);
-	protected:
-		bool init_ok;
-		pcap_t *ppcap;
-		uint8_t packet_transmit_buffer[MAX_PACKET_LENGTH];
-	};
+	typedef APCAP_RX APCAP_TX;
 }

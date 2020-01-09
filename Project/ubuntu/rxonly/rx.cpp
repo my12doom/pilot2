@@ -40,35 +40,78 @@ static int64_t getus()
 
 int main_tx(int argc, char **argv)
 {
+	int bw = 0;
 	char interface[1024];
 	if (argc>1)
 		strcpy(interface, argv[1]);
 
 	bool low_rate = false;
 	for(int i=0; i<argc; i++)
-		if (strcmp(argv[i], "-l") == 0)
+	{
+		if (strcmp(argv[i], "-20") == 0)
 			low_rate = true;
+		if (strcmp(argv[i], "-10") == 0)
+			low_rate = bw = 1;
+		if (strcmp(argv[i], "-5") == 0)
+			low_rate = bw = 2;
+		if (strcmp(argv[i], "-40") == 0)
+			low_rate = bw = 0;
+	}
 
 
 	APCAP_TX tx(interface, 0);
+
+	// dummy packets
+	/*
+	tx.set_mcs_bw(0, 40);
+	while(1)
+	{
+		char tmp[1200];
+		memset(tmp, 0x55, sizeof(tmp));
+		tx.write(tmp, sizeof(tmp));
+		usleep(5000);
+	}
+	*/
 
 	int64_t last_tx = 0;
 	FrameSender sender;
 	sender.set_block_device(&tx);
 	if (!low_rate)
 	{
-		tx.set_mcs_bw(1, 40);
+		tx.set_mcs_bw(2, 40);
 		sender.config(PACKET_SIZE, 0.5);
 	}
 	else
 	{
 		tx.set_mcs_bw(0, 20);
-		sender.config(PACKET_SIZE, 4.0);
+		sender.config(PACKET_SIZE, 2.0, 3);
 	}
 
-	H264_slicer(low_rate ? "test.264" : "DJI_0033L.264");
+	while(0)
+	{
+		printf("%d\n", tx.set_rf2(5520, 2, bw));
+		usleep(100000);
+	}
+
+	int n = bw;
+	int64_t last_change = getus();
+
+	H264_slicer(low_rate ? "300.264" : "DJI_0033L.264");
 
 	uint8_t *buf = new uint8_t[655360];
+
+	// speed test
+	while(0)
+	{
+		n++;
+		tx.set_rf2(5520, 1, n%3);
+
+		char tmp[1200];
+		memset(tmp, 0x55, sizeof(tmp));
+		tx.write(tmp, sizeof(tmp));
+	}
+
+	tx.set_rf2(5500, 1, bw, 0);
 
 	for(int i=0; ; i=(i+1)%frame_count)
 	{
@@ -85,6 +128,13 @@ int main_tx(int argc, char **argv)
 		last_tx = getus();
 		sender.send_frame(frames[i].nal, frames[i].size);
 
+		if (getus() - last_change > 5000000)
+		{
+			n++;
+			//tx.set_rf2(5500, 1, 2, n%2?8:4);
+			printf("changed to %d\n", n%3);
+			last_change = getus();
+		}
 	}
 
 	return 0;
@@ -139,9 +189,66 @@ public:
 	vector<frame*> frames;
 };
 
+#include <ifaddrs.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <linux/wireless.h>
+
+
+int check_wireless(const char* ifname, char* protocol) {
+  int sock = -1;
+  struct iwreq pwrq;
+  memset(&pwrq, 0, sizeof(pwrq));
+  strncpy(pwrq.ifr_name, ifname, IFNAMSIZ);
+
+  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    perror("socket");
+    return 0;
+  }
+
+  if (ioctl(sock, SIOCGIWNAME, &pwrq) != -1) {
+    if (protocol) strncpy(protocol, pwrq.u.name, IFNAMSIZ);
+    close(sock);
+    return 1;
+  }
+
+  close(sock);
+  return 0;
+}
+
+
+int list_interfaces() {
+  struct ifaddrs *ifaddr, *ifa;
+
+  if (getifaddrs(&ifaddr) == -1) {
+    perror("getifaddrs");
+    return -1;
+  }
+
+  /* Walk through linked list, maintaining head pointer so we
+     can free list later */
+  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+    char protocol[IFNAMSIZ]  = {0};
+
+    if (ifa->ifa_addr == NULL ||
+        ifa->ifa_addr->sa_family != AF_PACKET) continue;
+
+    if (check_wireless(ifa->ifa_name, protocol)) {
+      printf("interface %s is wireless: %s\n", ifa->ifa_name, protocol);
+    } else {
+      //printf("interface %s is not wireless\n", ifa->ifa_name);
+    }
+  }
+
+  freeifaddrs(ifaddr);
+  return 0;
+}
 
 int main(int argc,char** argv)
 {
+	list_interfaces();
+
 	cb * frame_cache = new cb();
 	reciever *rec = new reciever(frame_cache);
 
@@ -167,13 +274,27 @@ int main(int argc,char** argv)
 		if (strstr(argv[i], "-t"))
 			return main_tx(argc, argv);
 	}
-	APCAP_RX rx(interface, 0);
 
+	int bw = 0;
+	for(int i=0; i<argc; i++)
+	{
+		if (strcmp(argv[i], "-20") == 0)
+			bw = 0;
+		if (strcmp(argv[i], "-10") == 0)
+			bw = 1;
+		if (strcmp(argv[i], "-5") == 0)
+			bw = 2;
+		if (strcmp(argv[i], "-40") == 0)
+			bw = 0;
+	}
+
+	APCAP_RX rx(interface, 0);
 	int64_t last_fps_show = getus();
 	int valid = 0;
 	int invalid = 0;
 	int wifi_byte_counter = 0;
 	int frame_byte_counter = 0;
+	rx.set_rf2(5500, 1, bw, 0);
 
 	while(1)
 	{

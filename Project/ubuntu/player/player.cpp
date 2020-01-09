@@ -137,6 +137,22 @@ int main(int argc,char** argv)
 
 	APCAP_RX rx(interface, 0);
 
+	int bw = 0;
+	for(int i=0; i<argc; i++)
+	{
+		if (strcmp(argv[i], "-20") == 0)
+			bw = 0;
+		if (strcmp(argv[i], "-10") == 0)
+			bw = 1;
+		if (strcmp(argv[i], "-5") == 0)
+			bw = 2;
+		if (strcmp(argv[i], "-40") == 0)
+			bw = 0;
+	}
+
+	rx.set_rf2(5500, 1, bw, 0);
+	int64_t last_frame_time = getus();
+
 	memset(buffer, 0x80, sizeof(buffer));
 	AVPacket avpkt;
 	av_init_packet(&avpkt);
@@ -167,7 +183,10 @@ int main(int argc,char** argv)
 			if (getus() > last_fps_show + 1000000)
 			{
 				last_fps_show = getus();
-				fprintf(stderr, "%ddbm\n", rx.get_latest_rssi());
+				int dt = getus() - last_frame_time;
+				fprintf(stderr, "%ddbm%s", rx.get_latest_rssi(), dt>1000000?"":"\n");
+				if (dt > 1000000)
+					printf(", link lost %d ms\n", int(dt/1000));
 			}
 
 			frame * f = frame_cache->get_frame();
@@ -191,6 +210,8 @@ int main(int argc,char** argv)
 
 			fwrite(avpkt.data, 1, avpkt.size, h264);
 
+			last_frame_time = getus();
+
 			while (avpkt.size > 0) 
 			{
 				static int frame = 0;
@@ -201,18 +222,16 @@ int main(int argc,char** argv)
 	                break;
 	            }
 	            if (got_picture) {
-					if (frame == 0)
+					if (picture->width != pixel_w || picture->height != pixel_h)
 					{
 						pixel_w = picture->width;
 						pixel_h = picture->height;
 						SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+						if (sdlTexture)
+							SDL_DestroyTexture(sdlTexture);
 						sdlTexture = SDL_CreateTexture(sdlRenderer,pixformat, SDL_TEXTUREACCESS_STREAMING,pixel_w,pixel_h);
 					}
-					//printf("resolution:%dX%d, %lld\n", picture->width, picture->height, getus());
-	                //printf("showing frame %3d\n", frame);
-	                //fflush(stdout);
-
-					//show_picture(picture);
+					
 					SDL_Rect sdlRect = {0, 0, screen_w, screen_h};
 					memcpy(buffer, picture->data[0], pixel_w*pixel_h);
 					memcpy(buffer+pixel_w*pixel_h, picture->data[1], pixel_w*pixel_h/4);
