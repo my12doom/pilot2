@@ -18,5 +18,9 @@
 JLinkLog.txt
 Project/KEIL5/Listings
 Project/KEIL5/Output
+Project/KEIL5/DebugConfig
+Project/KEIL5/RTE
 JLinkLog.txt
 modules\Algorithm\ekf_lib\matlab\matlab_code\ekf_13state\generate
+Debug
+Release

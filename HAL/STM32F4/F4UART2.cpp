@@ -40,11 +40,45 @@ namespace STM32F4
 		if (uart_table[1])
 			uart_table[1]->rx_dma_irq();
 	}
+
+	// UART6
+	extern "C" void USART6_IRQHandler(void)
+	{
+		if (uart_table[5])
+			uart_table[5]->uart_irq();
+	}
+	extern "C" void DMA2_Stream6_IRQHandler()
+	{
+		if (uart_table[5])
+			uart_table[5]->tx_dma_irq();
+	}
+	extern "C" void DMA2_Stream1_IRQHandler()	// uart2rx
+	{
+		if (uart_table[5])
+			uart_table[5]->rx_dma_irq();
+	}	
 		
-	F4UART2::F4UART2(USART_TypeDef * USARTx):start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),tx_dma_running(false)
+	F4UART2::F4UART2(USART_TypeDef * USARTx, void *tx_buf_override, int tx_buf_override_size, void *rx_buf_override, int rx_buf_override_size)
+	:start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),tx_dma_running(false)
 	{		
 		this->USARTx=USARTx;
-		
+		dma_read_ptr = 0;
+		tx_buffer_size = TX_BUFFER_SIZE;
+		rx_buffer_size = RX_BUFFER_SIZE;
+		tx_buffer = _tx_buffer;
+		rx_buffer = _rx_buffer;
+
+		if (tx_buf_override_size && tx_buf_override)
+		{
+			tx_buffer = (char*)tx_buf_override;
+			tx_buffer_size = tx_buf_override_size;
+		}
+		if (rx_buf_override_size && rx_buf_override)
+		{
+			rx_buffer = (char*)rx_buf_override;
+			rx_buffer_size = rx_buf_override_size;
+		}
+
 		GPIO_InitTypeDef GPIO_InitStructure;
 		NVIC_InitTypeDef NVIC_InitStructure;
 		USART_InitTypeDef USART_InitStructure;
@@ -129,6 +163,48 @@ namespace STM32F4
 				printf("overwriting UART2\n");
 			uart_table[1] = this;
 		}
+
+		if(USART6 == USARTx)
+		{
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART6, ENABLE);
+			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG,ENABLE);
+			
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+			GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+			GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+			GPIO_Init(GPIOC, &GPIO_InitStructure);
+			GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
+			GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+			GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+			GPIO_Init(GPIOC, &GPIO_InitStructure);
+			GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_USART6);
+			GPIO_PinAFConfig(GPIOC, GPIO_PinSource7, GPIO_AF_USART6);
+
+			// NVIC config
+			NVIC_InitStructure.NVIC_IRQChannel = USART6_IRQn;
+			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+			NVIC_Init(&NVIC_InitStructure);		
+			
+			USART_InitStructure.USART_BaudRate = 115200;
+			USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+			USART_InitStructure.USART_StopBits = USART_StopBits_1;
+			USART_InitStructure.USART_Parity = USART_Parity_No ;
+			USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+			USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+			USART_Init(USART6, &USART_InitStructure); 
+			USART_Cmd(USART6, ENABLE);
+			USART_ITConfig(USART6, USART_IT_IDLE, ENABLE);
+
+			if (uart_table[5])
+				printf("overwriting UART6\n");
+			uart_table[5] = this;
+		}
+
 		dma_init();
 	}
 	int F4UART2::set_baudrate(int baudrate)
@@ -150,8 +226,6 @@ namespace STM32F4
 	{
 		uint32_t tx_DMA_Channel;
 		uint32_t rx_DMA_Channel;
-		uint8_t tx_dma_irqn;
-		uint8_t rx_dma_irqn;
 
 		if(USART1 == USARTx)
 		{
@@ -165,6 +239,7 @@ namespace STM32F4
 			rx_dma_irqn = DMA2_Stream2_IRQn;
 			rx_DMAy_Streamx = DMA2_Stream2;
 			rx_tcif_flag = DMA_FLAG_TCIF2;
+			rx_htif_flag = DMA_FLAG_HTIF2;
 		}
 		if(USART2 == USARTx)
 		{
@@ -178,12 +253,28 @@ namespace STM32F4
 			rx_dma_irqn = DMA1_Stream5_IRQn;
 			rx_DMAy_Streamx = DMA1_Stream5;
 			rx_tcif_flag = DMA_FLAG_TCIF5;
+			rx_htif_flag = DMA_FLAG_HTIF5;
+		}
+
+		if(USART6 == USARTx)
+		{
+			RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+			tx_DMA_Channel = DMA_Channel_5;
+			tx_dma_irqn = DMA2_Stream6_IRQn;
+			tx_DMAy_Streamx = DMA2_Stream6;
+			tx_tcif_flag = DMA_FLAG_TCIF6;
+
+			rx_DMA_Channel = DMA_Channel_5;
+			rx_dma_irqn = DMA2_Stream1_IRQn;
+			rx_DMAy_Streamx = DMA2_Stream1;
+			rx_tcif_flag = DMA_FLAG_TCIF1;
+			rx_htif_flag = DMA_FLAG_HTIF1;
 		}
 
 		// nvic for both tx & rx.
 		NVIC_InitTypeDef NVIC_InitStructure;
 		NVIC_InitStructure.NVIC_IRQChannel = tx_dma_irqn;  
-		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;		// must be same preemption priority with usart interrupt, to prevent re-entry
 		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 		NVIC_Init(&NVIC_InitStructure);
@@ -197,7 +288,7 @@ namespace STM32F4
 		DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(USARTx->DR));
 		DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)&tx_buffer;
 		DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-		DMA_InitStructure.DMA_BufferSize = sizeof(tx_buffer);
+		DMA_InitStructure.DMA_BufferSize = tx_buffer_size;
 		DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 		DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
 		DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
@@ -217,12 +308,12 @@ namespace STM32F4
 		DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(USARTx->DR));
 		DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)&rx_dma_buffer;
 		DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-		DMA_InitStructure.DMA_BufferSize = sizeof(rx_dma_buffer);
+		DMA_InitStructure.DMA_BufferSize = RX_DMA_BUFFER_SIZE;
 		DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 		DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
 		DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
 		DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-		DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+		DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
 		DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
 		DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
 		DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull; 
@@ -230,6 +321,7 @@ namespace STM32F4
 		DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single; 
 		DMA_Init(rx_DMAy_Streamx, &DMA_InitStructure);
 		DMA_ITConfig(rx_DMAy_Streamx,DMA_IT_TC,ENABLE);
+		DMA_ITConfig(rx_DMAy_Streamx,DMA_IT_HT,ENABLE);
 		
 		// start rx dma at once
 		DMA_Cmd(rx_DMAy_Streamx, ENABLE);
@@ -242,35 +334,65 @@ namespace STM32F4
 	{
 		int i;
 		const char *p = (const char*)buf;
-		int new_pos = (tx_end +count) % sizeof(tx_buffer);
-		int old_size = tx_end-tx_start < 0 ? tx_end-tx_start + sizeof(tx_buffer) : tx_end-tx_start;
-		if (count + old_size > sizeof(tx_buffer))
+		NVIC_DisableIRQ(tx_dma_irqn);
+		int old_size = tx_end-tx_start < 0 ? tx_end-tx_start + tx_buffer_size : tx_end-tx_start;
+		NVIC_EnableIRQ(tx_dma_irqn);
+
+		// has enough free buffer space ? 
+		if (count < tx_buffer_size - old_size)
 		{
+			// append to tx buffer
+			for(i=0; i<count; i++)
+				tx_buffer[(tx_end+i)%tx_buffer_size] = p[i];
+
+			tx_end = (tx_end+count)%tx_buffer_size;
+
+			count = tx_end-tx_start;
+			if (count<0)
+				count += tx_buffer_size;
+
+			// start dma if needed
+			NVIC_DisableIRQ(tx_dma_irqn);
 			dma_handle_tx_queue();
-			return 0;		// reject all data if buffer overrun
+			NVIC_EnableIRQ(tx_dma_irqn);
+
+			return count;
 		}
 
-		for(i=0; i<count; i++)
-			tx_buffer[(tx_end+i)%sizeof(tx_buffer)] = p[i];
+		else
+		{
+			// split into blocks and write one by one.
+			int sent = 0;
+			while(count>0)
+			{
+				NVIC_DisableIRQ(tx_dma_irqn);
+				int dma_data_count = tx_end-tx_start < 0 ? tx_end-tx_start + tx_buffer_size : tx_end-tx_start;
+				NVIC_EnableIRQ(tx_dma_irqn);
+				int dma_space_left = tx_buffer_size - dma_data_count - 1;
+				int block_size = count > dma_space_left ? dma_space_left : count;
 
-		tx_end = (tx_end+count)%sizeof(tx_buffer);
+				int r = write(p, block_size);
+				if (r<0)
+					return sent;
+				
+				count -= block_size;
+				p += block_size;
+				sent += block_size;
+			}
 
-		count = tx_end-tx_start;
-		if (count<0)
-		count += sizeof(tx_buffer);
-
-		dma_handle_tx_queue();
-
-		return count;
+			return sent;
+		}
 	}
+
 	int F4UART2::available()
 	{
 		int _end = end;
 		int size = _end - start;
 		if (size<0)
-			size += sizeof(rx_buffer);
+			size += rx_buffer_size;
 		return size;
 	}
+	
 	int F4UART2::read(void *data, int max_count)
 	{
 		char *p = (char*)data;
@@ -283,12 +405,12 @@ namespace STM32F4
 			return -1;
 		size = _end - start;
 		if (size<0)
-			size += sizeof(rx_buffer);
+			size += rx_buffer_size;
 		if (max_count > size)
 			max_count = size;
 		for(i=0; i<max_count; i++)
-			p[i] = rx_buffer[(i+start)%sizeof(rx_buffer)];
-		start = (i+start)%sizeof(rx_buffer);
+			p[i] = rx_buffer[(i+start)%rx_buffer_size];
+		start = (i+start)%rx_buffer_size;
 		return max_count;
 	}
 	int F4UART2::readline(void *data, int max_count)
@@ -303,16 +425,16 @@ namespace STM32F4
 			return -1;
 		size = _end - start;
 		if (size<0)
-			size += sizeof(rx_buffer);
+			size += rx_buffer_size;
 		if (max_count > size)
 			max_count = size;
 		for(i=0; i<max_count; i++)
 		{
-			p[i] = rx_buffer[(i+start)%sizeof(rx_buffer)];
+			p[i] = rx_buffer[(i+start)%rx_buffer_size];
 			if (p[i] == '\n')
 			{
 				i++;
-				start = (i+start)%sizeof(rx_buffer);
+				start = (i+start)%rx_buffer_size;
 				return i;
 			}
 		}
@@ -329,11 +451,11 @@ namespace STM32F4
 			return 0;
 		size = _end - start;
 		if (size<0)
-			size += sizeof(rx_buffer);
+			size += rx_buffer_size;
 		if (max_count > size)
 			max_count = size;
 		for(i=0; i<max_count; i++)
-			p[i] = rx_buffer[(i+start)%sizeof(rx_buffer)];
+			p[i] = rx_buffer[(i+start)%rx_buffer_size];
 		return max_count;
 	}
 	int F4UART2::dma_handle_tx_queue()
@@ -347,7 +469,7 @@ namespace STM32F4
 		if (ongoing_tx_size == 0)
 			return 0;
 		if (ongoing_tx_size < 0)
-			ongoing_tx_size = sizeof(tx_buffer) - tx_start;	// never cross the end of tx buffer
+			ongoing_tx_size = tx_buffer_size - tx_start;	// never cross the end of tx buffer
 		
 		tx_DMAy_Streamx->NDTR = ongoing_tx_size;
 		tx_DMAy_Streamx->M0AR = (uint32_t)tx_buffer + tx_start;
@@ -369,24 +491,24 @@ namespace STM32F4
 		return 0;
 	}
 	
+	int i = 0;
 	void F4UART2::uart_irq(void)
 	{
 		if(USARTx->SR & USART_FLAG_ORE)
 		{
 			volatile int c = USARTx->DR;		// strange way to clear RXNE/ORE/IDLE FLAG
-			printf("ORE\n");
+			printf("ORE %d\n", ++i);
 		}
 		if(USARTx->SR & USART_FLAG_IDLE)
 		{
-			//printf("IDLE\n");
 			volatile int c = USARTx->DR;		// strange way to clear RXNE/ORE/IDLE FLAG
-			rx_dma_reset();
+			rx_dma_extract();
 		}
 	}
 	
 	void F4UART2::tx_dma_irq()
 	{	
-		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
+		tx_start = (tx_start + ongoing_tx_size) % tx_buffer_size;
 		DMA_ClearFlag(tx_DMAy_Streamx, tx_tcif_flag);
 		tx_dma_running = false;
 		dma_handle_tx_queue();
@@ -394,34 +516,49 @@ namespace STM32F4
 
 	void F4UART2::rx_dma_irq(void)
 	{
-		DMA_ClearFlag(rx_DMAy_Streamx, rx_tcif_flag);
-		//printf("rx dma\n");
-		rx_dma_reset();
+		if (DMA_GetFlagStatus(rx_DMAy_Streamx, rx_htif_flag) && DMA_GetFlagStatus(rx_DMAy_Streamx, rx_tcif_flag))
+			printf("rx dma overflow \n");
+		if (DMA_GetFlagStatus(rx_DMAy_Streamx, rx_htif_flag))
+		{
+			rx_dma_extract();
+			DMA_ClearFlag(rx_DMAy_Streamx, rx_htif_flag);
+		}
+		if (DMA_GetFlagStatus(rx_DMAy_Streamx, rx_tcif_flag))
+		{
+			rx_dma_extract();
+			DMA_ClearFlag(rx_DMAy_Streamx, rx_tcif_flag);
+		}
 	}
 
-	int F4UART2::rx_dma_reset()
-	{
-		DMA_Cmd(rx_DMAy_Streamx, DISABLE);
-		
-		int n = sizeof(rx_dma_buffer) - rx_DMAy_Streamx->NDTR;
-		//printf("dma:%d bytes\n", n);
-		int m = start - end;
-		if (m>0)
-			m--;
-		else
-			m = end-start+sizeof(rx_buffer)-1;
-		if (n>m)
-			n = m;
-		
-		for(int i=0; i<n; i++)
-			rx_buffer[(end+i) & (sizeof(rx_buffer)-1)] = rx_dma_buffer[i];
-		
-		end = (end+n) & (sizeof(rx_buffer)-1);
-		
-		rx_DMAy_Streamx->NDTR = sizeof(rx_dma_buffer);
-		rx_DMAy_Streamx->M0AR = (uint32_t)rx_dma_buffer;
+	int F4UART2::rx_dma_extract()
+	{		
+		// size & pos of rx dma data block
+		int pos = RX_DMA_BUFFER_SIZE - rx_DMAy_Streamx->NDTR;
+		int n = pos - dma_read_ptr;
+		if (n<0)
+			n += RX_DMA_BUFFER_SIZE;
 
-		DMA_Cmd(rx_DMAy_Streamx, ENABLE);
+		// size of remaining rx buffer.
+		int m;
+		if (end>=start)
+			m = rx_buffer_size-1 - (end-start);
+		else
+			m = start-end-1;
+
+		if (n>m)
+		{
+			n = m;
+			printf("UART rx overflow\n");
+		}
+		
+		// insert
+		for(int i=0; i<n; i++)
+			rx_buffer[(end+i) & (rx_buffer_size-1)] = rx_dma_buffer[(dma_read_ptr+i)&(RX_DMA_BUFFER_SIZE-1)];
+		
+		end = (end+n) & (rx_buffer_size-1);
+		
+		// for next extraction
+		dma_read_ptr = pos;
 		
 		return 0;
 	}
@@ -431,5 +568,6 @@ namespace STM32F4
 		USART_Cmd(USARTx, DISABLE);
 		USART_ITConfig(USARTx, USART_IT_RXNE, DISABLE);
 		DMA_Cmd(tx_DMAy_Streamx, DISABLE);
+		DMA_Cmd(rx_DMAy_Streamx, DISABLE);
 	}
 }

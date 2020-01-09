@@ -281,8 +281,8 @@ typedef void      (__LZO_CDECL *lzo_free_func_t)
 typedef void (__LZO_CDECL *lzo_progress_func_t)
     (lzo_callback_p, lzo_uint, lzo_uint, int);
 
-typedef void (__LZO_CDECL *lzo_block_func_t)
-(lzo_callback_p, lzo_voidp ptr, lzo_uint);
+typedef int (__LZO_CDECL *lzo_block_func_t)
+(lzo_callback_p, lzo_voidp ptr, lzo_uint out_bytes, lzo_uint in_bytes);
 
 struct lzo_callback_t
 {

@@ -515,11 +515,9 @@ static uint8_t  usbd_cdc_DataIn (void *pdev, uint8_t epnum)				// 当usb发送�
 
 static uint8_t  usbd_cdc_DataOut (void *pdev, uint8_t epnum)
 {  
-	// USB data will be immediately processed, this allow next USB traffic being NAKed till the end of the application Xfer */
-	
+	// USB data will be immediately processed, this allow next USB traffic being NAKed till the end of the application Xfer */	
 	F4cb(rx_done, NULL, ((USB_OTG_CORE_HANDLE*)pdev)->dev.out_ep[epnum].xfer_count);
 	F4cb(rx_ready, NULL, 0);
-
 
 	return USBD_OK;
 }
@@ -534,8 +532,8 @@ static uint8_t usbd_cdc_SOF (void *pdev)
 {
 	if(usb_tx_state == 0 && init_done == 1)
 	{
-		usb_tx_state = 1;
-		F4cb(tx_ready, NULL, 0);
+		if (F4cb(tx_ready, NULL, 0) == 0)
+			usb_tx_state = 1;
 	}
 	
 	return USBD_OK;

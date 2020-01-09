@@ -14,6 +14,7 @@ namespace STM32F4
 		void *parameter;
 		GPIO_TypeDef* GPIOx;
 		uint32_t GPIO_Pin;
+		bool enabled;
 	public:
 		F4Interrupt();
 		~F4Interrupt();

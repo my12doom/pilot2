@@ -1,17 +1,18 @@
 #pragma once
 #include <HAL/Interface/IUART.h>
+#include <stdlib.h>
 #include "stm32F4xx_usart.h"
 
-#define TX_BUFFER_SIZE 1024
-#define RX_BUFFER_SIZE 1024
-#define RX_DMA_BUFFER_SIZE 512
+#define TX_BUFFER_SIZE 128
+#define RX_BUFFER_SIZE 256
+#define RX_DMA_BUFFER_SIZE 128
 
 namespace STM32F4
 {
 	class F4UART2:public HAL::IUART
 	{
 	public:
-		F4UART2(USART_TypeDef * USARTx);
+		F4UART2(USART_TypeDef * USARTx, void *tx_buf_override = NULL, int tx_buf_override_size = 0, void *rx_buf_override = NULL, int rx_buf_override_size = 0);
 		~F4UART2(){};
 
 		virtual int set_baudrate(int baudrate);
@@ -37,23 +38,31 @@ namespace STM32F4
 
 		// TX DMA var:
 		DMA_Stream_TypeDef* tx_DMAy_Streamx;
+		IRQn_Type tx_dma_irqn;
 		uint32_t tx_tcif_flag;
 		volatile bool tx_dma_running;
 		int tx_start;
 		int tx_end;
 		int ongoing_tx_size;
-		char tx_buffer[TX_BUFFER_SIZE];
+		char _tx_buffer[TX_BUFFER_SIZE];		// default buffer
+		char *tx_buffer;						// actural circular buffer, overridable.
 		int dma_handle_tx_queue();
+		int tx_buffer_size;
 
 		// rx dma
 		DMA_Stream_TypeDef* rx_DMAy_Streamx;
+		IRQn_Type rx_dma_irqn;
 		uint32_t rx_tcif_flag;
+		uint32_t rx_htif_flag;
 		char rx_dma_buffer[RX_DMA_BUFFER_SIZE];		// circular buffer
-		int rx_dma_reset();			// called by USART IDLE irq or DMA end irq, to actually recieve a block and put into user ring buffer,
+		int rx_dma_extract();		// called by USART IDLE irq or DMA end irq, to actually recieve a block and put into user ring buffer,
 									// and restart rx DMA again
+		int dma_read_ptr;									
 
 		// RX buffer:
-		char rx_buffer[RX_BUFFER_SIZE];		// circular buffer
+		char _rx_buffer[RX_BUFFER_SIZE];		// default circular buffer
+		char *rx_buffer;						// actural circular buffer, overridable.
+		int rx_buffer_size;
 		int start;
 		int end;
 	};
