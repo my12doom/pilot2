@@ -1,6 +1,5 @@
 #include "device_bulk.h"
 #include <Windows.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
 #include "libusb.h"
@@ -15,25 +14,10 @@ extern "C"
 
 int vendor_id = 0x111b;
 int product_id = 0x1234;
-static libusb_context* g_libusb_context = NULL;
-static int (*rx)(void *buf, int len, int type) = NULL;
-HANDLE usb_thread;
-HANDLE rx_thread;
-HANDLE usb_event;
-bool working = true;
-int16_t rx_data[65536];
-int rx_data_size = 0;
 
-DWORD WINAPI rx_worker(LPVOID p)
-{
-	while(working)
-	{
-		WaitForSingleObject(usb_event, INFINITE);
-		if (rx && rx_data_size)
-			rx(rx_data, rx_data_size, 1);
-	}
-	return 0;
-}
+
+
+
 #define HEAP_ALLOC(var,size) \
 	lzo_align_t __LZO_MMODEL var [ ((size) + (sizeof(lzo_align_t) - 1)) / sizeof(lzo_align_t) ]
 
@@ -141,12 +125,17 @@ int erase_test(libusb_device_handle* dev_handle)
 	return 0;
 }
 
+namespace NBFFT
+{
 
-DWORD WINAPI usb_worker(LPVOID p)
+DWORD bulk_device::usb_worker()
 {
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
-	libusb_init(&g_libusb_context);
+	libusb_context* ctx = NULL;
+
+	libusb_init(&ctx);
+	usb_ctx = ctx;
 start:
 	libusb_device **devs;
 	int cnt = libusb_get_device_list(NULL, &devs);
@@ -211,7 +200,7 @@ start:
 	while(!dev_handle)
 	{
 		Sleep(100);
-		dev_handle = libusb_open_device_with_vid_pid(g_libusb_context, vendor_id, product_id);
+		dev_handle = libusb_open_device_with_vid_pid((libusb_context*)usb_ctx, vendor_id, product_id);
 
 		if (!working)
 			return 0;
@@ -279,35 +268,8 @@ start:
 			c = 0;
 		}
 
-		int OSR = 1;
-		int divide = 1;
-		if (OSR >1 )
-		for(int i=0; i<actual_length/2; i+=2*OSR)
-		{
-			int o[2] = {0};
-
-			for(int j=0; j<OSR; j++)
-			{
-				o[0] += (data16[i+j*2])<<2;
-				o[1] += (data16[i+j*2+1])<<2;
-			}
-			data16[i/OSR] = o[0]/divide + 400;
-			data16[i/OSR+1] = -o[1]/divide + 500;
-		}
-
-		if (0)
-		{
-			static int16_t last;
-			rx_data[0] = last;
-			last = rx_data[actual_length/2/OSR-2];
-			memcpy(rx_data+1, data16, actual_length/OSR-2);
-			rx_data_size = actual_length/2/OSR;
-		}
-		else
-		{
-			memcpy(rx_data, data16, actual_length/OSR);
-			rx_data_size = actual_length/2/OSR;
-		}
+		memcpy(rx_data, data16, actual_length);
+		rx_data_size = actual_length/2;
 
 		SetEvent(usb_event);
 	}
@@ -321,20 +283,40 @@ start:
 	return 0;
 }
 
-int device_bulk_init(int (*rx)(void *buf, int len, int type))
+int bulk_device::init(int (*rx)(void *buf, int len, sample_quant type))
 {
-	::rx = rx;
+	this->cb = rx;
+	working = true;
+	rx_data_size = 0;
 
-	usb_thread = CreateThread(NULL, NULL, usb_worker, NULL, NULL, NULL);
-	rx_thread = CreateThread(NULL, NULL, rx_worker, NULL, NULL, NULL);
+	usb_thread = CreateThread(NULL, NULL, usb_worker_entry, this, NULL, NULL);
+	rx_thread = CreateThread(NULL, NULL, rx_worker_entry, this, NULL, NULL);
 	usb_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 	return 0;
 }
 
-int device_bulk_exit()
+int bulk_device::destroy()
 {
 	working = false;
+	SetEvent(usb_event);
 	WaitForSingleObject(usb_thread, INFINITE);
-
+	WaitForSingleObject(rx_thread, INFINITE);
+	if (usb_event != INVALID_HANDLE_VALUE)
+		CloseHandle(usb_event);
+	usb_event = INVALID_HANDLE_VALUE;
 	return 0;
+}
+
+
+DWORD bulk_device::rx_worker()
+{
+	while(working)
+	{
+		WaitForSingleObject(usb_event, INFINITE);
+		if (working && cb && rx_data_size)
+			cb(rx_data, rx_data_size, sample_16bit);
+	}
+	return 0;
+}
+
 }

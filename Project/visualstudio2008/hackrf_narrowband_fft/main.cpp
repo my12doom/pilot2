@@ -4,67 +4,97 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "fftw/fftw3.h"
-#include "Fourier.h"
 #include "sse_mathfun.h"
 #include "autolock.h"
 #include "resource.h"
 #include <float.h>
 #include <CommCtrl.h>
 
-#ifdef WIN32
-#include <Windows.h>
+#include "device_hackrf.h"
+#include "device_bulk.h"
+#include "device_dummy.h"
+
+#include "filter1d.h"
+
 #include <intrin.h>
 #include <tmmintrin.h>
-#else
-#include <x86intrin.h>
-#include <tmmintrin.h>
-#endif
+#include "FFTProcessor.h"
+
 
 #pragma comment(lib, "pthreadVSE2.lib")
 #pragma comment(lib, "fftw/libfftw3f-3.lib")
+using namespace NBFFT;
 
-// #define  hackrf
-#ifdef hackrf
-float sample_rate = 20E6;
-#include "device_hackrf.h"
-#define device_init device_hackrf_init
-#define device_exit device_hackrf_exit
-#else
-float sample_rate = 2E6;
-#include "device_bulk.h"
-#define device_init device_bulk_init
-#define device_exit device_bulk_exit
-#endif
+// configuration
+char *rbw_list[] = {"1Khz", "10Khz", "100Khz", "1Mhz", "custom"};
+char *device_list[] = {"hackrf", "dummy", "bulk"};
+const int minN = 1024;
+const int maxN = 16384;
 
-#define N 2048
-fftwf_complex * in = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
-fftwf_complex * fft_out = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
-fftwf_plan p;
-float log_amp[N];
+// structure/enum declaration
+enum rbw_type
+{
+	rbw_none,
+	rbw_gaussion,
+	rbw_box,
+};
+
+
+// functions
+int set_rbw_filter_bins(rbw_type type, float bw3db_bins, float dynamic_range_db);
+int set_rbw_filter_hz(rbw_type type, float bw3db_hz, float dynamic_range_db);
+int set_window();
+int int8tofloat(float *dst, const int8_t*src, float scale, int count);
+int int16tofloat(float *dst, const int16_t*src, float scale, int count);
+float total(const float *data, int count);
+void total_complex(const float *data, float *out, int count);
+int set_fft_size(int N);
+int open_device(const char *name, void *extra = NULL);
+
+// variables
+static const double PI = acos(-1.0);
+float range_low = -130;
+float range_high = 0;
+filter1d rbw_filter;
+rbw_type g_rbw_type;
+
+device *d = NULL;
+
+float sample_rate;
+float bw_per_bin;
+float rbw = 1000;
+
+int N = minN*2;
+fftwf_complex * in = NULL;//
+fftwf_complex * fft_out = NULL;//(fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
+fftwf_plan p = NULL;
+float ampsq[maxN];
 float peaksq_amp = 0;
-float noise_floor_sq_amp = 1;
-float fft_window[N];
+float fft_window[maxN];
+float fft_window_SIMD[maxN*2];
 float DC[2] = {0};
 _critical_section cs;
+_critical_section cs_rbw;
+_critical_section cs_fft;
 HWND slider;
 HWND slider2;
 float phase_imba = 0.0f;
 float gain_imba = 1.0f;
 
-FILE * f = fopen("Z:\\log2.pcm", "wb");
+FILE * f = fopen("E:\\log2.pcm", "wb");
 int canvas_width = N;
 int canvas_height;
 
 // len:length in elements
-// type: 0: int8_t, 1:int16_t
-int rx(void *buf, int len, int type)
+// type: 0: int8_t, 1:int16_t, 2:float
+int rx(void *buf, int len, sample_quant type)
 {
 	if (f)
 		fwrite(buf, 1, len*(1+type), f);
 
 	float dt = N/sample_rate;
-	float alpha_attack = dt / (dt + 1.0f/(1500*PI * 1));
-	float alpha_release = dt / (dt + 1.0f/(0.2*PI * 1));
+	float alpha_attack = dt / (dt + 1.0f/(150*PI * 1));
+	float alpha_release = dt / (dt + 1.0f/(5*PI * 1));
 
 	__m128 mattack_a = _mm_set1_ps(alpha_attack);
 	__m128 mrelease_a = _mm_set1_ps(alpha_release);
@@ -77,69 +107,87 @@ int rx(void *buf, int len, int type)
 
 	peaksq_amp *= pow(1-alpha_release, len/2/1000);
 
+	if (len < N*2)
+		return -1;
+
+	float *ampsq_copy = new float[N];
+	cs_fft.enter();
+	cs.enter();
+	memcpy(ampsq_copy, ampsq, N*sizeof(float));
+	cs.leave();
+
 	for(int i=0; i<len/2; i+= N)
 	{
 		if (0 == type)
 		{
 			int8_t *p = (int8_t*)buf;
-			for(int j=0; j<N; j++)
-			{
-				in[j][0] = p[(i+j)*2+0]/128.0f;
-				in[j][1] = p[(i+j)*2+1]/128.0f;
-			}
+			int8tofloat((float*)in, p+i*2, 1/128.0f, N*2);
 		}
 		else if (1 == type)
 		{
 			int16_t *p = (int16_t*)buf;
-			for(int j=0; j<N; j++)
-			{
-				in[j][0] = p[(i+j)*2+0]/32767.0f;
-				in[j][1] = p[(i+j)*2+1]/32767.0f;
-
-			}
+			int16tofloat((float*)in, p+i*2, 1/32768.0f, N*2);
 		}
+		else if (2 == type)
+		{
+			float *p = (float*)buf;
+			memcpy(in, &p[i*2], N*sizeof(float)*2);
+		}
+
+		// find DC offset
+		float DC_N[2] = {0};
+		total_complex((float*)in, DC_N, N);
 
 		float alpha_DC = dt / (dt + 1.0f/(0.5f*PI * 1));
-		float DC_N[2] = {0};
-		for(int i=0; i<N; i++)
-		{
-			DC_N[0] += in[i][0];
-			DC_N[1] += in[i][1];
-
-		}
-
 		DC[0] = DC[0] * (1-alpha_DC) + DC_N[0] * alpha_DC / N;
 		DC[1] = DC[1] * (1-alpha_DC) + DC_N[1] * alpha_DC / N;
 
+		// find peak
+		__m128 mpeak = _mm_set1_ps(0);		
+		for(int i=0; i<N*2; i+=8)
+		{
+			float *p = (float *)in;
+			__m128 m1 = _mm_loadu_ps(p+i);
+			m1 = _mm_mul_ps(m1, m1);
+			__m128 m2 = _mm_loadu_ps(p+i+4);
+			m2 = _mm_mul_ps(m2, m2);
+			m1 = _mm_hadd_ps(m1, m2);
+			mpeak = _mm_max_ps(mpeak, m1);
+
+			//float ampsq = in[i][0]*in[i][0]+in[i][1]*in[i][1];
+			//peaksq_amp = max(peaksq_amp, ampsq);
+		}
+		float *pk = (float*)&mpeak;
+		peaksq_amp = max(max(pk[0], pk[1]), max(pk[2], pk[3]));
+
+
+		/*
+		// IQ phase miss-match correction, see https://wiki.analog.com/resources/eval/user-guides/ad-fmcomms1-ebz/iq_correction
 		float tanm = tan(phase_imba);
 		float secm = 1.0f/cos(phase_imba);
 		for(int i=0; i<N; i++)
 		{
-			in[i][0] -= DC[0];
-			in[i][1] -= DC[1];
-
-			in[i][0] *= fft_window[i];
-			in[i][1] *= fft_window[i];
-
 			in[i][0] *= gain_imba;
 
-			// IQ phase miss-match correction, see https://wiki.analog.com/resources/eval/user-guides/ad-fmcomms1-ebz/iq_correction
 			in[i][1] = tanm * in[i][0] + secm * in[i][1];
-
-			float ampsq = in[i][0]*in[i][0]+in[i][1]*in[i][1];
-
-			peaksq_amp = max(peaksq_amp, ampsq);
-
-			// noise floor is detected by a quick decay slow attack smoothing filter
-			//noise_floor_sq_amp 
 		}
+		*/
+
+		// apply DC offset correction and fft window
+		__m128 mdc = _mm_set_ps(DC[1], DC[0], DC[1], DC[0]);		
+
+		for(int i=0; i<N*2; i+=4)
+		{
+			__m128 ma = _mm_loadu_ps(((float *)in)+i);
+			__m128 mb = _mm_loadu_ps(fft_window_SIMD+i);
+			ma = _mm_sub_ps(ma, mdc);
+			ma = _mm_mul_ps(ma, mb);
+			_mm_storeu_ps(((float *)in)+i, ma);
+		}
+
 
 		fftwf_execute(p);
 
-		float log_amp_copy[N];
-		cs.enter();
-		memcpy(log_amp_copy, log_amp, sizeof(log_amp_copy));
-		cs.leave();
 		for(int j=0; j<N; j+=4)
 		{
 			__m128 m1 = _mm_loadu_ps((float*)&fft_out[j]);
@@ -150,10 +198,7 @@ int rx(void *buf, int len, int type)
 			m1 = _mm_hadd_ps(m1, m2);
 			m1 = _mm_mul_ps(m1, mN);
 
-			m1 = log_ps(m1);
-			m1 = _mm_mul_ps(m1, m20);
-
-			__m128 pre = _mm_loadu_ps(log_amp_copy+j);
+			__m128 pre = _mm_loadu_ps(ampsq_copy+j);
 			__m128 mattack = _mm_mul_ps(m1, mattack_a);
 			mattack = _mm_add_ps(mattack, _mm_mul_ps(pre, m1attack_a));
 			__m128 mrelease = _mm_mul_ps(m1, mrelease_a);
@@ -166,16 +211,17 @@ int rx(void *buf, int len, int type)
 
 			m1 = _mm_or_ps(mattack, mrelease);
 
-			_mm_storeu_ps(log_amp_copy+j, m1);
+			_mm_storeu_ps(ampsq_copy+j, m1);
 		}
 
-		cs.enter();
-		memcpy(log_amp, log_amp_copy, sizeof(log_amp_copy));
-// 		for(int i=0; i<N; i++)
-// 			if (_isnan(log_amp[i]) || i == 0)		// remove DC offset and NANs from log_ps error.
-// 				log_amp[i] = _isnan(log_amp[(i+1)%N]) ? -999 : log_amp[(i+1)%N];
-		cs.leave();
 	}
+
+	cs.enter();
+	memcpy(ampsq, ampsq_copy, N*sizeof(float));
+	cs.leave();
+	cs_fft.leave();
+
+	delete [] ampsq_copy;
 
 	return 0;
 }
@@ -187,9 +233,9 @@ int draw_line(int x1, int y1, int x2, int y2, RGBQUAD color)	// draw line in pix
 {
 	int dx = x2 - x1;
 	int dy = y2 - y1;
-	int ux = ((dx > 0) << 1) - 1;//x的增量方向，取或-1
-	int uy = ((dy > 0) << 1) - 1;//y的增量方向，取或-1
-	int x = x1, y = y1, eps;//eps为累加误差
+	int ux = ((dx > 0) << 1) - 1;
+	int uy = ((dy > 0) << 1) - 1;
+	int x = x1, y = y1, eps;
 
 	eps = 0;dx = abs(dx); dy = abs(dy); 
 	if (dx > dy) 
@@ -233,25 +279,15 @@ int draw(HWND drawing_hwnd)
 	HBITMAP bitmap = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
 	HGDIOBJ obj = SelectObject(memDC, bitmap);
 
-	// draw
+	// drawing region
 	int width = rect.right - rect.left;
 	int height = rect.bottom - rect.top;
 	canvas_width = width;
 	canvas_height = height;
 	memset(canvas, 0xff, sizeof(canvas));
-	float amp[N];
-	float amp_pixel[2048];
-	cs.enter();
-	memcpy(amp, log_amp, sizeof(log_amp));
-	cs.leave();
-
 	RGBQUAD red = {0,0,255,255};
 	RGBQUAD blue = {255,0,0,255};
 	RGBQUAD light_red = {180,180,255,255};
-
-
-	float range_low = -130;
-	float range_high = 0;
 
 	// axies
 	for(int i=range_low; i<=range_high; i+=10)
@@ -261,14 +297,42 @@ int draw(HWND drawing_hwnd)
 			canvas[y*width+j] = light_red;
 	}
 
+	if (!d)
+		return 0;
+
 	// data
+	sample_type type = d->get_sample_type();
+	float *amp = new float[N];
+	float amp_pixel[2048];
+	cs.enter();
+	memcpy(amp, ampsq, N*sizeof(float));
+	cs.leave();
+
+	if (type == real_sample)
+		memset(amp+N/2, 0, sizeof(float)*N/2);
+	
+	if (g_rbw_type != rbw_none)
+		rbw_filter.apply(amp, N);
+	for(int i=0; i<N; i++)
+	{
+		amp[i] = log10(amp[i]) * 10;
+	}
+
 	for(int i=0; i<width; i++)
 	{
 		int n;
-		if (i<=width/2)
-			n = i*N/2/(width/2) + N/2-1;			// negative frequency
+		if (type == complex_sample)
+		{
+			if (i<=width/2)
+				n = i*N/2/(width/2) + N/2-1;			// negative frequency
+			else
+				n = (i-width/2-1)*(N/2-1)/(width/2-1);	// positive part
+		}
 		else
-			n = (i-width/2-1)*(N/2-1)/(width/2-1);	// positive part
+		{
+			n = i*(N/2-1)/(width-1);	// positive part
+		}
+		
 
 		if (amp[n] >= range_low && amp[n] <= range_high)
 		{
@@ -278,7 +342,11 @@ int draw(HWND drawing_hwnd)
 			amp_pixel[i] = 0;
 		else if (amp[n] < range_low)
 			amp_pixel[i] = height-1;
+		else
+			amp_pixel[i] = -1;
 	}
+
+	delete [] amp;
 
 	for(int i=1; i<width; i++)
 	{
@@ -289,8 +357,8 @@ int draw(HWND drawing_hwnd)
 	float peakamp_db = min(max(range_low,log10(peaksq_amp)*10), range_high);
  	draw_line(0, height, 0, height * (range_high - peakamp_db) / (range_high-range_low), red);
 
+	// transfer
 	SetBitmapBits(bitmap, rect.right * rect.bottom * 4, canvas);
-
 	BitBlt(hdc, 0, 0, rect.right, rect.bottom, memDC, 0, 0, SRCCOPY);
 
 	DeleteObject(obj);
@@ -301,27 +369,123 @@ int draw(HWND drawing_hwnd)
 	return 0;
 }
 
+int init_dialog(HWND hDlg)
+{
+//	window_start = GetTickCount();
+	SetTimer(hDlg, 0, 16, NULL);
+	slider = GetDlgItem(hDlg, IDC_SLIDER1);
+	slider2 = GetDlgItem(hDlg, IDC_SLIDER2);
+	SendMessage(slider, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)100);
+	SendMessage(slider, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)0);
+	SendMessage(slider2, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)1000);
+	SendMessage(slider2, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)500);
+
+	// devices
+	for(int i=0; i<sizeof(device_list)/sizeof(device_list[0]); i++)
+		SendMessageA(GetDlgItem(hDlg, ID_CB_DEVICES), CB_ADDSTRING, 0, (LPARAM)device_list[i]);
+	SendMessageA(GetDlgItem(hDlg, ID_CB_DEVICES), CB_SETCURSEL, 0, 0);
+
+
+	HWND cb = GetDlgItem(hDlg, ID_CB_RBW);
+	int v;
+	SendMessageA(cb, CB_RESETCONTENT , 0, 0);
+	for(int i=0; i<sizeof(rbw_list)/sizeof(rbw_list[0]); i++)
+		v = SendMessageA(cb, CB_ADDSTRING, 0, (LPARAM)rbw_list[i]);
+	SendMessageA(cb, CB_SETCURSEL, 0, 0);
+	ShowWindow(GetDlgItem(hDlg, IDC_RBW), SW_HIDE);
+	ShowWindow(GetDlgItem(hDlg, IDC_RBW_HZ), SW_HIDE);
+
+	HWND fft = GetDlgItem(hDlg, ID_CB_FFTSIZE);
+	for(int n = minN; n<=maxN; n*=2)
+	{
+		char tmp[20];
+		sprintf(tmp, "%d", n);
+		SendMessageA(fft, CB_ADDSTRING, 0, (LPARAM)tmp);
+	}
+	SendMessageA(fft, CB_SETCURSEL, 1, 0);
+
+	return 0;
+}
+
+int update_rbw(HWND hDlg)
+{
+	HWND cb = GetDlgItem(hDlg, ID_CB_RBW);
+	char tmp[100] = {0};
+	GetWindowTextA(cb, tmp, sizeof(tmp)-1);
+
+	if (strstr(tmp, "custom"))
+	{
+		ShowWindow(GetDlgItem(hDlg, IDC_RBW), SW_SHOW);
+		ShowWindow(GetDlgItem(hDlg, IDC_RBW_HZ), SW_SHOW);
+
+		sprintf(tmp, "%d", int(rbw));
+		SetDlgItemTextA(hDlg, IDC_RBW, tmp);
+
+		return 0;
+	}
+	else
+	{
+		ShowWindow(GetDlgItem(hDlg, IDC_RBW), SW_HIDE);
+		ShowWindow(GetDlgItem(hDlg, IDC_RBW_HZ), SW_HIDE);		
+	}
+	
+	int n = atoi(tmp);
+	if (strstr(tmp, "Khz"))
+		n *= 1000;
+	if (strstr(tmp, "Mhz"))
+		n *= 1000000;
+	
+	return set_rbw_filter_hz(rbw_gaussion, n, -range_low);
+}
+
+int update_fft_size(HWND cb)
+{
+	char tmp[100] = {0};
+	GetWindowTextA(cb, tmp, sizeof(tmp)-1);
+
+	return set_fft_size(atoi(tmp));
+}
+
 INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam )
 {
-	static int window_start = GetTickCount();
+//	static int window_start = GetTickCount();
 	switch( msg ) 
 	{
 	case WM_COMMAND:
 		{
 			int id = LOWORD(wParam);
+
+			if (id == IDC_OPEN)
+			{
+				char tmp[100] = {0};
+				GetDlgItemTextA(hDlg, ID_CB_DEVICES, tmp, sizeof(tmp)-1);
+				open_device(tmp);
+			}
+
+			if (id == ID_CB_RBW && HIWORD(wParam) == CBN_SELCHANGE)
+			{
+				update_rbw(hDlg);
+			}
+
+			if (id == ID_CB_FFTSIZE && HIWORD(wParam) == CBN_SELCHANGE)
+			{
+				update_fft_size(GetDlgItem(hDlg, ID_CB_FFTSIZE));
+			}
+
+			if (id == IDC_RBW && HIWORD(wParam) == EN_CHANGE)
+			{
+				char tmp[100] = {0};
+				GetDlgItemTextA(hDlg, IDC_RBW, tmp, sizeof(tmp)-1);
+				float hz = atof(tmp);
+				if (hz>0)
+					set_rbw_filter_hz(rbw_gaussion, atoi(tmp), -range_low);
+			}
 		}
 		break;
 
 
 	case WM_INITDIALOG:
-		window_start = GetTickCount();
-		SetTimer(hDlg, 0, 16, NULL);
-		slider = GetDlgItem(hDlg, IDC_SLIDER1);
-		slider2 = GetDlgItem(hDlg, IDC_SLIDER2);
-		SendMessage(slider, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)1000);
-		SendMessage(slider, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)500);
-		SendMessage(slider2, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)1000);
-		SendMessage(slider2, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)500);
+		init_dialog(hDlg);
 		break;
 	case WM_HSCROLL:
 		phase_imba = (SendMessage(slider, TBM_GETPOS, 0, 0)-500)*2*PI/180/500;
@@ -334,10 +498,12 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 	case WM_TIMER:
 		draw(GetDlgItem(hDlg, IDC_GRAPH));
 		{
+			//set_rbw_filter(rbw_gaussion, SendMessage(slider, TBM_GETPOS, 0, 0)+1, 100);
 			float peakamp_db = log10(peaksq_amp)*10 -3;	// -3: 2channel
 			char tmp[30];
 			sprintf(tmp, "%.1fdbFS, 10db/div", peakamp_db);
 			SetWindowTextA(hDlg, tmp);
+
 		}
 		break;
 
@@ -348,29 +514,216 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 	return TRUE; // Handled message
 }
 
+int set_rbw_filter_bins(rbw_type type, float bw3db_bins, float dynamic_range_db)
+{
+	// RBW gaussion filter
+	if (type == rbw_gaussion)
+	{
+		bw3db_bins /= 2;
+
+		float dynamic_range = pow(10, dynamic_range_db / 10);
+		float a = log(0.5) / (- bw3db_bins * bw3db_bins);		// at x=bw3db_bins, exp(-a*x^2) = 0.5
+		float d = exp(-a * bw3db_bins * bw3db_bins);			// == -3db (0.5)
+
+		float x2sq = -(dynamic_range_db/10)*log(10.0)/(-a) + (bw3db_bins*bw3db_bins);
+		float x2 = sqrt(x2sq);
+		float d2 = exp(-a * x2 * x2);							// == 0.5 * 10^(dynamic_range_db/10)
+
+		int taps_half = floor(x2) + 1;
+		float *rbw_taps = new float[taps_half * 2 + 1];
+		for(int i=0; i<=taps_half; i++)
+		{
+			rbw_taps[i+taps_half] = exp(-a*i*i);
+			rbw_taps[taps_half-i] = rbw_taps[i+taps_half];
+		}
+		rbw_filter.set_taps(rbw_taps, taps_half * 2 + 1);
+
+		delete rbw_taps;
+	}
+
+	g_rbw_type = type;
+	return 0;
+}
+
+int set_rbw_filter_hz(rbw_type type, float bw3db_hz, float dynamic_range_db)
+{
+	rbw = bw3db_hz;
+	bw_per_bin = sample_rate / N;
+	return set_rbw_filter_bins(rbw_gaussion, bw3db_hz/bw_per_bin, 120);
+}
+
+#define _mm_cmpge_epu8(a, b) _mm_cmpeq_epi8(_mm_max_epu8(a, b), a)
+#define _mm_cmpge_epu16(a, b) _mm_cmpeq_epi16(_mm_max_epu16(a, b), a)
+
+int int8tofloat(float *dst, const int8_t*src, float scale, int count)
+{
+	__m128 mscale = _mm_set1_ps(scale);
+	__m128i m80 = _mm_set1_epi8(0x80);
+	__m128i m8000 = _mm_set1_epi16(0x8000);
+	for(int i=0; i<count; i+=16)
+	{
+		__m128i m1 = _mm_loadu_si128((__m128i*)(src+i));
+		__m128i mh = _mm_cmpge_epu8(m1, m80);
+		__m128i m2 = _mm_unpackhi_epi8(m1, mh);
+		m1 = _mm_unpacklo_epi8(m1, mh);
+
+		mh = _mm_cmpge_epu16(m2, m8000);
+		__m128i m4 = _mm_unpackhi_epi16(m2, mh);
+		__m128i m3 = _mm_unpacklo_epi16(m2, mh);
+
+		mh = _mm_cmpge_epu16(m1, m8000);
+		m2 = _mm_unpackhi_epi16(m1, mh);
+		m1 = _mm_unpacklo_epi16(m1, mh);
+
+		__m128 m1f = _mm_mul_ps(_mm_cvtepi32_ps(m1), mscale);
+		__m128 m2f = _mm_mul_ps(_mm_cvtepi32_ps(m2), mscale);
+		__m128 m3f = _mm_mul_ps(_mm_cvtepi32_ps(m3), mscale);
+		__m128 m4f = _mm_mul_ps(_mm_cvtepi32_ps(m4), mscale);
+
+		_mm_storeu_ps(dst+i+0, m1f);
+		_mm_storeu_ps(dst+i+4, m2f);
+		_mm_storeu_ps(dst+i+8, m3f);
+		_mm_storeu_ps(dst+i+12, m4f);
+	}
+
+	return 0;
+}
+
+int int16tofloat(float *dst, const int16_t*src, float scale, int count)
+{
+	__m128 mscale = _mm_set1_ps(scale);
+	__m128i m8000 = _mm_set1_epi16(0x8000);
+	for(int i=0; i<count; i+=8)
+	{
+		__m128i m1 = _mm_loadu_si128((__m128i*)(src+i));
+
+		__m128i mh = _mm_cmpge_epu16(m1, m8000);
+		__m128i m2 = _mm_unpackhi_epi16(m1, mh);
+		m1 = _mm_unpacklo_epi16(m1, mh);
+
+		__m128 m1f = _mm_mul_ps(_mm_cvtepi32_ps(m1), mscale);
+		__m128 m2f = _mm_mul_ps(_mm_cvtepi32_ps(m2), mscale);
+
+		_mm_storeu_ps(dst+i+0, m1f);
+		_mm_storeu_ps(dst+i+4, m2f);
+	}
+
+	return 0;
+}
+
+float total(float *data, int count)
+{
+	__m128 m = _mm_set1_ps(0);
+	for(int i=0; i<count; i+=4)
+	{
+		__m128 d = _mm_loadu_ps(data+i);
+		m = _mm_add_ps(m, d);		
+	}
+	float *p = (float*)&m;
+	return p[0] + p[1] + p[2] + p[3];
+}
+
+void total_complex(const float *data, float *out, int count)
+{
+	__m128 m = _mm_set1_ps(0);
+	for(int i=0; i<count*2; i+=4)
+	{
+		__m128 d = _mm_loadu_ps(data+i);
+		m = _mm_add_ps(m, d);		
+	}
+	float *p = (float*)&m;
+	out[0] = p[0] + p[2];
+	out[1] = p[1] + p[3];
+}
+
+int set_fft_size(int _N)
+{
+	if (_N > maxN)
+		return -1;
+
+	cs_fft.enter();
+	N = _N;
+	if (p)
+		fftwf_destroy_plan(p);
+	if (in)
+		fftwf_free(in);
+	if (fft_out)
+		fftwf_free(fft_out);
+
+	in = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
+	fft_out = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
+	p = fftwf_plan_dft_1d(N, in, fft_out, FFTW_FORWARD, FFTW_ESTIMATE);
+
+	// blackman-harris window function
+	float a0 = 0.35875;
+	float a1 = 0.48829;
+	float a2 = 0.14128;
+	float a3 = 0.01168;
+	for(int i=0; i<N; i++)
+	{
+		fft_window[i] = (a0 - a1*cos(2*PI*i/N) + a2*cos(4*PI*i/N) - a3*cos(6*PI*i/N))/a0;	// /a0: normalized
+		fft_window_SIMD[i*2] = fft_window_SIMD[i*2+1] = fft_window[i];
+	}
+
+	// small initial value
+	for(int i=0; i<N; i++)
+	{
+		ampsq[i] = 1e-15;
+	}
+	cs_fft.leave();
+
+	set_rbw_filter_hz(g_rbw_type, rbw, -range_low);
+
+
+	return 0;
+}
+
+int open_device(const char *name, void *extra /*= NULL*/)
+{
+	if (d)
+	{
+		d->destroy();
+		delete d;
+	}
+
+	if (strcmp(name, "hackrf") == 0)
+	{
+		d = new NBFFT::hackrf_device;
+		d->init(rx);		
+	}
+
+	if (strcmp(name, "bulk") == 0)
+	{
+		d = new NBFFT::bulk_device;
+		d->init(rx);		
+	}
+
+	if (strcmp(name, "dummy") == 0)
+	{
+		d = new NBFFT::dummy_device;
+		d->init(rx);
+	}
+
+	sample_rate = d->get_sample_rate();
+	range_high = 0;
+	range_low = -d->dynamic_range_db();
+	set_fft_size(N);
+
+
+	return 0;
+}
 
 int main(int argc, char* argv[])
-{
-	// simple window function
-	for(int i=0; i<N/2; i++)
-	{
-		fft_window[i] = (float)i*2/N;
-		fft_window[N-1-i] = (float)i*2/N;
-	}
-
-	for(int i=0; i<N; i++)
-		log_amp[i] = -999;
-
- 	p = fftwf_plan_dft_1d(N, in, fft_out, FFTW_FORWARD, FFTW_ESTIMATE);
-	int res = device_init(rx);
-	if (res < 0)
-	{
-		return -1;
-	}
+{ 	
+	open_device(device_list[0]);
 
 	DialogBoxW(NULL, MAKEINTRESOURCE(IDD_DIALOG1), NULL, main_window_proc);
 
-	device_exit();
+	if (d)
+	{
+		d->destroy();
+		delete d;
+	}
 
 	fftwf_destroy_plan(p);
 	fftwf_free(in);

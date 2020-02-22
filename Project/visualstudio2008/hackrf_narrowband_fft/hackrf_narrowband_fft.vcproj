@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="hackrf_narrowband_fft"
-	ProjectGUID="{8EFAC049-07FB-4445-9B95-D261FBED37BE}"
+	ProjectGUID="{C60FAB45-CAD3-41AE-99C5-6C7DFEBA0440}"
 	RootNamespace="bin_merger"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
@@ -41,11 +41,12 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../../modules"
+				AdditionalIncludeDirectories="../../../modules;pthread"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="2"
+				EnableEnhancedInstructionSet="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
@@ -115,11 +116,12 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="../../../modules"
+				AdditionalIncludeDirectories="../../../modules;pthread"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				EnableEnhancedInstructionSet="2"
+				EnableEnhancedInstructionSet="0"
+				FloatingPointModel="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -186,6 +188,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\device_dummy.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\device_hackrf.cpp"
 				>
 			</File>
@@ -194,11 +200,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\filter1d.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Fourier.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\Fourier.h"
+				>
+			</File>
+			<File
+				RelativePath=".\hackrf.c"
 				>
 			</File>
 			<File
@@ -211,6 +225,14 @@
 			</File>
 			<File
 				RelativePath="..\..\..\modules\utils\minilzo.c"
+				>
+			</File>
+			<File
+				RelativePath=".\tinymt32.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tinymt32.h"
 				>
 			</File>
 		</Filter>
@@ -233,6 +255,10 @@
 				RelativePath=".\window.rc"
 				>
 			</File>
+		</Filter>
+		<Filter
+			Name="pthread"
+			>
 		</Filter>
 	</Files>
 	<Globals>
