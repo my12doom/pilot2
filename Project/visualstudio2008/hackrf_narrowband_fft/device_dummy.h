@@ -25,6 +25,7 @@ protected:
     int16_t data[32768];
     float dataf[32768];
 	tinymt32_t tinymt;
+	float scale;
 
     DWORD worker();
     static DWORD WINAPI entry(LPVOID p){return ((dummy_device*)p)->worker();}

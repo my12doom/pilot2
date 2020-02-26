@@ -39,7 +39,7 @@ real_t Index_to_frequency(unsigned int p_nBaseFreq, unsigned int p_nSamples, uns
 //  constantes-definition  //
 /////////////////////////////
 
-#define  PI  (3.14159265358979323846)
+//#define  PI  (3.14159265358979323846)
 
 
 #endif // !defined(AFX_FOURIER_H__6939C9A4_8D93_41A3_9521_3B863957EB8E__INCLUDED_)

@@ -23,13 +23,14 @@
 
 #pragma comment(lib, "pthreadVSE2.lib")
 #pragma comment(lib, "fftw/libfftw3f-3.lib")
+#pragma comment(lib, "fftw/libfftw3-3.lib")
 using namespace NBFFT;
 
 // configuration
-char *rbw_list[] = {"1Khz", "10Khz", "100Khz", "1Mhz", "custom"};
+char *rbw_list[] = {"1Khz", "10Khz", "100Khz", "1Mhz", "custom", "FFT bins"};
 char *device_list[] = {"hackrf", "dummy", "bulk"};
 const int minN = 1024;
-const int maxN = 16384;
+const int maxN = 1024*1024;
 
 // structure/enum declaration
 enum rbw_type
@@ -56,42 +57,39 @@ static const double PI = acos(-1.0);
 float range_low = -130;
 float range_high = 0;
 filter1d rbw_filter;
-rbw_type g_rbw_type;
+rbw_type g_rbw_type = rbw_gaussion;
 
 device *d = NULL;
 
 float sample_rate;
 float bw_per_bin;
-float rbw = 1000;
+float rbw = 10000;
 
 int N = minN*2;
 fftwf_complex * in = NULL;//
-fftwf_complex * fft_out = NULL;//(fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex)*N);
+fftwf_complex * fft_out = NULL;
 fftwf_plan p = NULL;
 float ampsq[maxN];
 float peaksq_amp = 0;
 float fft_window[maxN];
 float fft_window_SIMD[maxN*2];
 float DC[2] = {0};
-_critical_section cs;
+_critical_section cs_amp;
 _critical_section cs_rbw;
 _critical_section cs_fft;
+_critical_section cs_device;
+_critical_section cs_outfile;
 HWND slider;
 HWND slider2;
 float phase_imba = 0.0f;
 float gain_imba = 1.0f;
 
-FILE * f = fopen("E:\\log2.pcm", "wb");
+FILE * f = NULL;
 int canvas_width = N;
 int canvas_height;
 
-// len:length in elements
-// type: 0: int8_t, 1:int16_t, 2:float
-int rx(void *buf, int len, sample_quant type)
+int process_fft_block(float *ampsq_copy, void *buf, sample_quant type)
 {
-	if (f)
-		fwrite(buf, 1, len*(1+type), f);
-
 	float dt = N/sample_rate;
 	float alpha_attack = dt / (dt + 1.0f/(150*PI * 1));
 	float alpha_release = dt / (dt + 1.0f/(5*PI * 1));
@@ -101,127 +99,174 @@ int rx(void *buf, int len, sample_quant type)
 	__m128 m1attack_a = _mm_sub_ps(_mm_set1_ps(1), mattack_a);
 	__m128 m1release_a = _mm_sub_ps(_mm_set1_ps(1), mrelease_a);
 	__m128 mN = _mm_set1_ps(1.0/N/N);
-	__m128 m20 = _mm_set1_ps(1.0/log(10.0)*10);
 	__m128 mff;
 	_mm_storeu_si128((__m128i*)&mff, _mm_set1_epi8(0xff));
 
-	peaksq_amp *= pow(1-alpha_release, len/2/1000);
+	// convert/copy data
+	if (0 == type)
+		int8tofloat((float*)in, (int8_t*)buf, 1/128.0f, N*2);
+	else if (1 == type)
+		int16tofloat((float*)in, (int16_t*)buf, 1/32768.0f, N*2);
+	else if (2 == type)
+		memcpy(in, buf, N*sizeof(float)*2);
 
-	if (len < N*2)
-		return -1;
+	// find DC offset
+	float DC_N[2] = {0};
+	total_complex((float*)in, DC_N, N);
 
-	float *ampsq_copy = new float[N];
-	cs_fft.enter();
-	cs.enter();
-	memcpy(ampsq_copy, ampsq, N*sizeof(float));
-	cs.leave();
+	float alpha_DC = dt / (dt + 1.0f/(0.5f*PI * 1));
+	DC[0] = DC[0] * (1-alpha_DC) + DC_N[0] * alpha_DC / N;
+	DC[1] = DC[1] * (1-alpha_DC) + DC_N[1] * alpha_DC / N;
 
-	for(int i=0; i<len/2; i+= N)
+	// find peak
+	__m128 mpeak = _mm_set1_ps(0);		
+	for(int i=0; i<N*2; i+=8)
 	{
-		if (0 == type)
-		{
-			int8_t *p = (int8_t*)buf;
-			int8tofloat((float*)in, p+i*2, 1/128.0f, N*2);
-		}
-		else if (1 == type)
-		{
-			int16_t *p = (int16_t*)buf;
-			int16tofloat((float*)in, p+i*2, 1/32768.0f, N*2);
-		}
-		else if (2 == type)
-		{
-			float *p = (float*)buf;
-			memcpy(in, &p[i*2], N*sizeof(float)*2);
-		}
+		float *p = (float *)in;
+		__m128 m1 = _mm_loadu_ps(p+i);
+		m1 = _mm_mul_ps(m1, m1);
+		__m128 m2 = _mm_loadu_ps(p+i+4);
+		m2 = _mm_mul_ps(m2, m2);
+		m1 = _mm_hadd_ps(m1, m2);
+		mpeak = _mm_max_ps(mpeak, m1);
+	}
+	float *pk = (float*)&mpeak;
+	peaksq_amp *= pow(1-alpha_release, N/1000);
+	peaksq_amp = max(max(pk[0], pk[1]), max(pk[2], pk[3]));
 
-		// find DC offset
-		float DC_N[2] = {0};
-		total_complex((float*)in, DC_N, N);
+	/*
+	// IQ phase miss-match correction, see https://wiki.analog.com/resources/eval/user-guides/ad-fmcomms1-ebz/iq_correction
+	float tanm = tan(phase_imba);
+	float secm = 1.0f/cos(phase_imba);
+	for(int i=0; i<N; i++)
+	{
+		in[i][0] *= gain_imba;
 
-		float alpha_DC = dt / (dt + 1.0f/(0.5f*PI * 1));
-		DC[0] = DC[0] * (1-alpha_DC) + DC_N[0] * alpha_DC / N;
-		DC[1] = DC[1] * (1-alpha_DC) + DC_N[1] * alpha_DC / N;
+		in[i][1] = tanm * in[i][0] + secm * in[i][1];
+	}
+	*/
 
-		// find peak
-		__m128 mpeak = _mm_set1_ps(0);		
-		for(int i=0; i<N*2; i+=8)
-		{
-			float *p = (float *)in;
-			__m128 m1 = _mm_loadu_ps(p+i);
-			m1 = _mm_mul_ps(m1, m1);
-			__m128 m2 = _mm_loadu_ps(p+i+4);
-			m2 = _mm_mul_ps(m2, m2);
-			m1 = _mm_hadd_ps(m1, m2);
-			mpeak = _mm_max_ps(mpeak, m1);
+	// apply DC offset correction and fft window
+	__m128 mdc = _mm_set_ps(DC[1], DC[0], DC[1], DC[0]);
 
-			//float ampsq = in[i][0]*in[i][0]+in[i][1]*in[i][1];
-			//peaksq_amp = max(peaksq_amp, ampsq);
-		}
-		float *pk = (float*)&mpeak;
-		peaksq_amp = max(max(pk[0], pk[1]), max(pk[2], pk[3]));
-
-
-		/*
-		// IQ phase miss-match correction, see https://wiki.analog.com/resources/eval/user-guides/ad-fmcomms1-ebz/iq_correction
-		float tanm = tan(phase_imba);
-		float secm = 1.0f/cos(phase_imba);
-		for(int i=0; i<N; i++)
-		{
-			in[i][0] *= gain_imba;
-
-			in[i][1] = tanm * in[i][0] + secm * in[i][1];
-		}
-		*/
-
-		// apply DC offset correction and fft window
-		__m128 mdc = _mm_set_ps(DC[1], DC[0], DC[1], DC[0]);		
-
-		for(int i=0; i<N*2; i+=4)
-		{
-			__m128 ma = _mm_loadu_ps(((float *)in)+i);
-			__m128 mb = _mm_loadu_ps(fft_window_SIMD+i);
-			ma = _mm_sub_ps(ma, mdc);
-			ma = _mm_mul_ps(ma, mb);
-			_mm_storeu_ps(((float *)in)+i, ma);
-		}
-
-
-		fftwf_execute(p);
-
-		for(int j=0; j<N; j+=4)
-		{
-			__m128 m1 = _mm_loadu_ps((float*)&fft_out[j]);
-			__m128 m2 = _mm_loadu_ps((float*)&fft_out[j+2]);
-
-			m1 = _mm_mul_ps(m1, m1);
-			m2 = _mm_mul_ps(m2, m2);
-			m1 = _mm_hadd_ps(m1, m2);
-			m1 = _mm_mul_ps(m1, mN);
-
-			__m128 pre = _mm_loadu_ps(ampsq_copy+j);
-			__m128 mattack = _mm_mul_ps(m1, mattack_a);
-			mattack = _mm_add_ps(mattack, _mm_mul_ps(pre, m1attack_a));
-			__m128 mrelease = _mm_mul_ps(m1, mrelease_a);
-			mrelease = _mm_add_ps(mrelease, _mm_mul_ps(pre, m1release_a));
-
-			m2 = _mm_cmpge_ps(m1, pre);
-			__m128 m2n = _mm_xor_ps(m2, mff);
-			mattack = _mm_and_ps(mattack, m2);
-			mrelease = _mm_and_ps(mrelease, m2n);
-
-			m1 = _mm_or_ps(mattack, mrelease);
-
-			_mm_storeu_ps(ampsq_copy+j, m1);
-		}
-
+	for(int i=0; i<N*2; i+=4)
+	{
+		__m128 ma = _mm_loadu_ps(((float *)in)+i);
+		__m128 mb = _mm_loadu_ps(fft_window_SIMD+i);
+		ma = _mm_sub_ps(ma, mdc);
+		ma = _mm_mul_ps(ma, mb);
+		_mm_storeu_ps(((float *)in)+i, ma);
 	}
 
-	cs.enter();
-	memcpy(ampsq, ampsq_copy, N*sizeof(float));
-	cs.leave();
-	cs_fft.leave();
 
-	delete [] ampsq_copy;
+	fftwf_execute(p);
+
+	for(int j=0; j<N; j+=4)
+	{
+		__m128 m1 = _mm_loadu_ps((float*)&fft_out[j]);
+		__m128 m2 = _mm_loadu_ps((float*)&fft_out[j+2]);
+
+		m1 = _mm_mul_ps(m1, m1);
+		m2 = _mm_mul_ps(m2, m2);
+		m1 = _mm_hadd_ps(m1, m2);
+		m1 = _mm_mul_ps(m1, mN);
+
+		__m128 pre = _mm_loadu_ps(ampsq_copy+j);
+		__m128 mattack = _mm_mul_ps(m1, mattack_a);
+		mattack = _mm_add_ps(mattack, _mm_mul_ps(pre, m1attack_a));
+		__m128 mrelease = _mm_mul_ps(m1, mrelease_a);
+		mrelease = _mm_add_ps(mrelease, _mm_mul_ps(pre, m1release_a));
+
+		m2 = _mm_cmpge_ps(m1, pre);
+		__m128 m2n = _mm_xor_ps(m2, mff);
+		mattack = _mm_and_ps(mattack, m2);
+		mrelease = _mm_and_ps(mrelease, m2n);
+
+		m1 = _mm_or_ps(mattack, mrelease);
+
+		_mm_storeu_ps(ampsq_copy+j, m1);
+	}
+
+	return 0;
+}
+
+uint8_t *gbuf = new uint8_t[4*maxN*2];
+int gbuf_count = 0;
+// len:length in elements
+// type: 0: int8_t, 1:int16_t, 2:float
+int rx(void *buf, int len, sample_quant type)
+{
+	float dt = N/sample_rate;
+	float alpha_release = dt / (dt + 1.0f/(5*PI * 1));
+
+	float *ampsq_copy = NULL;
+	
+	int count = len/2;
+	int element_size = (0 == type) ? 1 : ((1==type) ? 2 : 4);
+	cs_outfile.enter();
+	if (f)
+		fwrite(buf, 1, len*element_size, f);
+	cs_outfile.leave();
+
+
+	int8_t *buf8 = (int8_t*)buf;
+
+	cs_fft.enter();
+	while (gbuf_count == 0 && count >= N)
+	{
+		if (!ampsq_copy)
+		{
+			ampsq_copy = new float[N];
+			cs_amp.enter();
+			memcpy(ampsq_copy, ampsq, N*sizeof(float));
+			cs_amp.leave();
+		}
+
+		process_fft_block(ampsq_copy, buf8, type);
+		count -= N;
+		buf8 += element_size*2*N;
+	}
+
+	while(count)
+	{
+		int blk_count = min(N - gbuf_count, count);
+		memcpy(gbuf+element_size*gbuf_count*2, buf8, blk_count*element_size*2);
+
+		gbuf_count += blk_count;
+		count -= blk_count;
+		buf8 += blk_count*element_size*2;
+
+		if (N == gbuf_count)
+		{
+			if (!ampsq_copy)
+			{
+				ampsq_copy = new float[N];
+				cs_amp.enter();
+				memcpy(ampsq_copy, ampsq, N*sizeof(float));
+				cs_amp.leave();
+			}
+			process_fft_block(ampsq_copy, gbuf, type);
+			gbuf_count = 0;
+		}
+	}
+
+	/*
+	for(int i=0; i<len/2 && (len/2-i) >= N; i+= N)
+	{
+		process_fft_block(ampsq_copy, buf8+i*2*element_size, type);
+	}
+	*/
+
+	if (ampsq_copy)
+	{
+		cs_amp.enter();
+		memcpy(ampsq, ampsq_copy, N*sizeof(float));
+		cs_amp.leave();
+
+		delete [] ampsq_copy;
+	}
+
+	cs_fft.leave();
 
 	return 0;
 }
@@ -270,6 +315,8 @@ int draw_line(int x1, int y1, int x2, int y2, RGBQUAD color)	// draw line in pix
 	return 0;
 }
 
+float amp[maxN];
+
 int draw(HWND drawing_hwnd)
 {
 	RECT rect;
@@ -297,26 +344,28 @@ int draw(HWND drawing_hwnd)
 			canvas[y*width+j] = light_red;
 	}
 
-	if (!d)
-		return 0;
 
 	// data
+	cs_device.enter();
+	if (!d)
+	{
+		cs_device.leave();
+		return 0;
+	}
 	sample_type type = d->get_sample_type();
-	float *amp = new float[N];
+	cs_device.leave();
+
 	float amp_pixel[2048];
-	cs.enter();
-	memcpy(amp, ampsq, N*sizeof(float));
-	cs.leave();
+	cs_amp.enter();
+	memcpy(amp, ampsq+N/2, N/2*sizeof(float));
+	memcpy(amp+N/2, ampsq, N/2*sizeof(float));		// reordered for applying RBW filter
+	cs_amp.leave();
 
 	if (type == real_sample)
-		memset(amp+N/2, 0, sizeof(float)*N/2);
+		memset(amp, 0, sizeof(float)*N/2);
 	
 	if (g_rbw_type != rbw_none)
 		rbw_filter.apply(amp, N);
-	for(int i=0; i<N; i++)
-	{
-		amp[i] = log10(amp[i]) * 10;
-	}
 
 	for(int i=0; i<width; i++)
 	{
@@ -324,29 +373,28 @@ int draw(HWND drawing_hwnd)
 		if (type == complex_sample)
 		{
 			if (i<=width/2)
-				n = i*N/2/(width/2) + N/2-1;			// negative frequency
+				n = i*N/2/(width/2);							// negative frequency
 			else
-				n = (i-width/2-1)*(N/2-1)/(width/2-1);	// positive part
+				n = (i-width/2-1)*(N/2-1)/(width/2-1) + N/2;	// positive part
 		}
 		else
 		{
-			n = i*(N/2-1)/(width-1);	// positive part
+			n = i*(N/2-1)/(width-1) + N/2;	// positive part
 		}
 		
+		float db = (amp[n]>0) ? log10(amp[n]) * 10 : range_low;
 
-		if (amp[n] >= range_low && amp[n] <= range_high)
+		if (db >= range_low && db <= range_high)
 		{
-			amp_pixel[i] = height * (range_high - amp[n]) / (range_high-range_low);
+			amp_pixel[i] = height * (range_high - db) / (range_high-range_low);
 		}
-		else if (amp[n] > range_high)
+		else if (db > range_high)
 			amp_pixel[i] = 0;
-		else if (amp[n] < range_low)
+		else if (db < range_low)
 			amp_pixel[i] = height-1;
 		else
 			amp_pixel[i] = -1;
 	}
-
-	delete [] amp;
 
 	for(int i=1; i<width; i++)
 	{
@@ -387,11 +435,10 @@ int init_dialog(HWND hDlg)
 
 
 	HWND cb = GetDlgItem(hDlg, ID_CB_RBW);
-	int v;
 	SendMessageA(cb, CB_RESETCONTENT , 0, 0);
 	for(int i=0; i<sizeof(rbw_list)/sizeof(rbw_list[0]); i++)
-		v = SendMessageA(cb, CB_ADDSTRING, 0, (LPARAM)rbw_list[i]);
-	SendMessageA(cb, CB_SETCURSEL, 0, 0);
+		SendMessageA(cb, CB_ADDSTRING, 0, (LPARAM)rbw_list[i]);
+	SendMessageA(cb, CB_SETCURSEL, 1, 0);
 	ShowWindow(GetDlgItem(hDlg, IDC_RBW), SW_HIDE);
 	ShowWindow(GetDlgItem(hDlg, IDC_RBW_HZ), SW_HIDE);
 
@@ -434,6 +481,9 @@ int update_rbw(HWND hDlg)
 		n *= 1000;
 	if (strstr(tmp, "Mhz"))
 		n *= 1000000;
+
+	if (strstr(tmp, "FFT bins"))
+		n = 0;
 	
 	return set_rbw_filter_hz(rbw_gaussion, n, -range_low);
 }
@@ -448,12 +498,28 @@ int update_fft_size(HWND cb)
 
 INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam )
 {
-//	static int window_start = GetTickCount();
 	switch( msg ) 
 	{
 	case WM_COMMAND:
 		{
 			int id = LOWORD(wParam);
+
+			if (id == IDC_RECORD)
+			{
+				cs_outfile.enter();
+				if (f)
+				{
+					fclose(f);
+					f = NULL;
+					SetDlgItemTextA(hDlg, IDC_RECORD, "Record");
+				}
+				else
+				{
+					f = fopen("E:\\log2.pcm", "wb");
+					SetDlgItemTextA(hDlg, IDC_RECORD, "Stop Recording");
+				}
+				cs_outfile.leave();
+			}
 
 			if (id == IDC_OPEN)
 			{
@@ -536,7 +602,10 @@ int set_rbw_filter_bins(rbw_type type, float bw3db_bins, float dynamic_range_db)
 			rbw_taps[i+taps_half] = exp(-a*i*i);
 			rbw_taps[taps_half-i] = rbw_taps[i+taps_half];
 		}
-		rbw_filter.set_taps(rbw_taps, taps_half * 2 + 1);
+		rbw_filter.set_taps_fft(rbw_taps, taps_half * 2 + 1, N);
+		//rbw_filter.set_taps(rbw_taps, taps_half * 2 + 1);
+
+		printf("%d taps\n", taps_half * 2 + 1);
 
 		delete rbw_taps;
 	}
@@ -549,7 +618,19 @@ int set_rbw_filter_hz(rbw_type type, float bw3db_hz, float dynamic_range_db)
 {
 	rbw = bw3db_hz;
 	bw_per_bin = sample_rate / N;
-	return set_rbw_filter_bins(rbw_gaussion, bw3db_hz/bw_per_bin, 120);
+
+	if (bw3db_hz < 1)
+	{
+		g_rbw_type = rbw_none;
+		printf("RBW filter disabled\n");
+
+		return 0;
+	}
+
+	if (bw_per_bin > bw3db_hz)
+		printf("too narrow rbw requested: %.1f, but minimum is %.1f hz\n", bw3db_hz, bw_per_bin);	
+
+	return set_rbw_filter_bins(type, bw3db_hz/bw_per_bin, 120);
 }
 
 #define _mm_cmpge_epu8(a, b) _mm_cmpeq_epi8(_mm_max_epu8(a, b), a)
@@ -680,6 +761,7 @@ int set_fft_size(int _N)
 
 int open_device(const char *name, void *extra /*= NULL*/)
 {
+	cs_device.enter();
 	if (d)
 	{
 		d->destroy();
@@ -707,6 +789,7 @@ int open_device(const char *name, void *extra /*= NULL*/)
 	sample_rate = d->get_sample_rate();
 	range_high = 0;
 	range_low = -d->dynamic_range_db();
+	cs_device.leave();
 	set_fft_size(N);
 
 
@@ -714,9 +797,9 @@ int open_device(const char *name, void *extra /*= NULL*/)
 }
 
 int main(int argc, char* argv[])
-{ 	
+{
+	set_fft_size(N);
 	open_device(device_list[0]);
-
 	DialogBoxW(NULL, MAKEINTRESOURCE(IDD_DIALOG1), NULL, main_window_proc);
 
 	if (d)

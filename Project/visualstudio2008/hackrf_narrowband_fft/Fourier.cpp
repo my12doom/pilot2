@@ -27,6 +27,8 @@ static char THIS_FILE[]=__FILE__;
 #endif
 
 
+static const double PI = acos(-1.0);
+
 bool IsPowerOfTwo(unsigned int p_nX);
 
 unsigned int NumberOfBitsNeeded(unsigned int p_nSamples);

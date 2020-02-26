@@ -13,6 +13,7 @@ int dummy_device::init(data_callback cb)
     
     this->cb = cb;
     working = true;
+	scale = 32767;
     memset(phase, 0, sizeof(phase));
 
     thread = CreateThread(NULL, NULL, entry, this, 0, 0);
@@ -33,13 +34,15 @@ DWORD dummy_device::worker()
     {
         Sleep(1);
 
-		int scale = (GetTickCount() % 5000) < 2500 ? 32767 : 13276;
+		int tscale = GetTickCount() % 5000 < 2500 ? 32767 : 3276;
+		float alpha = 1e-6;
 
         int count = sizeof(data)/sizeof(data[0]);
         float dp = 3000*2*PI/count;
         float dp2 = 9000*2*PI/count;
         for(int i=0; i<count; i+=2)
         {
+			scale = tscale * alpha + scale * (1-alpha);
             phase[0] += dp;
             if (phase[0]>2*PI)
                 phase[0] -= 2*PI;

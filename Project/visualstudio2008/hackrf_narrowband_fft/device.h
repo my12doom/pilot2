@@ -30,7 +30,7 @@ public:
     virtual int config() = 0;
     virtual int get_sample_rate() = 0;
     virtual sample_type get_sample_type(){return complex_sample;}
-    virtual int dynamic_range_db(){return 20*log10(32767.0*6.6);}     // return max noise density SNR in db
+    virtual int dynamic_range_db(){return 20*log10(32767.0*6.6*10);}     // return max noise density SNR in db
 };
 
 }
