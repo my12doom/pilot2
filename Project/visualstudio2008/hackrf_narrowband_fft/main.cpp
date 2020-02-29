@@ -1,8 +1,10 @@
 #include <Windows.h>
+#include <WindowsX.h>
 #include <math.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "fftw/fftw3.h"
 #include "sse_mathfun.h"
 #include "autolock.h"
@@ -451,6 +453,9 @@ int init_dialog(HWND hDlg)
 	}
 	SendMessageA(fft, CB_SETCURSEL, 1, 0);
 
+
+	SetDlgItemTextA(hDlg, IDC_FREQ, "2413000000");
+	
 	return 0;
 }
 
@@ -500,9 +505,38 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 {
 	switch( msg ) 
 	{
+	case WM_MOUSEWHEEL:
+		{
+			int xPos = GET_X_LPARAM(lParam);
+			int yPos = GET_Y_LPARAM(lParam);
+			int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+			POINT p = {xPos, yPos};
+			HWND pwnd = WindowFromPoint(p);
+			if (GetDlgCtrlID(pwnd) == IDC_FREQ)
+			{				
+				char tmp[100] = {0};
+				GetDlgItemTextA(hDlg, IDC_FREQ, tmp, sizeof(tmp)-1);
+				int64_t hz = _strtoui64(tmp, NULL, 10);
+
+				hz += zDelta * 1e6 / WHEEL_DELTA;
+
+				if (hz>0)
+				{
+					cs_device.enter();
+					if(d)
+						d->tune(hz);
+					cs_device.leave();
+
+					sprintf(tmp, "%lld", int64_t(hz));
+					SetDlgItemTextA(hDlg, IDC_FREQ, tmp);
+				}
+			}
+		}
+		break;
 	case WM_COMMAND:
 		{
 			int id = LOWORD(wParam);
+			int event = HIWORD(wParam);
 
 			if (id == IDC_RECORD)
 			{
@@ -516,7 +550,8 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 				else
 				{
 					f = fopen("E:\\log2.pcm", "wb");
-					SetDlgItemTextA(hDlg, IDC_RECORD, "Stop Recording");
+					if (f)
+						SetDlgItemTextA(hDlg, IDC_RECORD, "Stop Recording");
 				}
 				cs_outfile.leave();
 			}
@@ -545,6 +580,21 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 				float hz = atof(tmp);
 				if (hz>0)
 					set_rbw_filter_hz(rbw_gaussion, atoi(tmp), -range_low);
+			}
+
+			if (id == IDC_FREQ)
+			{
+				char tmp[100] = {0};
+				GetDlgItemTextA(hDlg, IDC_FREQ, tmp, sizeof(tmp)-1);
+				int64_t hz = _strtoui64(tmp, NULL, 10);
+
+				if (hz>0)
+				{
+					cs_device.enter();
+					if(d)
+						d->tune(hz);
+					cs_device.leave();
+				}
 			}
 		}
 		break;

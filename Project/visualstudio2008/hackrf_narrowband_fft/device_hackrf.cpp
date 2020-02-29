@@ -8,7 +8,6 @@
 namespace NBFFT
 {
 
-float center_frequency = 2413.0E6;
 #define BLOCKS_PER_TRANSFER 16
 
 int hackrf_device::rx_callback(hackrf_transfer* transfer)
@@ -139,6 +138,15 @@ int hackrf_device::destroy()
 
 	stop_rx();
 
+	return 0;
+}
+
+int hackrf_device::tune(int64_t hz)
+{
+	center_frequency = hz;
+	::hackrf_device *device = (::hackrf_device*)_device;
+	if (device)
+		hackrf_set_freq(device, hz);
 	return 0;
 }
 
