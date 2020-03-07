@@ -10,7 +10,7 @@
 #include <algorithm/EKFINS.h>
 #include <Windows.h>
 #include <math/LowPassFilter2p.h>
-#include <math/median_filter.h>
+//#include <math/median_filter.h>
 #include <math/quaternion.h>
 #include <algorithm/motion_detector.h>
 #include <Algorithm/battery_estimator.h>
@@ -21,7 +21,7 @@ using namespace sensors;
 #define PI 3.1415926
 math::LowPassFilter2p lpf2p[3];//
 math::LowPassFilter2p lpf_ned[3];
-MedianFilter<7> mf[2];
+//MedianFilter<7> mf[2];
 
 motion_detector motion_acc;
 motion_detector motion_gyro;
@@ -189,9 +189,12 @@ int main(int argc, char* argv[])
 
 	char out_name[300];
 	sprintf(out_name, "%s.log", argv[1]);
+	char txt_name[300];
+	sprintf(txt_name, "%s.txt", argv[1]);
 
 	FILE *in = fopen(argv[1], "rb");
 	FILE *out = fopen(out_name, "wb");
+	FILE *txt_out = fopen(txt_name, "wb");
 	FILE *excel = fopen("Z:\\flow.csv", "wb");
 	if (excel)
 		fprintf(excel, "t,x,y\r\n");
@@ -295,6 +298,11 @@ int main(int argc, char* argv[])
 			memcpy(batt_state_on, data, 8);
 		}
 
+		if (tag_ex == TAG_TEXT_LOG)
+		{
+			fwrite(data, 1, size, txt_out);
+		}
+
 
 		if (tag_ex == TAG_EXTRA_GPS_DATA)
 		{
@@ -349,8 +357,8 @@ int main(int argc, char* argv[])
 		{
 			memcpy(flow_on, data, size);
 
-			flow_on_mf[0] = mf[0].apply(flow_on[0]);
-			flow_on_mf[1] = mf[1].apply(flow_on[1]);
+			//flow_on_mf[0] = mf[0].apply(flow_on[0]);
+			//flow_on_mf[1] = mf[1].apply(flow_on[1]);
 		}
 		if (tag_ex == 5)
 		{
@@ -586,7 +594,7 @@ int main(int argc, char* argv[])
 				if (sonar <= 0.01f)
 					sonar = NAN;
 
- 				pos2.update(quad5.q, acc, gps_extra2,fdata, sonar, baro, dt, pilot.fly_mode, true, still);
+ 				pos2.update(quad5.q, acc, gps_extra2,fdata, sonar, baro, dt, pilot.fly_mode, true);
 				if (last_state != pos2.state())
 				{
 					last_state = pos2.state();
@@ -595,7 +603,7 @@ int main(int argc, char* argv[])
 				}
 
 
-				ins.update(gyro, acc, mag, gps_extra, fdata, baro, sonar, dt, ppm.out[0]>=1240, quad2.airborne);
+				ins.update(gyro, acc, mag, gps_extra, frame, baro, dt, ppm.out[0]>=1240, quad2.airborne);
 
 				if (time > 12000000)
 				{
@@ -744,6 +752,7 @@ int main(int argc, char* argv[])
 
 	fclose(in);
 	fclose(out);
+	fclose(txt_out);
 	if(excel)
 	fclose(excel);
 

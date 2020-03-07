@@ -58,8 +58,6 @@ public:
 	{
 		if (index >= count())
 		{
-			if (out)
-				*out = NULL;
 			return -1;
 		}
 

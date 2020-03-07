@@ -11,8 +11,10 @@ namespace SIL_WIN32
 		Win32SysTimer();
 		~Win32SysTimer();
 		virtual int64_t gettime();		// micro-second
-		virtual void delayms(float ms);
-		virtual void delayus(float us);
+		//virtual void delaymsf(float ms);
+		//virtual void delayusf(float us);
+		virtual void delayms(int ms);
+		virtual void delayus(int us);
 
 		LARGE_INTEGER start;
 		LARGE_INTEGER fre;

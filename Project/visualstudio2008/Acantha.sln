@@ -19,6 +19,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SIL", "SIL\SIL.vcproj", "{8
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "H264Player", "H264Player\H264Player.vcproj", "{8DE615F9-A0D6-4595-A443-67BC12FBA7F9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hackrf_narrowband_fft", "hackrf_narrowband_fft\hackrf_narrowband_fft.vcproj", "{C60FAB45-CAD3-41AE-99C5-6C7DFEBA0440}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -61,6 +63,10 @@ Global
 		{8DE615F9-A0D6-4595-A443-67BC12FBA7F9}.Debug|Win32.Build.0 = Debug|Win32
 		{8DE615F9-A0D6-4595-A443-67BC12FBA7F9}.Release|Win32.ActiveCfg = Release|Win32
 		{8DE615F9-A0D6-4595-A443-67BC12FBA7F9}.Release|Win32.Build.0 = Release|Win32
+		{C60FAB45-CAD3-41AE-99C5-6C7DFEBA0440}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C60FAB45-CAD3-41AE-99C5-6C7DFEBA0440}.Debug|Win32.Build.0 = Debug|Win32
+		{C60FAB45-CAD3-41AE-99C5-6C7DFEBA0440}.Release|Win32.ActiveCfg = Release|Win32
+		{C60FAB45-CAD3-41AE-99C5-6C7DFEBA0440}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -32,12 +32,12 @@ namespace SIL_WIN32
 		return (li.QuadPart - start.QuadPart) * 1000000 / fre.QuadPart;
 	}
 	
-	void Win32SysTimer::delayms(float ms)
+	void Win32SysTimer::delayms(int ms)
 	{
 		Sleep(ms);
 	}
 	
-	void Win32SysTimer::delayus(float us)
+	void Win32SysTimer::delayus(int us)
 	{
 		int64_t s = gettime();
 		while(gettime()-s<us)

@@ -212,14 +212,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\modules\YAL\fec\fec.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\modules\YAL\fec\fec.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\modules\YAL\fec\frame.cpp"
 				>
 			</File>

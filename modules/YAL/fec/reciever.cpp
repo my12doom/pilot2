@@ -50,8 +50,8 @@ int reciever::put_packet(const void *packet, int size)
 	}
 
 	// decode header and check for error
-	uint32_t crc_calculated = crc32(0, packet, HEADER_SIZE - sizeof(raw_packet::header_crc));
 	raw_packet *raw = (raw_packet*)packet;
+	uint32_t crc_calculated = crc32(0, packet, HEADER_SIZE - sizeof(raw->header_crc));
 	uint8_t crc0 = crc_calculated;
 	uint8_t crc1 = crc_calculated >> 8;
 	if (crc0 != raw->header_crc[0] || crc1 != raw->header_crc[1])
