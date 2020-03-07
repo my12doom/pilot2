@@ -2,7 +2,6 @@
 #include <Windows.h>
 #include <stdio.h>
 #include <assert.h>
-#include "libusb.h"
 #include "Protocol/crc32.h"
 #pragma comment(lib, "libusb-1.0.lib");
 #pragma comment(lib, "winmm.lib")
@@ -15,7 +14,11 @@ extern "C"
 int vendor_id = 0x111b;
 int product_id = 0x1234;
 
+#define transfer_size (256*1024)
+#define transfer_count 4
+//#define use_transfers
 
+struct libusb_transfer* transfers[transfer_count];
 
 
 #define HEAP_ALLOC(var,size) \
@@ -23,9 +26,24 @@ int product_id = 0x1234;
 
 static HEAP_ALLOC(wrkmem, LZO1X_1_MEM_COMPRESS);
 
+
+
 int erase_test(libusb_device_handle* dev_handle)
 {
-	static bool once = false;
+	uint8_t d[256];
+
+	int rr = libusb_control_transfer(
+		dev_handle,
+		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		LIBUSB_REQUEST_GET_DESCRIPTOR,
+		(3<<8) | 1,
+		0,
+		d,
+		sizeof(d),
+		0
+		);
+
+	static bool once = true;
 	if (once)
 		return 0;
 
@@ -127,6 +145,57 @@ int erase_test(libusb_device_handle* dev_handle)
 
 namespace NBFFT
 {
+void bulk_device::libusb_transfer_callback(struct libusb_transfer* usb_transfer)
+{
+	if(usb_transfer->status == LIBUSB_TRANSFER_COMPLETED)
+	{
+
+		handle_data(usb_transfer->buffer, usb_transfer->actual_length);
+
+		libusb_submit_transfer(usb_transfer);
+		/*
+		hackrf_transfer transfer = {
+			.device = device,
+			.buffer = usb_transfer->buffer,
+			.buffer_length = usb_transfer->length,
+			.valid_length = usb_transfer->actual_length,
+			.rx_ctx = device->rx_ctx,
+			.tx_ctx = device->tx_ctx
+		};
+		*/
+
+
+		//usb_transfer->
+	}
+	else
+	{
+		// error handling here
+	}
+}
+int bulk_device::handle_data(uint8_t *data, int actual_length)
+{
+	int16_t *data16 = (int16_t*)data;
+
+	static int l = timeGetTime();
+	static int c = 0;
+	c += actual_length;
+	int interval = timeGetTime() - l;
+	if ( interval >= 1000)
+	{
+		l = timeGetTime();
+		printf("%lld bytes/s(%.3fMsps)\n", (int64_t)c*1000/interval, (double)c/interval/1000/4);
+		c = 0;
+	}
+
+	int divide = 1;
+	uint16_t *udata16 = (uint16_t*)data16;
+
+	memcpy(rx_data, data16, actual_length);
+	rx_data_size = actual_length/2;
+
+	SetEvent(usb_event);
+	return 0;
+}
 
 DWORD bulk_device::usb_worker()
 {
@@ -137,97 +206,41 @@ DWORD bulk_device::usb_worker()
 	libusb_init(&ctx);
 	usb_ctx = ctx;
 start:
-	libusb_device **devs;
-	int cnt = libusb_get_device_list(NULL, &devs);
-
-	libusb_device *dev;
-	int i = 0;
-	uint8_t path[8]; 
-	while ((dev = devs[i++]) != NULL)
-	{
-		struct libusb_device_descriptor desc;
-		int r = libusb_get_device_descriptor(dev, &desc);
-		if (r < 0) {
-			fprintf(stderr, "failed to get device descriptor");
-			return -1;
-		}
-
-		struct libusb_device_handle *dev_handle = NULL;
-		libusb_open(dev, &dev_handle);
-		if (dev_handle)
-		{
-			unsigned char manufacturer[200] = {0};
-			unsigned char product[200] = {0};
-			libusb_get_string_descriptor_ascii(dev_handle, desc.iManufacturer, manufacturer, 200);
-			libusb_get_string_descriptor_ascii(dev_handle, desc.iProduct, product, 200);
-			printf("%s %s : ", manufacturer, product);
-			libusb_close(dev_handle);
 
 
-			struct libusb_config_descriptor *config_descriptor;
-			libusb_get_active_config_descriptor(dev, &config_descriptor);
-
-			for(int j=0; j<config_descriptor->bNumInterfaces; j++)
-			{
-				const struct libusb_interface inf = config_descriptor->interface[j];
-
-				printf("interface %d has %d endpoints\n", j, inf.altsetting[0].bNumEndpoints);
-			}
-		}
-		else
-		{
-			printf("(Unkown) : ");
-		}
-
-
-
-		printf("%04x:%04x (bus %d, device %d)",
-			desc.idVendor, desc.idProduct,
-			libusb_get_bus_number(dev), libusb_get_device_address(dev));
-
-		r = libusb_get_port_numbers(dev, path, sizeof(path));
-		if (r > 0) {
-			printf(" path: %d", path[0]);
-			for (int j = 1; j < r; j++)
-				printf(".%d", path[j]);
-		}
-		printf("\n\n");
-	}
-
-
-	libusb_device_handle* dev_handle = NULL;
+	libusb_device_handle* dev_handle;
+	dev_handle = NULL;
 
 	while(!dev_handle)
 	{
 		Sleep(100);
-		dev_handle = libusb_open_device_with_vid_pid((libusb_context*)usb_ctx, vendor_id, product_id);
+		dev_handle = libusb_open_device_with_vid_pid(ctx, vendor_id, product_id);
 
 		if (!working)
 			return 0;
 	}
 
+	Sleep(100);
 	int rslt = libusb_kernel_driver_active(dev_handle, 1);
 	if(rslt != 0)
-		libusb_detach_kernel_driver(dev_handle, 1);
+		rslt = libusb_detach_kernel_driver(dev_handle, 1);
 
 	//int b = libusb_kernel_driver_active(dev_handle, 0);
 	int config2;
-	libusb_get_configuration(dev_handle,&config2);
+	rslt = libusb_get_configuration(dev_handle,&config2);
 	if(config2 != 1)
-		libusb_set_configuration(dev_handle, 1);
+		rslt = libusb_set_configuration(dev_handle, 1);
 
 
-	int r = libusb_claim_interface(dev_handle, 1);
+	int r = libusb_claim_interface(dev_handle, 0);
 
-	unsigned char data[65536] = {0};
+	unsigned char data[transfer_size] = {0};
 	int actual_length = 64;
 	int actual_length2 = 64;
 
-	int c = 0;
-	uint32_t l = timeGetTime();
 	static uint32_t l2 = timeGetTime();
 
-	uint8_t bulk_cmd[65536] = {0xE8};
+	uint8_t bulk_cmd[transfer_size] = {0xE8};
 
 	bulk_cmd[0] = 0x83;
 	//int result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, bulk_cmd, 1024, &actual_length, 1000);
@@ -236,12 +249,23 @@ start:
 
 	erase_test(dev_handle);
 
+	// create and prepare transfers
+#ifdef use_transfers
+	uint8_t *buf = (uint8_t*)malloc(1024*1024);;
+	for(int i=0; i<transfer_count; i++)
+	{
+		transfers[i] = libusb_alloc_transfer(0);
+		libusb_fill_bulk_transfer(transfers[i], dev_handle, 1|LIBUSB_ENDPOINT_IN, &buf[i * transfer_size], transfer_size, libusb_transfer_callback_entry, this, 0);
+		int result = libusb_submit_transfer(transfers[i]);
+	}
+#endif
+
 	while(1)
-	{	
-		int result;// = libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, bulk_cmd, 512, &actual_length, 0);
-		result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, 65536, &actual_length, 0);
-//  		libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, data, actual_length, &actual_length2, 16);
-// 		libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, data, actual_length, &actual_length2, 16);
+	{
+
+#ifndef use_transfers
+		int result;
+		result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, transfer_size, &actual_length, 0);
 
 		int dt = timeGetTime() - l2;
 		l2 = timeGetTime();
@@ -256,31 +280,42 @@ start:
 		if (result < 0)
 			break;
 
-		c += actual_length;
 
-		int16_t *data16 = (int16_t*)data;
+		handle_data(data, actual_length);
 
-		int interval = timeGetTime() - l;
-		if ( interval >= 1000)
-		{
-			l = timeGetTime();
-			printf("%d bytes/s\n", (int64_t)c*interval/1000);
-			c = 0;
-		}
+#else
 
-		memcpy(rx_data, data16, actual_length);
-		rx_data_size = actual_length/2;
+		if (!working)
+			break;
+		struct timeval timeout = { 0, 500000 };
+		int error = libusb_handle_events_timeout(ctx, &timeout);
+		if (error <0)
+			break;
 
-		SetEvent(usb_event);
+#endif
 	}
 
-	libusb_release_interface(dev_handle, 0);
+#ifdef use_transfers
+	for(int i=0; i<transfer_count; i++)
+ 		libusb_cancel_transfer(transfers[i]);
+#endif
+
+	r = libusb_release_interface(dev_handle, 0);
 	libusb_close(dev_handle);
+
+#ifdef use_transfers
+	Sleep(100);
+	for(int i=0; i<transfer_count; i++)
+		libusb_free_transfer(transfers[i]);
+	free(buf);
+#endif
+
 
 	if (working)
 		goto start;
 
 	return 0;
+
 }
 
 int bulk_device::init(int (*rx)(void *buf, int len, sample_quant type))

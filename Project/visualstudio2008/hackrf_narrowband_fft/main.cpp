@@ -252,13 +252,6 @@ int rx(void *buf, int len, sample_quant type)
 		}
 	}
 
-	/*
-	for(int i=0; i<len/2 && (len/2-i) >= N; i+= N)
-	{
-		process_fft_block(ampsq_copy, buf8+i*2*element_size, type);
-	}
-	*/
-
 	if (ampsq_copy)
 	{
 		cs_amp.enter();
