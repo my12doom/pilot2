@@ -19,10 +19,10 @@ public:
 	int off();
 	int show_str(int x, int y, const char *text);
 	int draw_bmp(int width, int height, const void *data, int x, int y);
+	int write_pixel(uint8_t data);
 
 protected:
 	int WriteCmd(uint8_t cmd);
-	int WriteDat(uint8_t data);
 	uint8_t address;
 	HAL::II2C *i2c;
 };

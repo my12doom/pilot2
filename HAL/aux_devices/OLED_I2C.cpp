@@ -1,6 +1,7 @@
 #include "OLED_I2C.h"
 #include <HAL/Interface/ISysTimer.h>
 #include "codetab.h"
+#include <string.h>
 
 namespace devices
 {
@@ -20,8 +21,8 @@ int OLED96::init(HAL::II2C *i2c, uint8_t address)
 	FAIL_RETURN(WriteCmd(0x40));//--set start line address  Set Mapping RAM Display Start Line (0x00~0x3F)
 	FAIL_RETURN(WriteCmd(0x81));//--set contrast control register
 	FAIL_RETURN(WriteCmd(0xff)); // Set SEG Output Current Brightness
-	FAIL_RETURN(WriteCmd(0xa1));//--Set SEG/Column Mapping     0xa0×óÓÒ·´ÖÃ 0xa1Õı³£
-	FAIL_RETURN(WriteCmd(0xc8));//Set COM/Row Scan Direction   0xc0ÉÏÏÂ·´ÖÃ 0xc8Õı³£
+	FAIL_RETURN(WriteCmd(0xa1));//--Set SEG/Column Mapping     0xa0å·¦å³åç½® 0xa1æ­£å¸¸
+	FAIL_RETURN(WriteCmd(0xc8));//Set COM/Row Scan Direction   0xc0ä¸Šä¸‹åç½® 0xc8æ­£å¸¸
 	FAIL_RETURN(WriteCmd(0xa6));//--set normal display
 	FAIL_RETURN(WriteCmd(0xa8));//--set multiplex ratio(1 to 64)
 	FAIL_RETURN(WriteCmd(0x3f));//--1/64 duty
@@ -43,7 +44,7 @@ int OLED96::init(HAL::II2C *i2c, uint8_t address)
 	FAIL_RETURN(WriteCmd(0xa6));// Disable Inverse Display On (0xa6/a7) 
 	FAIL_RETURN(WriteCmd(0xaf));//--turn on oled panel
 
-	fill(0); //³õÊ¼ÇåÆÁ
+	fill(0); //åˆå§‹æ¸…å±
 	move(0,0);
 
 	return 0;
@@ -60,16 +61,16 @@ int OLED96::move(int x, int y)
 
 int OLED96::fill(uint8_t color)
 {
+	uint8_t data[128];
+	memset(data, color, 128);
 	unsigned char m,n;
 	for(m=0;m<8;m++)
 	{
 		WriteCmd(0xb0+m);		//page0-page1
 		WriteCmd(0x00);		//low column start address
 		WriteCmd(0x10);		//high column start address
-		for(n=0;n<128;n++)
-		{
-			WriteDat(color);
-		}
+
+		i2c->write_regs(address, 0x40, data, 128);
 	}
 
 
@@ -85,17 +86,17 @@ int OLED96::clear()
 
 int OLED96::on()
 {
-	WriteCmd(0X8D);  //ÉèÖÃµçºÉ±Ã
-	WriteCmd(0X14);  //¿ªÆôµçºÉ±Ã
-	WriteCmd(0XAF);  //OLED»½ĞÑ
+	WriteCmd(0X8D);  //è®¾ç½®ç”µè·æ³µ
+	WriteCmd(0X14);  //å¼€å¯ç”µè·æ³µ
+	WriteCmd(0XAF);  //OLEDå”¤é†’
 	return 0;
 }
 
 int OLED96::off()
 {
-	WriteCmd(0X8D);  //ÉèÖÃµçºÉ±Ã
-	WriteCmd(0X10);  //¹Ø±ÕµçºÉ±Ã
-	WriteCmd(0XAE);  //OLEDĞİÃß
+	WriteCmd(0X8D);  //è®¾ç½®ç”µè·æ³µ
+	WriteCmd(0X10);  //å…³é—­ç”µè·æ³µ
+	WriteCmd(0XAE);  //OLEDä¼‘çœ 
 	return 0;
 }
 
@@ -113,7 +114,7 @@ int OLED96::show_str(int x, int y, const char *text)
 		}
 		move(x,y);
 		for(i=0;i<6;i++)
-			WriteDat(F6x8[c][i]);
+			write_pixel(F6x8[c][i]);
 		x += 6;
 		j++;
 	}
@@ -131,7 +132,7 @@ int OLED96::draw_bmp(int width, int height, const void *data, int x, int y)
 		move(x,y+py);
 		for(int px=0; px<width; px++)
 		{
-			WriteDat(BMP[j++]);
+			write_pixel(BMP[j++]);
 		}
 	}
 
@@ -142,7 +143,7 @@ int OLED96::WriteCmd(uint8_t cmd)
 {
 	return i2c->write_reg(address, 0, cmd);
 }
-int OLED96::WriteDat(uint8_t data)
+int OLED96::write_pixel(uint8_t data)
 {
 	return i2c->write_reg(address, 0x40, data);
 }
