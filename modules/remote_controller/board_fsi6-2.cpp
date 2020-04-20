@@ -272,7 +272,7 @@ int board_init()
 	//systimer->delayms(10);
 	i2c.write_reg(0x6b<<1, 5, 0x8C);		// disable i2c watchdog
 	i2c.write_reg(0x6b<<1, 3, 0x10);		// 256mA pre-charge, 128mA termination
-	i2c.write_reg(0x6b<<1, 2, 0xA0);		// 2.5A charge
+	i2c.write_reg(0x6b<<1, 2, 0x60);		// 1.5A charge
 	i2c.write_reg(0x6b<<1, 0, 0x07);		// allow charger to pull vbus down to 3.88V, 3A max input
 	i2c.write_reg(0x6b<<1, 1, 0x1B);		// default value, 3.5V minimum system voltage, charge enable.
 	i2c.write_reg(0x6b<<1, 7, 0x4B);		// default value
