@@ -178,6 +178,11 @@ uint32_t USBD_OTG_EP1IN_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
     /* TX COMPLETE */
     USBD_DCD_INT_fops->DataInStage(pdev , 1);
   }
+  if (diepint.b.emptyintr)
+  {
+    DCD_WriteEmptyTxFifo(pdev , 1);
+    CLEAR_IN_EP_INTR(1, emptyintr);
+  }
   if ( diepint.b.epdisabled )
   {
     CLEAR_IN_EP_INTR(1, epdisabled);
@@ -194,11 +199,7 @@ uint32_t USBD_OTG_EP1IN_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
   {
     CLEAR_IN_EP_INTR(1, inepnakeff);
   }
-  if (diepint.b.emptyintr)
-  {
-    DCD_WriteEmptyTxFifo(pdev , 1);
-    CLEAR_IN_EP_INTR(1, emptyintr);
-  }
+
   return 1;
 }
 #endif

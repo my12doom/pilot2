@@ -21,7 +21,8 @@ namespace HAL
 		virtual int send_ack()=0;		// return -1 on any error.
 		virtual int send_nak()=0;		// return -1 on any error.
 		virtual int wait_ack()=0;		// return 0 on success, -1 on any error, 1 if a nak received.
-		virtual int txrx(uint8_t tx = 0xff)=0;	// send and receive a byte, to receive from slave, send 0xff.
+		virtual int tx(uint8_t tx)=0;	// send a byte
+		virtual uint8_t rx()=0;			// receive a byte
 	};
 
 	class I2C_SW : public II2C
@@ -41,7 +42,8 @@ namespace HAL
 		virtual int send_ack();		// return -1 on any error.
 		virtual int send_nak();		// return -1 on any error.
 		virtual int wait_ack();		// return 0 on success, -1 on any error, 1 if a nak received.
-		virtual int txrx(uint8_t tx = 0xff);	// send and receive a byte, to receive from slave, send 0xff.
+		virtual int tx(uint8_t tx);	// send a byte
+		virtual uint8_t rx();		// receive a byte
 	
 	protected:
 		int m_speed_tick;

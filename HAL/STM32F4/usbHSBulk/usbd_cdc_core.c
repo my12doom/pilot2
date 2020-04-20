@@ -431,7 +431,7 @@ static uint8_t  usbd_cdc_Setup (void  *pdev,
       if( (req->wValue >> 8) == CDC_DESCRIPTOR_TYPE)	// 在描述符请求中，wValue表示的是描述符类型和索引，第一字节表示索引号，第二字节表示描述符的类型编号
       {		// CDC_DESCRIPTOR_TYPE因为USB底层函数不识别，所以返回给用户回调函数处理，这在st的usb库说明文档有说明，这里改成纯bulk设备后，应该不需要了。
 #ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
-        pbuf = usbd_cdc_Desc; 
+        pbuf = usbd_cdc_CfgDesc; 
 #else
         pbuf = usbd_cdc_CfgDesc + 9 + (9 * USBD_ITF_MAX_NUM);		// USBD_ITF_MAX_NUM = 1, 也就是指向了/*Header Functional Descriptor*/的开头
 #endif 
@@ -498,7 +498,8 @@ static uint8_t  usbd_cdc_DataIn (void *pdev, uint8_t epnum)				// 当usb发送�
 		usb_tx_state = 0;
 //		extern int data_valid;
 //		extern int data_usb;
-		F4cb(tx_done, NULL, 0);
+		if (F4cb(tx_done, NULL, 0) == 0)
+			usb_tx_state = 1;
 		
 //		data_valid &= ~(data_usb+1);			
 	}

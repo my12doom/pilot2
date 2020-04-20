@@ -13,6 +13,7 @@ enum F4HSBulk_Event
 	tx_done = 1,	// block sent
 	rx_ready = 2,	// ready to queue new block buffer
 	rx_done = 3,	// new block arrived
+	control_trx = 4,// control requested
 };
 
 #ifdef __cplusplus

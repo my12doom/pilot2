@@ -199,6 +199,8 @@ static uint8_t USBD_SetupStage(USB_OTG_CORE_HANDLE *pdev)
 		4~31:reserved
 	*/
   
+  // TODO: vendor!
+  
   switch (req.bmRequest & 0x1F) 	// Ö»ÅÐ¶ÏD4~0
   {
   case USB_REQ_RECIPIENT_DEVICE:   

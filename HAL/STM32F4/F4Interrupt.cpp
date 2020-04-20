@@ -2,13 +2,13 @@
 
 #include <protocol/common.h>
 #include <HAL/Interface/ISysTimer.h>
+#include "stm32F4xx_gpio.h"
 
 using namespace HAL;
 static STM32F4::F4Interrupt *int_table[16] = {0};
 
 extern "C" void EXTI15_10_IRQHandler(void)
 {
-	int64_t t = systimer->gettime();
 	if (EXTI_GetITStatus(EXTI_Line10) != RESET)
 	{
 		if (int_table[10])
@@ -49,7 +49,6 @@ extern "C" void EXTI15_10_IRQHandler(void)
 }
 extern "C" void EXTI9_5_IRQHandler(void)
 {
-	int64_t t = systimer->gettime();
 	if (EXTI_GetITStatus(EXTI_Line5) != RESET)
 	{
 		if (int_table[5])
@@ -84,7 +83,6 @@ extern "C" void EXTI9_5_IRQHandler(void)
 
 extern "C" void EXTI2_IRQHandler(void)
 {
-	int64_t t = systimer->gettime();
 	if (EXTI_GetITStatus(EXTI_Line2) != RESET)
 	{
 		if (int_table[2])
@@ -95,7 +93,6 @@ extern "C" void EXTI2_IRQHandler(void)
 
 extern "C" void EXTI1_IRQHandler(void)
 {
-	int64_t t = systimer->gettime();
 	if (EXTI_GetITStatus(EXTI_Line1) != RESET)
 	{
 		if (int_table[1])
@@ -106,7 +103,6 @@ extern "C" void EXTI1_IRQHandler(void)
 
 extern "C" void EXTI0_IRQHandler(void)
 {
-	int64_t t = systimer->gettime();
 	if (EXTI_GetITStatus(EXTI_Line0) != RESET)
 	{
 		if (int_table[0])
@@ -231,6 +227,7 @@ namespace STM32F4
 	int F4Interrupt::enable()
 	{
 		enabled = true;
+		EXTI_ClearITPendingBit(GPIO_Pin);
 		NVIC_EnableIRQ(pin2irqn(GPIO_Pin));
 		return 0;
 	}
@@ -238,6 +235,7 @@ namespace STM32F4
 	int F4Interrupt::disable()
 	{
 		enabled = false;
+		EXTI_ClearITPendingBit(GPIO_Pin);
 		NVIC_DisableIRQ(pin2irqn(GPIO_Pin));
 		return 0;
 	}
@@ -250,6 +248,8 @@ namespace STM32F4
 	
 	void F4Interrupt::call_callback()
 	{
+		int io = GPIO_ReadInputDataBit(GPIOx, GPIO_Pin);
+		int flag = io ? interrupt_rising : interrupt_falling;
 		if(cb && enabled)
 			cb(parameter, flag);
 	}

@@ -9,6 +9,22 @@ namespace STM32F4
 	{	
 		this->TIMx=TIMx;
 		cb = NULL;
+		if(TIM1==TIMx)
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1,ENABLE);
+		if(TIM2==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2,ENABLE);
+		if(TIM3==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3,ENABLE);
+		if(TIM4==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4,ENABLE);
+		if(TIM5==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5,ENABLE);
+		if(TIM6==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6,ENABLE);
+		if(TIM7==TIMx)
+			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7,ENABLE);
+		if(TIM8==TIMx)
+			RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM8,ENABLE);
 	}
 	void F4Timer::TimerInit(TIM_TypeDef* TIMx)
 	{
@@ -80,22 +96,6 @@ namespace STM32F4
 	}
 	void F4Timer::set_period(uint32_t period)
 	{
-		if(TIM1==TIMx)
-			RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1,ENABLE);
-		if(TIM2==TIMx)
-			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2,ENABLE);
-		if(TIM3==TIMx)
-			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3,ENABLE);
-		if(TIM4==TIMx)
-			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4,ENABLE);
-		if(TIM5==TIMx)
-			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5,ENABLE);
-		if(TIM6==TIMx)
-			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6,ENABLE);
-		if(TIM7==TIMx)
-			RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7,ENABLE);
-		if(TIM8==TIMx)
-			RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM8,ENABLE);
 		TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 		TIM_DeInit(TIMx);
 		TIM_InternalClockConfig(TIMx);
@@ -120,22 +120,7 @@ namespace STM32F4
 	void F4Timer::restart()
 	{
 		TIMx->CNT = 0;
-		if(TIM1==TIMx)
-			TIM_ClearITPendingBit(TIM1 , TIM_FLAG_Update);
-		else if(TIM2==TIMx)
-			TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);
-		else if(TIM3==TIMx)
-			TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
-		else if(TIM4==TIMx)
-			TIM_ClearITPendingBit(TIM4 , TIM_FLAG_Update);
-		else if(TIM5==TIMx)
-			TIM_ClearITPendingBit(TIM5 , TIM_FLAG_Update);
-		else if(TIM6==TIMx)
-			TIM_ClearITPendingBit(TIM6 , TIM_FLAG_Update);
-		else if(TIM7==TIMx)
-			TIM_ClearITPendingBit(TIM7 , TIM_FLAG_Update);
-		else if(TIM8==TIMx)
-			TIM_ClearITPendingBit(TIM8 , TIM_FLAG_Update);
+		TIM_ClearITPendingBit(TIMx , TIM_FLAG_Update);
 	}
 	void F4Timer::enable_cb()
 	{
