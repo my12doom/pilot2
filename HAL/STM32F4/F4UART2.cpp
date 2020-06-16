@@ -62,22 +62,8 @@ namespace STM32F4
 	:start(0),end(0),tx_start(0),tx_end(0),ongoing_tx_size(0),tx_dma_running(false)
 	{		
 		this->USARTx=USARTx;
-		dma_read_ptr = 0;
-		tx_buffer_size = TX_BUFFER_SIZE;
-		rx_buffer_size = RX_BUFFER_SIZE;
-		tx_buffer = _tx_buffer;
-		rx_buffer = _rx_buffer;
 
-		if (tx_buf_override_size && tx_buf_override)
-		{
-			tx_buffer = (char*)tx_buf_override;
-			tx_buffer_size = tx_buf_override_size;
-		}
-		if (rx_buf_override_size && rx_buf_override)
-		{
-			rx_buffer = (char*)rx_buf_override;
-			rx_buffer_size = rx_buf_override_size;
-		}
+		set_buffer_override(tx_buf_override, tx_buf_override_size, rx_buffer, rx_buffer_size);
 
 		GPIO_InitTypeDef GPIO_InitStructure;
 		NVIC_InitTypeDef NVIC_InitStructure;
@@ -206,6 +192,30 @@ namespace STM32F4
 		}
 
 		dma_init();
+	}
+	int F4UART2::set_buffer_override(void *tx_buf_override /*= NULL*/, int tx_buf_override_size /*= 0*/, void *rx_buf_override /*= NULL*/, int rx_buf_override_size /*= 0*/)
+	{
+		USART_Cmd(USARTx, DISABLE);
+
+		dma_read_ptr = 0;
+		tx_buffer_size = TX_BUFFER_SIZE;
+		rx_buffer_size = RX_BUFFER_SIZE;
+		tx_buffer = _tx_buffer;
+		rx_buffer = _rx_buffer;
+
+		if (tx_buf_override_size && tx_buf_override)
+		{
+			tx_buffer = (char*)tx_buf_override;
+			tx_buffer_size = tx_buf_override_size;
+		}
+		if (rx_buf_override_size && rx_buf_override)
+		{
+			rx_buffer = (char*)rx_buf_override;
+			rx_buffer_size = rx_buf_override_size;
+		}
+		USART_Cmd(USARTx, ENABLE);
+
+		return 0;
 	}
 	int F4UART2::set_baudrate(int baudrate)
 	{
@@ -548,7 +558,7 @@ namespace STM32F4
 		if (n>m)
 		{
 			n = m;
-			printf("UART rx overflow\n");
+			//printf("UART rx overflow\n");
 		}
 		
 		// insert

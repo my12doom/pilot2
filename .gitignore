@@ -10,6 +10,7 @@
 *.pcbdocpreview
 *.uvoptx
 *.Joy
+*.zerozero
 *.d
 *.o
 *.264
@@ -17,6 +18,7 @@
 .vscode/
 JLinkLog.txt
 Project/KEIL5/Listings
+Project/KEIL5/Objects
 Project/KEIL5/Output
 Project/KEIL5/DebugConfig
 Project/KEIL5/RTE

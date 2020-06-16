@@ -22,11 +22,14 @@ namespace STM32F4
 		virtual int peak(void *data, int max_count);
 		virtual int readline(void *data, int max_count);
 		virtual int available();
+		
 		void destroy();
 		
 		void uart_irq();
 		void tx_dma_irq();
 		void rx_dma_irq();
+			
+		int set_buffer_override(void *tx_buf_override = NULL, int tx_buf_override_size = 0, void *rx_buf_override = NULL, int rx_buf_override_size = 0);
 			
 
 

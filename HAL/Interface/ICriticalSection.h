@@ -16,10 +16,21 @@ namespace HAL
 
 		// return true if the critical section is successfully entered or current thread already owns the critical section
 		// return false if another thread already owns the critical section.
-		virtual bool try_enter() = 0;		
+		virtual bool try_enter() = 0;
 	};
+
+	class autolock
+	{
+	public:
+		autolock(ICriticalSection *cs){_cs = cs;cs->enter();}
+		~autolock(){_cs->leave();}
+	protected:
+		ICriticalSection *_cs;
+	};
+
 
 	// platform specified implementation
 	// return NULL if run out of resources
 	ICriticalSection * create_critical_section();
+
 }

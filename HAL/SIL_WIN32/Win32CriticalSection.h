@@ -20,7 +20,7 @@ namespace SIL_WIN32
 
 		// return true if the critical section is successfully entered or current thread already owns the critical section
 		// return false if another thread already owns the critical section.
-		bool try_enter(){return TryEnterCriticalSection(&cs);}
+		bool try_enter(){return (bool)TryEnterCriticalSection(&cs);}
 	protected:
 		CRITICAL_SECTION cs;
 	};

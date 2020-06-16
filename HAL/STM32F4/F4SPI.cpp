@@ -171,7 +171,7 @@ namespace STM32F4
 			while (!(SPIx->SR & SPI_I2S_FLAG_TXE));
 			SPIx->DR = tx[i];
 			while (!(SPIx->SR & SPI_I2S_FLAG_RXNE));
-			rx[i] = SPIx->DR;
+			if (rx) rx[i] = SPIx->DR;
 		}
 	}
 }

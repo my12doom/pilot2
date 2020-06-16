@@ -200,9 +200,9 @@ int NX3A::read_status()
 	int status;
 
 	FAIL_RET(i2c->start());
-	FAIL_RET(i2c->txrx(address | 0x1));
+	FAIL_RET(i2c->tx(address | 0x1));
 	FAIL_RET(i2c->wait_ack());
-	status=i2c->txrx();
+	status=i2c->rx();
 	FAIL_RET(i2c->send_nak());
 fail:
 	i2c->stop();
@@ -214,22 +214,22 @@ int NX3A::read_nvm(uint8_t nvm_address, uint16_t *out)
 	uint8_t status;
 
 	FAIL_RET(i2c->start());
-	FAIL_RET(i2c->txrx(address));
+	FAIL_RET(i2c->tx(address));
 	FAIL_RET(i2c->wait_ack());
-	i2c->txrx(nvm_address);
+	i2c->rx();
 	FAIL_RET(i2c->wait_ack());
 	FAIL_RET(i2c->stop());
 
 	systimer->delayus(85);
 
 	FAIL_RET(i2c->start());
-	FAIL_RET(i2c->txrx(address | 0x1));
+	FAIL_RET(i2c->tx(address | 0x1));
 	FAIL_RET(i2c->wait_ack());
-	status =i2c->txrx();
+	status =i2c->rx();
 	FAIL_RET(i2c->send_ack());
-	out[0] = i2c->txrx() << 8;
+	out[0] = i2c->rx() << 8;
 	FAIL_RET(i2c->send_ack());
-	out[0] |= i2c->txrx();
+	out[0] |= i2c->rx();
 	FAIL_RET(i2c->send_nak());
 fail:
 	i2c->stop();
@@ -240,13 +240,13 @@ fail:
 int NX3A::write_command(uint8_t cmd, uint16_t cmd_data)
 {
 	FAIL_RET(i2c->start());
-	FAIL_RET(i2c->txrx(address));
+	FAIL_RET(i2c->tx(address));
 	FAIL_RET(i2c->wait_ack());
-	i2c->txrx(cmd);
+	i2c->tx(cmd);
 	FAIL_RET(i2c->wait_ack());
-	i2c->txrx(cmd_data >> 8);
+	i2c->tx(cmd_data >> 8);
 	FAIL_RET(i2c->wait_ack());
-	i2c->txrx(cmd & 0xff);
+	i2c->tx(cmd & 0xff);
 	FAIL_RET(i2c->wait_ack());
 fail:
 	i2c->stop();
@@ -258,21 +258,21 @@ int NX3A::read_measurement_data(int32_t *out)
 	uint8_t status;
 	FAIL_RET(i2c->start());
 
-	FAIL_RET(i2c->txrx(address | 0x1));
+	FAIL_RET(i2c->tx(address | 0x1));
 	FAIL_RET(i2c->wait_ack());
 
-	status =i2c->txrx();
+	status =i2c->rx();
 	FAIL_RET(i2c->send_ack());
 
-	*out |= i2c->txrx();
+	*out |= i2c->rx();
 	*out <<= 8; 
 	FAIL_RET(i2c->send_ack());
 
-	*out |= i2c->txrx();
+	*out |= i2c->rx();
 	*out <<= 8; 
 	FAIL_RET(i2c->send_ack());
 
-	*out |= i2c->txrx();
+	*out |= i2c->rx();
 	FAIL_RET(i2c->send_nak());
 fail:
 	i2c->stop();
