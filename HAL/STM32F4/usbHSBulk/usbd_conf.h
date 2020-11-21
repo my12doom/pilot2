@@ -16,8 +16,8 @@
   *
   *        http://www.st.com/software_license_agreement_liberty_v2
   *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
@@ -34,75 +34,75 @@
 
 /** @defgroup USB_CONF_Exported_Defines
   * @{
-  */ 
-#define USBD_CFG_MAX_NUM                1		// Éè±¸ÅäÖÃµÄÊýÁ¿
+  */
+#define USBD_CFG_MAX_NUM                1		// è®¾å¤‡é…ç½®çš„æ•°é‡
 #define USBD_ITF_MAX_NUM                1		// 
 
-#define USBD_SELF_POWERED               
+#define USBD_SELF_POWERED
 
-#define USB_MAX_STR_DESC_SIZ            255		/*×Ö·û´®ÃèÊö·ûbufferµÄ×î´óÈÝÁ¿*/
+#define USB_MAX_STR_DESC_SIZ            255		/*å­—ç¬¦ä¸²æè¿°ç¬¦bufferçš„æœ€å¤§å®¹é‡*/
 
 /** @defgroup USB_VCP_Class_Layer_Parameter
   * @{
-  */ 
+  */
 #define CDC_IN_EP                       0x81  /* EP1 for data IN */
 #define CDC_OUT_EP                      0x01  /* EP1 for data OUT */
 #define CDC_CMD_EP                      0x82  /* EP2 for CDC commands */
 
 /* CDC Endpoints parameters: you can fine tune these values depending on the needed baudrates and performance. */
 #ifdef USE_USB_OTG_HS
- #define CDC_DATA_MAX_PACKET_SIZE_IN       512  /* Endpoint IN & OUT Packet size */
- #define CDC_DATA_MAX_PACKET_SIZE_OUT       512  /* Endpoint IN & OUT Packet size */
- #define CDC_CMD_PACKET_SZE             8    /* Control Endpoint Packet size */
- // ¸Ä¶¯CDC_IN_FRAME_INTERVALµÄ²âÊÔ½á¹û(Ò»´Î´«Êä256KBytes):0-spd=2.0~2.1MB/s(wrong)  1-2.5-2.8MB/s(correct)  2-3.0~3.2MB/s(wrong)  3-2.2~2.3MB/s(wrong)
- #define CDC_IN_FRAME_INTERVAL          1   /* Number of micro-frames between IN transfers */			// Ô­À´ÊÇ40
- #define APP_RX_DATA_SIZE               8192/*2048*/ /* Total size of IN buffer: 
-                                                APP_RX_DATA_SIZE*8/MAX_BAUDARATE*1000 should be > CDC_IN_FRAME_INTERVAL*8 */
- #define BULK_ONLY_PACKET_SIZE			8192													
+#define CDC_DATA_MAX_PACKET_SIZE_IN       512  /* Endpoint IN & OUT Packet size */
+#define CDC_DATA_MAX_PACKET_SIZE_OUT       512  /* Endpoint IN & OUT Packet size */
+#define CDC_CMD_PACKET_SZE             8    /* Control Endpoint Packet size */
+// æ”¹åŠ¨CDC_IN_FRAME_INTERVALçš„æµ‹è¯•ç»“æžœ(ä¸€æ¬¡ä¼ è¾“256KBytes):0-spd=2.0~2.1MB/s(wrong)  1-2.5-2.8MB/s(correct)  2-3.0~3.2MB/s(wrong)  3-2.2~2.3MB/s(wrong)
+#define CDC_IN_FRAME_INTERVAL          1   /* Number of micro-frames between IN transfers */			// åŽŸæ¥æ˜¯40
+#define APP_RX_DATA_SIZE               8192/*2048*/ /* Total size of IN buffer: 
+APP_RX_DATA_SIZE*8/MAX_BAUDARATE*1000 should be > CDC_IN_FRAME_INTERVAL*8 */
+#define BULK_ONLY_PACKET_SIZE			8192
 #else
 // #define CDC_DATA_MAX_PACKET_SIZE       64   /* Endpoint IN & OUT Packet size */
- #define CDC_DATA_MAX_PACKET_SIZE_IN       512   /* Endpoint IN & OUT Packet size */
- #define CDC_DATA_MAX_PACKET_SIZE_OUT       1024   /* Endpoint IN & OUT Packet size */
- #define CDC_CMD_PACKET_SZE             8    /* Control Endpoint Packet size */
+#define CDC_DATA_MAX_PACKET_SIZE_IN       512   /* Endpoint IN & OUT Packet size */
+#define CDC_DATA_MAX_PACKET_SIZE_OUT       1024   /* Endpoint IN & OUT Packet size */
+#define CDC_CMD_PACKET_SZE             8    /* Control Endpoint Packet size */
 
- #define CDC_IN_FRAME_INTERVAL          5    /* Number of frames between IN transfers */
- #define APP_RX_DATA_SIZE               2048 /* Total size of IN buffer: 
-                                                APP_RX_DATA_SIZE*8/MAX_BAUDARATE*1000 should be > CDC_IN_FRAME_INTERVAL */
+#define CDC_IN_FRAME_INTERVAL          5    /* Number of frames between IN transfers */
+#define APP_RX_DATA_SIZE               2048 /* Total size of IN buffer: 
+APP_RX_DATA_SIZE*8/MAX_BAUDARATE*1000 should be > CDC_IN_FRAME_INTERVAL */
 #endif /* USE_USB_OTG_HS */
 
 #define APP_FOPS                        VCP_fops
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup USB_CONF_Exported_Types
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 
 
 /** @defgroup USB_CONF_Exported_Macros
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup USB_CONF_Exported_Variables
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup USB_CONF_Exported_FunctionsPrototype
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 
 
 #endif //__USBD_CONF__H__
