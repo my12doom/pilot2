@@ -31,6 +31,7 @@
 #include "usbd_ioreq.h"
 #include "usb_dcd_int.h"
 #include "usb_bsp.h"
+#include "../F4HSBulk.h"
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
 * @{
@@ -123,7 +124,7 @@ USBD_DCD_INT_cb_TypeDef  *USBD_DCD_INT_fops = &USBD_DCD_INT_cb;
 */ 
 
 /**
-* @brief  USBD_Init			// ³õÊ¼»¯Éè±¸¿â£¬¼ÓÔØÀàÇý¶¯ºÍÓÃ»§»Øµ÷º¯Êý
+* @brief  USBD_Init			// åˆå§‹åŒ–è®¾å¤‡åº“ï¼ŒåŠ è½½ç±»é©±åŠ¨å’Œç”¨æˆ·å›žè°ƒå‡½æ•°
 *         Initailizes the device stack and load the class driver
 * @param  pdev: device instance
 * @param  core_address: USB OTG core ID
@@ -131,16 +132,16 @@ USBD_DCD_INT_cb_TypeDef  *USBD_DCD_INT_fops = &USBD_DCD_INT_cb;
 * @param  usr_cb: User callback structure address
 * @retval None
 */
-void USBD_Init(USB_OTG_CORE_HANDLE *pdev,			// ÊµÀý¾ä±ú
-               USB_OTG_CORE_ID_TypeDef coreID,		// FS»òÕßHSµÄID, HS=0
-               USBD_DEVICE *pDevice,                // &USR_desc  ¶¨ÒåÓÚusbd_desc.c£¬ÓÃÓÚ¼ÓÔØ¸÷ÖÖÃèÊö·û
-               USBD_Class_cb_TypeDef *class_cb, 	// &USBD_CDC_cb ¶¨ÒåÓÚusbd_cdc_core.c  CDCÀà»Øµ÷º¯Êý
-               USBD_Usr_cb_TypeDef *usr_cb)			// &USR_cb ¶¨ÒåÓÚusbd_usr.c£¬ÓÃ»§»Øµ÷º¯Êý
+void USBD_Init(USB_OTG_CORE_HANDLE *pdev,			// å®žä¾‹å¥æŸ„
+               USB_OTG_CORE_ID_TypeDef coreID,		// FSæˆ–è€…HSçš„ID, HS=0
+               USBD_DEVICE *pDevice,                // &USR_desc  å®šä¹‰äºŽusbd_desc.cï¼Œç”¨äºŽåŠ è½½å„ç§æè¿°ç¬¦
+               USBD_Class_cb_TypeDef *class_cb, 	// &USBD_CDC_cb å®šä¹‰äºŽusbd_cdc_core.c  CDCç±»å›žè°ƒå‡½æ•°
+               USBD_Usr_cb_TypeDef *usr_cb)			// &USR_cb å®šä¹‰äºŽusbd_usr.cï¼Œç”¨æˆ·å›žè°ƒå‡½æ•°
 {
   /* Hardware Init */
-  USB_OTG_BSP_Init(pdev);  					// ¶¨ÒåÓÚusb_bsp.c ÓÃÓÚ³õÊ¼»¯IO¿Ú
+  USB_OTG_BSP_Init(pdev);  					// å®šä¹‰äºŽusb_bsp.c ç”¨äºŽåˆå§‹åŒ–IOå£
   
-  USBD_DeInit(pdev);						// »Ö¸´Ä¬ÈÏµÄUSBÉèÖÃ
+  USBD_DeInit(pdev);						// æ¢å¤é»˜è®¤çš„USBè®¾ç½®
   
   /*Register class and user callbacks */
   pdev->dev.class_cb = class_cb;
@@ -148,13 +149,13 @@ void USBD_Init(USB_OTG_CORE_HANDLE *pdev,			// ÊµÀý¾ä±ú
   pdev->dev.usr_device = pDevice;    
   
   /* set USB OTG core params */
-  DCD_Init(pdev , coreID);					// ¶¨ÒåÓÚusb_dcd.c ³õÊ¼»¯¼Ä´æÆ÷µØÖ·£¬¶Ëµã£¬ÄÚºË£¬Éè±¸Ä£Ê½µÈ
+  DCD_Init(pdev , coreID);					// å®šä¹‰äºŽusb_dcd.c åˆå§‹åŒ–å¯„å­˜å™¨åœ°å€ï¼Œç«¯ç‚¹ï¼Œå†…æ ¸ï¼Œè®¾å¤‡æ¨¡å¼ç­‰
   
   /* Upon Init call usr callback */
-  pdev->dev.usr_cb->Init();					// µ÷ÓÃusbd_usr.cµÄinitº¯Êý³õÊ¼»¯ÓÃ»§´úÂë
+  pdev->dev.usr_cb->Init();					// è°ƒç”¨usbd_usr.cçš„initå‡½æ•°åˆå§‹åŒ–ç”¨æˆ·ä»£ç 
   
   /* Enable Interrupts */
-  USB_OTG_BSP_EnableInterrupt(pdev);		// µ÷ÓÃusb_bsp.cµÄÖÐ¶ÏNVICÅäÖÃÀ´Ê¹ÄÜÖÐ¶Ï
+  USB_OTG_BSP_EnableInterrupt(pdev);		// è°ƒç”¨usb_bsp.cçš„ä¸­æ–­NVICé…ç½®æ¥ä½¿èƒ½ä¸­æ–­
 }
 
 /**
@@ -170,6 +171,9 @@ USBD_Status USBD_DeInit(USB_OTG_CORE_HANDLE *pdev)
   return USBD_OK;
 }
 
+
+uint8_t ctl_rx_buf[64];
+USB_SETUP_REQ ctl_out_req;
 /**
 * @brief  USBD_SetupStage 
 *         Handle the setup stage
@@ -183,15 +187,15 @@ static uint8_t USBD_SetupStage(USB_OTG_CORE_HANDLE *pdev)
   USBD_ParseSetupRequest(pdev , &req);
 	
 	/* bmRequestType 
-	D7:Êý¾Ý´«Êä·½Ïò
+	D7:æ•°æ®ä¼ è¾“æ–¹å‘
 		0:host->device
 		1:device->host
-	D6~5:ÇëÇóµÄÀàÐÍ
+	D6~5:è¯·æ±‚çš„ç±»åž‹
 		0:standard
 		1:class
 		2:vendor
 		3:reserved
-	D4~0:ÇëÇóµÄ½ÓÊÜÕß
+	D4~0:è¯·æ±‚çš„æŽ¥å—è€…
 		0:device
 		1:interface
 		2:endpoint
@@ -201,10 +205,46 @@ static uint8_t USBD_SetupStage(USB_OTG_CORE_HANDLE *pdev)
   
   // TODO: vendor!
   
-  switch (req.bmRequest & 0x1F) 	// Ö»ÅÐ¶ÏD4~0
+  printf("**bmRequest %02x**, length %d\n", req.bmRequest, req.wLength);
+  
+  if ((req.bmRequest&0x7f) == 0x40)		// Vendor request
+  {
+		if (req.bmRequest&0x80)
+	  	{
+			// "IN" request
+			/*
+			if (req.wLength)
+			USBD_CtlSendData (pdev, ctl_rx_buf, req.wLength);
+			else
+			USBD_CtlReceiveStatus(pdev);
+			*/
+
+			printf("vendor IN request, %d bytes max\n", req.wLength);
+
+			control_verndor_transfer t  = 
+			{
+				1, req.bmRequest&0x7f, req.bRequest, req.wValue, req.wIndex, req.wLength
+			};
+
+			F4cb(control_IN, &t, sizeof(t));
+		}
+		else
+		{
+			printf("vendor OUT request, %d bytes\n", req.wLength);
+
+			ctl_out_req = req;
+			if (req.wLength)
+				USBD_CtlPrepareRx(pdev, ctl_rx_buf, req.wLength);
+			else
+				USBD_CtlSendStatus(pdev);
+		}
+		return USBD_OK;
+  }
+  
+  switch (req.bmRequest & 0x1F) 	// åªåˆ¤æ–­D4~0
   {
   case USB_REQ_RECIPIENT_DEVICE:   
-    USBD_StdDevReq (pdev, &req);		// Õâ¼¸¸öº¯Êý¶¼ÔÚusbd_req.cÖÐ
+    USBD_StdDevReq (pdev, &req);		// è¿™å‡ ä¸ªå‡½æ•°éƒ½åœ¨usbd_req.cä¸­
     break;
     
   case USB_REQ_RECIPIENT_INTERFACE:     
@@ -216,7 +256,7 @@ static uint8_t USBD_SetupStage(USB_OTG_CORE_HANDLE *pdev)
     break;
     
   default:           
-    DCD_EP_Stall(pdev , req.bmRequest & 0x80);		// usb_dcd.cÖÐ
+    DCD_EP_Stall(pdev , req.bmRequest & 0x80);		// usb_dcd.cä¸­
     break;
   }  
   return USBD_OK;
@@ -233,12 +273,12 @@ static uint8_t USBD_DataOutStage(USB_OTG_CORE_HANDLE *pdev , uint8_t epnum)
 {
   USB_OTG_EP *ep;
   
-  if(epnum == 0) 		// Èç¹ûÊÇ¶Ëµã0
+  if(epnum == 0) 		// å¦‚æžœæ˜¯ç«¯ç‚¹0
   {
     ep = &pdev->dev.out_ep[0];
     if ( pdev->dev.device_state == USB_OTG_EP0_DATA_OUT)
     {
-      if(ep->rem_data_len > ep->maxpacket)		// Èç¹û¶Ëµã´ý·¢ËÍµÄÊý¾Ý³¤¶È´óÓÚ¶Ëµã×î´ó³¤¶È£¬ÄÇÃ´·ÖÁ½´ÎÒÔÉÏ·¢ËÍ£¬²¢¸Ä±äep½á¹¹ÌåÏà¹ØµÄÖµ
+      if(ep->rem_data_len > ep->maxpacket)		// å¦‚æžœç«¯ç‚¹å¾…å‘é€çš„æ•°æ®é•¿åº¦å¤§äºŽç«¯ç‚¹æœ€å¤§é•¿åº¦ï¼Œé‚£ä¹ˆåˆ†ä¸¤æ¬¡ä»¥ä¸Šå‘é€ï¼Œå¹¶æ”¹å˜epç»“æž„ä½“ç›¸å…³çš„å€¼
       {
         ep->rem_data_len -=  ep->maxpacket;
         
@@ -252,16 +292,27 @@ static uint8_t USBD_DataOutStage(USB_OTG_CORE_HANDLE *pdev , uint8_t epnum)
                             MIN(ep->rem_data_len ,ep->maxpacket));
       }
       else
-      {	// µ÷ÓÃusbd_class_core.cÖÐµÄxxx_EP0_RxReady(xxx)º¯Êý
+      {	// è°ƒç”¨usbd_class_core.cä¸­çš„xxx_EP0_RxReady(xxx)å‡½æ•°
         if((pdev->dev.class_cb->EP0_RxReady != NULL)&&
            (pdev->dev.device_status == USB_OTG_CONFIGURED))
         {
-          pdev->dev.class_cb->EP0_RxReady(pdev); 		// µ÷ÓÃÀ´×öÊ²Ã´?
+          pdev->dev.class_cb->EP0_RxReady(pdev); 		// è°ƒç”¨æ¥åšä»€ä¹ˆ?
+
+		  int data_count = USBD_GetRxCount(pdev, 0);
+  
+		  printf("CTRL_RX:%d bytes, req=%d, index=%d, value=%d\n", data_count, ctl_out_req.bRequest, ctl_out_req.wIndex, ctl_out_req.wValue);
+			control_verndor_transfer t = 
+			{
+				0, ctl_out_req.bmRequest & 0x7f, ctl_out_req.bRequest, ctl_out_req.wValue, ctl_out_req.wIndex, 
+				data_count, ctl_rx_buf
+			};
+
+			F4cb(control_OUT, &t, sizeof(t));
         }
         USBD_CtlSendStatus(pdev);
       }
     }
-  }	// Èç¹û²»ÊÇ¶Ëµã0£¬ÄÇÃ´Ö±½Óµ÷ÓÃÀà»Øµ÷º¯ÊýµÄDataOutº¯Êý
+  }	// å¦‚æžœä¸æ˜¯ç«¯ç‚¹0ï¼Œé‚£ä¹ˆç›´æŽ¥è°ƒç”¨ç±»å›žè°ƒå‡½æ•°çš„DataOutå‡½æ•°
   else if((pdev->dev.class_cb->DataOut != NULL)&&
           (pdev->dev.device_status == USB_OTG_CONFIGURED))
   {

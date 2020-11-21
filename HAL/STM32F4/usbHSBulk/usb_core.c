@@ -226,9 +226,9 @@ USB_OTG_STS USB_OTG_SelectCore(USB_OTG_CORE_HANDLE *pdev,
   
   pdev->cfg.dma_enable       = 0;
   
-  /* at startup the core is in FS mode */		// Æô¶¯Ê±£¬USBºË´¦ÓÚÈ«ËÙ×´Ì¬
-  pdev->cfg.speed            = USB_OTG_SPEED_FULL;		// ÔÚusb_defines.hÖÐ¶¨ÒåÎª1£¬HSÎª0
-  pdev->cfg.mps              = USB_OTG_FS_MAX_PACKET_SIZE ;    	// ÔÚusb_regs.hÖÐ¶¨ÒåÎª64bytes£¬¸ßËÙÎª512bytes
+  /* at startup the core is in FS mode */		// å¯åŠ¨æ—¶ï¼ŒUSBæ ¸å¤„äºŽå…¨é€ŸçŠ¶æ€
+  pdev->cfg.speed            = USB_OTG_SPEED_FULL;		// åœ¨usb_defines.hä¸­å®šä¹‰ä¸º1ï¼ŒHSä¸º0
+  pdev->cfg.mps              = USB_OTG_FS_MAX_PACKET_SIZE ;    	// åœ¨usb_regs.hä¸­å®šä¹‰ä¸º64bytesï¼Œé«˜é€Ÿä¸º512bytes
   
   /* initialize device cfg following its address */
   if (coreID == USB_OTG_FS_CORE_ID)
@@ -250,10 +250,10 @@ USB_OTG_STS USB_OTG_SelectCore(USB_OTG_CORE_HANDLE *pdev,
   }
   else if (coreID == USB_OTG_HS_CORE_ID)
   {
-    baseAddress                = USB_OTG_HS_BASE_ADDR;		// ÔÚusb_regs.hÖÐ¶¨ÒåÎª£º0x40040000
+    baseAddress                = USB_OTG_HS_BASE_ADDR;		// åœ¨usb_regs.hä¸­å®šä¹‰ä¸ºï¼š0x40040000
     pdev->cfg.coreID           = USB_OTG_HS_CORE_ID;    
-    pdev->cfg.host_channels    = 12 ;						// 12¸öpipe£¬Ã¿¸öEPÓÐ½øÓÐ³ö?
-    pdev->cfg.dev_endpoints    = 6 ;						// ¸ßËÙÄ£Ê½ÓÐ6¸öEP
+    pdev->cfg.host_channels    = 12 ;						// 12ä¸ªpipeï¼Œæ¯ä¸ªEPæœ‰è¿›æœ‰å‡º?
+    pdev->cfg.dev_endpoints    = 6 ;						// é«˜é€Ÿæ¨¡å¼æœ‰6ä¸ªEP
     pdev->cfg.TotalFifoSize    = 1280;/* in 32-bits */		
     
 #ifdef USB_OTG_ULPI_PHY_ENABLED
@@ -277,12 +277,12 @@ USB_OTG_STS USB_OTG_SelectCore(USB_OTG_CORE_HANDLE *pdev,
 #endif 
     
   }
-  // È«ËÙ¼Ä´æÆ÷ÔÚAHB2Ê±ÖÓÇøÓòÊµÏÖ£¬¸ßËÙÔÚAHB1ÊµÏÖ
-  // ¸ßËÙÇë²Î¿¼reference manualµÄpage1085
-  /* ÕâÀïÆäÊµÊÇ¶¨ÒåÁËCore global CSRs¼Ä´æÆ÷×éµÄ»ùÖ· */
+  // å…¨é€Ÿå¯„å­˜å™¨åœ¨AHB2æ—¶é’ŸåŒºåŸŸå®žçŽ°ï¼Œé«˜é€Ÿåœ¨AHB1å®žçŽ°
+  // é«˜é€Ÿè¯·å‚è€ƒreference manualçš„page1085
+  /* è¿™é‡Œå…¶å®žæ˜¯å®šä¹‰äº†Core global CSRså¯„å­˜å™¨ç»„çš„åŸºå€ */
   pdev->regs.GREGS = (USB_OTG_GREGS *)(baseAddress + \
-    USB_OTG_CORE_GLOBAL_REGS_OFFSET);		// ÔÚusb_regs.h¶¨ÒåÎª0x000
-  /* ÕâÀïÆäÊµÊÇ¶¨ÒåÁËDevice mode CSRs¼Ä´æÆ÷×éµÄ»ùÖ· */
+    USB_OTG_CORE_GLOBAL_REGS_OFFSET);		// åœ¨usb_regs.hå®šä¹‰ä¸º0x000
+  /* è¿™é‡Œå…¶å®žæ˜¯å®šä¹‰äº†Device mode CSRså¯„å­˜å™¨ç»„çš„åŸºå€ */
   pdev->regs.DREGS =  (USB_OTG_DREGS  *)  (baseAddress + \
     USB_OTG_DEV_GLOBAL_REG_OFFSET);			// USB_OTG_DEV_GLOBAL_REG_OFFSET-0x800
   
