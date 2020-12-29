@@ -159,11 +159,11 @@ int ADXL357::read(devices::accelerometer_data *out)
 	spi->set_mode(0, 0);
 
 	uint8_t data[11];
-	read_reg(0x08, data, 9);
+	read_reg(0x06, data, 11);
 
 	int16_t data16[3];
 	for(int i=0; i<3; i++)
-		data16[i] = (data[3*i] << 8) | data[1+3*i];
+		data16[i] = (data[2+3*i] << 8) | data[3+3*i];
 
 	out->x = data16[0] * negtive[0] * G_in_ms2 / 800.0f;
 	out->y = data16[1] * negtive[1] * G_in_ms2 / 800.0f;

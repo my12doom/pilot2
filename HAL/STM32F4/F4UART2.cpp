@@ -349,7 +349,7 @@ namespace STM32F4
 		NVIC_EnableIRQ(tx_dma_irqn);
 
 		// has enough free buffer space ? 
-		if (count < tx_buffer_size - old_size)
+		if (count < tx_buffer_size - old_size - 1)
 		{
 			// append to tx buffer
 			for(i=0; i<count; i++)

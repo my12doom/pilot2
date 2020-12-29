@@ -187,6 +187,7 @@ int MPU6000::init()
 	if (who_am_i != 0x68 && who_am_i != 0x71 && who_am_i != 0x12)
 		return -1;
 
+	chip_id = who_am_i;
 	
 	gyro_axis_config(0, 1, 2, 1, 1, 1);
 	accelerometer_axis_config(0, 1, 2, 1, 1, 1);
@@ -275,7 +276,11 @@ int MPU6000::read(devices::accelerometer_data *out)
 	out->x = data[axis[0]] * negtive[0] * G_in_ms2 / 2048.0f;
 	out->y = data[axis[1]] * negtive[1] * G_in_ms2 / 2048.0f;
 	out->z = data[axis[2]] * negtive[2] * G_in_ms2 / 2048.0f;
-	out->temperature = data[3] / 340.0f + 36.53f;
+	if (chip_id == 0x12)
+		out->temperature = data[3] / 326.8f + 25.0f;
+	else
+		out->temperature = data[3] / 340.0f + 36.53f;
+
 	
 	return 0;
 }
@@ -288,7 +293,10 @@ int MPU6000::read(devices::gyro_data *out)
 	out->x = data[axis[3]] * negtive[3] * 0.00106530f;		// to radians
 	out->y = data[axis[4]] * negtive[4] * 0.00106530f;
 	out->z = data[axis[5]] * negtive[5] * 0.00106530f;
-	out->temperature = data[3] / 340.0f + 36.53f;
+	if (chip_id == 0x12)
+		out->temperature = data[3] / 326.8f + 25.0f;
+	else
+		out->temperature = data[3] / 340.0f + 36.53f;
 	
 	return 0;
 }

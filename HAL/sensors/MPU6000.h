@@ -47,5 +47,6 @@ namespace sensors
 		int axis[6];
 		int negtive[6];
 		short data[7];
+		uint8_t chip_id;
 	};
 }
