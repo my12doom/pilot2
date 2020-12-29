@@ -47,6 +47,16 @@ int F4HSBulk::ioctl(int op, void *p, int size)
 		rx_buf = p;
 		DCD_EP_PrepareRx(&USB_OTG_dev, CDC_OUT_EP, (uint8_t*)p, size);
 	}
+
+	else if (op == tx_ctrl_block)
+	{
+		if (size > 0)
+			USBD_CtlSendData (&USB_OTG_dev, (uint8_t*)p, size);
+		else
+			USBD_CtlReceiveStatus(&USB_OTG_dev);
+
+		return 0;
+	}
 	
 	return HAL::error_unsupported;
 }
