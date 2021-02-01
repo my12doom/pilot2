@@ -21,3 +21,10 @@ HAL::IUART *uart = NULL;
 WEAK void select_ant(uint32_t *randomizer, bool tx)
 {
 }
+
+WEAK void read_keys(uint8_t* key, int max_keys)
+{
+}
+WEAK void custom_output(uint8_t * payload, int payload_size, int latency)
+{
+}

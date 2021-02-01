@@ -78,8 +78,12 @@ static int iabs(int a)
 	return a>0?a:-a;
 }
 
+int16_t channel_data[6];
+int16_t channel_data_o[6];
+
 void process_channels(int16_t *data, int count)
 {
+	memcpy(channel_data, data, count*2);
 	for(int i=0; i<count; i++)
 	{
 		int16_t d = data[i];
@@ -104,6 +108,8 @@ void process_channels(int16_t *data, int count)
 		
 		data[i] = d;
 	}
+	memcpy(channel_data_o, data, count*2);
+	
 }
 
 void timer_entry(void *p)
@@ -117,10 +123,13 @@ void timer_entry(void *p)
 	//channel = hoop_id%100;
 	nrf.rf_off();
 	nrf.write_reg(5, channel);
+	
+	//if (channel < 10)
 	if (1)
 	{		
 		read_channels((int16_t*)(data+2), 6);
 		process_channels((int16_t*)(data+2), 6);
+		read_keys(data+14, 8);
 		
 		*(uint16_t*)(data+30) = crc32(0, data, 30);
 		
@@ -192,6 +201,7 @@ int binding_loop()
 						dbg2->write(true);
 						
 						memcpy(&seed, payload->key, 8);
+						seed ^= board_get_seed();
 						space_write("seed", 4, &seed, 8, NULL);
 
 						return 0;
@@ -206,10 +216,11 @@ int binding_loop()
 			}
 		}
 		
-		if (vibrator)
-			vibrator->write(false);
 	}
 
+	if (vibrator)
+		vibrator->write(false);
+	
 	return -1;
 }
 
@@ -258,7 +269,6 @@ int carrier_test()
 int main()
 {
 	space_init();	
-	board_init();
 	space_read("seed", 4, &seed, 8, NULL);
 	if (space_read("conf", 4, &config, sizeof(config), NULL) < 0)
 	{
@@ -272,27 +282,19 @@ int main()
 			config[i].dead_band = 0;
 		}
 
-		config[0].middle = 2157;
-		config[1].middle = 2034;
-		config[2].middle = 2174;
-		config[3].middle = 2137;
-
-		config[0]._min = 327;
-		config[1]._min = 100;
-		config[2]._min = 238;
-		config[3]._min = 318;
-
-		config[0]._max = 3946;
-		config[1]._max = 3948;
-		config[2]._max = 3975;
-		config[3]._max = 4036;
-
-		//space_write("conf", 4, &config, sizeof(config), NULL);
+		space_write("conf", 4, &config, sizeof(config), NULL);
 	}
+
+	// don't do flash erasure after board init
+	// may corrupt adc dma transfer 
+	board_init();
+	
+	// read config again, if board modified
+	space_read("conf", 4, &config, sizeof(config), NULL);
 	
 	irq->set_mode(MODE_IN);
 	dbg->set_mode(MODE_OUT_PushPull);
-	dbg->write(false);
+	dbg->write(false); 
 	dbg2->set_mode(MODE_OUT_PushPull);
 	dbg2->write(true);
 	

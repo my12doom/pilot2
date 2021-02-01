@@ -62,7 +62,17 @@ int hoop_to(int next_hoop_id)
 	
 	nrf.write_reg(RF_CH, channel);
 	
-	nrf.rf_on(true);
+	//if (channel < 10)
+	if (1)
+	{	
+		nrf.rf_on(true);
+	}
+	else
+	{
+		uint8_t pkt[32] = "HelloWorld";
+		nrf.write_tx(pkt, 32);
+		nrf.rf_on(false);		
+	}
 	
 	return 0;
 }
@@ -85,7 +95,9 @@ void nrf_irq_entry(void *parameter, int flags)
 		
 		aes.decrypt(data, data);
 		aes.decrypt(data+16, data+16);
-		if ((uint16_t)crc32(0, data, 30) != *(uint16_t*)(data+30))
+		uint16_t crc_calc = crc32(0, data, 30);
+
+		if (crc_calc != *(uint16_t*)(data+30))
 			continue;
 		
 		dbg->write(false);
@@ -172,7 +184,11 @@ int binding_loop()
 			// tx channel data ?
 			else
 			{
-				tx_channel_data ++ ;
+				aes.decrypt(data, data);
+				aes.decrypt(data+16, data+16);
+				uint16_t crc_calc = crc32(0, data, 30);
+				if (crc_calc == *(uint16_t*)(data+30))
+					tx_channel_data ++ ;
 			}
 		}
 		
@@ -189,7 +205,8 @@ int binding_loop()
 			binding_pkt pkt = {{'B','D'}, 0, 0};
 			binding_info_v0 *payload = (binding_info_v0 *)pkt.payload;
 			payload->cmd = cmd_ack_binding;
-			memcpy(payload->key, &seed, 8);
+			uint64_t ack_seed = board_get_seed();
+			memcpy(payload->key, &ack_seed, 8);
 			pkt.crc = crc32(0, ((uint8_t*)&pkt)+3, 29);
 			
 			nrf.rf_off();
@@ -261,10 +278,12 @@ int main()
 	//carrier_test();
 	if (SCL && SDA)
 		oled.show_str(0, 0, "binding ...");
-	binding_loop();
-	nrf.rf_off();
 	uint64_t key4[4] = {seed, seed, seed, seed};
 	aes.set_key((uint8_t*)key4, 256);
+	binding_loop();
+	uint64_t key4after[4] = {seed, seed, seed, seed};
+	aes.set_key((uint8_t*)key4after, 256);
+	nrf.rf_off();
 	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
 	nrf.enable_rx_address(0, true);
 	nrf.write_reg(RF_CH, 95);
@@ -285,6 +304,8 @@ int main()
 	int lp = 0;
 	while(1)
 	{
+		custom_output(valid_data+2, 28, systimer->gettime() - last_valid_packet);
+		
 		if (ppm)
 		{
 			static int64_t last_out = systimer->gettime();
