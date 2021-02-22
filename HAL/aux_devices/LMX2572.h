@@ -28,4 +28,5 @@ protected:
 
 	uint32_t pfd_freq;
 	uint16_t regs[126];
+	uint64_t last_vco_sel_freq;
 };

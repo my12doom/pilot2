@@ -100,7 +100,7 @@ int ADF4351::set_freq(uint64_t freq)
 	}
 
 	reg0.N_INT = vco_freq/pfd_freq;
-	reg0.N_FRAC = (vco_freq - reg0.N_INT * pfd_freq) * 0xfff / pfd_freq;
+	reg0.N_FRAC = (vco_freq - (uint64_t)reg0.N_INT * pfd_freq) * 0xfff / pfd_freq;
 
 	write_reg(4, reg4);
 	write_reg(0, reg0);

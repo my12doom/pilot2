@@ -81,6 +81,24 @@ extern "C" void EXTI9_5_IRQHandler(void)
 	}
 }
 
+extern "C" void EXTI4_IRQHandler(void)
+{
+	if (EXTI_GetITStatus(EXTI_Line4) != RESET)
+	{
+		if (int_table[4])
+			int_table[4]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line4);
+	}
+}
+extern "C" void EXTI3_IRQHandler(void)
+{
+	if (EXTI_GetITStatus(EXTI_Line3) != RESET)
+	{
+		if (int_table[3])
+			int_table[3]->call_callback();
+		EXTI_ClearITPendingBit(EXTI_Line3);
+	}
+}
 extern "C" void EXTI2_IRQHandler(void)
 {
 	if (EXTI_GetITStatus(EXTI_Line2) != RESET)
@@ -201,7 +219,7 @@ namespace STM32F4
 		GPIO_InitTypeDef GPIO_InitStructure = {0};
 		GPIO_InitStructure.GPIO_Pin = GPIO_Pin;
 		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+		GPIO_InitStructure.GPIO_PuPd = flag == interrupt_rising ? GPIO_PuPd_DOWN : GPIO_PuPd_UP;
 		GPIO_Init(GPIOx, &GPIO_InitStructure);
 
 		// configure exti

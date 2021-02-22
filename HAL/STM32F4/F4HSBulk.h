@@ -22,8 +22,8 @@ enum F4HSBulk_Event
 
 typedef struct
 {
-	uint8_t request_dir: 1;	// true: IN request, false : OUT request
-	uint8_t request_type : 7;
+	uint8_t dir: 1;	// true: IN request, false : OUT request
+	uint8_t type : 7;
 	uint8_t request;
 	uint16_t value;
 	uint16_t index;

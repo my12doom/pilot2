@@ -2,6 +2,8 @@
 #include "LMX2572_default.h"
 #include <string.h>
 
+#define VCO_CAL_THRESHOLD 25000000
+
 LMX2572::LMX2572()
 {
 
@@ -14,6 +16,7 @@ int LMX2572::init(HAL::ISPI *spi, HAL::IGPIO *cs)
 {
 	this->spi = spi;
 	this->cs = cs;
+	last_vco_sel_freq = 0;
 
 	if (!cs || !spi)
 		return -1;
@@ -103,7 +106,19 @@ int LMX2572::set_freq(uint64_t freq)
 	// strange divider table of R75
 	int divider_tbl[9] = {0, 0, 1, 3, 5, 7, 9, 12, 14};
 	regs[75] = 0x0800 | (divider_tbl[div]<<6);
+	
+	int freq_delta = last_vco_sel_freq > freq ? last_vco_sel_freq - freq : freq - last_vco_sel_freq;
+	if (freq_delta > VCO_CAL_THRESHOLD)
+	{
+		last_vco_sel_freq = freq;
+		regs[78] &= ~0x200;
+	}
+	else
+	{
+		regs[78] |= 0x200;
+	}
 
+	write_reg(78, regs[78]);
 	write_reg(75, regs[75]);
 	write_reg(45, regs[45]);
 	write_reg(39, regs[39]);
@@ -120,7 +135,7 @@ int LMX2572::set_freq(uint64_t freq)
 bool LMX2572::is_locked()
 {
 	uint16_t reg110 = read_reg(110);
-	return ((reg110>>9)&0x3) == 0x02;
+	return ((reg110>>9)&0x3);
 }
 void LMX2572::write_reg(uint8_t address, uint16_t data)
 {

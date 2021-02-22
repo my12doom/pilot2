@@ -172,7 +172,7 @@ USBD_Status USBD_DeInit(USB_OTG_CORE_HANDLE *pdev)
 }
 
 
-uint8_t ctl_rx_buf[64];
+uint8_t ctl_rx_buf[128];
 USB_SETUP_REQ ctl_out_req;
 /**
 * @brief  USBD_SetupStage
@@ -203,24 +203,11 @@ static uint8_t USBD_SetupStage(USB_OTG_CORE_HANDLE *pdev)
 		4~31:reserved
 	*/
 
-	// TODO: vendor!
-
-	printf("**bmRequest %02x**, length %d\n", req.bmRequest, req.wLength);
-
-	if ((req.bmRequest&0x7f) == 0x40)		// Vendor request
+	// Vendor request
+	if ((req.bmRequest&0x7f) == 0x40)
 	{
 		if (req.bmRequest&0x80)
 		{
-			// "IN" request
-			/*
-			if (req.wLength)
-			USBD_CtlSendData (pdev, ctl_rx_buf, req.wLength);
-			else
-			USBD_CtlReceiveStatus(pdev);
-			*/
-
-			printf("vendor IN request, %d bytes max\n", req.wLength);
-
 			control_verndor_transfer t  =
 			{
 				1, req.bmRequest&0x7f, req.bRequest, req.wValue, req.wIndex, req.wLength
@@ -230,13 +217,18 @@ static uint8_t USBD_SetupStage(USB_OTG_CORE_HANDLE *pdev)
 		}
 		else
 		{
-			printf("vendor OUT request, %d bytes\n", req.wLength);
-
 			ctl_out_req = req;
 			if (req.wLength)
 				USBD_CtlPrepareRx(pdev, ctl_rx_buf, req.wLength);
 			else
+			{
 				USBD_CtlSendStatus(pdev);
+				control_verndor_transfer t  =
+				{
+					0, req.bmRequest&0x7f, req.bRequest, req.wValue, req.wIndex, req.wLength
+				};
+				F4cb(control_OUT, &t, sizeof(t));				
+			}
 		}
 		return USBD_OK;
 	}
@@ -300,7 +292,7 @@ static uint8_t USBD_DataOutStage(USB_OTG_CORE_HANDLE *pdev , uint8_t epnum)
 
 					int data_count = USBD_GetRxCount(pdev, 0);
 
-					printf("CTRL_RX:%d bytes, req=%d, index=%d, value=%d\n", data_count, ctl_out_req.bRequest, ctl_out_req.wIndex, ctl_out_req.wValue);
+					//printf("CTRL_RX:%d bytes, req=%d, index=%d, value=%d\n", data_count, ctl_out_req.bRequest, ctl_out_req.wIndex, ctl_out_req.wValue);
 					control_verndor_transfer t =
 					{
 						0, ctl_out_req.bmRequest & 0x7f, ctl_out_req.bRequest, ctl_out_req.wValue, ctl_out_req.wIndex,

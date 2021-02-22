@@ -17,7 +17,7 @@ public:
 	int clear();
 	int on();
 	int off();
-	int show_str(int x, int y, const char *text);
+	int show_str(int x, int y, const char *text, bool invert = false);
 	int draw_bmp(int width, int height, const void *data, int x, int y);
 	int write_pixel(uint8_t data);
 

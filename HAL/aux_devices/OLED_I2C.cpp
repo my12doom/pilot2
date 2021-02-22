@@ -61,16 +61,16 @@ int OLED96::move(int x, int y)
 
 int OLED96::fill(uint8_t color)
 {
-	uint8_t data[128];
-	memset(data, color, 128);
 	unsigned char m,n;
 	for(m=0;m<8;m++)
 	{
 		WriteCmd(0xb0+m);		//page0-page1
 		WriteCmd(0x00);		//low column start address
 		WriteCmd(0x10);		//high column start address
-
-		i2c->write_regs(address, 0x40, data, 128);
+		for(n=0;n<128;n++)
+		{
+			write_pixel(color);
+		}
 	}
 
 
@@ -100,9 +100,10 @@ int OLED96::off()
 	return 0;
 }
 
-int OLED96::show_str(int x, int y, const char *text)
+int OLED96::show_str(int x, int y, const char *text, bool invert/* = false*/)
 {
 	unsigned char c = 0,i = 0,j = 0;
+	unsigned char _xor = invert ? 0xff : 0;
 
 	while(text[j] != '\0')
 	{
@@ -114,7 +115,7 @@ int OLED96::show_str(int x, int y, const char *text)
 		}
 		move(x,y);
 		for(i=0;i<6;i++)
-			write_pixel(F6x8[c][i]);
+			write_pixel(F6x8[c][i]^_xor);
 		x += 6;
 		j++;
 	}
