@@ -378,7 +378,7 @@ namespace STM32F4
 				NVIC_DisableIRQ(tx_dma_irqn);
 				int dma_data_count = tx_end-tx_start < 0 ? tx_end-tx_start + tx_buffer_size : tx_end-tx_start;
 				NVIC_EnableIRQ(tx_dma_irqn);
-				int dma_space_left = tx_buffer_size - dma_data_count - 1;
+				int dma_space_left = tx_buffer_size - dma_data_count - 2;
 				int block_size = count > dma_space_left ? dma_space_left : count;
 
 				int r = write(p, block_size);
