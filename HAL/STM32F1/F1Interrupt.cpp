@@ -57,19 +57,19 @@ extern "C" void EXTI9_5_IRQHandler(void)
 	{
 		if (int_table[5])
 			int_table[5]->call_callback();
-		EXTI_ClearITPendingBit(EXTI_Line8);
+		EXTI_ClearITPendingBit(EXTI_Line5);
 	}
 	if (EXTI_GetITStatus(EXTI_Line6) != RESET)
 	{
 		if (int_table[6])
 			int_table[6]->call_callback();
-		EXTI_ClearITPendingBit(EXTI_Line8);
+		EXTI_ClearITPendingBit(EXTI_Line6);
 	}
 	if (EXTI_GetITStatus(EXTI_Line7) != RESET)
 	{
 		if (int_table[7])
 			int_table[7]->call_callback();
-		EXTI_ClearITPendingBit(EXTI_Line8);
+		EXTI_ClearITPendingBit(EXTI_Line7);
 	}
 	if (EXTI_GetITStatus(EXTI_Line8) != RESET)
 	{
@@ -81,7 +81,7 @@ extern "C" void EXTI9_5_IRQHandler(void)
 	{
 		if (int_table[9])
 			int_table[9]->call_callback();
-		EXTI_ClearITPendingBit(EXTI_Line8);
+		EXTI_ClearITPendingBit(EXTI_Line9);
 	}
 }
 

@@ -1,42 +1,60 @@
 #include "F1SysTimer.h"
 #include <stm32f10x.h>
+#include <stm32f10x_tim.h>
+#include <misc.h>
 #include <stdint.h>
 
 namespace STM32F1 
 {
 	int64_t base = 0;
-	int reload;
 	
-	extern "C" void SysTick_Handler()
+	extern "C" void TIM1_UP_IRQHandler()
 	{
-		base += reload;
+		TIM_ClearITPendingBit(TIM1 , TIM_FLAG_Update);
+		base += 0x10000;
 	}
 	
 	F1SysTimer::F1SysTimer()
 	{
-		reload = SystemCoreClock / 100;		// ~ 10ms reload period
-		SysTick_Config(reload);
-		NVIC_SetPriority(SysTick_IRQn, 0x0);
+		RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1,ENABLE);
+
+		NVIC_InitTypeDef NVIC_InitStructure;
+		NVIC_InitStructure.NVIC_IRQChannel = TIM1_UP_IRQn;
+		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+		NVIC_Init(&NVIC_InitStructure);
+		
+		TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+		TIM_DeInit(TIM1);
+		TIM_InternalClockConfig(TIM1);
+		SystemCoreClockUpdate();
+		TIM_TimeBaseStructure.TIM_Prescaler= SystemCoreClock / 1000000-1;
+		TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
+		TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
+		TIM_TimeBaseStructure.TIM_Period=0xffff;
+		TIM_TimeBaseStructure.TIM_RepetitionCounter = 0x0;
+		TIM_TimeBaseInit(TIM1,&TIM_TimeBaseStructure);
+		TIM_ClearFlag(TIM1,TIM_FLAG_Update);
+		TIM_ARRPreloadConfig(TIM1,DISABLE);
+		TIM_ITConfig(TIM1,TIM_IT_Update,ENABLE);
+		TIM_Cmd(TIM1,ENABLE);
 	}
 	
 	
 	int64_t F1SysTimer::gettime()		// micro-second
 	{
-		volatile int tick1 = SysTick->VAL;
+		volatile int tick1 = TIM1->CNT;
 		volatile int64_t tick_base1 = base;
-		volatile int tick2 = SysTick->VAL;
+		volatile int tick2 = TIM1->CNT;
 		__DSB();
 		__ISB();
 		volatile int64_t tick_base2 = base;
-
-		
-		tick1 = reload - tick1;
-		tick2 = reload - tick2;
-		
+				
 		if (tick2 < tick1)
-			return (tick_base2 + tick2) / (SystemCoreClock / 1000000);
+			return (tick_base2 + tick2);
 		else
-			return (tick_base1 + tick1) / (SystemCoreClock / 1000000);
+			return (tick_base1 + tick1);
 	}
 	
 	void F1SysTimer::delayms(int ms)
@@ -46,27 +64,20 @@ namespace STM32F1
 	
 	void F1SysTimer::delayus(int us)
 	{
-		#ifdef __OPTIMIZE__
-		static const float overhead = 2.87f;
-		#else
-		static const float overhead = 4.35f;
-		#endif
-		if (us < overhead)
-			return;
-		us -= overhead;
-		if (us < 9000)	// ~ 9ms
+		volatile int start = TIM1->CNT;
+				
+		if (us < 30000)
 		{
-			volatile int start = reload - SysTick->VAL;
-			volatile int target = int(start + us * (SystemCoreClock / 1000000)) % reload;
+			volatile int target = int(start + us) & 0xffff;
 
 			if (start <= target)
 			{
-				while((reload - SysTick->VAL) < target && (reload - SysTick->VAL) >= start)
+				while((TIM1->CNT) < target && (TIM1->CNT) >= start)
 					;
 			}
 			else
 			{
-				while((reload - SysTick->VAL) >= start || (reload - SysTick->VAL) < target)
+				while((TIM1->CNT) >= start || (TIM1->CNT) < target)
 					;
 			}
 		}

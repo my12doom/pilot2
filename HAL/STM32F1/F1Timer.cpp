@@ -3,79 +3,66 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <misc.h>
+#include <Protocol/common.h>
+
+static STM32F1::F1Timer *tim_tbl[8] = {NULL};
 
 using namespace HAL;
 namespace STM32F1
 {
 	F1Timer::F1Timer(TIM_TypeDef* TIMx)
 	{	
-		this->TIMx=TIMx;
-	}
-	void F1Timer::TimerInit(TIM_TypeDef* TIMx)
-	{
-		NVIC_InitTypeDef NVIC_InitStructure;
 		if(TIM1==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM1_UP_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
-			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-			NVIC_Init(&NVIC_InitStructure);
+			IRQn = TIM1_UP_IRQn;
+			tim_tbl[1] = this;
 		}
-		else if(TIM2==TIMx)
+		if(TIM2==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM2_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
-			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-			NVIC_Init(&NVIC_InitStructure);
+			IRQn = TIM2_IRQn;
+			tim_tbl[2] = this;
 		}
-		else if(TIM3==TIMx)
+		if(TIM3==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM3_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
-			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
-			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-			NVIC_Init(&NVIC_InitStructure);
+			IRQn = TIM3_IRQn;
+			tim_tbl[3] = this;
 		}
-		else if(TIM4==TIMx)
+		if(TIM4==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM4_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
-			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-			NVIC_Init(&NVIC_InitStructure);
+			IRQn = TIM4_IRQn;
+			tim_tbl[4] = this;
 		}
 #ifdef STM32F10X_HD
-		else if(TIM5==TIMx)
+		if(TIM5==TIMx)
 		{
-			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM5_IRQn;
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 7;
-			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-			NVIC_Init(&NVIC_InitStructure);
+			IRQn = TIM5_IRQn;
+			tim_tbl[5] = this;
 		}
-		else if(TIM6==TIMx)
+		//if(TIM6==TIMx)
+		//{
+		//	IRQn = TIM6_IRQn;		// TODO: IRQn?
+		//	tim_tbl[6] = this;
+		//}
+		if(TIM7==TIMx)
 		{
-			/*
-			NVIC_InitStructure.NVIC_IRQChannel = TIM6_IRQn;		// TODO: IRQ?
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 6;
-			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-			NVIC_Init(&NVIC_InitStructure);
-			*/
-			printf("TIM6 not supported\n");
+			IRQn = TIM7_IRQn;
+			tim_tbl[7] = this;
 		}
-		else if(TIM7==TIMx)
-		{
-			NVIC_InitStructure.NVIC_IRQChannel = IRQn = TIM7_IRQn;		// TODO: IRQ?
-			NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
-			NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-			NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-			NVIC_Init(&NVIC_InitStructure);
-		}
-#endif
+#endif		
+		this->TIMx=TIMx;
+		set_priority(4, 0);
 	}
+	
+	void F1Timer::set_priority(int preemption_priority, int sub_priority/* = 0 */)
+	{
+		NVIC_InitTypeDef NVIC_InitStructure;
+		NVIC_InitStructure.NVIC_IRQChannel = IRQn;
+		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = preemption_priority;
+		NVIC_InitStructure.NVIC_IRQChannelSubPriority = sub_priority;
+		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+		NVIC_Init(&NVIC_InitStructure);
+	}
+	
 	void F1Timer::set_period(uint32_t period)
 	{
 		if(TIM1==TIMx)
@@ -105,7 +92,6 @@ namespace STM32F1
 		TIM_ARRPreloadConfig(TIMx,DISABLE);
 		TIM_ITConfig(TIMx,TIM_IT_Update,ENABLE);
 		TIM_Cmd(TIMx,ENABLE);
-		TimerInit(this->TIMx);
 	}
 	void F1Timer::set_callback(timer_callback cb, void *user_data)
 	{		
@@ -117,14 +103,7 @@ namespace STM32F1
 	{
 		TIM_Cmd(TIMx,DISABLE);
 		TIMx->CNT = 0;
-		TIM_ClearITPendingBit(TIMx , TIM_FLAG_Update);
-		__DSB();
-		__ISB();
-		__DMB();
-		__NOP();__NOP();__NOP();__NOP();__NOP();
-		__NOP();__NOP();__NOP();__NOP();__NOP();
-		__NOP();__NOP();__NOP();__NOP();__NOP();
-		systimer->delayus(5);
+		TIM_ClearITPendingBit(TIMx , TIM_FLAG_Update);		
 		TIM_Cmd(TIMx,ENABLE);
 	}
 	void F1Timer::enable_cb()
@@ -139,23 +118,12 @@ namespace STM32F1
 	
 	void F1Timer::call_callback()
 	{
-		if(TIM1==TIMx)
-			TIM_ClearITPendingBit(TIM1 , TIM_FLAG_Update);
-		else if(TIM2==TIMx)
-			TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);
-		else if(TIM3==TIMx)
-			TIM_ClearITPendingBit(TIM3 , TIM_FLAG_Update);
-		else if(TIM4==TIMx)
-			TIM_ClearITPendingBit(TIM4 , TIM_FLAG_Update);
-		else if(TIM5==TIMx)
-			TIM_ClearITPendingBit(TIM5 , TIM_FLAG_Update);
-		else if(TIM6==TIMx)
-			TIM_ClearITPendingBit(TIM6 , TIM_FLAG_Update);
-		else if(TIM7==TIMx)
-			TIM_ClearITPendingBit(TIM7 , TIM_FLAG_Update);
-		else if(TIM8==TIMx)
-			TIM_ClearITPendingBit(TIM8 , TIM_FLAG_Update);
-		if(cb)
-			cb(user_data);
+		if (TIMx->SR & TIM_FLAG_Update)
+		{
+			TIMx->SR = ~TIM_FLAG_Update;
+			if(cb)
+				cb(user_data);
+		}
 	}
+
 }

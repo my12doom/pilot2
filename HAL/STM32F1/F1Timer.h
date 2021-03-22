@@ -13,7 +13,6 @@ namespace STM32F1
 		TIM_TypeDef* TIMx;
 		IRQn_Type IRQn;
 		void *user_data;
-		void TimerInit(TIM_TypeDef* TIMx);
 	public:
 		F1Timer(TIM_TypeDef* TIMx);
 		~F1Timer(){};
@@ -22,6 +21,7 @@ namespace STM32F1
 		virtual void call_callback();
 		virtual void restart();
 		virtual void enable_cb();
-		virtual void disable_cb();		
+		virtual void disable_cb();
+		virtual void set_priority(int preemption_priority, int sub_priority = 0);
 	};
 }
