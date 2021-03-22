@@ -15,6 +15,7 @@ namespace HAL
 		virtual void restart(){}
 		virtual void enable_cb(){}
 		virtual void disable_cb(){}
+		virtual void set_priority(int preemption_priority, int sub_priority = 0){}
 	};
 	
 	class InterruptTimer: public ITimer
