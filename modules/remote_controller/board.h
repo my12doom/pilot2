@@ -24,6 +24,7 @@ extern HAL::IGPIO *SDA;
 extern HAL::IRCOUT *ppm;
 extern HAL::IUART *uart;
 extern HAL::IGPIO *vibrator;
+extern HAL::IUART *sbus;
 
 typedef struct 
 {

@@ -14,6 +14,8 @@
 #include <utils/space.h>
 #include "binding.h"
 
+#include <Protocol/sbus.h>
+
 // BSP
 using namespace HAL;
 using namespace devices;
@@ -293,10 +295,16 @@ int main()
 	interrupt->set_callback(nrf_irq_entry, NULL);
 	timer->set_callback(timer_entry, NULL);
 	timer->set_period(hoop_interval);
+	timer->set_priority(3);
 	nrf.write_cmd(FLUSH_RX, NOP);
 	nrf.write_reg(STATUS, nrf.read_reg(STATUS));
 	dbg->write(true);
 	nrf.rf_on(true);
+
+	if (uart)
+		uart->set_baudrate(115200);
+	if (sbus)
+		sbus->set_baudrate(100000);
 	
 	int lo = 0;
 	int64_t t = systimer->gettime();
@@ -336,6 +344,33 @@ int main()
 					
 					uart->write(ebus_frame, sizeof(ebus_frame));
 				}
+				/*
+				if (sbus)
+				{
+					sbus_u s = {0x0f};
+					uint8_t *payload = valid_data+2;
+					uint8_t key = payload[12];
+					uint16_t *channel_data = (uint16_t*)payload;
+					
+					// roll : left = 1000
+					// pitch: back = 1000
+					// yaw : left = 1000
+					// stop : aux4 2000
+					// mode : aux1 1000 manual, aux1 1500 semiauto
+					// land : aux2 1500, takeoff aux2 2000
+
+
+					s.dat.chan2 = (((int)channel_data[0] * 800) >> 11)+200;	// roll
+					s.dat.chan1 = (((int)channel_data[1] * 800) >> 11)+200;	// pitch
+					s.dat.chan3 = (((int)channel_data[2] * 800) >> 11)+200;	// throttle
+					s.dat.chan4 = (((int)channel_data[3] * 800) >> 11)+200;	// yaw
+					s.dat.chan5 = !(key&1) ? 200 : 1024;				// aux1 mode
+					s.dat.chan8 = !(key&2) ? 1800 : 200;				// aux4 stop
+					s.dat.chan6 = !(key&4) ? 1024 : 200;				// aux2 land
+
+					sbus->write(&s, sizeof(s));
+				}
+				*/
 			}
 			
 			continue;

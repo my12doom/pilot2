@@ -235,7 +235,8 @@ void tx_on()
 	nrf.write_cmd(FLUSH_RX, NOP);
 	nrf.write_reg(7, nrf.read_reg(7));
 	nrf.rf_on(false);
-	interrupt->set_callback(nrf_irq_entry, NULL);	
+	interrupt->set_callback(nrf_irq_entry, NULL);
+	timer->set_priority(2);
 	timer->set_period(hoop_interval);
 	timer->set_callback(timer_entry, NULL);	
 		

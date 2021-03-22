@@ -17,6 +17,7 @@ extern HAL::IGPIO *SCL = NULL;
 extern HAL::IGPIO *SDA = NULL;
 extern HAL::IRCOUT *ppm = NULL;
 HAL::IUART *uart = NULL;
+HAL::IUART *sbus = NULL;
 
 WEAK void select_ant(uint32_t *randomizer, bool tx)
 {

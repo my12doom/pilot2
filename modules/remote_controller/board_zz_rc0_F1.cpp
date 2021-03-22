@@ -21,11 +21,8 @@ F1GPIO _cs(GPIOA, GPIO_Pin_8);
 F1GPIO _ce(GPIOA, GPIO_Pin_9);
 F1GPIO _irq(GPIOA, GPIO_Pin_10);
 
-F1GPIO _dbg(GPIOB, GPIO_Pin_11);
-F1GPIO _dbg2(GPIOB, GPIO_Pin_8);
-
-F1GPIO _SCL(GPIOC, GPIO_Pin_13);
-F1GPIO _SDA(GPIOC, GPIO_Pin_14);
+F1GPIO _dbg(GPIOA, GPIO_Pin_4);
+F1GPIO _dbg2(GPIOA, GPIO_Pin_5);
 
 F1SPI _spi;
 F1Interrupt _interrupt;
@@ -57,9 +54,9 @@ int board_init()
 	spi = &_spi;
 	interrupt = &_interrupt;
 	timer = &_timer;
+	sbus = &f1uart;
 	
-	//
-	
+	//	
 	_spi.init(SPI2);
 	_interrupt.init(GPIOA, GPIO_Pin_10, interrupt_falling);
 	
@@ -69,7 +66,6 @@ int board_init()
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);	
-	
 
 	static PPMOUT ppmout;
 	ppm = &ppmout;
@@ -88,6 +84,8 @@ static uint16_t le2be_uint16(uint16_t in)
 
 void custom_output(uint8_t * payload, int payload_size, int latency)
 {
+	return;
+	
 	static int64_t last_output = 0;
 	if (systimer->gettime() - last_output < 14000 || latency > 200000)
 		return;
