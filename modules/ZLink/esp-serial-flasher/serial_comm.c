@@ -62,7 +62,7 @@ static esp_loader_error_t SLIP_receive_data(uint8_t *buff, uint32_t size)
             if (ch == 0xdc) {
                 buff[i] = 0xc0;
             } else if (ch == 0xdd) {
-                buff[i] = 0xbd;
+                buff[i] = 0xdb;
             } else {
                 return ESP_LOADER_ERROR_INVALID_RESPONSE;
             }

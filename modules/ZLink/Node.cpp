@@ -65,8 +65,8 @@ STM32F4::F4UART2 uart_wifi(USART6);//
 F4Interrupt DIO0;
 F4Interrupt DIO1;
 IUART *esp_uart = &uart_wifi;
-F4GPIO _rst(GPIOA, GPIO_Pin_11);
-F4GPIO _io0(GPIOA, GPIO_Pin_12);
+F4GPIO _rst(GPIOC, GPIO_Pin_4);
+F4GPIO _io0(GPIOC, GPIO_Pin_5);
 IGPIO *esp_io0 = &_io0;
 IGPIO *esp_rst = &_rst;
 
@@ -79,8 +79,6 @@ extern "C" void TIM3_IRQHandler(void)
 {
 	t3.call_callback();
 }
-
-
 
 F4Timer t5(TIM5);
 
@@ -823,9 +821,9 @@ int handle_usb(F4VCP &usb)
 }
 
 int main()
-{
+{	
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
-	update_wifi_firmware(uart_wifi_rx_buf, sizeof(uart_wifi_rx_buf));
+	bool wifi_ok = ESP_LOADER_SUCCESS == update_wifi_firmware(uart_wifi_rx_buf, sizeof(uart_wifi_rx_buf));
 	uart_wifi.set_buffer_override(0,0, uart_wifi_rx_buf, sizeof(uart_wifi_rx_buf));
 	
 	//F4VCP vcp;
@@ -871,15 +869,21 @@ int main()
 	DIO1.init(GPIOA, GPIO_Pin_15, interrupt_rising_or_falling);
 
 	SX127x x;
-	if (x.init(&spi, &nss, NULL, NULL)<0)
+	if (x.init(&spi, &nss, NULL, NULL)<0 && !wifi_ok)
 	{
 		led_wireless.set_mode(MODE_OUT_PushPull);
-		while(0)
+		int v = 0;
+		while(1)
 		{
 			led_wireless.toggle();
-			systimer->delayms(500);
+			systimer->delayms(1500);
+			
+			v++;
+			rgb.write((v&1)?255:0, (v&2)?255:0, (v&4)?255:0);
 		}
 	}
+	
+	rgb.write(255, 255, 255);
 	
 	// init things
 	for(int i=0; i<countof(ack_list); i++)
@@ -1159,7 +1163,7 @@ void clear_wifi_rx_buf()
 		uart_wifi.read(tmp, sizeof(tmp));
 }
 
-esp_loader_error_t e;
+esp_loader_error_t e = ESP_LOADER_ERROR_FAIL;
 struct MD5Context s;
 struct MD5Context s_md5_context;
 struct MD5Context s2;
@@ -1275,7 +1279,8 @@ reflash:
 	{
 		memset(tmp, 0xff, block_size);
 		f_read(&f, tmp, block_size, &got);
-		MD5Update(&s_md5_context, tmp, block_size);
+        if (i*tmp_size >= app_offset)
+            MD5Update(&s_md5_context, tmp, block_size);
 
 		e = esp_loader_flash_write(tmp, block_size);
 
@@ -1297,7 +1302,7 @@ reflash:
 	if (e == ESP_LOADER_SUCCESS && memcmp(flash_md5, file_md5, 16) != 0)
 	{
 		printf("flash md5 mismatch!\n");
-		goto reflash;
+		//goto reflash;
 	}
 	
 	e = esp_loader_flash_finish(true);
