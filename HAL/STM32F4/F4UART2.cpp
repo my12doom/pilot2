@@ -195,6 +195,7 @@ namespace STM32F4
 	}
 	int F4UART2::set_buffer_override(void *tx_buf_override /*= NULL*/, int tx_buf_override_size /*= 0*/, void *rx_buf_override /*= NULL*/, int rx_buf_override_size /*= 0*/)
 	{
+		flush();
 		USART_Cmd(USARTx, DISABLE);
 
 		dma_read_ptr = 0;
@@ -220,6 +221,7 @@ namespace STM32F4
 	int F4UART2::set_baudrate(int baudrate)
 	{
 		this->baudrate=baudrate;
+				
 		USART_InitTypeDef USART_InitStructure;
 		//USART config
 		USART_InitStructure.USART_BaudRate = baudrate;

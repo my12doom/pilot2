@@ -1,0 +1,14 @@
+Cell Name         = None - Framework
+Parameter Name    = NonModRamAlloc
+Parameter Address = 0
+Parameter Value   = 0
+Parameter Data :
+0x00, 0x00, 0x00, 0x00, 
+
+
+
+Parameter data for: IC 1 (Hexadecimal format starting at parameter address 0)
+See also adau1761_mic.hex file
+
+Parameter data for: IC 1 (Binary format starting at parameter address 0)
+

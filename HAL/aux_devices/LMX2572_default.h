@@ -1,6 +1,6 @@
 #include <stdint.h>
 static const uint16_t LMX2572_default_regs[126] = {
-0x211C,
+0x2118,
 0x0808,
 0x0500,
 0x0782,

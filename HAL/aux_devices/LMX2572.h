@@ -20,9 +20,9 @@ public:
 	int set_output(bool enable, int power);
 	bool is_locked();
 
-protected:
 	void write_reg(uint8_t address, uint16_t data);
 	uint16_t read_reg(uint8_t address);
+protected:
 	HAL::ISPI *spi;
 	HAL::IGPIO *cs;
 

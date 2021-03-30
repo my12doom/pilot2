@@ -135,7 +135,7 @@ int LMX2572::set_freq(uint64_t freq)
 bool LMX2572::is_locked()
 {
 	uint16_t reg110 = read_reg(110);
-	return ((reg110>>9)&0x3);
+	return (reg110>>9) == 2;
 }
 void LMX2572::write_reg(uint8_t address, uint16_t data)
 {

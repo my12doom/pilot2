@@ -71,7 +71,7 @@ int si5351::set_pll(int id, double freq, int freq_src, int input_divider)
     float abc = freq/ref;
 	
 	int a = floor(abc);	
-	int c = 1<<16;
+	int c = 1<<18;
 	int b = (abc-a)*c;	
 	
 	int p1 = 128*a+(128*b/c) -512;
