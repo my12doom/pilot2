@@ -360,93 +360,110 @@ void update_config()
 {
 	configure_entry config[6];
 
-	// default configuration
-	for(int i=0; i<sizeof(config)/sizeof(config[0]); i++)
+
+	if (space_read("conf", 4, &config, sizeof(config), NULL) < 0)
 	{
-		config[i]._min = 0;
-		config[i]._max = 4095;
-		config[i].middle = 2048;
-		config[i].reverse = 0;
-		config[i].dead_band = 0;
+		// default configuration
+		for(int i=0; i<sizeof(config)/sizeof(config[0]); i++)
+		{
+			config[i]._min = 0;
+			config[i]._max = 4095;
+			config[i].middle = 2048;
+			config[i].reverse = 0;
+			config[i].dead_band = 0;
+		}
+		
+		/*
+		// #1		
+		config[0].middle = 2240;
+		config[1].middle = 2133;
+		config[2].middle = 2188;
+		config[3].middle = 2210;
+
+		config[0]._min = 557;
+		config[1]._min = 435;
+		config[2]._min = 492;
+		config[3]._min = 456;
+
+		config[0]._max = 3943;
+		config[1]._max = 3804;
+		config[2]._max = 3780;
+		config[3]._max = 3924;
+		
+		
+		// #2
+		config[0].middle = 2293;
+		config[1].middle = 2088;
+		config[2].middle = 2102;
+		config[3].middle = 2170;
+
+		config[0]._min = 567;
+		config[1]._min = 394;
+		config[2]._min = 410;
+		config[3]._min = 493;
+
+		config[0]._max = 3980;
+		config[1]._max = 3750;
+		config[2]._max = 3705;
+		config[3]._max = 3869;
+		
+		
+		// #4
+		config[0].middle = 2235;
+		config[1].middle = 2114;
+		config[2].middle = 2135;
+		config[3].middle = 2222;
+
+		config[0]._min = 485;
+		config[1]._min = 378;
+		config[2]._min = 417;
+		config[3]._min = 563;
+
+		config[0]._max = 3965;
+		config[1]._max = 3807;
+		config[2]._max = 3820;
+		config[3]._max = 3929;
+		
+		
+		// #3
+		config[0].middle = 2194;
+		config[1].middle = 2220;
+		config[2].middle = 2147;
+		config[3].middle = 2164;
+
+		config[0]._min = 445;
+		config[1]._min = 443;
+		config[2]._min = 402;
+		config[3]._min = 477;
+
+		config[0]._max = 3914;
+		config[1]._max = 3774;
+		config[2]._max = 3786;
+		config[3]._max = 3890;
+
+		// #5
+		config[0].middle = 2157;
+		config[1].middle = 2106;
+		config[2].middle = 2063;
+		config[3].middle = 2135;
+
+		config[0]._min = 505;
+		config[1]._min = 366;
+		config[2]._min = 364;
+		config[3]._min = 433;
+
+		config[0]._max = 3877;
+		config[1]._max = 3764;
+		config[2]._max = 3738;
+		config[3]._max = 3869;
+		*/
+		
+		config[0].reverse = true;
+		config[1].reverse = true;
+		config[3].reverse = false;
+		
+		space_write("conf", 4, &config, sizeof(config), NULL);		
 	}
-	
-
-
-	
-	// #1
-	config[0].middle = 2240;
-	config[1].middle = 2133;
-	config[2].middle = 2188;
-	config[3].middle = 2210;
-
-	config[0]._min = 557;
-	config[1]._min = 435;
-	config[2]._min = 492;
-	config[3]._min = 456;
-
-	config[0]._max = 3943;
-	config[1]._max = 3804;
-	config[2]._max = 3780;
-	config[3]._max = 3924;
-	
-	
-	// #2
-	config[0].middle = 2293;
-	config[1].middle = 2088;
-	config[2].middle = 2102;
-	config[3].middle = 2170;
-
-	config[0]._min = 567;
-	config[1]._min = 394;
-	config[2]._min = 410;
-	config[3]._min = 493;
-
-	config[0]._max = 3980;
-	config[1]._max = 3750;
-	config[2]._max = 3705;
-	config[3]._max = 3869;
-	
-	
-	// #4
-	config[0].middle = 2235;
-	config[1].middle = 2114;
-	config[2].middle = 2135;
-	config[3].middle = 2222;
-
-	config[0]._min = 485;
-	config[1]._min = 378;
-	config[2]._min = 417;
-	config[3]._min = 563;
-
-	config[0]._max = 3965;
-	config[1]._max = 3807;
-	config[2]._max = 3820;
-	config[3]._max = 3929;
-	
-	
-	// #3
-	config[0].middle = 2194;
-	config[1].middle = 2220;
-	config[2].middle = 2147;
-	config[3].middle = 2164;
-
-	config[0]._min = 445;
-	config[1]._min = 443;
-	config[2]._min = 402;
-	config[3]._min = 477;
-
-	config[0]._max = 3914;
-	config[1]._max = 3774;
-	config[2]._max = 3786;
-	config[3]._max = 3890;
-	
-	
-	config[0].reverse = true;
-	config[1].reverse = true;
-	config[3].reverse = false;
-	
-	space_write("conf", 4, &config, sizeof(config), NULL);
-	qon.set_mode(MODE_IN);
 }
 
 F1Interrupt button_int;
@@ -457,6 +474,7 @@ uint8_t reg[10];
 
 int board_init()
 {
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	update_config();
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);		
@@ -620,14 +638,30 @@ void read_channels(int16_t *channel, int max_channel_count)
 	channel[5] = 2048;
 }
 
+extern int apply_channel_statics();
 uint8_t gkey;
-
+bool applied = false;
+int64_t apply_timer = 0;
 void read_keys(uint8_t* key, int max_keys)
 {
 	*key = 0;
 	for(int i=0; i<8; i++)
 		*key |= (keys[i].read() ? 1 : 0) << i;
 	gkey = *key;
+
+	if ((gkey & 0x1f) == 0)
+		apply_timer = (apply_timer == 0) ? systimer->gettime() : apply_timer;
+	else
+		apply_timer = 0;
+	
+	if ( (apply_timer != 0) && (systimer->gettime() - apply_timer > 3000000) && !applied)
+	{
+		apply_channel_statics();
+		applied = true;
+		vib.write(1);
+		systimer->delayms(500);
+		vib.write(0);
+	}
 }
 
 

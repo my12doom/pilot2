@@ -27,6 +27,7 @@ int rdp;
 AESCryptor2 aes;
 uint32_t randomizing[4] = {0, 0, 0, 0};
 configure_entry config[6];
+configure_entry channel_statics[6];
 
 class NRF24L01_ANT : public NRF24L01
 {
@@ -87,6 +88,14 @@ void process_channels(int16_t *data, int count)
 	for(int i=0; i<count; i++)
 	{
 		int16_t d = data[i];
+
+		// update channel statics
+		if (d < channel_statics[i]._min)
+			channel_statics[i]._min = d;
+		if (d > channel_statics[i]._max)
+			channel_statics[i]._max = d;
+
+		// apply calibration
 		if (iabs(d-config[i].middle) < config[i].dead_band)
 			d = 2048;
 		else if (d <= config[i].middle)
@@ -109,7 +118,6 @@ void process_channels(int16_t *data, int count)
 		data[i] = d;
 	}
 	memcpy(channel_data_o, data, count*2);
-	
 }
 
 void timer_entry(void *p)
@@ -267,6 +275,31 @@ int carrier_test()
 	return 0;
 }
 
+int reset_channel_statics()
+{
+	for(int i=0; i<sizeof(channel_statics)/sizeof(channel_statics[0]); i++)
+	{
+		channel_statics[i]._min = 2048;
+		channel_statics[i]._max = 2048;
+		channel_statics[i].middle = 2048;
+	}
+
+	return 0;
+}
+
+int apply_channel_statics()
+{
+	for(int i=0; i<sizeof(channel_statics)/sizeof(channel_statics[0]); i++)
+	{
+		config[i]._min = channel_statics[i]._min;
+		config[i]._max = channel_statics[i]._max;
+		config[i].middle = channel_data[i];
+	}
+
+	space_write("conf", 4, &config, sizeof(config), NULL);
+	return 0;
+}
+
 int main()
 {
 	space_init();	
@@ -314,6 +347,7 @@ int main()
 	//	binding_loop();
 	//carrier_test();
 	tx_on();
+	reset_channel_statics();
 	
 	bool last_bind_button = false;
 	if (bind_button)
