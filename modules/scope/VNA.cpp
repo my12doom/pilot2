@@ -13,6 +13,8 @@
 #include <HAL/Interface/II2C.h>
 #include <HAL/aux_devices/si5351.h>
 #include <HAL/aux_devices/LMX2572.h>
+#include <modules/Protocol/common.h>
+#include <utils/fifo.h>
 
 using namespace STM32F4;
 using namespace HAL;
@@ -21,16 +23,68 @@ extern "C" void SetSysClock(int hse_mhz = 0);
 int default_download_IC_1(bool _24bit);
 void i2s_setup();
 int set_volume(uint8_t gain_code, bool muted/* = false */);	// 0.75db/LSB
-int hmc960_read();
+int hmc960_init();
+int init_regs();
 
 static F4GPIO scl(GPIOC, GPIO_Pin_13);
 static F4GPIO sda(GPIOC, GPIO_Pin_14);
 static I2C_SW i2c(&scl, &sda);
 static F4GPIO cs_LO(GPIOB, GPIO_Pin_1);
+static F4GPIO cs_source(GPIOB, GPIO_Pin_7);
+F4GPIO att_le(GPIOB, GPIO_Pin_0);
+F4GPIO swd1[3] = {F4GPIO(GPIOA, GPIO_Pin_4), F4GPIO(GPIOA, GPIO_Pin_2), F4GPIO(GPIOA, GPIO_Pin_3)};
+
 LMX2572 LO;
+LMX2572 source;
+
+bool sweeping = false;
+
+typedef enum
+{
+	SAMPLE_DISCARD1,
+	/*
+	SAMPLE_DISCARD2,
+	SAMPLE_DISCARD3,
+	SAMPLE_DISCARD4,
+	SAMPLE_DISCARD5,
+	*/
+	SAMPLE_COMMIT,
+	SAMPLE_NEXT_FREQ,
+} sample_state;
+
+sample_state state = SAMPLE_NEXT_FREQ;
 
 //#define TRACE printf
 #define TRACE(...)
+
+typedef struct
+{
+	int32_t fwd0r;
+	int32_t fwd0i;
+	int32_t rev0r;
+	int32_t rev0i;
+	int32_t rev1r;
+	int32_t rev1i;
+	uint16_t freq_index;
+	uint8_t reserved[6];
+} fifo_value;
+
+CircularQueue<fifo_value, 128> fifo;
+
+int64_t integrate[4];
+int64_t integrate_out[4];
+float phase[2];
+double amp[2];
+double amp_diff;
+double amp_diff_db;
+double amp_db[2];
+float phase_diff;
+int freq_index = 0;
+
+int32_t int_debug[96];
+
+int fifo_output_request = 0;
+
 
 bool detect_adc(II2C &i2c)
 {
@@ -55,19 +109,10 @@ static int imin(int a, int b)
 }
 
 uint8_t regs[256];
-uint16_t &sweep_points = *(uint16_t*)&regs[20];
-
-typedef struct
-{
-	int32_t fwd0r;
-	int32_t fwd0i;
-	int32_t rev0r;
-	int32_t rev0i;
-	int32_t rev1r;
-	int32_t rev1i;
-	uint16_t freq_index;
-	uint8_t reserved[6];
-} fifo_value;
+uint16_t &sweep_points = *(uint16_t*)&regs[0x20];
+uint64_t &sweep_start = *(uint64_t*)&regs[0x00];
+uint64_t &sweep_step = *(uint64_t*)&regs[0x10];
+uint16_t &valuesPerFrequency = *(uint16_t*)&regs[0x22];
 
 fifo_value mock = 
 {
@@ -80,8 +125,60 @@ fifo_value mock =
 	0,
 };
 
-int freq_index = 0;
 
+int fifo_fill(int count)
+{
+	//return 0;
+
+	for(int i=0; i<count; i++)
+	{
+		if (++mock.reserved[0] == valuesPerFrequency)
+		{
+			mock.freq_index = (mock.freq_index+1) % sweep_points;
+			mock.reserved[0] = 0;
+		}
+
+		mock.fwd0r = integrate_out[0];
+		mock.fwd0i = integrate_out[1];
+		mock.rev0r = integrate_out[2];
+		mock.rev0i = integrate_out[3];
+
+		fifo.push(mock);
+	}
+}
+
+int fifo_out(IUART &vcp)
+{
+	if (fifo_output_request == 0)
+		return 0;
+
+	while (fifo_output_request >0 && fifo.count())
+	{
+		fifo_value v;
+		if (fifo.pop(&v) == 0)
+		{
+			float A = log10((double)v.fwd0r * v.fwd0r + (double)v.fwd0i * v.fwd0i) * 10;
+			float A2 = log10((double)v.rev0r * v.rev0r + (double)v.rev0i * v.rev0i) * 10;
+			float diff = A-A2;
+			//if (fabs(diff) > 1)
+			//printf("o:%d, amp=%.2f/%.2f, diff=%.2f\n", v.freq_index, A, A2, diff);
+			vcp.write(&v, sizeof(v));
+			fifo_output_request--;
+
+			if (fifo_output_request == 0)
+			{
+				TRACE("\n\n\n---ROUND---\n\n\n");
+			}
+
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	return 0;
+}
 
 int handle_vcp(IUART &vcp)
 {
@@ -155,23 +252,11 @@ int handle_vcp(IUART &vcp)
 
 		case 0x18:					// READ FIFO
 			if (arg_buf[0] == 0x30)	// value FIFO
-			{
-				int sweep_points = *(uint16_t*)&regs[0x20];
-				int valuesPerFrequency = *(uint16_t*)&regs[0x22];
-				mock.rev0r = (systimer->gettime() % 500000 < 250000) ? 0x60000 : 0x600;
-				
-				for(int i=0; i<arg_buf[1]; i++)
-				{
-					if (++mock.reserved[0] == valuesPerFrequency)
-					{
-						mock.freq_index = (mock.freq_index+1) % sweep_points;
-						mock.reserved[0] = 0;
-					}
-					vcp.write(&mock, sizeof(mock));
-				}
+				fifo_output_request = arg_buf[1];
+				//fifo_fill(fifo_output_request);
+				TRACE("\n\n\n---%d---\n\n\n", fifo_output_request);
 
-			}
-			break;
+				break;
 
 		case 0x20:
 			TRACE("WRITE8 @ %02x\n", arg_buf[0]);
@@ -251,6 +336,7 @@ int SIGMA_WRITE_DELAY( uint8_t devAddress, int length, uint8_t *pData )
 
 int hmc960_write(uint8_t reg, uint32_t value)
 {
+	spi.set_mode(0, 0);
 	reg = ((reg & 0x1f) << 3) | 0x06;	// 0x06: chip id
 	cs.write(0);
 	spi.txrx(value >> 16);
@@ -262,16 +348,18 @@ int hmc960_write(uint8_t reg, uint32_t value)
 }
 
 uint32_t read960[4] = {0};
-int hmc960_read()
+int hmc960_init()
 {
-	hmc960_write(1,0x0e);
+	hmc960_write(1,0x0f);
+	hmc960_write(2,0x37);	// spi
+	hmc960_write(3,80);	// spi
 	
 	for(int i=0; i<3; i++)
 	{
 
 
-		spi.set_mode(0, 0);
 		hmc960_write(0, i);
+		
 		spi.set_mode(0, 1);
 
 		uint32_t read;
@@ -284,26 +372,141 @@ int hmc960_read()
 
 		read960[i] = read;
 	}
+	spi.set_mode(0, 0);
+	
+	return 0;
 }
 
-uint16_t regs2572[126];
-int test2572()
-{
-	LO.init(&spi, &cs_LO);
-	for(int i=0; i<126; i++)
-		regs2572[i] = LO.read_reg(i);
-	
-	LO.set_ref(100000000, false, 1, 1, 1);
-	LO.set_freq(3200000000+1);
-	LO.set_output(true, 63);
-	//LO.set_freq(25e6);
 
-	//while (!LO.is_locked())
+void set_att(int att)
+{
+	att &= 0x7f;
+	uint8_t tx = 0;
+	for(int i=0; i<8; i++)
+		tx |= ((att>>i)&1) << (7-i);
+
+	att = limit(att, 0, 127);
+	spi.txrx(tx);
+	att_le.write(1);
+	systimer->delayus(1);
+	att_le.write(0);
+}
+
+// path: 1 - 6
+int select_path(int path)
+{
+	if (path < 1 || path > 6)
+		return -1;
+
+	int path_tbl[7][3] = {{0,0,0}, {0,0,0}, {1,0,0}, {0,1,0}, {1,1,0}, {0,0,1}, {1,0,1}};
+
+	for(int i=0; i<3; i++)
 	{
-		//
-		printf("..");
+		//swd1[2-i].write(path_tbl[path][i]);
+		swd1[2-i].write(path_tbl[7-path][i]);
 	}
 
+	return 0;
+}
+
+
+int init_path()
+{
+	for(int i=0; i<3; i++)
+	{
+		swd1[i].set_mode(MODE_OUT_PushPull);
+		//swd2[i].set_mode(MODE_OUT_PushPull);
+	}	
+
+	select_path(1);
+
+	return 0;
+}
+
+int get_path_by_freq(int64_t freq)
+{
+	if (freq > 3400000000)
+		return 4;
+	else if (freq > 1750000000)
+		return 5;
+	else if (freq > 900000000)
+		return 6;
+	else if (freq > 500000000)
+		return 3;
+	else if (freq > 250000000)
+		return 2;
+	else
+		return 1;
+}
+
+int select_path_by_freq(int64_t freq)
+{
+	return select_path(get_path_by_freq(freq));
+}
+
+bool new_freq = true;
+int64_t fc = 6400e6 + 2e6;
+int off = 1.2e4;
+int att = 120;
+uint64_t last_fc;
+int update_freq()
+{
+	if (last_fc != fc)
+	{
+		sweeping = true;
+
+		source.set_freq(fc);
+		LO.set_freq(fc+off);
+		
+		
+		select_path_by_freq(fc);
+
+		set_att(att);
+
+		last_fc = fc;
+		systimer->delayms(2);
+		sweeping = false;
+	}
+
+	return 0;
+}
+
+int init_LO_source()
+{
+	int fref = 100000000;
+
+	LO.init(&spi, &cs_LO);	
+	LO.set_ref(fref, false, 1, 1, 1, true);
+	LO.set_freq(fc+off);
+	LO.set_output(true, 25, true, 25);
+	
+	source.init(&spi, &cs_source);	
+	source.set_ref(fref, false, 1, 1, 1, true);
+	source.set_freq(fc);
+	source.set_output(false, 0, true, 25);
+	
+	return 0;
+}
+
+int n = 0;
+int update_sweep()
+{
+	if (state == SAMPLE_NEXT_FREQ)
+	{
+		if (++n >= valuesPerFrequency)
+		{
+			freq_index = (freq_index+1) % sweep_points;
+			n = 0;
+		}
+
+		fc = sweep_start + sweep_step * (uint64_t)freq_index;
+		att = 120 - fc * 120 / 6400000000;
+		att = limit(att, 0, 120);
+		new_freq = true;
+		state = SAMPLE_DISCARD1;
+		update_freq();
+		
+	}
 
 	return 0;
 }
@@ -311,14 +514,37 @@ int test2572()
 
 int main()
 {
-	// css
+	// default registers	
+	*(uint16_t*)&regs[0x20] = 5;		// sweep_points
+	sweep_points = 1;
+	sweep_start = 2.425e9;
+	sweep_step = 1e5;
+
+	// CS pins
 	cs.set_mode(MODE_OUT_PushPull);
 	cs.write(1);
 	cs_LO.set_mode(MODE_OUT_PushPull);
 	cs_LO.write(1);
+	cs_source.set_mode(MODE_OUT_PushPull);
+	cs_source.write(1);
+	att_le.set_mode(MODE_OUT_PushPull);
+	att_le.write(0);
+	
+	while(0)
+	{
+		cs_source.toggle();
+		systimer->delayus(100);
+	}
+
+	init_path();
 
 
 	spi.set_speed(1000000);	
+	hmc960_init();
+	init_LO_source();
+
+	//extern int hse_en;
+	//hse_en = 1;
 
 	RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));		// switch to HSI
 	RCC->CR &= ~((uint32_t)RCC_CR_HSEON | RCC_CR_PLLON);	// disable HSE & PLL
@@ -337,8 +563,7 @@ int main()
 			led.write(0);
 			systimer->delayms(500);
 		}
-	}
-	
+	}	
 
 	si.set_ref_freq(26.0);
 	si.set_pll(0, 900);
@@ -354,12 +579,11 @@ int main()
 	// use clock from si5351
 	SetSysClock(25);
 	SystemCoreClockUpdate();
-	test2572();
 
 	led.write(SystemCoreClock == 84000000);
 
 	default_download_IC_1(true);
-	set_volume(63, false);
+	set_volume(16, false);
 
 	// disable adau1761 clock for now
 	si.set_output(1, true, false);
@@ -380,30 +604,15 @@ int main()
 		led.write(0);
 		systimer->delayms(100);
 	}
-	
-	// MCO test
-	GPIO_InitTypeDef GPIO_InitStructure;
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_MCO);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;  
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
-	RCC_MCO1Config(RCC_MCO1Source_PLLCLK, RCC_MCO1Div_4);
-
-	
-	// default registers	
-	*(uint16_t*)&regs[20] = 150;		// sweep_points
 
 	// USB ON
 	F4VCP vcp;
 
 	while(1)
 	{
-		hmc960_read();
+		fifo_out(vcp);
 		handle_vcp(vcp);
+		update_sweep();
 	}
 }
 
@@ -512,14 +721,6 @@ int32_t i2s_fmt(int32_t in)
 	return out;
 }
 
-uint64_t integrate[4];
-uint64_t integrate_out[4];
-int integrate_counter = 0;
-int integrate_out_counter = 0;
-const int integrate_count = 2;
-
-int32_t int_debug[96];
-
 extern "C" void DMA1_Stream0_IRQHandler(void)
 {
 	int32_t *data;
@@ -537,27 +738,60 @@ extern "C" void DMA1_Stream0_IRQHandler(void)
 		data = (int32_t*)(codec_data + 96);
     }
 
+	if (sweeping)
+		return;
+
 	// strange i2s byte mapping
 	int sample_count = sizeof(codec_data)/2 / sizeof(uint32_t) / 2;
+	int mix_tbl[4] = {1,1,-1,-1};
+	memset(integrate, 0, sizeof(integrate));
 	for(int i=0; i<sample_count; i++)
 	{
 		int32_t *p = data + i*2;
 		int32_t c1 = i2s_fmt(p[0]);
 		int32_t c2 = i2s_fmt(p[1]);
 
-		integrate[0] += c1;
-		integrate[1] += c2;
+		integrate[0] += c1 * mix_tbl[i%4];
+		integrate[1] += c1 * mix_tbl[(i+1)%4];
+		integrate[2] += c2 * mix_tbl[i%4];
+		integrate[3] += c2 * mix_tbl[(i+1)%4];
 
 		int_debug[i] = c1;
 		int_debug[i+48] = c2;
 	}
 
-	if (++integrate_counter == integrate_count)
+	memcpy(integrate_out, integrate, sizeof(integrate));
+	memset(integrate, 0 , sizeof(integrate));
+
+	phase[0] = atan2((double)integrate_out[0], (double)integrate_out[1]);
+	phase[1] = atan2((double)integrate_out[2], (double)integrate_out[3]);
+	phase_diff = radian_sub(phase[0], phase[1]);
+
+	amp[0] = sqrt(double(integrate_out[0] * integrate_out[0] + integrate_out[1] * integrate_out[1]));
+	amp[1] = sqrt(double(integrate_out[2] * integrate_out[2] + integrate_out[3] * integrate_out[3]));
+	amp_diff = amp[0] / amp[1];
+	amp_diff_db = log10(amp_diff) * 20;
+	amp_db[0] = log10(amp[0]) * 20;
+	amp_db[1] = log10(amp[1]) * 20;
+
+	if (state < SAMPLE_NEXT_FREQ)
 	{
-		integrate_counter = 0;
-		integrate_out_counter ++;
-		memcpy(integrate_out, integrate, sizeof(integrate));
-		memset(integrate, 0 , sizeof(integrate));
+		if (state == SAMPLE_COMMIT)
+		{
+			fifo_value v = {0};
+			v.freq_index = freq_index;
+			v.fwd0r = integrate_out[0]>>8;
+			v.fwd0i = integrate_out[1]>>8;
+			v.rev0r = integrate_out[2]>>8;
+			v.rev0i = integrate_out[3]>>8;
+			v.rev1r = 1;//integrate_out[0];
+			v.rev1i = 1;//integrate_out[1];
+
+			fifo.push(v);
+			TRACE("s:%d\n", freq_index);
+		}
+
+		state = sample_state (state + 1);
 	}
 }
 

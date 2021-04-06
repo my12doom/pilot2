@@ -15,14 +15,15 @@ public:
 	LMX2572();
 	~LMX2572();
 	int init(HAL::ISPI *spi, HAL::IGPIO *cs);
-	int set_ref(uint32_t ref_freq, bool doubler, int pre_R, int multiplier, int R);
+	int set_ref(uint32_t ref_freq, bool doubler, int pre_R, int multiplier, int R, bool diff = false);
 	int set_freq(uint64_t freq);
-	int set_output(bool enable, int power);
+	int set_output(bool enableA, int powerA, bool enableB = false, int powerB = 63);
 	bool is_locked();
 
+protected:
 	void write_reg(uint8_t address, uint16_t data);
 	uint16_t read_reg(uint8_t address);
-protected:
+
 	HAL::ISPI *spi;
 	HAL::IGPIO *cs;
 

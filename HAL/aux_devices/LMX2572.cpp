@@ -1,6 +1,8 @@
 #include "LMX2572.h"
 #include "LMX2572_default.h"
 #include <string.h>
+#include <math.h>
+#include <stdio.h>
 
 #define VCO_CAL_THRESHOLD 25000000
 
@@ -33,7 +35,7 @@ int LMX2572::init(HAL::ISPI *spi, HAL::IGPIO *cs)
 	return 0;
 }
 
-int LMX2572::set_ref(uint32_t ref_freq, bool doubler, int pre_R, int multiplier, int R)
+int LMX2572::set_ref(uint32_t ref_freq, bool doubler, int pre_R, int multiplier, int R, bool diff /*= false*/)
 {
 	// note:multiplier *8-31 is allowed but not recommended
 	// also use doubler instead of multiplier 2 
@@ -59,18 +61,24 @@ int LMX2572::set_ref(uint32_t ref_freq, bool doubler, int pre_R, int multiplier,
 	for(int i=9; i<=11; i++)
 		write_reg(i, regs[i]);
 
+	regs[5] = (regs[5] &0xEFFF) | (diff ? 0 : 0x1000);
+	write_reg(5, regs[5]);
+
 	return 0;
 }
 
-int LMX2572::set_output(bool enable, int power)
+int LMX2572::set_output(bool enableA, int powerA, bool enableB /*= false*/, int powerB /*= 63*/)
 {
-	// B disabled
-
-	power &= 0x3f;
-	regs[44] = 0xA2 | (power << 8);
-	if (!enable)
+	powerA &= 0x3f;
+	regs[44] = 0x22 | (powerA << 8);
+	if (!enableA)
 		regs[44] |= 0x40;
+	if (!enableB)
+		regs[44] |= 0x80;
 	write_reg(44, regs[44]);
+
+	regs[45] = (regs[45] & 0xFFC0) | (powerB&0x3f);
+	write_reg(45, regs[45]);
 
 	return 0;
 }
@@ -101,7 +109,8 @@ int LMX2572::set_freq(uint64_t freq)
 	regs[39] = denum;
 	regs[42] = FRAC>>16;
 	regs[43] = FRAC;
-	regs[45] = (div == 0) ? 0xCE22 : 0xC622;
+	regs[45] = ((div == 0) ? 0x0800 : 0) | (regs[45]&0xE7FF);	// OUT_A MUX
+	regs[46] = (div == 0) ? 0x07F1 : 0x07F0;					// OUT_B MUX
 
 	// strange divider table of R75
 	int divider_tbl[9] = {0, 0, 1, 3, 5, 7, 9, 12, 14};
@@ -115,11 +124,62 @@ int LMX2572::set_freq(uint64_t freq)
 	}
 	else
 	{
-		regs[78] |= 0x200;
+		//regs[78] |= 0x200;
 	}
+
+
+	// Partial Assist
+	int mhz = vco_freq / 1000000;
+	int assist_tbl[6][6] = 
+	{
+		{3200, 3650, 131, 19, 138, 137},
+		{3650, 4200, 143, 25, 162, 142},
+		{4200, 4650, 135, 34, 126, 114},
+		{4650, 5200, 136, 25, 195, 172},
+		{5200, 5750, 133, 20, 190, 163},
+		{5750, 7000, 151, 27, 256, 204},
+	};
+
+	int select = -1;
+	for(int i=0; i<6; i++)
+	{
+		if (mhz >= assist_tbl[i][0] && mhz <= assist_tbl[i][1])
+			select = i;
+	}
+
+	if (select == 3 && mhz < 4700)
+		select = 2;
+
+	if (select == 3 && mhz > 5100)
+		select = 4;
+	
+	int fmin = assist_tbl[select][0];
+	int fmax = assist_tbl[select][1];
+	int cmin = assist_tbl[select][2];
+	int cmax = assist_tbl[select][3];
+	int amin = assist_tbl[select][4];
+	int amax = assist_tbl[select][5];
+
+	int C = floor(0.5f + cmin - float(mhz-fmin) * (cmin-cmax) / (fmax-fmin));
+	int A = floor(0.5f + amin - float(mhz-fmin) * (amin-amax) / (fmax-fmin));
+	int vco = select + 1;
+
+	regs[78] = 0x000 | (C<<1);
+	regs[20] = 0x448 | (vco << 11);
+	regs[17] = A;
+	regs[8] = 0x6000;
+	write_reg(20, regs[20]);
+	write_reg(17, regs[17]);
+	write_reg(8, regs[8]);
+
+	//printf("freq%dMhz, vco%d A%d C%d\n", mhz, vco, A, C);
+
+	
+
 
 	write_reg(78, regs[78]);
 	write_reg(75, regs[75]);
+	write_reg(46, regs[46]);
 	write_reg(45, regs[45]);
 	write_reg(39, regs[39]);
 	write_reg(38, regs[38]);
