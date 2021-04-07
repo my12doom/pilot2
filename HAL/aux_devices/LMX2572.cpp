@@ -147,7 +147,7 @@ int LMX2572::set_freq(uint64_t freq)
 			select = i;
 	}
 
-	if (select == 3 && mhz < 4700)
+	if (select == 3 && mhz < 4900)
 		select = 2;
 
 	if (select == 3 && mhz > 5100)
@@ -174,7 +174,14 @@ int LMX2572::set_freq(uint64_t freq)
 
 	//printf("freq%dMhz, vco%d A%d C%d\n", mhz, vco, A, C);
 
+	int pfd_dly_needed = (FRAC > 0) ? (vco_freq > 4900000000 ? 3 : 2) : 
+								(vco_freq > 4000000000 ? 1 : 0);
 	
+	if (((regs[37] >> 8)&0x3f) != pfd_dly_needed)
+	{
+		regs[37] = (pfd_dly_needed << 8) | 5;
+		write_reg(37, regs[37]);
+	}
 
 
 	write_reg(78, regs[78]);
