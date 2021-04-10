@@ -19,7 +19,7 @@ using namespace HAL;
 
 // configuration
 int64_t MAX_FREQ = 6.8e9;
-int64_t MIN_FREQ = 7.5e6;
+int64_t MIN_FREQ = 12.5e6;
 float coupling = -19;
 
 
@@ -200,6 +200,7 @@ int main()
 	lmx2572.init(&spi, &cs_2572);
 	lmx2572.set_ref(40000000, true, 1, 1, 1);
 	lmx2572.set_freq(read_freq());
+	lmx2572.set_output(true, 63);
 	select_path_by_freq(read_freq());
 	
 
@@ -248,8 +249,9 @@ int main()
 	float vset_per_lsb = 0.022f / 4;
 	float vset_deadband = 0;//vset_per_lsb * 1 / 2;
 	double ghz = read_freq() * 1e-9;
+	float intercept_ref = -0.071 * ghz*ghz*ghz + 1.43 * ghz*ghz + -6.9 * ghz + 20.5;
 	float intercept_mv = 2.289 * ghz*ghz*ghz*ghz -22.99 * ghz*ghz*ghz +66.56 * ghz*ghz -89.60 * ghz + 693.7;
-	float intercept = intercept_mv / 22.0f;
+	float intercept = intercept_mv / 22.0f + coupling;
 	char tmp[20];
 
 	while(1)
