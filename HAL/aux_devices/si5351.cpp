@@ -133,25 +133,42 @@ int si5351::set_output_freq(int id, int freq_src, double divider)
 		p3 = 1;
 	}
 	
-	uint8_t regs[8] =
-	{
-		(p3 >> 8) & 0xff,
-		p3 & 0xff,
-		(R_DIV << 4) | ((p1 >> 16) & 0x3) | (highfreq ? 0xC : 0),
-		(p1 >> 8) & 0xff,
-		p1 & 0xff,
-		((p3 >> 12)&0xf0) | ((p2>>16)&0x0f),
-		(p2 >> 8) & 0xff,
-		p2 & 0xff,		
-	};
+	int o = -1;
 	
-	int reg_start = 42 + id * 8;
-	int o = i2c->write_regs(0xc0, reg_start, regs, 8);
+	if (id == 6 || id == 7)
+	{
+		i2c->write_reg(0xc0, 0x5a + id - 6, a);
+		
+		uint8_t reg92 = 0;
+		i2c->read_reg(0xc0, 0x5c, &reg92);
+		
+		reg92 &= id == 6 ? 0xf0 : 0x0f;
+		reg92 |= R_DIV << (id == 6 ? 0 : 4);
+		o = i2c->write_reg(0xc0, 0x5c, reg92);
+	}
+	else
+	{
+	
+		uint8_t regs[8] =
+		{
+			(p3 >> 8) & 0xff,
+			p3 & 0xff,
+			(R_DIV << 4) | ((p1 >> 16) & 0x3) | (highfreq ? 0xC : 0),
+			(p1 >> 8) & 0xff,
+			p1 & 0xff,
+			((p3 >> 12)&0xf0) | ((p2>>16)&0x0f),
+			(p2 >> 8) & 0xff,
+			p2 & 0xff,		
+		};
+		
+		int reg_start = 42 + id * 8;
+		o = i2c->write_regs(0xc0, reg_start, regs, 8);
+	}
 
 	uint8_t reg16;
 	i2c->read_reg(0xc0, 16 + id, &reg16);
 	reg16 &= 0x9f;
-	reg16 |= (b == 0 ? 0x40 : 0);
+	reg16 |= (b == 0 && id < 6) ? 0x40 : 0;
     reg16 |= freq_src << 5;
 	i2c->write_reg(0xc0, 16 + id, reg16);
 	
