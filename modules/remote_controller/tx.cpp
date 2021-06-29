@@ -28,6 +28,10 @@ AESCryptor2 aes;
 uint32_t randomizing[4] = {0, 0, 0, 0};
 configure_entry config[6];
 configure_entry channel_statics[6];
+int packet_time = 1363;		// in us
+int rf_latency = 45;
+int rx_pkt = 0;
+int rx_pkt_s = 0;
 
 class NRF24L01_ANT : public NRF24L01
 {
@@ -56,7 +60,7 @@ void nrf_irq_entry(void *parameter, int flags)
 		
 	// clear all interrupts
 	nrf.rf_off();
-	nrf.write_reg(7, nrf.read_reg(7));				// sending 32bytes payload with 3byte address and 2byte CRC cost ~1373us
+	nrf.write_reg(7, nrf.read_reg(7));				// sending 32bytes payload with 3byte address and 2byte CRC cost ~1363us
 													// delay between tx and rx is 25us max
 		
 	// read out RX packets
@@ -67,6 +71,8 @@ void nrf_irq_entry(void *parameter, int flags)
 		nrf.read_rx(data, 32);
 		rdp = nrf.read_reg(9);
 		fifo_state = nrf.read_reg(FIFO_STATUS);
+		
+		rx_pkt ++;
 	}
 	
 	//dt = systimer->gettime() - ts;
@@ -120,6 +126,7 @@ void process_channels(int16_t *data, int count)
 	memcpy(channel_data_o, data, count*2);
 }
 
+int tx_tx_process_time = 0;
 void timer_entry(void *p)
 {
 	interrupt->disable();
@@ -133,8 +140,10 @@ void timer_entry(void *p)
 	nrf.write_reg(5, channel);
 	
 	//if (channel < 10)
+	//if (hoop_id& 1)
 	if (1)
-	{		
+	{
+		int64_t t = systimer->gettime();
 		read_channels((int16_t*)(data+2), 6);
 		process_channels((int16_t*)(data+2), 6);
 		read_keys(data+14, 8);
@@ -146,6 +155,7 @@ void timer_entry(void *p)
 			
 		nrf.write_tx(data, 32);
 		nrf.rf_on(false);
+		tx_tx_process_time = systimer->gettime() - t;
 	}
 	else
 	{
@@ -224,6 +234,8 @@ int binding_loop()
 			}
 		}
 		
+		watchdog_reset();
+		
 	}
 
 	if (vibrator)
@@ -239,6 +251,9 @@ void tx_on()
 	aes.set_key((uint8_t*)key4, 256);
 	nrf.rf_off();
 	nrf.set_tx_address((uint8_t*)&seed, 3);
+	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
+	nrf.enable_rx_address(0, true);
+	nrf.enable_rx_address(1, false);
 	nrf.write_cmd(FLUSH_TX, NOP);
 	nrf.write_cmd(FLUSH_RX, NOP);
 	nrf.write_reg(7, nrf.read_reg(7));
@@ -342,6 +357,7 @@ int main()
 		systimer->delayms(100);
 	}
 	hoop_interval = nrf.is_bk5811() ? 1000 : 2000;	
+	packet_time = nrf.is_bk5811() ? 450 : 1373;
 	
 	//if (seed == 0x1234567890345678)
 	//	binding_loop();
@@ -354,6 +370,8 @@ int main()
 		last_bind_button = bind_button->read();
 	int64_t last_key_down = 0;
 	int streak = 0;
+	int64_t last_pkt_counting = 0;
+	int last_pkt_count = 0;
 	while(1)
 	{
 		if (bind_button)
@@ -381,5 +399,13 @@ int main()
 			last_bind_button = b;
 		}
 		
+		if (systimer->gettime() > last_pkt_counting + 1000000)
+		{
+			rx_pkt_s = rx_pkt - last_pkt_count;
+			last_pkt_count = rx_pkt;
+			last_pkt_counting = systimer->gettime();
+		}
+		
+		watchdog_reset();
 	}
 }

@@ -36,6 +36,29 @@ typedef struct
 } configure_entry;
 
 int board_init();
+
+//#if (defined (STM32F10X_LD) || defined(STM32F10X_MD) || defined (STM32F10X_MD_VL) || defined (STM32F0XX))
+
+#if defined (STM32F0XX)
+#include <stm32f0xx_iwdg.h>
+#elif (defined (STM32F10X_LD) || defined(STM32F10X_MD) || defined (STM32F10X_MD_VL))
+#include <stm32f10x_iwdg.h>
+#elif (defined (STM32F40_41xxx) || defined (STM32F427_437xx) || defined (STM32F429_439xx) || defined (STM32F401xx))
+#include <stm32f4xx_iwdg.h>
+#endif
+static void watchdog_init()
+{
+IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
+IWDG_SetPrescaler(IWDG_Prescaler_32); // set clock to 32 KHz/32 = 1 KHz
+IWDG_SetReload(2000); // reload every 2000 ms
+IWDG_ReloadCounter();
+IWDG_Enable();
+}
+static void watchdog_reset()
+{
+IWDG_ReloadCounter();
+}
+
 void read_channels(int16_t *channel, int max_channel_count);
 void select_ant(uint32_t *randomizer, bool tx);		// 16bytes randomizer
 void read_keys(uint8_t* key, int max_keys);
@@ -60,6 +83,10 @@ static uint64_t board_get_seed()
 	
 	#if (defined (STM32F10X_LD) || defined(STM32F10X_MD) || defined (STM32F10X_MD_VL))
 	const void *stm32_id_address = (const void*)0x1FFFF7E8;	
+	#endif
+	
+	#if (defined (STM32F40_41xxx) || defined (STM32F427_437xx) || defined (STM32F429_439xx) || defined (STM32F401xx))
+	const void *stm32_id_address = (const void*)0x1FFF7A10;	
 	#endif
 	
 	char data[12];

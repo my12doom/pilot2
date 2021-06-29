@@ -29,7 +29,11 @@ int rdp;
 int hoop_id = 0;
 int miss = 99999;
 int maxmiss = 0;
-int packet_time = 1373;		// in us
+int packet_time = 1363;		// in us
+int rf_latency = 45;
+int rx_process_time = 208;	// 72Mhz STM32F1 -O0, will be updated in IRQ
+int spi_tune_time = 60;
+
 int64_t last_valid_packet = -1000000;
 uint16_t hoop_interval = 1000;
 uint32_t randomizing[4] = {0, 0, 0, 0};
@@ -54,8 +58,18 @@ uint32_t pos2rando(int pos)
 	return randomizing[0];
 }
 
+bool LOS()
+{
+	if (hoop_interval == 1000)
+		return miss > 1000;
+	else
+		return miss > 500;
+}
+
+int tx_spi_time = 0;
 int hoop_to(int next_hoop_id)
 {
+	int64_t t = systimer->gettime();
 	nrf.rf_off();
 	
 	hoop_id = next_hoop_id;
@@ -64,16 +78,21 @@ int hoop_to(int next_hoop_id)
 	
 	nrf.write_reg(RF_CH, channel);
 	
+//	if (!(hoop_id & 1) || LOS())
+	if(1)
 	//if (channel < 10)
-	if (1)
-	{	
+	{
 		nrf.rf_on(true);
 	}
 	else
 	{
+		
 		uint8_t pkt[32] = "HelloWorld";
 		nrf.write_tx(pkt, 32);
-		nrf.rf_on(false);		
+		systimer->delayus(120);		
+		nrf.rf_on(false);
+		
+		tx_spi_time = systimer->gettime() - t;
 	}
 	
 	return 0;
@@ -109,15 +128,14 @@ void nrf_irq_entry(void *parameter, int flags)
 		last_valid_packet = ts;
 	}
 	
+	
 	if (next_hoop_id >= 0)
 	{
-		hoop_to((next_hoop_id+1)&0xffff);
-		miss = 0;
-		int dt = systimer->gettime() - ts;
-		int ss = hoop_interval - dt - packet_time-200;
-		if (ss > 0)
-			systimer->delayus(ss);
+		//systimer->delayus(330);
 		timer->restart();
+		miss = 0;
+		rx_process_time = systimer->gettime() - ts;
+		hoop_to((next_hoop_id+1)&0xffff);
 	}
 	
 	timer->enable_cb();
@@ -130,12 +148,12 @@ void timer_entry(void * p)
 	
 	miss ++;
 	
-	if (miss < 2000)
+	if (!LOS())
 		dbg2->write(false);
 	// hoop slower when lost sync
-	if (miss < 2000 || miss % 50 == 0)
+	if (!LOS() || miss % 50 == 0)
 		hoop_to((hoop_id+1)&0xffff);
-	if (miss < 2000)
+	if (!LOS())
 		dbg2->write(true);
 	
 	if (maxmiss < miss)
@@ -286,6 +304,7 @@ int main()
 	uint64_t key4after[4] = {seed, seed, seed, seed};
 	aes.set_key((uint8_t*)key4after, 256);
 	nrf.rf_off();
+	nrf.set_tx_address((uint8_t*)&seed, 3);
 	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
 	nrf.enable_rx_address(0, true);
 	nrf.write_reg(RF_CH, 95);
@@ -344,7 +363,6 @@ int main()
 					
 					uart->write(ebus_frame, sizeof(ebus_frame));
 				}
-				/*
 				if (sbus)
 				{
 					sbus_u s = {0x0f};
@@ -368,12 +386,12 @@ int main()
 					s.dat.chan8 = !(key&2) ? 1800 : 200;				// aux4 stop
 					s.dat.chan6 = !(key&4) ? 1024 : 200;				// aux2 land
 
+					s.dat.chan9 = !(key&8) ? 1024 : 200;				// aux5 key
+					s.dat.chan10 = !(key&16) ? 1024 : 200;				// aux6 key
+
 					sbus->write(&s, sizeof(s));
 				}
-				*/
 			}
-			
-			continue;
 		}
 		
 		if (SCL&&SDA)
@@ -402,5 +420,7 @@ int main()
 			lo = o;
 			maxmiss = 0;
 		}
+		
+		watchdog_reset();
 	}
 }

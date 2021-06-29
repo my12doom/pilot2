@@ -348,5 +348,38 @@ uint8_t I2C_SW::rx()	// send a byte.
 	return I2C_ReceiveByte();
 }
 
+int I2C_SW::reset_bus()		// return -1 if bus busy or any error, -2 not supported, 0 on success.
+{
+	// bus reset method 1
+	m_SCL->write(false);
+	m_SCL->set_mode(MODE_OUT_PushPull);
+	I2C_Delay();
+	m_SDA->write(false);
+	m_SDA->set_mode(MODE_OUT_PushPull);
+	I2C_Delay();
+	m_SCL->write(true);
+	I2C_Delay();
+	m_SDA->write(true);
+	I2C_Delay();
+	m_SCL->set_mode(MODE_OUT_OpenDrain);
+	m_SDA->set_mode(MODE_OUT_OpenDrain);
+	
+	// bus reset method 2
+	for(int i=0; i<9; i++)
+	{
+		m_SCL->write(false);
+		systimer->delayus(10);
+		m_SCL->write(true);
+		systimer->delayus(10);
+
+		if (m_SDA->read())
+			break;
+	}
+
+	stop();
+
+	return SDA_STATE() ? 0 : -1;
+}
+
 
 }

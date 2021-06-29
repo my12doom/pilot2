@@ -50,17 +50,6 @@ F1GPIO state_led[3] =
 	F1GPIO(GPIOB, GPIO_Pin_9),
 };
 
-/*
-BUTTON_FLY_MODE,
-BUTTON_STOP,
-BUTTON_RETURN,
-BUTTON_BOT_LEFT,
-BUTTON_BOT_RIGHT,
-BUTTON_SHUTTER,
-BUTTON_RECORD,
-ENCODER_KEY,
-*/
-
 F1GPIO keys[8] =
 {
 	F1GPIO(GPIOC, GPIO_Pin_7),
@@ -107,15 +96,15 @@ static void adc_config(void)
 	
 	/* DMA channel1 configuration */
 	DMA_DeInit(DMA1_Channel1);
-	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);	 //ADC??
-	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&adc_data;//????
+	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(ADC1->DR);
+	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&adc_data;
 	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
 	DMA_InitStructure.DMA_BufferSize = 8;
-	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;//??????
-	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;  //??????
-	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;	//??
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
 	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;		//????
+	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
 	DMA_InitStructure.DMA_Priority = DMA_Priority_High;
 	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
 	DMA_Init(DMA1_Channel1, &DMA_InitStructure);
@@ -124,12 +113,12 @@ static void adc_config(void)
 	DMA_Cmd(DMA1_Channel1, ENABLE);
 	
 	/* ADC1 configuration */		
-	ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;	//??ADC??
-	ADC_InitStructure.ADC_ScanConvMode = ENABLE ; 	 //??????,???????????
-	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;	//????????,??????ADC??
-	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;	//?????????
-	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right; 	//???????
-	ADC_InitStructure.ADC_NbrOfChannel = 8;	 	//????????1
+	ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;
+	ADC_InitStructure.ADC_ScanConvMode = ENABLE ;
+	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
+	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
+	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+	ADC_InitStructure.ADC_NbrOfChannel = 8;
 	ADC_Init(ADC1, &ADC_InitStructure);
 	
 	RCC_ADCCLKConfig(RCC_PCLK2_Div8); 
@@ -270,13 +259,14 @@ void mode_button_entry(void *parameter, int flags)
 
 
 int64_t last_charging = -9999999;
+uint8_t reg8;
+bool charge_done;
 void read_charge_state()
 {
-	uint8_t reg8;
 	i2c.read_reg(0x6b<<1, 8, &reg8);
 	bool power_good = reg8 & (0x4);
 	bool charging = ((reg8>>4)&0x03) == 0x01 || ((reg8>>4)&0x03) == 0x02;
-	
+	charge_done = (reg8>>4)&0x03 == 0x03;
 	if (charging)
 		last_charging = systimer->gettime();
 	
@@ -372,92 +362,15 @@ void update_config()
 			config[i].reverse = 0;
 			config[i].dead_band = 0;
 		}
+				
+		config[0].reverse = true;
+		config[1].reverse = true;
+		config[3].reverse = false;
 		
-		/*
-		// #1		
-		config[0].middle = 2240;
-		config[1].middle = 2133;
-		config[2].middle = 2188;
-		config[3].middle = 2210;
-
-		config[0]._min = 557;
-		config[1]._min = 435;
-		config[2]._min = 492;
-		config[3]._min = 456;
-
-		config[0]._max = 3943;
-		config[1]._max = 3804;
-		config[2]._max = 3780;
-		config[3]._max = 3924;
-		
-		
-		// #2
-		config[0].middle = 2293;
-		config[1].middle = 2088;
-		config[2].middle = 2102;
-		config[3].middle = 2170;
-
-		config[0]._min = 567;
-		config[1]._min = 394;
-		config[2]._min = 410;
-		config[3]._min = 493;
-
-		config[0]._max = 3980;
-		config[1]._max = 3750;
-		config[2]._max = 3705;
-		config[3]._max = 3869;
-		
-		
-		// #4
-		config[0].middle = 2235;
-		config[1].middle = 2114;
-		config[2].middle = 2135;
-		config[3].middle = 2222;
-
-		config[0]._min = 485;
-		config[1]._min = 378;
-		config[2]._min = 417;
-		config[3]._min = 563;
-
-		config[0]._max = 3965;
-		config[1]._max = 3807;
-		config[2]._max = 3820;
-		config[3]._max = 3929;
-		
-		
-		// #3
-		config[0].middle = 2194;
-		config[1].middle = 2220;
-		config[2].middle = 2147;
-		config[3].middle = 2164;
-
-		config[0]._min = 445;
-		config[1]._min = 443;
-		config[2]._min = 402;
-		config[3]._min = 477;
-
-		config[0]._max = 3914;
-		config[1]._max = 3774;
-		config[2]._max = 3786;
-		config[3]._max = 3890;
-
-		// #5
-		config[0].middle = 2157;
-		config[1].middle = 2106;
-		config[2].middle = 2063;
-		config[3].middle = 2135;
-
-		config[0]._min = 505;
-		config[1]._min = 366;
-		config[2]._min = 364;
-		config[3]._min = 433;
-
-		config[0]._max = 3877;
-		config[1]._max = 3764;
-		config[2]._max = 3738;
-		config[3]._max = 3869;
-		*/
-		
+		space_write("conf", 4, &config, sizeof(config), NULL);		
+	}
+	else if (!config[0].reverse)
+	{
 		config[0].reverse = true;
 		config[1].reverse = true;
 		config[3].reverse = false;
@@ -477,7 +390,9 @@ int board_init()
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
 	update_config();
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
-	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);		
+	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
+	watchdog_init();
+	
 	
 	// NRF GPIOs and interrupt 
 	::cs = &_cs;
@@ -534,36 +449,20 @@ int board_init()
 	::dbg2->set_mode(MODE_OUT_OpenDrain);
 	::vibrator = &vib;
 	
-	// priority config
-	/*
-	NVIC_InitTypeDef NVIC_InitStructure;
-	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
-	
-	NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;	
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
-	*/
-	
 	i2c.init(::SCL, ::SDA);
 	i2c.set_speed(25);
 	int64_t bq_timeout = systimer->gettime() + 500000;
 	while(systimer->gettime() < bq_timeout)
 	{
 		if (i2c.read_reg(0x6b<<1, 8, &reg08) == 0)
-			break;		
-	} 
+			break;
+	}
 	systimer->delayms(600);
 	i2c.write_reg(0x6b<<1, 1, 0x80);		// reset registers
 	systimer->delayms(100);
 	i2c.write_reg(0x6b<<1, 5, 0x8C);		// disable i2c watchdog
 	i2c.write_reg(0x6b<<1, 3, 0x10);		// 256mA pre-charge, 128mA termination
-	i2c.write_reg(0x6b<<1, 2, 0x60);		// 1.5A charge
+	i2c.write_reg(0x6b<<1, 2, 0x20);		// 1A charge
 	i2c.write_reg(0x6b<<1, 0, 0x07);		// allow charger to pull vbus down to 3.88V, 3A max input
 	i2c.write_reg(0x6b<<1, 1, 0x1F);		// 3.7V minimum system voltage, charge enable
 	i2c.write_reg(0x6b<<1, 7, 0x4B);		// default value
@@ -574,18 +473,7 @@ int board_init()
 			i++;
 		else
 		{
-			::SCL->write(false);
-			::SCL->set_mode(MODE_OUT_PushPull);
-			systimer->delayus(10);
-			::SDA->write(false);
-			::SDA->set_mode(MODE_OUT_PushPull);
-			systimer->delayus(10);
-			::SCL->write(true);
-			systimer->delayus(10);
-			::SDA->write(true);
-			::SCL->set_mode(MODE_OUT_OpenDrain);
-			::SDA->set_mode(MODE_OUT_OpenDrain);
-			
+			i2c.reset_bus();
 			
 			if (i == 9)
 				NVIC_SystemReset();
@@ -608,9 +496,11 @@ int board_init()
 		{
 			::dbg2->write(true);
 			::dbg->write(systimer->gettime() % 200000 < 100000);
-			if (systimer->gettime() > last_click + 5000000 && systimer->gettime() > last_charging + 5000000)
+			if (!charge_done && systimer->gettime() > last_click + 5000000 && systimer->gettime() > last_charging + 5000000)
 				shutdown();
 		}
+		
+		watchdog_reset();
 	}
 	state_led[0].write(!mode);
 	state_led[1].write(false);

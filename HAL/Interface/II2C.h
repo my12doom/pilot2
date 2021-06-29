@@ -23,6 +23,9 @@ namespace HAL
 		virtual int wait_ack()=0;		// return 0 on success, -1 on any error, 1 if a nak received.
 		virtual int tx(uint8_t tx)=0;	// send a byte
 		virtual uint8_t rx()=0;			// receive a byte
+
+		// bus reset
+		virtual int reset_bus(){return -2;}// return -1 if bus busy or any error, -2 not supported, 0 on success.
 	};
 
 	class I2C_SW : public II2C
@@ -44,7 +47,10 @@ namespace HAL
 		virtual int wait_ack();		// return 0 on success, -1 on any error, 1 if a nak received.
 		virtual int tx(uint8_t tx);	// send a byte
 		virtual uint8_t rx();		// receive a byte
-	
+
+		// bus reset
+		virtual int reset_bus();		// return -1 if bus busy or any error, -2 not supported, 0 on success.
+
 	protected:
 		int m_speed_tick;
 		IGPIO *m_SDA;

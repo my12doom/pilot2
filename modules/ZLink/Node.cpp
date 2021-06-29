@@ -52,6 +52,7 @@ param downlink_freq("fdwn", 437);
 param portpower("pwr", 65535);
 static uint8_t aes_key[32] = {0x85, 0xA3};
 static bool use_aes = false;
+bool uwb_mode = true;
 
 // hardware/board
 F4GPIO led_uart1(GPIOB, GPIO_Pin_1);
@@ -897,8 +898,8 @@ int main()
 	led_uart1.write(1);
 	led_uart_rtk.write(1);
 	led_usb.write(1);
-	uart_payload.set_baudrate(57600);
-	uart_RTK.set_baudrate(57600);
+	uart_payload.set_baudrate(uwb_mode ? 115200 : 57600);
+	uart_RTK.set_baudrate(uwb_mode ? 115200 : 57600);
 	uart_wifi.set_baudrate(1000000);
 
 	x.set_lora_mode(lora_mode);
@@ -1036,33 +1037,49 @@ int main()
 		// try send downlink
 		try_send_next_downlink();
 		
-		// drain uart
-		int c = -1;
-		do
+
+		if (uwb_mode)
 		{
-			uint8_t tmp[DOWNLINK_MTU];
-			c = uart_payload.read(tmp, DOWNLINK_MTU);
-			for(int i=0; i<c; i++)
+			// bypass to uwb
+			char tmp[128];
+			int n = 0;
+			while((n = uart_payload.read(tmp, sizeof(tmp))) > 0)
+				uart_RTK.write(tmp, n);
+			while((n = uart_RTK.read(tmp, sizeof(tmp))) > 0)
+				uart_payload.write(tmp, n);
+		}
+		else
+		{
+			// drain uart to wifi/lora
+			int c = -1;
+			do
 			{
-				if (mavlink_parse_char(mavlink_chan, tmp[i], &mav_msg, &mav_status))
-				{				
-					led_uart1.toggle();
-					if (mav_msg.msgid == 94)
-					{
-						mav_msg94 = mav_msg;
-						new_94 = true;
+				uint8_t tmp[DOWNLINK_MTU];
+				c = uart_payload.read(tmp, DOWNLINK_MTU);
+				for(int i=0; i<c; i++)
+				{
+					if (mavlink_parse_char(mavlink_chan, tmp[i], &mav_msg, &mav_status))
+					{				
+						led_uart1.toggle();
+						if (mav_msg.msgid == 94)
+						{
+							mav_msg94 = mav_msg;
+							new_94 = true;
+						}
 					}
 				}
+			} while(c>0);
+			
+			if (new_94 && port_power(3))
+			{
+				WirelessPacket * wp = (WirelessPacket*) p.data;
+				int mavlink_buf_size = mavlink_msg_to_send_buffer(wp->payload, &mav_msg94);					
+				if (enqueue_downlink(wp->payload, mavlink_buf_size, packet_payload, downlink_path) == 0)
+					new_94 = false;
 			}
-		} while(c>0);
-		
-		if (new_94 && port_power(3))
-		{
-			WirelessPacket * wp = (WirelessPacket*) p.data;
-			int mavlink_buf_size = mavlink_msg_to_send_buffer(wp->payload, &mav_msg94);					
-			if (enqueue_downlink(wp->payload, mavlink_buf_size, packet_payload, downlink_path) == 0)
-				new_94 = false;
 		}
+		
+
 
 		/*
 		int c = uart_payload.peak(wp->payload, DOWNLINK_MTU);
