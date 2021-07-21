@@ -22,7 +22,8 @@ F0GPIO _dbg2(GPIOB, GPIO_Pin_10);
 F0SPI _spi;
 F0Interrupt _interrupt;
 F0Timer _timer(TIM14);
-	
+F0UART uart(USART1);
+
 int board_init()
 {
 	::cs = &_cs;
@@ -45,6 +46,7 @@ int board_init()
 	
 	static PPMOUT ppmout;
 	::ppm = &ppmout;
+	::telemetry = &uart;
 			
 	return 0;
 }

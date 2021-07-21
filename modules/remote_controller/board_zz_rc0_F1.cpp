@@ -54,7 +54,9 @@ int board_init()
 	spi = &_spi;
 	interrupt = &_interrupt;
 	timer = &_timer;
-	sbus = &f1uart;
+	telemetry = &f1uart;
+
+	telemetry->set_baudrate(500000);
 	
 	//	
 	_spi.init(SPI2);
@@ -69,9 +71,7 @@ int board_init()
 
 	static PPMOUT ppmout;
 	ppm = &ppmout;
-	
-	f1uart.set_baudrate(115200);
-		
+			
 	return 0;
 }
 

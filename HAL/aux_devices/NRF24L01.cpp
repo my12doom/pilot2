@@ -1,5 +1,5 @@
 #include "NRF24L01.h"
-
+#include <string.h>
 #include <HAL/Interface/ISysTimer.h>
 
 using namespace HAL;
@@ -51,7 +51,7 @@ int NRF24L01::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *ce)
 	cs->write(true);
 	ce->write(false);
 
-	spi->set_speed(8000000);
+	spi->set_speed(12000000);
 	spi->set_mode(0, 0);
 
 	systimer->delayms(100);
@@ -162,9 +162,10 @@ int NRF24L01::power_off()	// power down the whole chip.
 int NRF24L01::write_cmd(uint8_t cmd, const uint8_t *data, int count)
 {
 	cs->write(false);
-	spi->txrx(cmd);
-	for(int i=0; i<count; i++)
-		spi->txrx(data[i]);
+	uint8_t tx[33] = {cmd};	
+	uint8_t rx[33];
+	memcpy(tx+1, data, count);
+	spi->txrx2(tx, rx, count+1);
 	cs->write(true);
 
 	return 0;
@@ -173,10 +174,11 @@ int NRF24L01::write_cmd(uint8_t cmd, const uint8_t *data, int count)
 int NRF24L01::read_cmd(uint8_t cmd, uint8_t *data, int count)
 {
 	cs->write(false);
-	spi->txrx(cmd);
-	uint8_t tx[32];
-	spi->txrx2(tx, data, count);
+	uint8_t tx[33] = {cmd};
+	uint8_t rx[33];
+	spi->txrx2(tx, rx, count+1);
 	cs->write(true);
+	memcpy(data, rx+1, count);
 
 	return 0;
 }

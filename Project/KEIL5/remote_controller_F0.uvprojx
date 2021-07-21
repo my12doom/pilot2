@@ -578,6 +578,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F0\F0Interrupt.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F0UART.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -740,11 +745,6 @@
               <FileName>PPMOUT_f0.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\remote_controller\PPMOUT_f0.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>F0UART.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
             </File>
             <File>
               <FileName>rx.cpp</FileName>
@@ -1360,7 +1360,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>4</Optim>
             <oTime>1</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -1625,6 +1625,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F0\F0Interrupt.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F0UART.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1718,11 +1723,6 @@
               <FileName>PPMOUT_f0.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\remote_controller\PPMOUT_f0.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>F0UART.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
             </File>
             <File>
               <FileName>rx.cpp</FileName>
@@ -2603,6 +2603,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F0\F0Interrupt.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F0UART.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -2816,11 +2821,6 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
-            </File>
-            <File>
-              <FileName>F0UART.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
             </File>
             <File>
               <FileName>rx.cpp</FileName>
@@ -3487,7 +3487,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>4</Optim>
             <oTime>1</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -3752,6 +3752,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F0\F0Interrupt.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F0UART.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -3965,11 +3970,6 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
-            </File>
-            <File>
-              <FileName>F0UART.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
             </File>
             <File>
               <FileName>rx.cpp</FileName>
@@ -4850,6 +4850,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\STM32F0\F0Interrupt.cpp</FilePath>
             </File>
+            <File>
+              <FileName>F0UART.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -4943,11 +4948,6 @@
               <FileName>PPMOUT_f0.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\modules\remote_controller\PPMOUT_f0.cpp</FilePath>
-            </File>
-            <File>
-              <FileName>F0UART.cpp</FileName>
-              <FileType>8</FileType>
-              <FilePath>..\..\HAL\STM32F0\F0UART.cpp</FilePath>
             </File>
             <File>
               <FileName>rx.cpp</FileName>

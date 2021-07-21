@@ -87,22 +87,22 @@ namespace STM32F0
 	
 	int F0SPI::set_speed(int speed)	// speed in hz
 	{
-		int APB_frequency = 48000000;
-		if (speed > APB_frequency / 2)
+		int APB_frequency = SystemCoreClock;
+		if (speed >= APB_frequency / 2)
 			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
-		else if (speed > APB_frequency / 4)
+		else if (speed >= APB_frequency / 4)
 			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
-		else if (speed > APB_frequency / 8)
+		else if (speed >= APB_frequency / 8)
 			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
-		else if (speed > APB_frequency / 16)
+		else if (speed >= APB_frequency / 16)
 			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_16;
-		else if (speed > APB_frequency / 32)
+		else if (speed >= APB_frequency / 32)
 			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32;
-		else if (speed > APB_frequency / 64)
+		else if (speed >= APB_frequency / 64)
 			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_64;
-		else if (speed > APB_frequency / 128)
+		else if (speed >= APB_frequency / 128)
 			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_128;
-		else if (speed > APB_frequency / 256)
+		else if (speed >= APB_frequency / 256)
 			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256;
 		else
 			SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256;

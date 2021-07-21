@@ -4,6 +4,7 @@
 #include <HAL/STM32F1/F1GPIO.h>
 #include <HAL/STM32F1/F1Interrupt.h>
 #include <HAL/STM32F1/F1Timer.h>
+#include <HAL/STM32F1/F1VCP.h>
 #include <HAL/Interface/II2C.h>
 #include <HAL/Interface/ISysTimer.h>
 #include <string.h>
@@ -34,6 +35,7 @@ F1GPIO _SDA(GPIOC, GPIO_Pin_14);
 F1SPI _spi;
 F1Interrupt _interrupt;
 F1Timer _timer(TIM2);
+F1VCP vcp;
 
 F1GPIO power_leds[4] =
 {
@@ -240,24 +242,6 @@ void button_entry(void *parameter, int flags)
 	}
 }
 
-int16_t mode = 0;
-void mode_button_entry(void *parameter, int flags)
-{
-	mode = 4095 - mode;
-	if (powerup)
-	{
-		state_led[0].write(!mode);
-		state_led[1].write(false);
-	}
-	else
-	{
-		state_led[0].write(true);
-		state_led[1].write(true);
-		state_led[2].write(true);
-	}
-}
-
-
 int64_t last_charging = -9999999;
 uint8_t reg8;
 bool charge_done;
@@ -275,6 +259,7 @@ void read_charge_state()
 
 void button_timer_entry(void *p)
 {
+	read_charge_state();
 	static int64_t up = systimer->gettime();
 	if (!qon.read())
 	{
@@ -380,7 +365,6 @@ void update_config()
 }
 
 F1Interrupt button_int;
-F1Interrupt mode_button_int;
 uint8_t reg08;
 uint8_t reg[10];
 
@@ -406,6 +390,8 @@ int board_init()
 	::interrupt = &_interrupt;
 	::timer = &_timer;
 	::bind_button = &qon;
+	::downlink_led = &state_led[1];
+	//::telemetry = &vcp;
 	qon.set_mode(MODE_IN);
 		
 	_spi.init(SPI2);
@@ -435,11 +421,8 @@ int board_init()
 	button_int.init(GPIOB, GPIO_Pin_3, interrupt_rising_or_falling);
 	button_entry(NULL, 0);
 	button_int.set_callback(button_entry, NULL);
-	button_timer.set_period(10000);
+	button_timer.set_period(100000);
 	button_timer.set_callback(button_timer_entry, NULL);
-	
-	mode_button_int.init(GPIOB, GPIO_Pin_1, interrupt_rising);
-	mode_button_int.set_callback(mode_button_entry, NULL);
 	
 	int64_t up = systimer->gettime();
 	qon.set_mode(MODE_IN);
@@ -502,8 +485,6 @@ int board_init()
 		
 		watchdog_reset();
 	}
-	state_led[0].write(!mode);
-	state_led[1].write(false);
 
 	::dbg->write(true);
 	::dbg2->write(true);

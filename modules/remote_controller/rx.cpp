@@ -13,6 +13,7 @@
 #include <utils/AES.h>
 #include <utils/space.h>
 #include "binding.h"
+#include "packet_format.h"
 
 #include <Protocol/sbus.h>
 
@@ -20,9 +21,17 @@
 using namespace HAL;
 using namespace devices;
 
-uint8_t valid_data[32];
-AESCryptor2 aes;
+// parameters
 uint64_t seed = 0x1234567890345678;
+bool enable_telemetry = false;
+
+
+nrf_pkt uplink_pkt;
+uplink_payload_v0 *uplink_payload = (uplink_payload_v0 *)uplink_pkt.payload;
+nrf_pkt downlink_pkt;
+downlink_payload_v0 *downlink_payload = (downlink_payload_v0 *)downlink_pkt.payload;
+
+AESCryptor2 aes;
 OLED96 oled;
 int o = 0;
 int rdp;
@@ -33,6 +42,16 @@ int packet_time = 1363;		// in us
 int rf_latency = 45;
 int rx_process_time = 208;	// 72Mhz STM32F1 -O0, will be updated in IRQ
 int spi_tune_time = 60;
+int telemetry_id = 0;
+int telemetry_ack_count = 0;
+int telemetry_nack_count = 0;
+int telemetry_nack2_count = 0;
+int telemetry_down_bytes = 0;
+int telemetry_up_bytes = 0;
+
+
+bool downlink_ready = true;
+int last_uplink_telemetry_id = -1;
 
 int64_t last_valid_packet = -1000000;
 uint16_t hoop_interval = 1000;
@@ -41,12 +60,48 @@ uint32_t randomizing[4] = {0, 0, 0, 0};
 class NRF24L01_ANT : public NRF24L01
 {
 public:
-	int rf_on(bool rx)
+	virtual int rf_on(bool rx)
 	{
 		select_ant(randomizing, true);
 		return NRF24L01::rf_on(rx);
 	}
 } nrf;
+
+void encrypt_downlink_pkt()
+{
+
+}
+
+void fill_telemetry_pkt()
+{
+	static uint8_t buf[32] = "HelloWorld";
+	static int buf_size = 10;
+	if (downlink_ready && telemetry)
+	{
+		buf_size = telemetry->read(buf, sizeof(uplink_payload->telemetry));
+		if (buf_size > 0)
+		{
+			telemetry_id ++;
+			telemetry_id &= 0xf;
+			downlink_ready = false;
+			telemetry_down_bytes += buf_size;
+		}
+		else
+		{
+			buf_size = 0;
+		}
+	}
+
+	downlink_payload->telemetry_id = telemetry_id;
+	memcpy(downlink_payload->telemetry, buf, buf_size);
+	downlink_payload->ack_id = uplink_payload->telemetry_id;
+	downlink_payload->telemetry_size = buf_size;
+
+	downlink_pkt.crc = crc32(0, &downlink_pkt, 30);
+	uint8_t *p = (uint8_t*)&downlink_pkt;
+	//aes.encrypt(p, p);
+	//aes.encrypt(p+16, p+16);
+}
 
 uint32_t pos2rando(int pos)
 {
@@ -69,30 +124,32 @@ bool LOS()
 int tx_spi_time = 0;
 int hoop_to(int next_hoop_id)
 {
-	int64_t t = systimer->gettime();
 	nrf.rf_off();
 	
 	hoop_id = next_hoop_id;
 	
-	int channel = ((pos2rando(next_hoop_id) & 0xffff) * 100) >> 16;
-	
+	// 68
+	int channel = ((pos2rando(next_hoop_id) & 0xffff) * 100) >> 16;	
 	nrf.write_reg(RF_CH, channel);
 	
-//	if (!(hoop_id & 1) || LOS())
-	if(1)
-	//if (channel < 10)
+	if (!(hoop_id & 1) || LOS() || !enable_telemetry)
 	{
 		nrf.rf_on(true);
 	}
 	else
 	{
+		// 131
+		fill_telemetry_pkt();
 		
-		uint8_t pkt[32] = "HelloWorld";
-		nrf.write_tx(pkt, 32);
-		systimer->delayus(120);		
-		nrf.rf_on(false);
-		
-		tx_spi_time = systimer->gettime() - t;
+		//if(!downlink_ready)
+		{
+			int64_t t = systimer->gettime();
+			// 105
+			nrf.write_tx((uint8_t*)&downlink_pkt, 32);
+			nrf.rf_on(false);
+
+			tx_spi_time = systimer->gettime() - t;
+		}
 	}
 	
 	return 0;
@@ -107,35 +164,64 @@ void nrf_irq_entry(void *parameter, int flags)
 	
 	int fifo_state = nrf.read_reg(FIFO_STATUS);
 	int next_hoop_id = -1;
-	uint8_t data[32];
 	while ((fifo_state&1) == 0)
 	{
-		nrf.read_rx(data, 32);
+		nrf_pkt data;
+		nrf.read_rx((uint8_t*)&data, 32);
 		rdp = nrf.read_reg(9);
 		fifo_state = nrf.read_reg(FIFO_STATUS);
 		
-		aes.decrypt(data, data);
-		aes.decrypt(data+16, data+16);
-		uint16_t crc_calc = crc32(0, data, 30);
+		aes.decrypt((uint8_t*)&data, (uint8_t*)&data);
+		aes.decrypt((uint8_t*)&data+16, (uint8_t*)&data+16);
+		uint16_t crc_calc = crc32(0, (uint8_t*)&data, 30);
 
-		if (crc_calc != *(uint16_t*)(data+30))
+		if (crc_calc != data.crc)
 			continue;
 		
 		dbg->write(false);
 		o++;
-		next_hoop_id = *(uint16_t*)data;
-		memcpy(valid_data, data, 32);
+		next_hoop_id = (data.hoop_id + 1)&0xffff;
+		memcpy(&uplink_pkt, &data, 32);
 		last_valid_packet = ts;
+
+		// telemetry
+		if (uplink_payload->ack_id == telemetry_id)
+		{
+			telemetry_ack_count ++;
+			downlink_ready = true;
+		}
+		else
+		{
+			int m1 = telemetry_id - 1;
+			if (m1 == -1)
+				m1 = 15;
+			
+			if (uplink_payload->ack_id == m1)
+				telemetry_nack_count ++;
+			else
+				telemetry_nack2_count ++;				
+		}
+
+		if (uplink_payload->telemetry_id != last_uplink_telemetry_id)
+		{
+			last_uplink_telemetry_id = uplink_payload->telemetry_id;
+
+			if (telemetry)
+				telemetry->write(uplink_payload->telemetry, uplink_payload->telemetry_size);		
+		}
 	}
 	
 	
 	if (next_hoop_id >= 0)
 	{
-		//systimer->delayus(330);
 		timer->restart();
 		miss = 0;
+		hoop_to(next_hoop_id);
 		rx_process_time = systimer->gettime() - ts;
-		hoop_to((next_hoop_id+1)&0xffff);
+	}
+	else
+	{
+		nrf.rf_on(true);
 	}
 	
 	timer->enable_cb();
@@ -145,15 +231,17 @@ void nrf_irq_entry(void *parameter, int flags)
 void timer_entry(void * p)
 {
 	interrupt->disable();
+	bool is_rx = !(hoop_id & 1) || LOS() || !enable_telemetry;
 	
-	miss ++;
+	if (is_rx)
+		miss ++;
 	
-	if (!LOS())
+	if (!LOS() && is_rx)
 		dbg2->write(false);
 	// hoop slower when lost sync
 	if (!LOS() || miss % 50 == 0)
 		hoop_to((hoop_id+1)&0xffff);
-	if (!LOS())
+	if (!LOS() && is_rx)
 		dbg2->write(true);
 	
 	if (maxmiss < miss)
@@ -178,8 +266,11 @@ int binding_loop()
 	bool binding_done = false;
 	uint64_t new_seed = 0;
 	int64_t timeout = systimer->gettime() + 5000000;
+	bool new_enable_telemetry;
 	while(systimer->gettime() < timeout)
 	{
+		watchdog_reset();
+
 		// read new packet
 		if (irq->read() == false)
 		{
@@ -192,6 +283,7 @@ int binding_loop()
 			{
 				// check payload
 				binding_info_v0 *payload = (binding_info_v0 *)pkt->payload;
+				new_enable_telemetry = payload->enable_telemetry && telemetry != NULL;
 				
 				if (payload->cmd == cmd_requesting_binding)
 				{
@@ -220,11 +312,14 @@ int binding_loop()
 			// save settings
 			seed = new_seed;
 			space_write("seed", 4, &seed, 8, NULL);
+			enable_telemetry = new_enable_telemetry;
+			space_write("tele", 4, &enable_telemetry, 1, NULL);
 			
 			// ACK packets
 			binding_pkt pkt = {{'B','D'}, 0, 0};
 			binding_info_v0 *payload = (binding_info_v0 *)pkt.payload;
 			payload->cmd = cmd_ack_binding;
+			payload->enable_telemetry = telemetry != NULL;
 			uint64_t ack_seed = board_get_seed();
 			memcpy(payload->key, &ack_seed, 8);
 			pkt.crc = crc32(0, ((uint8_t*)&pkt)+3, 29);
@@ -258,7 +353,8 @@ int binding_loop()
 	
 	return 0;
 }
-int carrier_test()
+
+void carrier_test()
 {
 	nrf.rf_off();
 	systimer->delayms(2);
@@ -270,20 +366,23 @@ int carrier_test()
 	while(1)
 	{
 	}
-	return 0;
 }
+	int lp = 0;
 
 int main()
 {
 	space_init();
 	space_read("seed", 4, &seed, 8, NULL);
+	space_read("tele", 4, &enable_telemetry, 1, NULL);
 	board_init();
+	watchdog_init();
 	dbg->write(true);
 	dbg2->write(true);
 	dbg->set_mode(MODE_OUT_OpenDrain);
 	dbg2->set_mode(MODE_OUT_OpenDrain);
-	crc32(0, valid_data, 30);	// to build crc32 lookup table;
-	
+
+	memset(&downlink_pkt, 0, sizeof(downlink_pkt));
+
 	if (SCL && SDA)
 	{
 		I2C_SW i2c(SCL, SDA);
@@ -303,6 +402,7 @@ int main()
 	binding_loop();
 	uint64_t key4after[4] = {seed, seed, seed, seed};
 	aes.set_key((uint8_t*)key4after, 256);
+
 	nrf.rf_off();
 	nrf.set_tx_address((uint8_t*)&seed, 3);
 	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
@@ -320,91 +420,95 @@ int main()
 	dbg->write(true);
 	nrf.rf_on(true);
 
-	if (uart)
-		uart->set_baudrate(115200);
+
+	if (ebus)
+		ebus->set_baudrate(115200);
 	if (sbus)
 		sbus->set_baudrate(100000);
 	
 	int lo = 0;
 	int64_t t = systimer->gettime();
 	int64_t lt = t;
-	int lp = 0;
 	while(1)
 	{
-		custom_output(valid_data+2, 28, systimer->gettime() - last_valid_packet);
+		custom_output(uplink_pkt.payload, 28, systimer->gettime() - last_valid_packet);
 		
 		if (ppm)
 		{
-			static int64_t last_out = systimer->gettime();
+			static int64_t last_ppm_out = systimer->gettime();
+			static int64_t last_sbus_out = systimer->gettime();
+			static int64_t last_ebus_out = systimer->gettime();
+
 			
 			int16_t data[6];
 			for(int i=0; i<6; i++)
-				data[i] = ((int16_t *)valid_data)[i+1]* 1000 / 4096 + 1000;
-			
-			if (systimer->gettime() - last_out > 20000)
+				data[i] = uplink_payload->channel_data[i]* 1000 / 4096 + 1000;
+			if (miss > 2000 || systimer->gettime() > last_valid_packet + 2000000)
+				data[2] = 800;				
+
+			if (ebus && systimer->gettime() - last_ebus_out > 10000)
 			{
-				last_out = systimer->gettime();
+				last_ebus_out = systimer->gettime();
+				int8_t ebus_frame[15] = {0};
+				ebus_frame[0] = 0x85;
+				ebus_frame[1] = 0xA3;
+									
+				memcpy(ebus_frame+2, uplink_payload->channel_data, 12);
 				
-				if (miss > 2000 || systimer->gettime() > last_valid_packet + 2000000)
-					data[2] = 800;
+				if (miss > 200)
+					((int16_t*)(ebus_frame+2))[2] = -1000;
+				ebus_frame[14] = crc32(0, ebus_frame+2, 12);
+				
+				ebus->write(ebus_frame, sizeof(ebus_frame));
+			}
+
+			if (sbus && systimer->gettime() - last_sbus_out > 10000)
+			{
+				last_sbus_out = systimer->gettime();
+
+				sbus_u s = {0x0f};
+				uint8_t key = uplink_payload->keys[0];
+				
+				// roll : left = 1000
+				// pitch: back = 1000
+				// yaw : left = 1000
+				// stop : aux4 2000
+				// mode : aux1 1000 manual, aux1 1500 semiauto
+				// land : aux2 1500, takeoff aux2 2000
+
+
+				s.dat.chan2 = (((int)uplink_payload->channel_data[0] * 800) >> 11)+200;	// roll
+				s.dat.chan1 = (((int)uplink_payload->channel_data[1] * 800) >> 11)+200;	// pitch
+				s.dat.chan3 = (((int)uplink_payload->channel_data[2] * 800) >> 11)+200;	// throttle
+				s.dat.chan4 = (((int)uplink_payload->channel_data[3] * 800) >> 11)+200;	// yaw
+				s.dat.chan5 = !(key&1) ? 200 : 1024;				// aux1 mode
+				s.dat.chan8 = !(key&2) ? 1800 : 200;				// aux4 stop
+				s.dat.chan6 = !(key&4) ? 1024 : 200;				// aux2 land
+
+				s.dat.chan9 = !(key&8) ? 1024 : 200;				// aux5 key
+				s.dat.chan10 = !(key&16) ? 1024 : 200;				// aux6 key
+
+				sbus->write(&s, sizeof(s));
+			}
+
+			if (ppm && systimer->gettime() - last_ppm_out > 20000)
+			{
+				last_ppm_out = systimer->gettime();
 				ppm->write(data, 6, 0);
-				
-				if (uart)
-				{
-					int8_t ebus_frame[15] = {0};
-					ebus_frame[0] = 0x85;
-					ebus_frame[1] = 0xA3;
-										
-					memcpy(ebus_frame+2, valid_data+2, 12);
-					
-					if (miss > 200)
-						((int16_t*)(ebus_frame+2))[2] = -1000;
-					ebus_frame[14] = crc32(0, ebus_frame+2, 12);
-					
-					uart->write(ebus_frame, sizeof(ebus_frame));
-				}
-				if (sbus)
-				{
-					sbus_u s = {0x0f};
-					uint8_t *payload = valid_data+2;
-					uint8_t key = payload[12];
-					uint16_t *channel_data = (uint16_t*)payload;
-					
-					// roll : left = 1000
-					// pitch: back = 1000
-					// yaw : left = 1000
-					// stop : aux4 2000
-					// mode : aux1 1000 manual, aux1 1500 semiauto
-					// land : aux2 1500, takeoff aux2 2000
-
-
-					s.dat.chan2 = (((int)channel_data[0] * 800) >> 11)+200;	// roll
-					s.dat.chan1 = (((int)channel_data[1] * 800) >> 11)+200;	// pitch
-					s.dat.chan3 = (((int)channel_data[2] * 800) >> 11)+200;	// throttle
-					s.dat.chan4 = (((int)channel_data[3] * 800) >> 11)+200;	// yaw
-					s.dat.chan5 = !(key&1) ? 200 : 1024;				// aux1 mode
-					s.dat.chan8 = !(key&2) ? 1800 : 200;				// aux4 stop
-					s.dat.chan6 = !(key&4) ? 1024 : 200;				// aux2 land
-
-					s.dat.chan9 = !(key&8) ? 1024 : 200;				// aux5 key
-					s.dat.chan10 = !(key&16) ? 1024 : 200;				// aux6 key
-
-					sbus->write(&s, sizeof(s));
-				}
 			}
 		}
 		
 		if (SCL&&SDA)
 		{
 			char tmp[100];
-			sprintf(tmp, "%dp, pos=%d    ", o, *(uint16_t*)valid_data);
+			sprintf(tmp, "%dp, pos=%d    ", o, *(uint16_t*)uplink_pkt.hoop_id);
 			oled.show_str(0, 0, tmp);
 			sprintf(tmp, "rdp=%d,%dp/s, %dms    ", rdp, lp, maxmiss * hoop_interval / 1000);
 			oled.show_str(0, 1, tmp);
 			
 			int64_t current = systimer->gettime();
 			
-			int16_t *channel = (int16_t *)(valid_data+2);
+			int16_t *channel = uplink_payload->channel_data;
 			
 			sprintf(tmp, "%04d,%04d,%04d ", channel[0], channel[1], channel[2]);
 			oled.show_str(0, 2, tmp);

@@ -1,23 +1,26 @@
 #include "board.h"
 #include <Protocol/common.h>
 
-extern HAL::ISPI *spi = NULL;
-extern HAL::IGPIO *cs = NULL;
-extern HAL::IGPIO *ce = NULL;
-extern HAL::IGPIO *irq = NULL;
-extern HAL::IGPIO *dbg = NULL;
-extern HAL::IGPIO *dbg2 = NULL;
-extern HAL::IInterrupt *interrupt = NULL;
-extern HAL::ITimer *timer = NULL;
+HAL::ISPI *spi = NULL;
+HAL::IGPIO *cs = NULL;
+HAL::IGPIO *ce = NULL;
+HAL::IGPIO *irq = NULL;
+HAL::IGPIO *dbg = NULL;
+HAL::IGPIO *dbg2 = NULL;
+HAL::IInterrupt *interrupt = NULL;
+HAL::ITimer *timer = NULL;
 
-extern HAL::IGPIO *bind_button = NULL;
-extern HAL::IGPIO *vibrator = NULL;
+HAL::IGPIO *bind_button = NULL;
+HAL::IGPIO *vibrator = NULL;
+HAL::IGPIO *downlink_led = NULL;
 
-extern HAL::IGPIO *SCL = NULL;
-extern HAL::IGPIO *SDA = NULL;
-extern HAL::IRCOUT *ppm = NULL;
-HAL::IUART *uart = NULL;
+HAL::IGPIO *SCL = NULL;
+HAL::IGPIO *SDA = NULL;
+HAL::IRCOUT *ppm = NULL;
+HAL::IUART *ebus = NULL;
 HAL::IUART *sbus = NULL;
+
+HAL::IUART *telemetry = NULL;
 
 WEAK void select_ant(uint32_t *randomizer, bool tx)
 {

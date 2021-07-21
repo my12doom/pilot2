@@ -15,7 +15,7 @@ namespace STM32F0
 		if (uart_table[0])
 			uart_table[0]->usart_irq();
 	}
-	extern "C" void DMA1_Channel2_3_IRQHandler()
+	extern "C" void DMA1_Channel4_5_IRQHandler()
 	{
 		if (uart_table[0])
 			uart_table[0]->dma_irq();
@@ -89,7 +89,7 @@ namespace STM32F0
 		if(USART1 == USARTx)
 		{
 			RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
-			tx_DMAy_Streamx=DMA1_Channel2;
+			tx_DMAy_Streamx=DMA1_Channel4;
 			
 			NVIC_InitTypeDef NVIC_InitStructure;
 			NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel2_3_IRQn;
@@ -99,7 +99,7 @@ namespace STM32F0
 		}
 		
 		DMA_InitTypeDef DMA_InitStructure = {0};
-		DMA_DeInit(DMA1_Channel2);
+		DMA_DeInit(DMA1_Channel4);
 		DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(USARTx->TDR));
 		DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&tx_buffer;
 		DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
@@ -253,7 +253,7 @@ namespace STM32F0
 	void F0UART::dma_irq()
 	{	
 		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
-		DMA_ClearFlag(DMA1_FLAG_TC2);
+		DMA_ClearFlag(DMA1_FLAG_TC4);
 		tx_dma_running = false;
 		dma_handle_tx_queue();
 	}

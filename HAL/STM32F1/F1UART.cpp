@@ -5,6 +5,7 @@
 #include <stm32F10x_rcc.h>
 #include <misc.h>
 
+bool uart_overflow = false;
 namespace STM32F1
 {
 	static F1UART * uart_table[6] = {0};
@@ -209,7 +210,7 @@ namespace STM32F1
 	{
 		int i;
 		const char *p = (const char*)buf;
-		int new_pos = (tx_end +count) % sizeof(tx_buffer);
+		int new_pos = (tx_end +count) &(sizeof(tx_buffer)-1);
 		int old_size = tx_end-tx_start < 0 ? tx_end-tx_start + sizeof(tx_buffer) : tx_end-tx_start;
 		if (count + old_size > sizeof(tx_buffer))
 		{
@@ -218,9 +219,9 @@ namespace STM32F1
 		}
 
 		for(i=0; i<count; i++)
-			tx_buffer[(tx_end+i)%sizeof(tx_buffer)] = p[i];
+			tx_buffer[(tx_end+i)&(sizeof(tx_buffer)-1)] = p[i];
 
-		tx_end = (tx_end+count)%sizeof(tx_buffer);
+		tx_end = (tx_end+count)&(sizeof(tx_buffer)-1);
 
 		count = tx_end-tx_start;
 		if (count<0)
@@ -254,8 +255,8 @@ namespace STM32F1
 		if (max_count > size)
 			max_count = size;
 		for(i=0; i<max_count; i++)
-			p[i] = rx_buffer[(i+start)%sizeof(rx_buffer)];
-		start = (i+start)%sizeof(rx_buffer);
+			p[i] = rx_buffer[(i+start)&(sizeof(rx_buffer)-1)];
+		start = (i+start)&(sizeof(rx_buffer)-1);
 		return max_count;
 	}
 	int F1UART::readline(void *data, int max_count)
@@ -275,11 +276,11 @@ namespace STM32F1
 			max_count = size;
 		for(i=0; i<max_count; i++)
 		{
-			p[i] = rx_buffer[(i+start)%sizeof(rx_buffer)];
+			p[i] = rx_buffer[(i+start)&(sizeof(rx_buffer)-1)];
 			if (p[i] == '\n')
 			{
 				i++;
-				start = (i+start)%sizeof(rx_buffer);
+				start = (i+start)&(sizeof(rx_buffer)-1);
 				return i;
 			}
 		}
@@ -301,7 +302,7 @@ namespace STM32F1
 		if (max_count > size)
 			max_count = size;
 		for(i=0; i<max_count; i++)
-			p[i] = rx_buffer[(i+start)%sizeof(rx_buffer)];
+			p[i] = rx_buffer[(i+start)&(sizeof(rx_buffer)-1)];
 		return max_count;
 	}
 	int F1UART::dma_handle_tx_queue()
@@ -341,7 +342,7 @@ namespace STM32F1
 	//For usart1:
 	void F1UART::TXIRQHandler()
 	{	
-		tx_start = (tx_start + ongoing_tx_size) % sizeof(tx_buffer);
+		tx_start = (tx_start + ongoing_tx_size) &(sizeof(tx_buffer)-1);
 		DMA_ClearFlag(tc_flag);
 		tx_dma_running = false;
 		dma_handle_tx_queue();
@@ -357,11 +358,15 @@ namespace STM32F1
 		
 		//USART_ClearITPendingBit(UART4, USART_IT_RXNE);
 		USARTx->SR = (uint16_t)~0x20;
-		if (((end+1)%sizeof(rx_buffer) != start))
+		if (((end+1)&(sizeof(rx_buffer)-1)) != start)
 		{
 			rx_buffer[end] = c;
 			end++;
-			end %= sizeof(rx_buffer);
+			end &= sizeof(rx_buffer)-1;
+		}
+		else
+		{
+			uart_overflow = true;
 		}
 	}
 	

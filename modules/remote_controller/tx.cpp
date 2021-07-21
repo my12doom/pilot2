@@ -11,32 +11,46 @@
 #include <utils/RIJNDAEL.h>
 #include <utils/AES.h>
 #include "binding.h"
+#include "packet_format.h"
 
 // BSP
 using namespace HAL;
 using namespace devices;
 
-uint8_t data[32];
-uint8_t rx_data[32];
-uint16_t hoop_id = 0;
+// parameters
 uint64_t seed = 0x1234567890345678;
+configure_entry config[6];
+configure_entry channel_statics[6];
+bool enable_telemetry = false;
+
+nrf_pkt uplink_pkt;
+uplink_payload_v0 *uplink_payload = (uplink_payload_v0*)uplink_pkt.payload;
+nrf_pkt downlink_pkt;
+downlink_payload_v0 *downlink_payload = (downlink_payload_v0*)downlink_pkt.payload;
+int telemetry_id = 0;
+int telemetry_down_bytes = 0;
+int last_downlink_telemetry_id = -1;
+int telemetry_up_bytes = 0;
+bool telemetry_ready = true;
+
+uint16_t hoop_id = 0;
 uint16_t hoop_interval = 1000;
 int64_t ts;
 int dt;
 int rdp;
 AESCryptor2 aes;
 uint32_t randomizing[4] = {0, 0, 0, 0};
-configure_entry config[6];
-configure_entry channel_statics[6];
+
 int packet_time = 1363;		// in us
 int rf_latency = 45;
 int rx_pkt = 0;
 int rx_pkt_s = 0;
 
+
 class NRF24L01_ANT : public NRF24L01
 {
 public:
-	int rf_on(bool rx)
+	virtual int rf_on(bool rx)
 	{
 		select_ant(randomizing, true);
 		return NRF24L01::rf_on(rx);
@@ -53,6 +67,7 @@ uint32_t pos2rando(int pos)
 	return randomizing[0];
 }
 
+
 void nrf_irq_entry(void *parameter, int flags)
 {
 	timer->disable_cb();
@@ -63,16 +78,50 @@ void nrf_irq_entry(void *parameter, int flags)
 	nrf.write_reg(7, nrf.read_reg(7));				// sending 32bytes payload with 3byte address and 2byte CRC cost ~1363us
 													// delay between tx and rx is 25us max
 		
-	// read out RX packets
+	// read out downlink packets
 	//ts = systimer->gettime();
 	int fifo_state = nrf.read_reg(FIFO_STATUS);
 	while ((fifo_state&1) == 0)
 	{
-		nrf.read_rx(data, 32);
+		nrf_pkt pkt;
+		uint8_t *p = (uint8_t*)&pkt;
+		nrf.read_rx(p, 32);
 		rdp = nrf.read_reg(9);
 		fifo_state = nrf.read_reg(FIFO_STATUS);
 		
-		rx_pkt ++;
+		aes.decrypt(p, p);
+		aes.decrypt(p+16, p+16);
+		uint16_t crc_calc = crc32(0, p, 30);
+		
+		if (pkt.crc == crc_calc)
+		{
+			downlink_pkt = pkt;
+			rx_pkt ++;
+
+			if (downlink_led)
+				downlink_led->toggle();
+
+			// handle telemetry
+			if (downlink_payload->ack_id == telemetry_id)
+				telemetry_ready = true;
+			if (downlink_payload->telemetry_id != last_downlink_telemetry_id)
+			{
+				last_downlink_telemetry_id = downlink_payload->telemetry_id;
+
+				if (telemetry)
+				{
+					telemetry->write(downlink_payload->telemetry, downlink_payload->telemetry_size);
+					telemetry_down_bytes += downlink_payload->telemetry_size;
+				}
+			}
+		}
+	}
+
+	if (enable_telemetry)
+	{
+		int channel = ((pos2rando(hoop_id) & 0xffff) * 100) >> 16;
+		nrf.write_reg(5, channel);
+		nrf.rf_on(true);
 	}
 	
 	//dt = systimer->gettime() - ts;
@@ -88,7 +137,7 @@ static int iabs(int a)
 int16_t channel_data[6];
 int16_t channel_data_o[6];
 
-void process_channels(int16_t *data, int count)
+void apply_calibration(int16_t *data, int count)
 {
 	memcpy(channel_data, data, count*2);
 	for(int i=0; i<count; i++)
@@ -126,40 +175,68 @@ void process_channels(int16_t *data, int count)
 	memcpy(channel_data_o, data, count*2);
 }
 
+void fill_telemetry()
+{
+	static uint8_t buf[32] = "HelloWorld";
+	static int buf_size = 10;
+	if (telemetry_ready && telemetry)
+	{
+		buf_size = telemetry->read(buf, sizeof(uplink_payload->telemetry));
+		if (buf_size > 0)
+		{
+			telemetry_id ++;
+			telemetry_id &= 0xf;
+			telemetry_ready = false;
+			telemetry_up_bytes += buf_size;
+		}
+		else
+		{
+			buf_size = 0;
+		}
+	}
+
+	uplink_payload->telemetry_id = telemetry_id;
+	memcpy(uplink_payload->telemetry, buf, buf_size);
+	uplink_payload->telemetry_size = buf_size;
+}
+
 int tx_tx_process_time = 0;
 void timer_entry(void *p)
 {
 	interrupt->disable();
 	dbg->write(true);
 	
-	*(uint16_t*)data = hoop_id;	
+	uplink_pkt.hoop_id = hoop_id;	
 	int channel = ((pos2rando(hoop_id) & 0xffff) * 100) >> 16;
 	hoop_id ++;
 	//channel = hoop_id%100;
-	nrf.rf_off();
-	nrf.write_reg(5, channel);
 	
-	//if (channel < 10)
-	//if (hoop_id& 1)
-	if (1)
+	if (!enable_telemetry || (hoop_id& 1))
 	{
+		nrf.rf_off();
+		nrf.write_reg(5, channel);
 		int64_t t = systimer->gettime();
-		read_channels((int16_t*)(data+2), 6);
-		process_channels((int16_t*)(data+2), 6);
-		read_keys(data+14, 8);
+		read_channels(uplink_payload->channel_data, 6);
+		apply_calibration(uplink_payload->channel_data, 6);
+		read_keys(uplink_payload->keys, 2);
+
+		fill_telemetry();
 		
-		*(uint16_t*)(data+30) = crc32(0, data, 30);
-		
-		aes.encrypt(data, data);
-		aes.encrypt(data+16, data+16);
+		uplink_payload->ack_id = downlink_payload->telemetry_id;
+		uplink_payload->telemetry_id = telemetry_id;
+
+		uplink_pkt.crc = crc32(0, &uplink_pkt, 30);		
+		uint8_t *p = (uint8_t*)&uplink_pkt;
+		aes.encrypt(p, p);
+		aes.encrypt(p+16, p+16);
 			
-		nrf.write_tx(data, 32);
+		nrf.write_tx(p, 32);
 		nrf.rf_on(false);
 		tx_tx_process_time = systimer->gettime() - t;
 	}
 	else
 	{
-		nrf.rf_on(true);
+		//nrf.rf_on(true);
 	}
 	
 	interrupt->enable();
@@ -168,7 +245,10 @@ void timer_entry(void *p)
 }
 
 int binding_loop()
-{	
+{
+	if (downlink_led)
+		downlink_led->write(1);
+
 	nrf.set_rx_address(0, (uint8_t*)&seed, 3);
 	nrf.set_rx_address(1, (uint8_t*)BINDING_ADDRESS, 3);
 	nrf.enable_rx_address(0, true);
@@ -180,6 +260,7 @@ int binding_loop()
 	// binding packets
 	binding_pkt pkt = {{'B','D'}, 0, 0};
 	binding_info_v0 *payload = (binding_info_v0 *)pkt.payload;
+	payload->enable_telemetry = telemetry != NULL;
 	payload->cmd = cmd_requesting_binding;
 	uint64_t board_seed = board_get_seed();
 	memcpy(payload->key, &board_seed, 8);
@@ -205,26 +286,32 @@ int binding_loop()
 			if (irq->read() == false)
 			{
 				uint8_t data[32];
-				nrf.read_rx(data, 32);
+				nrf.read_rx(data, 32); 
 				
 				// version 0 binding request ?
-				binding_pkt *pkt = (binding_pkt*)data;
-				if (pkt->magic[0] == 'B' && pkt->magic[1] == 'D' && pkt->version == 0 && pkt->crc == uint8_t(crc32(0, data+3, 29)))
+				binding_pkt *rx_pkt = (binding_pkt*)data;
+				if (rx_pkt->magic[0] == 'B' && rx_pkt->magic[1] == 'D' && rx_pkt->version == 0 && rx_pkt->crc == uint8_t(crc32(0, data+3, 29)))
 				{
 					// check payload is ack?
-					binding_info_v0 *payload = (binding_info_v0 *)pkt->payload;
+					binding_info_v0 *rx_payload = (binding_info_v0 *)rx_pkt->payload;
 					
-					if (payload->cmd == cmd_ack_binding)
+					if (rx_payload->cmd == cmd_ack_binding)
 					{
 						dbg2->write(true);
 						
-						memcpy(&seed, payload->key, 8);
+						memcpy(&seed, rx_payload->key, 8);
 						seed ^= board_get_seed();
 						space_write("seed", 4, &seed, 8, NULL);
 
+						enable_telemetry = payload->enable_telemetry && rx_payload->enable_telemetry;
+						space_write("tele", 4, &enable_telemetry, 1, NULL);
+
+						if (vibrator)
+							vibrator->write(false);
+
 						return 0;
 					}
-				}				
+				}
 			}
 			dbg2->write(systimer->gettime() % 500000 < 250000);
 			if (vibrator)
@@ -287,7 +374,6 @@ int carrier_test()
 	while(1)
 	{
 	}
-	return 0;
 }
 
 int reset_channel_statics()
@@ -319,6 +405,7 @@ int main()
 {
 	space_init();	
 	space_read("seed", 4, &seed, 8, NULL);
+	space_read("tele", 4, &enable_telemetry, 1, NULL);
 	if (space_read("conf", 4, &config, sizeof(config), NULL) < 0)
 	{
 		// default configuration
@@ -337,13 +424,14 @@ int main()
 	// don't do flash erasure after board init
 	// may corrupt adc dma transfer 
 	board_init();
+	watchdog_init();
 	
 	// read config again, if board modified
 	space_read("conf", 4, &config, sizeof(config), NULL);
 	
 	irq->set_mode(MODE_IN);
 	dbg->set_mode(MODE_OUT_PushPull);
-	dbg->write(false); 
+	dbg->write(false);
 	dbg2->set_mode(MODE_OUT_PushPull);
 	dbg2->write(true);
 	
@@ -404,6 +492,9 @@ int main()
 			rx_pkt_s = rx_pkt - last_pkt_count;
 			last_pkt_count = rx_pkt;
 			last_pkt_counting = systimer->gettime();
+
+			if (downlink_led)
+				downlink_led->write(enable_telemetry && rx_pkt_s == 0);
 		}
 		
 		watchdog_reset();

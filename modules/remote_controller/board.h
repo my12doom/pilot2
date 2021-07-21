@@ -9,6 +9,7 @@
 #include <string.h>
 #include <Protocol/crc32.h>
 
+// RF module
 extern HAL::ISPI *spi;
 extern HAL::IGPIO *cs;
 extern HAL::IGPIO *ce;
@@ -17,14 +18,20 @@ extern HAL::IGPIO *dbg;
 extern HAL::IGPIO *dbg2;
 extern HAL::IInterrupt *interrupt;
 extern HAL::ITimer *timer;
-extern HAL::IGPIO *bind_button;
 
+// TX side
+extern HAL::IGPIO *bind_button;
+extern HAL::IGPIO *downlink_led;
+extern HAL::IGPIO *vibrator;
+
+// RX side
 extern HAL::IGPIO *SCL;
 extern HAL::IGPIO *SDA;
 extern HAL::IRCOUT *ppm;
-extern HAL::IUART *uart;
-extern HAL::IGPIO *vibrator;
+extern HAL::IUART *ebus;
 extern HAL::IUART *sbus;
+
+extern HAL::IUART *telemetry;
 
 typedef struct 
 {

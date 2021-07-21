@@ -4,6 +4,8 @@
 #include <HAL/STM32F0/F0GPIO.h>
 #include <HAL/STM32F0/F0Interrupt.h>
 #include <HAL/STM32F0/F0Timer.h>
+#include <HAL/STM32F0/F0UART.h>
+
 #include <HAL/Interface/II2C.h>
 #include <HAL/Interface/ISysTimer.h>
 #include <string.h>
@@ -34,6 +36,7 @@ F0GPIO _SDA(GPIOC, GPIO_Pin_14);
 F0SPI _spi;
 F0Interrupt _interrupt;
 F0Timer _timer(TIM14);
+F0UART uart1(USART1);
 
 static const uint8_t ding[] = 
 {
@@ -71,11 +74,11 @@ F0GPIO keys[8] =
 	F0GPIO(GPIOB, GPIO_Pin_0),
 	F0GPIO(GPIOB, GPIO_Pin_2),
 	F0GPIO(GPIOB, GPIO_Pin_1),
-	F0GPIO(GPIOB, GPIO_Pin_0),
-	F0GPIO(GPIOB, GPIO_Pin_0),
+	F0GPIO(GPIOC, GPIO_Pin_7),
+	F0GPIO(GPIOC, GPIO_Pin_8),
 	F0GPIO(GPIOC, GPIO_Pin_9),
-	F0GPIO(GPIOB, GPIO_Pin_0),
-	F0GPIO(GPIOB, GPIO_Pin_2),
+	F0GPIO(GPIOC, GPIO_Pin_10),
+	F0GPIO(GPIOC, GPIO_Pin_12),
 };
 
 F0GPIO ants[3] =
@@ -247,23 +250,6 @@ void button_entry(void *parameter, int flags)
 	}
 }
 
-int16_t mode = 0;
-void mode_button_entry(void *parameter, int flags)
-{
-	mode = 4095 - mode;
-	if (powerup)
-	{
-		state_led[0].write(!mode);
-		state_led[1].write(false);
-	}
-	else
-	{
-		state_led[0].write(true);
-		state_led[1].write(true);
-		state_led[2].write(true);
-	}
-}
-
 void button_timer_entry(void *p)
 {
 	static int64_t up = systimer->gettime();
@@ -400,7 +386,6 @@ void update_config()
 }
 
 F0Interrupt button_int;
-F0Interrupt mode_button_int;
 uint8_t reg08;
 uint8_t reg[10];
 int board_init()
@@ -419,6 +404,8 @@ int board_init()
 	::interrupt = &_interrupt;
 	::timer = &_timer;
 	::bind_button = &qon;
+	::downlink_led = &state_led[0];
+	::telemetry = &uart1;
 	qon.set_mode(MODE_IN);
 		
 	_spi.init(SPI2);
@@ -448,11 +435,8 @@ int board_init()
 	button_int.init(GPIOB, GPIO_Pin_3, interrupt_rising_or_falling);
 	button_entry(NULL, 0);
 	button_int.set_callback(button_entry, NULL);
-	button_timer.set_period(10000);
+	button_timer.set_period(100000);
 	button_timer.set_callback(button_timer_entry, NULL);
-	
-	mode_button_int.init(GPIOB, GPIO_Pin_1, interrupt_rising);
-	mode_button_int.set_callback(mode_button_entry, NULL);
 	
 	int64_t up = systimer->gettime();
 	qon.set_mode(MODE_IN);
@@ -485,7 +469,7 @@ int board_init()
 	systimer->delayms(100);
 	i2c.write_reg(0x6b<<1, 5, 0x8C);		// disable i2c watchdog
 	i2c.write_reg(0x6b<<1, 3, 0x10);		// 256mA pre-charge, 128mA termination
-	i2c.write_reg(0x6b<<1, 2, 0x60);		// 1.5A charge
+	i2c.write_reg(0x6b<<1, 2, 0x20);		// 1A charge
 	i2c.write_reg(0x6b<<1, 0, 0x07);		// allow charger to pull vbus down to 3.88V, 3A max input
 	i2c.write_reg(0x6b<<1, 1, 0x1F);		// 3.7V minimum system voltage, charge enable
 	i2c.write_reg(0x6b<<1, 7, 0x4B);		// default value
@@ -496,18 +480,10 @@ int board_init()
 			i++;
 		else
 		{
-			::SCL->write(false);
-			::SCL->set_mode(MODE_OUT_PushPull);
-			systimer->delayus(10);
-			::SDA->write(false);
-			::SDA->set_mode(MODE_OUT_PushPull);
-			systimer->delayus(10);
-			::SCL->write(true);
-			systimer->delayus(10);
-			::SDA->write(true);
-			::SCL->set_mode(MODE_OUT_OpenDrain);
-			::SDA->set_mode(MODE_OUT_OpenDrain);
-
+			i2c.reset_bus();
+			
+			if (i == 9)
+				NVIC_SystemReset();
 		}
 		
 		::dbg->toggle();
@@ -520,6 +496,7 @@ int board_init()
 		i2c.read_reg(0x6b<<1, 8, &reg8);
 		bool power_good = reg8 & (0x4);
 		bool charging = ((reg8>>4)&0x03) == 0x01 || ((reg8>>4)&0x03) == 0x02;
+		bool charge_done = (reg8>>4)&0x03 == 0x03;
 		
 		if (charging)
 			last_charging = systimer->gettime();
@@ -535,12 +512,10 @@ int board_init()
 		{
 			::dbg2->write(true);
 			::dbg->write(systimer->gettime() % 200000 < 100000);
-			if (systimer->gettime() > last_click + 5000000 && systimer->gettime() > last_charging + 5000000)
+			if (!charge_done && systimer->gettime() > last_click + 5000000 && systimer->gettime() > last_charging + 5000000)
 				shutdown();
 		}
 	}
-	state_led[0].write(!mode);
-	state_led[1].write(false);
 
 	::dbg->write(true);
 	::dbg2->write(true);

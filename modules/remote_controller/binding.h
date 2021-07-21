@@ -3,7 +3,9 @@ binding workflow
 
 tx side:
 1. send all binding request packets out.
-2. switch to rx mode for 50ms, listen for ACK packets, if ACK packets received, exit binding loop
+2. switch to rx mode for 50ms, listen for ACK packets
+	if ACK packets received, save binding key and exit binding loop.
+	final key is xor combination of both key
 3. repeat step 1-2.
 
 rx side:
@@ -13,13 +15,12 @@ rx side:
 						or timed out ( if any ).
 3. if binding packets recieved, enter tx mode, send ACK packets for at least 200ms.
 4. save settings and exit binding loop.
+	final key is xor combination of both key
 
 
 possible errors:
 1. RX recieved binding packets and exit binding loop, but failed to ACK tx:
-	binding is done and should work properly.
-	reset tx to exit binding.
-	or reset rx to bind again.
+	binding is not done, reset rx to bind again.
 */
 
 
@@ -44,6 +45,7 @@ typedef struct _binding_info_v0
 	uint8_t key[8];			// key for both hooping randomizer and any encryption.
 	uint8_t channel_high;
 	uint8_t channel_low;
+	uint8_t enable_telemetry : 1;	// telemetry is enabled ONLY IF BOTH sides enabled
 } binding_info_v0;
 
 enum cmd_v0
