@@ -99,8 +99,8 @@ void fill_telemetry_pkt()
 
 	downlink_pkt.crc = crc32(0, &downlink_pkt, 30);
 	uint8_t *p = (uint8_t*)&downlink_pkt;
-	//aes.encrypt(p, p);
-	//aes.encrypt(p+16, p+16);
+	aes.encrypt(p, p);
+	aes.encrypt(p+16, p+16);
 }
 
 uint32_t pos2rando(int pos)

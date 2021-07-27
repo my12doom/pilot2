@@ -391,7 +391,7 @@ int board_init()
 	::timer = &_timer;
 	::bind_button = &qon;
 	::downlink_led = &state_led[1];
-	//::telemetry = &vcp;
+	::telemetry = &vcp;
 	qon.set_mode(MODE_IN);
 		
 	_spi.init(SPI2);
@@ -426,8 +426,8 @@ int board_init()
 	
 	int64_t up = systimer->gettime();
 	qon.set_mode(MODE_IN);
-	::dbg->write(false);
-	::dbg2->write(false);
+	::dbg->write(1);
+	::dbg2->write(1);
 	::dbg->set_mode(MODE_OUT_OpenDrain);
 	::dbg2->set_mode(MODE_OUT_OpenDrain);
 	::vibrator = &vib;
@@ -461,24 +461,15 @@ int board_init()
 			if (i == 9)
 				NVIC_SystemReset();
 		}
-		
-		::dbg->toggle();
 	}
 	
 	while(!powerup)
 	{
-		read_charge_state();
-
 		if (show_charging || systimer->gettime() < last_click + 500000)
 		{
-			// charging or click not timed out, no shutting down.
-			::dbg->write(true);
-			::dbg2->write(systimer->gettime() % 200000 < 100000);
 		}
 		else
 		{
-			::dbg2->write(true);
-			::dbg->write(systimer->gettime() % 200000 < 100000);
 			if (!charge_done && systimer->gettime() > last_click + 5000000 && systimer->gettime() > last_charging + 5000000)
 				shutdown();
 		}
@@ -486,6 +477,16 @@ int board_init()
 		watchdog_reset();
 	}
 
+	for(int i=0; i<3; i++)
+	{
+		state_led[0].write(0);
+		state_led[1].write(0);
+		systimer->delayms(200);
+		state_led[0].write(1);
+		state_led[1].write(1);
+		systimer->delayms(200);
+	}
+	
 	::dbg->write(true);
 	::dbg2->write(true);
 

@@ -99,7 +99,7 @@ void nrf_irq_entry(void *parameter, int flags)
 			rx_pkt ++;
 
 			if (downlink_led)
-				downlink_led->toggle();
+				downlink_led->write(0);
 
 			// handle telemetry
 			if (downlink_payload->ack_id == telemetry_id)
@@ -211,6 +211,9 @@ void timer_entry(void *p)
 	hoop_id ++;
 	//channel = hoop_id%100;
 	
+	if (downlink_led && !enable_telemetry)
+		downlink_led->write(1);
+	
 	if (!enable_telemetry || (hoop_id& 1))
 	{
 		nrf.rf_off();
@@ -237,6 +240,8 @@ void timer_entry(void *p)
 	else
 	{
 		//nrf.rf_on(true);
+		if (downlink_led)
+			downlink_led->write(!enable_telemetry);
 	}
 	
 	interrupt->enable();
@@ -493,8 +498,8 @@ int main()
 			last_pkt_count = rx_pkt;
 			last_pkt_counting = systimer->gettime();
 
-			if (downlink_led)
-				downlink_led->write(enable_telemetry && rx_pkt_s == 0);
+			//if (downlink_led)
+			//	downlink_led->write(enable_telemetry && rx_pkt_s == 0);
 		}
 		
 		watchdog_reset();

@@ -19,8 +19,9 @@ F1GPIO _cs(GPIOA, GPIO_Pin_8);
 F1GPIO _ce(GPIOA, GPIO_Pin_9);
 F1GPIO _irq(GPIOA, GPIO_Pin_10);
 
-F1GPIO _dbg(GPIOA, GPIO_Pin_4);
-F1GPIO _dbg2(GPIOA, GPIO_Pin_5);
+F1GPIO _dbg(GPIOA, GPIO_Pin_5);
+F1GPIO _dbg2(GPIOA, GPIO_Pin_3);
+F1GPIO _downlink_led(GPIOA, GPIO_Pin_4);
 
 F1SPI _spi;
 F1Interrupt _interrupt;
@@ -43,6 +44,7 @@ int board_init()
 	::interrupt = &_interrupt;
 	::timer = &_timer;
 	::telemetry = &vcp;
+	::downlink_led = &_downlink_led;
 	
 	while(0)
 	{
@@ -62,8 +64,10 @@ int board_init()
 			
 	_dbg.set_mode(HAL::MODE_OUT_OpenDrain);
 	_dbg2.set_mode(HAL::MODE_OUT_OpenDrain);
+	_downlink_led.set_mode(HAL::MODE_OUT_OpenDrain);
 			
-	_dbg.write(0);
+	_dbg.write(1);
+	_downlink_led.write(1);
 	systimer->delayms(100);
 	return 0;
 }
