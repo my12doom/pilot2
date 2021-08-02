@@ -241,7 +241,7 @@ void timer_entry(void *p)
 	{
 		//nrf.rf_on(true);
 		if (downlink_led)
-			downlink_led->write(!enable_telemetry);
+			downlink_led->write(enable_telemetry);
 	}
 	
 	interrupt->enable();

@@ -507,7 +507,7 @@ void read_channels(int16_t *channel, int max_channel_count)
 	channel[2] = adc_data[1];
 	channel[3] = adc_data[0];
 	channel[4] = adc_data[5];
-	channel[5] = 2048;
+	channel[5] = adc_data[7];
 }
 
 extern int apply_channel_statics();

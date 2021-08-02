@@ -29,7 +29,8 @@ F1Interrupt _interrupt;
 F1Timer _timer(TIM2);
 
 
-STM32F1::F1UART f1uart(USART2);	
+STM32F1::F1UART _sbus(USART2);	
+STM32F1::F1UART tele(USART3);	
 
 	
 extern "C" void TIM2_IRQHandler(void)
@@ -54,7 +55,8 @@ int board_init()
 	spi = &_spi;
 	interrupt = &_interrupt;
 	timer = &_timer;
-	telemetry = &f1uart;
+	sbus = &_sbus;
+	telemetry = &tele;
 
 	telemetry->set_baudrate(500000);
 	
@@ -117,5 +119,5 @@ void custom_output(uint8_t * payload, int payload_size, int latency)
     // 7th channel, 0xffff for compatability
     dsm_packet.channels[6] = 0xffff;
 	
-	f1uart.write(&dsm_packet, sizeof(dsm_packet));
+	sbus->write(&dsm_packet, sizeof(dsm_packet));
 }

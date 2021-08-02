@@ -433,69 +433,58 @@ int main()
 	{
 		custom_output(uplink_pkt.payload, 28, systimer->gettime() - last_valid_packet);
 		
-		if (ppm)
+		static int64_t last_ppm_out = systimer->gettime();
+		static int64_t last_sbus_out = systimer->gettime();
+		static int64_t last_ebus_out = systimer->gettime();
+
+		
+		int16_t data[6];
+		for(int i=0; i<6; i++)
+			data[i] = uplink_payload->channel_data[i]* 1000 / 4096 + 1000;
+		if (miss > 2000 || systimer->gettime() > last_valid_packet + 2000000)
+			data[2] = 800;				
+
+		if (ebus && systimer->gettime() - last_ebus_out > 10000)
 		{
-			static int64_t last_ppm_out = systimer->gettime();
-			static int64_t last_sbus_out = systimer->gettime();
-			static int64_t last_ebus_out = systimer->gettime();
-
+			last_ebus_out = systimer->gettime();
+			int8_t ebus_frame[15] = {0};
+			ebus_frame[0] = 0x85;
+			ebus_frame[1] = 0xA3;
+								
+			memcpy(ebus_frame+2, uplink_payload->channel_data, 12);
 			
-			int16_t data[6];
-			for(int i=0; i<6; i++)
-				data[i] = uplink_payload->channel_data[i]* 1000 / 4096 + 1000;
-			if (miss > 2000 || systimer->gettime() > last_valid_packet + 2000000)
-				data[2] = 800;				
+			if (miss > 200)
+				((int16_t*)(ebus_frame+2))[2] = -1000;
+			ebus_frame[14] = crc32(0, ebus_frame+2, 12);
+			
+			ebus->write(ebus_frame, sizeof(ebus_frame));
+		}
 
-			if (ebus && systimer->gettime() - last_ebus_out > 10000)
-			{
-				last_ebus_out = systimer->gettime();
-				int8_t ebus_frame[15] = {0};
-				ebus_frame[0] = 0x85;
-				ebus_frame[1] = 0xA3;
-									
-				memcpy(ebus_frame+2, uplink_payload->channel_data, 12);
-				
-				if (miss > 200)
-					((int16_t*)(ebus_frame+2))[2] = -1000;
-				ebus_frame[14] = crc32(0, ebus_frame+2, 12);
-				
-				ebus->write(ebus_frame, sizeof(ebus_frame));
-			}
+		if (sbus && last_valid_packet - last_sbus_out > 0)
+		{
+			last_sbus_out = systimer->gettime();
 
-			if (sbus && systimer->gettime() - last_sbus_out > 10000)
-			{
-				last_sbus_out = systimer->gettime();
+			sbus_u s = {0x0f};
+			uint8_t key = uplink_payload->keys[0];
+			
+			s.dat.chan2 = (((int)uplink_payload->channel_data[0] * 800) >> 11)+200;	// roll
+			s.dat.chan1 = (((int)uplink_payload->channel_data[1] * 800) >> 11)+200;	// pitch
+			s.dat.chan3 = (((int)uplink_payload->channel_data[2] * 800) >> 11)+200;	// throttle
+			s.dat.chan4 = (((int)uplink_payload->channel_data[3] * 800) >> 11)+200;	// yaw
+			s.dat.chan5 = ((((int)uplink_payload->channel_data[4] * 800) >> 11))+200;	// mode
+			s.dat.chan6 = ((((int)uplink_payload->channel_data[5] * 800) >> 11))+200;	// arm
 
-				sbus_u s = {0x0f};
-				uint8_t key = uplink_payload->keys[0];
-				
-				// roll : left = 1000
-				// pitch: back = 1000
-				// yaw : left = 1000
-				// stop : aux4 2000
-				// mode : aux1 1000 manual, aux1 1500 semiauto
-				// land : aux2 1500, takeoff aux2 2000
+			s.dat.chan8 = !(key&2) ? 1800 : 200;				// aux4 stop
+			s.dat.chan9 = !(key&8) ? 1024 : 200;				// aux5 key
+			s.dat.chan10 = !(key&16) ? 1024 : 200;				// aux6 key
 
+			sbus->write(&s, sizeof(s));
+		}
 
-				s.dat.chan2 = (((int)uplink_payload->channel_data[0] * 800) >> 11)+200;	// roll
-				s.dat.chan1 = (((int)uplink_payload->channel_data[1] * 800) >> 11)+200;	// pitch
-				s.dat.chan3 = (((int)uplink_payload->channel_data[2] * 800) >> 11)+200;	// throttle
-				s.dat.chan4 = (((int)uplink_payload->channel_data[3] * 800) >> 11)+200;	// yaw
-				s.dat.chan5 = !(key&1) ? 200 : 1024;				// aux1 mode
-				s.dat.chan8 = !(key&2) ? 1800 : 200;				// aux4 stop
-				s.dat.chan6 = !(key&4) ? 1024 : 200;				// aux2 land
-
-				s.dat.chan9 = !(key&8) ? 1024 : 200;				// aux5 key
-				s.dat.chan10 = !(key&16) ? 1024 : 200;				// aux6 key
-
-				sbus->write(&s, sizeof(s));
-			}
-
-			if (ppm && systimer->gettime() - last_ppm_out > 20000)
-			{
-				last_ppm_out = systimer->gettime();
-				ppm->write(data, 6, 0);
-			}
+		if (ppm && systimer->gettime() - last_ppm_out > 20000)
+		{
+			last_ppm_out = systimer->gettime();
+			ppm->write(data, 6, 0);
 		}
 		
 		if (SCL&&SDA)
