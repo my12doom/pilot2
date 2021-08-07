@@ -15,6 +15,7 @@
 #include <Protocol/common.h>
 
 #include <stm32f4xx_tim.h>
+#include <stm32f4xx_dac.h>
 
 #include "adc.h"
 

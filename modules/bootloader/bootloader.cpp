@@ -6,12 +6,14 @@
 #include <utils/ymodem.h>
 #include <utils/param.h>
 #include <utils/space.h>
+#include <utils/AES.h>
 #include <utils/RIJNDAEL.h>
 #include <stdio.h>
 #include <Protocol/crc32.h>
 #include <string.h>
 #include <stdint.h>
-#include "stm32f4xx_flash.h"
+#include <stm32f4xx_flash.h>
+#include <stm32f4xx_pwr.h>
 
 extern "C" const char bootloader_name[]  __attribute__((at(0x08003F00))) = __DATE__ " " __TIME__;
 

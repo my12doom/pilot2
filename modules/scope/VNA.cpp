@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <stm32f4xx_dma.h>
 
 #include <stdint.h>
 #include <HAL/STM32F4/F4SPI.h>
@@ -11,7 +12,6 @@
 #include <HAL/STM32F4/F4UART.h>
 
 #include <HAL/Interface/II2C.h>
-#include <HAL/aux_devices/si5351.h>
 #include <HAL/aux_devices/LMX2572.h>
 #include <modules/Protocol/common.h>
 #include <utils/fifo.h>
@@ -19,24 +19,36 @@
 using namespace STM32F4;
 using namespace HAL;
 
-extern "C" void SetSysClock(int hse_mhz = 0);
-int default_download_IC_1(bool _24bit);
+// board
+
+// io
+static F4GPIO scl(GPIOC, GPIO_Pin_13);
+static F4GPIO sda(GPIOC, GPIO_Pin_14);
+
+static F4GPIO cs_LO2(GPIOB, GPIO_Pin_6);
+static F4GPIO cs_source2(GPIOB, GPIO_Pin_9);
+static F4GPIO cs_IF2(GPIOE, GPIO_Pin_0);
+F4GPIO att_le2(GPIOB, GPIO_Pin_7);
+
+static F4GPIO cs_LO(GPIOA, GPIO_Pin_1);
+static F4GPIO cs_source(GPIOA, GPIO_Pin_4);
+static F4GPIO cs_IF(GPIOA, GPIO_Pin_0);
+F4GPIO att_le(GPIOA, GPIO_Pin_2);
+
+F4GPIO swd1[3] = {F4GPIO(GPIOD, GPIO_Pin_11), F4GPIO(GPIOD, GPIO_Pin_12), F4GPIO(GPIOD, GPIO_Pin_13)};
+
+F4SPI spi(SPI1);
+static I2C_SW i2c(&scl, &sda);
+LMX2572 LO;
+LMX2572 LO2;
+LMX2572 source;
+
+// funcs
 void i2s_setup();
-int set_volume(uint8_t gain_code, bool muted/* = false */);	// 0.75db/LSB
 int hmc960_init();
 int init_regs();
 
-static F4GPIO scl(GPIOC, GPIO_Pin_13);
-static F4GPIO sda(GPIOC, GPIO_Pin_14);
-static I2C_SW i2c(&scl, &sda);
-static F4GPIO cs_LO(GPIOB, GPIO_Pin_1);
-static F4GPIO cs_source(GPIOB, GPIO_Pin_7);
-F4GPIO att_le(GPIOB, GPIO_Pin_0);
-F4GPIO swd1[3] = {F4GPIO(GPIOA, GPIO_Pin_4), F4GPIO(GPIOA, GPIO_Pin_2), F4GPIO(GPIOA, GPIO_Pin_3)};
-
-LMX2572 LO;
-LMX2572 source;
-
+// gloabal variables
 bool sweeping = false;
 
 typedef enum
@@ -54,9 +66,6 @@ typedef enum
 
 sample_state state = SAMPLE_NEXT_FREQ;
 
-//#define TRACE printf
-#define TRACE(...)
-
 typedef struct
 {
 	int32_t fwd0r;
@@ -71,81 +80,24 @@ typedef struct
 
 CircularQueue<fifo_value, 128> fifo;
 
-int64_t integrate[4];
-int64_t integrate_out[4];
-float phase[2];
-double amp[2];
+int64_t integrate[8];
+int64_t integrate_out[8];
+float phase[4];
+double amp[4];
 double amp_diff;
 double amp_diff_db;
-double amp_db[2];
+double amp_db[4];
 float phase_diff;
 int freq_index = 0;
 
-int32_t int_debug[96];
-
 int fifo_output_request = 0;
 
-
-bool detect_adc(II2C &i2c)
-{
-    if (i2c.start()<0) {
-        return false;
-    }
-
-    i2c.tx(0x70&0xFE);
-
-    if (i2c.wait_ack()<0) {
-		i2c.stop();
-		return false;
-    }
-
-	i2c.stop();
-	return true;
-}
-
-static int imin(int a, int b)
-{
-	return a>b?b:a;
-}
-
 uint8_t regs[256];
+uint8_t regs2[256];
 uint16_t &sweep_points = *(uint16_t*)&regs[0x20];
 uint64_t &sweep_start = *(uint64_t*)&regs[0x00];
 uint64_t &sweep_step = *(uint64_t*)&regs[0x10];
 uint16_t &valuesPerFrequency = *(uint16_t*)&regs[0x22];
-
-fifo_value mock = 
-{
-	0x100000,
-	0,
-	0x10000,
-	0,
-	0,
-	0x600000,
-	0,
-};
-
-
-int fifo_fill(int count)
-{
-	//return 0;
-
-	for(int i=0; i<count; i++)
-	{
-		if (++mock.reserved[0] == valuesPerFrequency)
-		{
-			mock.freq_index = (mock.freq_index+1) % sweep_points;
-			mock.reserved[0] = 0;
-		}
-
-		mock.fwd0r = integrate_out[0];
-		mock.fwd0i = integrate_out[1];
-		mock.rev0r = integrate_out[2];
-		mock.rev0i = integrate_out[3];
-
-		fifo.push(mock);
-	}
-}
 
 int fifo_out(IUART &vcp)
 {
@@ -281,94 +233,57 @@ int handle_vcp(IUART &vcp)
 	return 0;
 }
 
-
-int SIGMA_WRITE_REGISTER_BLOCK( uint8_t devAddress, uint16_t address, int length, uint8_t* pData )
-{
-    if (i2c.start()<0) {
-        return -1;
-    }
-
-    i2c.tx(devAddress&0xFE);
-
-    if (i2c.wait_ack()<0) {
-		i2c.stop();
-		return -1;
-    }
-
-    i2c.tx(address>>8);
-    if (i2c.wait_ack()<0)
-	{
-		i2c.stop();
-		return -1;
-	}
-
-	i2c.tx(address);
-    if (i2c.wait_ack()<0)
-	{
-		i2c.stop();
-		return -1;
-	}
-
-    for(int i=0; i<length; i++)
-    {
-        i2c.tx(pData[i]);
-        
-        if (i2c.wait_ack()<0)
-        {
-            i2c.stop();
-            return -1;
-        }
-    }
-
-    i2c.stop();
-
-    return 0;
-}
-
-int SIGMA_WRITE_DELAY( uint8_t devAddress, int length, uint8_t *pData )
-{
-	systimer->delayms(100);
-	return 0;
-}
-
-	F4SPI spi(SPI1);
-	static F4GPIO cs(GPIOB, GPIO_Pin_2);
-
 int hmc960_write(uint8_t reg, uint32_t value)
 {
 	spi.set_mode(0, 0);
 	reg = ((reg & 0x1f) << 3) | 0x06;	// 0x06: chip id
-	cs.write(0);
+	cs_IF.write(0);
+	cs_IF2.write(0);
 	spi.txrx(value >> 16);
 	spi.txrx(value >> 8);
 	spi.txrx(value);
 	spi.txrx(reg);
-	cs.write(1);
+	cs_IF.write(1);
+	cs_IF2.write(1);
 	return 0;
 }
 
 uint32_t read960[4] = {0};
 int hmc960_init()
 {
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_5 | GPIO_Pin_6;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_Init(GPIOE, &GPIO_InitStructure);
+
+	F4GPIO css[4] = {F4GPIO(GPIOA, GPIO_Pin_0), F4GPIO(GPIOA, GPIO_Pin_1),
+		F4GPIO(GPIOA, GPIO_Pin_2), F4GPIO(GPIOA, GPIO_Pin_4)};
+	for(int i=0; i<4; i++)
+	{
+		css[i].set_mode(MODE_OUT_PushPull);
+		css[i].write(1);
+	}
+
 	hmc960_write(1,0x0f);
 	hmc960_write(2,0x37);	// spi
-	hmc960_write(3,80);	// spi
+	hmc960_write(3,40);		// 0.5db / LSB
 	
 	for(int i=0; i<3; i++)
 	{
-
-
 		hmc960_write(0, i);
 		
 		spi.set_mode(0, 1);
 
 		uint32_t read;
-		cs.write(0);
+		cs_IF.write(0);
 		read = spi.txrx(0)<<16;
 		read |= spi.txrx(0)<<8;
 		read |= spi.txrx(0);
 		spi.txrx(0);
-		cs.write(1);
+		cs_IF.write(1);
 
 		read960[i] = read;
 	}
@@ -378,8 +293,9 @@ int hmc960_init()
 }
 
 
-void set_att(int att)
+void set_att(int att, int id = 1)
 {
+	IGPIO *le = id == 1 ? &att_le : &att_le2;
 	att &= 0x7f;
 	uint8_t tx = 0;
 	for(int i=0; i<8; i++)
@@ -387,9 +303,9 @@ void set_att(int att)
 
 	att = limit(att, 0, 127);
 	spi.txrx(tx);
-	att_le.write(1);
+	le->write(1);
 	systimer->delayus(1);
-	att_le.write(0);
+	le->write(0);
 }
 
 // path: 1 - 6
@@ -409,14 +325,13 @@ int select_path(int path)
 	return 0;
 }
 
-
 int init_path()
 {
 	for(int i=0; i<3; i++)
 	{
 		swd1[i].set_mode(MODE_OUT_PushPull);
 		//swd2[i].set_mode(MODE_OUT_PushPull);
-	}	
+	}
 
 	select_path(1);
 
@@ -445,10 +360,14 @@ int select_path_by_freq(int64_t freq)
 }
 
 bool new_freq = true;
-int64_t fc = 6400e6 + 2e6;
-int off = 1.2e4;
+int64_t fc = 3640e6;
+int f_af = 12000;
+int f_if = 120e6;
 int att = 120;
-uint64_t last_fc;
+uint64_t last_fc = 0;
+
+uint16_t LOregs[200];
+uint16_t sourceregs[200];
 int update_freq()
 {
 	if (last_fc != fc)
@@ -456,15 +375,15 @@ int update_freq()
 		sweeping = true;
 
 		source.set_freq(fc);
-		LO.set_freq(fc+off);
-		
-		
+		LO.set_freq((fc<6000e6) ? (fc - f_af + f_if) : (fc+f_af-f_if));
+		LO2.set_freq((fc<6000e6) ? (fc - f_af + f_if) : (fc+f_af-f_if));
+		//LO2.set_freq(6400000000-f_af-f_if);
+				
 		select_path_by_freq(fc);
 
-		set_att(att);
 
 		last_fc = fc;
-		systimer->delayms(2);
+		systimer->delayus(1000);
 		sweeping = false;
 	}
 
@@ -473,22 +392,27 @@ int update_freq()
 
 int init_LO_source()
 {
-	int fref = 100000000;
+	int fref = 40000000;
 
-	LO.init(&spi, &cs_LO);	
-	LO.set_ref(fref, false, 1, 1, 1, true);
-	LO.set_freq(fc+off);
-	LO.set_output(true, 25, true, 25);
-	
+	LO.init(&spi, &cs_LO);
+	LO.set_ref(fref, true, 1, 1, 1, true);
+	LO.set_freq(fc-f_af-f_if);
+	LO.set_output(true, 63, true, 63);
+
+	LO2.init(&spi, &cs_LO2);
+	LO2.set_ref(fref, true, 1, 1, 1, true);
+	LO2.set_freq(fc-f_af-f_if);
+	LO2.set_output(true, 63, true, 63);
+
 	source.init(&spi, &cs_source);	
-	source.set_ref(fref, false, 1, 1, 1, true);
+	source.set_ref(fref, true, 1, 1, 1, true);
 	source.set_freq(fc);
 	source.set_output(false, 0, true, 25);
 	
 	return 0;
 }
 
-int n = 0;
+static int n = 0;
 int update_sweep()
 {
 	if (state == SAMPLE_NEXT_FREQ)
@@ -500,8 +424,10 @@ int update_sweep()
 		}
 
 		fc = sweep_start + sweep_step * (uint64_t)freq_index;
-		att = 120 - fc * 120 / 6400000000;
+		att = 60 - fc * 120 / 6400000000;
 		att = limit(att, 0, 120);
+		set_att(att, 1);
+		set_att(att, 2);
 		new_freq = true;
 		state = SAMPLE_DISCARD1;
 		update_freq();
@@ -512,17 +438,172 @@ int update_sweep()
 }
 
 
-int main()
+uint8_t reg3101_0[16];
+uint8_t reg3101_1[16];
+
+int configure_af_adc()
 {
+	F4GPIO led(GPIOD, GPIO_Pin_2);
+	led.set_mode(HAL::MODE_OUT_PushPull);
+	led.write(1);
+
+	uint8_t add0 = 0x30;
+	uint8_t add1 = 0x32;
+
+	// soft reset & page 0
+	i2c.write_reg(add0, 0, 0);
+	i2c.write_reg(add1, 0, 0);
+	if (i2c.write_reg(add0, 1, 1) < 0 || 
+		i2c.write_reg(add1, 1, 1) < 0)
+			return -1;
+
+	// clock setting;
+	// BCLK = 48*32*2 = 3072khz, WCLK = 48khz
+
+	// ADC_MODCLK = ADCCLK_IN / 1 / 2 = 6144khz (128x oversample)
+	// BCLK = ADC_CLK / 8
+	// WCLK == ADC_FS = ADC_MODCLK / OSR	(not listed in datasheet)
+
+	// master clock config
+	int NADC = 1;
+	if (40)
+	{
+		// for 40Mhz MCLK input
+		// ADCCLK_IN = PLL_CLK, ADCCLK = PLL_CLK / 8
+		// PLLCLK = MCLK * K * R / P, (K = J + D / 10000, R = vco divider, P = reference divider)
+		// PLL VCO range: 80M - 110M
+		// J range: 4 - 55 integer, 4 - 11 frac.
+		// PLL pfd range: 0.5M - 20M integer, 10M - 20M frac
+		// VCO frequency = 12.288 * 8 = 98.304 = 4.9152 * 20M
+		// R = 1, J = 4, D = 9152, P = 2
+
+		i2c.write_reg(add0, 0x04, 0x03);		// PLL_CLKIN = MCLK, ADC_CLKIN = PLL_CLK
+		i2c.write_reg(add0, 0x05, 0x80 | 1 | (2<<4));		// P=2, R=1, PLL power up
+		i2c.write_reg(add0, 0x06, 0x04);		// J=4
+		i2c.write_reg(add0, 0x07, 9152 >> 8);	// D = 9152
+		i2c.write_reg(add0, 0x08, 9152 & 0xff);
+
+		NADC = 8;
+	}
+	else
+	{
+		// for 12.288Mhz MCLK input
+		// ADCCLK = ADCCLK_IN = MCLK
+		i2c.write_reg(add0, 0x04, 0x00);		// ADC_CLKIN = MCLK
+		i2c.write_reg(add0, 0x05, 0x11);		// P=1, R=1, PLL power down
+		i2c.write_reg(add0, 0x06, 0x00);		// J=0,
+		i2c.write_reg(add0, 0x07, 0x00);		// D = 0
+		i2c.write_reg(add0, 0x08, 0x00);
+	}
+
+	// clkout for slave
+	i2c.write_reg(add0, 0x34, 0x10);		// GPIO1 = CLKOUT
+	i2c.write_reg(add0, 0x19, 0x06);		// CLKOUT_SRC = ADC_CLK
+	i2c.write_reg(add0, 0x1A, 0x81);		// CLKOUT enabled, divider = 1
+
+	// slave clock config
+	i2c.write_reg(add1, 0x04, 0x00);		// ADC_CLKIN = MCLK
+	i2c.write_reg(add1, 0x05, 0x11);		// P=1, R=1, PLL power down
+	i2c.write_reg(add1, 0x06, 0x00);		// J=0,
+	i2c.write_reg(add1, 0x07, 0x00);		// D = 0
+	i2c.write_reg(add1, 0x08, 0x00);
+
+
+
+	// adc clock setting, ADC_CLK = 12.288Mhz, ADC_MODCLK = 6.144Mhz
+	// master
+	i2c.write_reg(add0, 0x12, NADC);		// NADC = 1, power down for now
+	i2c.write_reg(add0, 0x13, 0x82);		// MADC = 2, power up
+	i2c.write_reg(add0, 0x14, 0x80);		// AOSR = 128
+	// slave
+	i2c.write_reg(add1, 0x12, 0x81);		// NADC = 1, power up
+	i2c.write_reg(add1, 0x13, 0x82);		// MADC = 2, power up
+	i2c.write_reg(add1, 0x14, 0x80);		// AOSR = 128
+
+	// analog(page 1)
+	int8_t gain = 40;
+	i2c.write_reg(add0, 0, 1);
+	i2c.write_reg(add0, 0x33, 0x00);		// mic bias not used
+	i2c.write_reg(add0, 0x3b, gain);		// left gain
+	i2c.write_reg(add0, 0x3c, gain);		// right gain
+	i2c.write_reg(add0, 0x34, 0x3f);		// left = differential
+	i2c.write_reg(add0, 0x37, 0x3f);		// right = differential
+	i2c.write_reg(add1, 0, 1);
+	i2c.write_reg(add1, 0x33, 0x00);		// mic bias not used
+	i2c.write_reg(add1, 0x3b, gain);		// left gain
+	i2c.write_reg(add1, 0x3c, gain);		// right gain
+	i2c.write_reg(add1, 0x34, 0x3f);		// left = differential
+	i2c.write_reg(add1, 0x37, 0x3f);		// right = differential
+
+	// power up adc & unmute (page 0)
+	i2c.write_reg(add0, 0, 0);
+	i2c.write_reg(add0, 0x51, 0xc2);
+	i2c.write_reg(add0, 0x52, 0x00);
+	i2c.write_reg(add1, 0, 0);
+	i2c.write_reg(add1, 0x51, 0xc2);
+	i2c.write_reg(add1, 0x52, 0x00);
+
+	// power up main clock path
+	i2c.write_reg(add0, 0, 0);
+	i2c.write_reg(add1, 0, 0);	
+	i2c.write_reg(add0, 0x12, 0x80 | NADC);		// power up ADC N divider
+	systimer->delayms(100);
+
+	// interface setting: i2s, 16bit word
+	// master
+	i2c.write_reg(add0, 0x1b, 0x0D);		// i2s master mode, 16bit word length, data 3-state enabled
+	i2c.write_reg(add0, 0x1c, 0x00);		// data offset = 0 bclk, both channel
+	i2c.write_reg(add0, 0x1d, 0x02);		// BCLK_IN = ADC_CLK
+	i2c.write_reg(add0, 0x1e, 0x84);		// BCLK = BCLK_IN / 4, enable bclk divider
+	i2c.write_reg(add0, 0x3d, 0x01);		// PRB_P1
+	// slave
+	i2c.write_reg(add1, 0x1b, 0x01);		// i2s slave mode, 16bit word length, data 3-state enabled
+	i2c.write_reg(add1, 0x1c, 0x10);		// data offset = 16 bclk, both channel
+	i2c.write_reg(add1, 0x1d, 0x02);		// BCLK_IN = ADC_CLK
+	i2c.write_reg(add1, 0x1e, 0x84);		// BCLK = BCLK_IN / 4, enable bclk divider
+	i2c.write_reg(add1, 0x3d, 0x01);		// PRB_P1
+
+
+	// back to page 0 and read back
+	i2c.write_reg(add0, 0, 0);
+	i2c.write_reg(add1, 0, 0);
+	//add1 = 0x66;
+	i2c.read_regs(add0, 0, reg3101_0, 16);
+	i2c.read_regs(add1, 0, reg3101_1, 16);
+
+
+
+	// we should get no i2s frame error here
+	i2s_setup();
+	systimer->delayms(2);
+	if (SPI3->SR & 0x100)
+	while(1)
+	{
+		//NVIC_SystemReset();
+
+		led.write(1);
+		systimer->delayms(100);
+		led.write(0);
+		systimer->delayms(100);
+	}
+	
+	return 0;
+}
+
+int main()
+{	
+	// USB ON
+	F4VCP vcp;
+
 	// default registers	
 	*(uint16_t*)&regs[0x20] = 5;		// sweep_points
 	sweep_points = 1;
-	sweep_start = 2.425e9;
+	sweep_start = 6.425e9;
 	sweep_step = 1e5;
 
-	// CS pins
-	cs.set_mode(MODE_OUT_PushPull);
-	cs.write(1);
+	// cs_IF pins
+	cs_IF.set_mode(MODE_OUT_PushPull);
+	cs_IF.write(1);
 	cs_LO.set_mode(MODE_OUT_PushPull);
 	cs_LO.write(1);
 	cs_source.set_mode(MODE_OUT_PushPull);
@@ -530,83 +611,28 @@ int main()
 	att_le.set_mode(MODE_OUT_PushPull);
 	att_le.write(0);
 	
-	while(0)
-	{
-		cs_source.toggle();
-		systimer->delayus(100);
-	}
-
+	cs_IF2.set_mode(MODE_OUT_PushPull);
+	cs_IF2.write(1);
+	cs_LO2.set_mode(MODE_OUT_PushPull);
+	cs_LO2.write(1);
+	cs_source2.set_mode(MODE_OUT_PushPull);
+	cs_source2.write(1);
+	att_le2.set_mode(MODE_OUT_PushPull);
+	att_le2.write(0);
+	
 	init_path();
-
 
 	spi.set_speed(1000000);	
 	hmc960_init();
 	init_LO_source();
 
-	//extern int hse_en;
-	//hse_en = 1;
-
-	RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));		// switch to HSI
-	RCC->CR &= ~((uint32_t)RCC_CR_HSEON | RCC_CR_PLLON);	// disable HSE & PLL
-
-	F4GPIO led(GPIOB, GPIO_Pin_9);
+	F4GPIO led(GPIOD, GPIO_Pin_2);
 	led.set_mode(HAL::MODE_OUT_PushPull);
 	led.write(0);
 
-	si5351 si;
-	if (si.set_i2c(&i2c) < 0)
-	{
-		while(1)
-		{
-			led.write(1);
-			systimer->delayms(500);
-			led.write(0);
-			systimer->delayms(500);
-		}
-	}	
-
-	si.set_ref_freq(26.0);
-	si.set_pll(0, 900);
-	si.set_pll(1, 12.288*60);
-	si.set_output_freq(0, 0, 9);			// 100M ref clock
-	si.set_output_freq(1, 1, 60);			// 24.576M adc clock
-	si.set_output_freq(2, 2, 900/25.0);		// 24M mcu clock
-	si.set_output(0, false, false);
-	si.set_output(1, false, false);
-	si.set_output(2, false, false);
-
-
-	// use clock from si5351
-	SetSysClock(25);
-	SystemCoreClockUpdate();
-
 	led.write(SystemCoreClock == 84000000);
-
-	default_download_IC_1(true);
-	set_volume(16, false);
-
-	// disable adau1761 clock for now
-	si.set_output(1, true, false);
-	systimer->delayms(1);
-	i2s_setup();
-	// enable it back after i2s init
-	si.set_output(1, false, false);
-
-	// we should get no i2s frame error here
-	systimer->delayms(2);
-	if (SPI3->SR & 0x100)
-	while(1)
-	{
-		NVIC_SystemReset();
-
-		led.write(1);
-		systimer->delayms(100);
-		led.write(0);
-		systimer->delayms(100);
-	}
-
-	// USB ON
-	F4VCP vcp;
+	
+	configure_af_adc();
 
 	while(1)
 	{
@@ -631,7 +657,7 @@ void i2s_setup()
 	GPIO_InitTypeDef GPIO_InitStructure;
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN ;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
@@ -689,42 +715,28 @@ void i2s_setup()
 	// I2S configure
 	I2S_InitTypeDef i2s_init_str;
 	i2s_init_str.I2S_Mode = I2S_Mode_SlaveRx;
-	i2s_init_str.I2S_Standard = I2S_Standard_LSB;
-	i2s_init_str.I2S_DataFormat = I2S_DataFormat_24b;
+	i2s_init_str.I2S_Standard = I2S_Standard_Phillips;
+	i2s_init_str.I2S_DataFormat = I2S_DataFormat_32b;
 	i2s_init_str.I2S_MCLKOutput = I2S_MCLKOutput_Disable;
-	i2s_init_str.I2S_AudioFreq = 96000;
+	i2s_init_str.I2S_AudioFreq = 48000;
 	i2s_init_str.I2S_CPOL = I2S_CPOL_High;
 	I2S_Cmd(SPI3, DISABLE);
 	SPI_I2S_DeInit(SPI3);
 	I2S_Init(SPI3, &i2s_init_str);	
 	SPI_I2S_DMACmd(SPI3, SPI_I2S_DMAReq_Rx, ENABLE);
 	
+	// wait WS go high
+	while(!(GPIOA->IDR & GPIO_Pin_15))
+		;
+	
 	// go!
 	I2S_Cmd(SPI3, ENABLE);
-}
-
-int32_t i2s_fmt(int32_t in)
-{
-	int32_t out;
-	uint8_t *pin = (uint8_t*)&in;
-	uint8_t *pout = (uint8_t*)&out;
-
-	// input
-	// bus: XXB MSB MID LSB
-	// dma buffer: [MSB XXB] [LSB MID]
-	// out LSB MID MSB MSB&0x80
-	pout[0] = pin[2];
-	pout[1] = pin[3];
-	pout[2] = pin[0];
-	pout[3] = pin[0] & 0x80 ? 0xff : 0;
-
-	return out;
 }
 
 extern "C" void DMA1_Stream0_IRQHandler(void)
 {
 	int32_t *data;
-	int flag = DMA1->LIFCR & 0x30;
+	int flag = DMA1->LISR & 0x30;
 
 	// first half buffer
     if (DMA1->LISR & DMA_LISR_HTIF0) {
@@ -735,29 +747,32 @@ extern "C" void DMA1_Stream0_IRQHandler(void)
 	// second half buffer
     if (DMA1->LISR & DMA_LISR_TCIF0) {
         DMA1->LIFCR = DMA_LIFCR_CTCIF0;
-		data = (int32_t*)(codec_data + 96);
+		data = (int32_t*)(codec_data + sizeof(codec_data)/4);
     }
 
 	if (sweeping)
 		return;
 
-	// strange i2s byte mapping
 	int sample_count = sizeof(codec_data)/2 / sizeof(uint32_t) / 2;
 	int mix_tbl[4] = {1,1,-1,-1};
 	memset(integrate, 0, sizeof(integrate));
 	for(int i=0; i<sample_count; i++)
 	{
 		int32_t *p = data + i*2;
-		int32_t c1 = i2s_fmt(p[0]);
-		int32_t c2 = i2s_fmt(p[1]);
+		int32_t c3 = p[1] >> 16;
+		int32_t c4 = p[0] >> 16;
+		int32_t c2 = int16_t(p[0] & 0xffff);
+		int32_t c1 = int16_t(p[1] & 0xffff);
 
 		integrate[0] += c1 * mix_tbl[i%4];
 		integrate[1] += c1 * mix_tbl[(i+1)%4];
 		integrate[2] += c2 * mix_tbl[i%4];
 		integrate[3] += c2 * mix_tbl[(i+1)%4];
 
-		int_debug[i] = c1;
-		int_debug[i+48] = c2;
+		integrate[4] += c3 * mix_tbl[i%4];
+		integrate[5] += c3 * mix_tbl[(i+1)%4];
+		integrate[6] += c4 * mix_tbl[i%4];
+		integrate[7] += c4 * mix_tbl[(i+1)%4];
 	}
 
 	memcpy(integrate_out, integrate, sizeof(integrate));
@@ -769,10 +784,16 @@ extern "C" void DMA1_Stream0_IRQHandler(void)
 
 	amp[0] = sqrt(double(integrate_out[0] * integrate_out[0] + integrate_out[1] * integrate_out[1]));
 	amp[1] = sqrt(double(integrate_out[2] * integrate_out[2] + integrate_out[3] * integrate_out[3]));
+	amp[2] = sqrt(double(integrate_out[4] * integrate_out[4] + integrate_out[5] * integrate_out[5]));
+	amp[3] = sqrt(double(integrate_out[6] * integrate_out[6] + integrate_out[7] * integrate_out[7]));
+	
 	amp_diff = amp[0] / amp[1];
 	amp_diff_db = log10(amp_diff) * 20;
+
 	amp_db[0] = log10(amp[0]) * 20;
 	amp_db[1] = log10(amp[1]) * 20;
+	amp_db[2] = log10(amp[2]) * 20;
+	amp_db[3] = log10(amp[3]) * 20;
 
 	if (state < SAMPLE_NEXT_FREQ)
 	{
@@ -780,12 +801,25 @@ extern "C" void DMA1_Stream0_IRQHandler(void)
 		{
 			fifo_value v = {0};
 			v.freq_index = freq_index;
-			v.fwd0r = integrate_out[0]>>8;
-			v.fwd0i = integrate_out[1]>>8;
-			v.rev0r = integrate_out[2]>>8;
-			v.rev0i = integrate_out[3]>>8;
-			v.rev1r = 1;//integrate_out[0];
-			v.rev1i = 1;//integrate_out[1];
+
+			if (fc<6000e6)
+			{			
+				v.fwd0r = integrate_out[1];
+				v.fwd0i = integrate_out[0];
+				v.rev0r = integrate_out[3];
+				v.rev0i = integrate_out[2];
+				v.rev1r = integrate_out[7];
+				v.rev1i = integrate_out[6];
+			}
+			else
+			{
+				v.fwd0r = integrate_out[0];
+				v.fwd0i = integrate_out[1];
+				v.rev0r = integrate_out[2];
+				v.rev0i = integrate_out[3];	
+				v.rev1r = integrate_out[6];
+				v.rev1i = integrate_out[7];
+			}
 
 			fifo.push(v);
 			TRACE("s:%d\n", freq_index);
@@ -793,17 +827,4 @@ extern "C" void DMA1_Stream0_IRQHandler(void)
 
 		state = sample_state (state + 1);
 	}
-}
-
-
-int set_volume(uint8_t gain_code, bool muted/* = false */)	// 0.75db/LSB
-{
-	gain_code &= 0x3f;
-	gain_code <<= 2;
-	gain_code |= 1;
-	if (!muted)
-		gain_code |= 0x2;
-	uint8_t v[2] = {gain_code, gain_code};
-
-	return SIGMA_WRITE_REGISTER_BLOCK(0x70, 0x400E, 2, v);
 }

@@ -2,7 +2,9 @@
 
 #include <protocol/common.h>
 #include <HAL/Interface/ISysTimer.h>
-#include "stm32F4xx_gpio.h"
+#include <stm32F4xx_gpio.h>
+#include <stm32F4xx_exti.h>
+#include <stm32F4xx_syscfg.h>
 
 using namespace HAL;
 static STM32F4::F4Interrupt *int_table[16] = {0};

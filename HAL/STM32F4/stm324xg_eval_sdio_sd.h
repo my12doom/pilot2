@@ -37,7 +37,9 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <stm32f4xx_sdio.h>
+#include <stm32f4xx_dma.h>
 #include "stm324xg_eval.h"
+#include <stm32f4xx_gpio.h>
 
 /** @addtogroup Utilities
   * @{

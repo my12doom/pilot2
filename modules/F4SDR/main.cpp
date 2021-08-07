@@ -5,6 +5,9 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_spi.h"
 #include "stm32f4xx_dma.h"
+#include <stm32f4xx_flash.h>
+#include <stm32f4xx_tim.h>
+
 #include <HAL/STM32F4/F4SPI.h>
 #include <HAL/STM32F4/F4SysTimer.h>
 #include <HAL/STM32F4/F4GPIO.h>
@@ -377,14 +380,32 @@ uint8_t read_ad9251(int16_t add)
 
 int configure_ad9251()
 {
-	cs_adc.set_mode(MODE_OUT_PushPull);
-	cs_adc.write(1);
 	spi.set_mode(0,0);
 	spi.set_speed(4000000);
 
-	write_ad9251(0x14, 0x01);	// use twos complement output	
+		
+	write_ad9251(0x00, 0x3C);	// software reset
+	write_ad9251(0x05, 0x03);	// select channel B
+	write_ad9251(0xff, 0x01);	// execute
+	
+	systimer->delayms(1);
+	
+
+	write_ad9251(0x14, 0x21);	// use twos complement output, interleaved
+	write_ad9251(0x17, 0x00);	// delay clock 4.5ns
+	write_ad9251(0x15, 0x02);	// weak cmos drive
+	write_ad9251(0x16, 0x00);	// DCO invert
+
+	//write_ad9251(0x14, 0x01);	// use twos complement output
+	//write_ad9251(0x17, 0x00);	// no delay
+
 	write_ad9251(0x0b, 0x00);	// clock divider : /1
 	write_ad9251(0x09, 0x01);	// clock duty cycle stabalize
+	write_ad9251(0xff, 0x01);	// execute
+	
+	// disable channel B	
+	write_ad9251(0x05, 0x02);	// select channel B
+	write_ad9251(0x14, 0x21);	// disable
 	write_ad9251(0xff, 0x01);	// execute
 	
 	return 0;
@@ -394,13 +415,16 @@ int configure_ad9251()
 extern "C" void SetSysClock();
 int main()
 {
+	cs_adc.set_mode(MODE_OUT_PushPull);
+	cs_adc.write(1);
+
 	// use clock from USB3320
 	RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));		// switch to HSI
-	F4GPIO usb_reset(GPIOC, GPIO_Pin_14);
+	F4GPIO usb_reset(GPIOA, GPIO_Pin_4);
 	usb_reset.set_mode(MODE_OUT_PushPull);
 	usb_reset.write(0);
 	systimer->delayms(10);
-	usb_reset.write(1);
+	usb_reset.write(0);
 	systimer->delayms(5);	
 	SetSysClock();
 	SystemCoreClockUpdate();

@@ -1,6 +1,6 @@
 #include "space.h"
 #include <string.h>
-#include <HAL/Interface/Interfaces.h>
+#include <HAL/Interface/IStorage.h>
 
 using namespace HAL;
 IStorage *param_storage = get_default_storage();

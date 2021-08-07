@@ -245,29 +245,29 @@ int read_rx()
 			return -1;
 	}
 
-	i2c.txrx(fusb302_address&0xFE);
+	i2c.tx(fusb302_address&0xFE);
 
 	if (i2c.wait_ack() < 0) {
 			i2c.stop();
 			return -1;
 	}
 
-	i2c.txrx(0x43);
+	i2c.tx(0x43);
 	i2c.wait_ack();
 
 	i2c.start();
-	i2c.txrx((fusb302_address&0xFE)|0x01);
+	i2c.tx((fusb302_address&0xFE)|0x01);
 	i2c.wait_ack();
 	
 	do
 	{
-		tmp[0] = i2c.txrx();
+		tmp[0] = i2c.rx();
 		i2c.send_ack();
 	} while(tmp[0] & 0xE0 == 0xE0);
 
-	tmp[0] = i2c.txrx();
+	tmp[0] = i2c.rx();
 	i2c.send_ack();
-	tmp[1] = i2c.txrx();
+	tmp[1] = i2c.rx();
 	i2c.send_ack();
 	
 	int len = ( (tmp[1] >> 4) & 0x7 ) * 4;
@@ -283,7 +283,7 @@ int read_rx()
 	
 	for(int i=0; i<len+4; i++)
 	{
-		tmp[i+2] = i2c.txrx();
+		tmp[i+2] = i2c.rx();
 		if (i==len+4-1)
 			i2c.send_nak();
 		else

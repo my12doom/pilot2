@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <stm32f4xx_pwr.h>
 #include <HAL/Interface/ISysTimer.h>
 #include <HAL/STM32F4/F4GPIO.h>
 #include <HAL/STM32F4/F4UART2.h>

@@ -73,10 +73,10 @@ int EKFINS::healthy()
 	return gps_healthy;
 }
 
-int EKFINS::update_mode(const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, sensors::px4flow_frame frame, float baro, float dt, bool armed, bool airborne)
+int EKFINS::update_mode(const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, sensors::flow_data flow, float baro, float sonar, float dt, bool armed, bool airborne)
 {
 	// flow switching
-	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133);
+	bool use_flow = !isnan(sonar) && (flow.quality > 0.67f);
 	if (!flow_healthy && use_flow)
 	{
 		flow_ticker += dt;
@@ -107,9 +107,9 @@ int EKFINS::update_mode(const float gyro[3], const float acc_body[3], const floa
 		flow_ticker = 0;
 	}
 
-	bool current_sonar_healthy = frame.ground_distance/1000.0f > SONAR_MIN && frame.ground_distance/1000.0f < SONAR_MAX;
+	bool current_sonar_healthy = !isnan(sonar) && sonar > SONAR_MIN && sonar < SONAR_MAX;
 	if (current_sonar_healthy)
-		last_valid_sonar = frame.ground_distance/1000.0f;
+		last_valid_sonar = sonar;
 	if (sonar_healthy && !current_sonar_healthy)
 	{
 		sonar_ticker += dt;
@@ -118,6 +118,7 @@ int EKFINS::update_mode(const float gyro[3], const float acc_body[3], const floa
 		{
 			sonar_healthy = false;
 			sonar_ticker = 0;
+			LOGE("EKFINS: sonar failed\n");
 		}
 	}
 	else if (!sonar_healthy && current_sonar_healthy)
@@ -127,6 +128,7 @@ int EKFINS::update_mode(const float gyro[3], const float acc_body[3], const floa
 		{
 			sonar_healthy = true;
 			sonar_ticker = 0;
+			LOGE("EKFINS: using sonar\n");
 			// TODO: reset sonar surface and covariance
 		}
 	}
@@ -201,19 +203,20 @@ int EKFINS::update_mode(const float gyro[3], const float acc_body[3], const floa
 	return 0;
 }
 
-int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag[3], devices::gps_data gps, sensors::px4flow_frame frame, float baro, float dt, bool armed, bool airborne)
+int EKFINS::update(const float gyro[3], float acc_body[3], const float mag[3], devices::gps_data gps, sensors::flow_data flow, float baro, float sonar, float dt, bool armed, bool airborne)
 {
+ 	acc_body[2] += 0.1f;
+
 	if (!inited)
 		init_attitude(acc_body, gyro, mag);
 
-	if (update_mode(gyro, acc_body, mag, gps, frame, baro, dt, armed, airborne) < 0)
+	if (update_mode(gyro, acc_body, mag, gps, flow, baro, sonar, dt, armed, airborne) < 0)
 	{
 		reset();
 		return -1;
 	}
 
 	bool use_gps = (gps.fix == 3 && gps.position_accuracy_horizontal < 3.5) || (gps_healthy && gps.position_accuracy_horizontal < 7);
-	bool use_flow = (frame.ground_distance > 0) && (frame.qual > 133);
 
 	// prepare matrices
 	float q0q0 = x[0] * x[0];
@@ -238,6 +241,7 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 		2.f * (q2q3 + q0q1),	// 23
 		q0q0 - q1q1 - q2q2 + q3q3,// 33
 	};
+	bool use_flow = !isnan(sonar) && (flow.quality > 0.67f) && r[8] > 0.7f;		// r[8]: don't use flow when tilt too much
 	float dtsq_2 = dt*dt/2;
 	float dt2 = dt/2;
 	const float *g = gyro;
@@ -310,10 +314,10 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 	float f1 = dt / 0.005f;		// 0.005: tuned dt.
 	float f2 = dt*dt / (0.005f*0.005f);
 	matrix Q = matrix::diag(19,
-		1e-7, 1e-7, 1e-7, 1e-7, 1e-9, 1e-9, 1e-9,
+		1e-9, 1e-9, 1e-9, 1e-7, 1e-9, 1e-9, 1e-9,
 		4e-3, 4e-3, 4e-6, 
 		1e-4, 1e-4, 1e-6, 
-		1e-9, 1e-9, 1e-9, 
+		1e-6, 1e-6, 1e-6, 
 		1e-7, 1e-7, 5e-7);
 	Q *= f1;
 	matrix x1 = F * x + Bu;
@@ -372,11 +376,12 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 	}
 
 	// baro
-	add_observation(160.0, baro, x1[9], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+	add_observation(60.0, baro, x1[9], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 
 
 	float mag_0z[3] = {mag[0], mag[1], mag[2]};
-	remove_mag_ned_z(mag_0z, &x[0]);
+	float q[4] = {x[0], x[1], x[2], x[3]};
+	remove_mag_ned_z(mag_0z, q);
 	float m_len = 1.0/sqrt(mag_0z[0] * mag_0z[0] + mag_0z[1] * mag_0z[1] + mag_0z[2] * mag_0z[2]);
 	float a_len = 1.0/sqrt(acc_body[0]*acc_body[0] + acc_body[1]*acc_body[1] + acc_body[2]*acc_body[2]);
 
@@ -390,16 +395,24 @@ int EKFINS::update(const float gyro[3], const float acc_body[3], const float mag
 //  		add_observation(125.0, gps.climb_rate, x1[12], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 	}
 
+	if (use_flow)
+	{
+		float vx = flow.x * sonar;
+		float vy = flow.y * sonar;
+		add_observation(5.0, vx, x1[10]*-r[1] +x1[11]*-r[4], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, -r[1],-r[4],0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(5.0, vy, x1[10]* r[0] +x1[11]* r[3], 0.0,0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, r[0],r[3],0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+	}
+
 	// still motion, acc and gyro bias with very low noise.
 	if (still)
 	{
 		add_observation(1e-2, acc_body[0]*a_len, -r[6] + x1[13]/G_in_ms2, 2*x[2], 2*-x[3], 2*x[0], 2*-x[1], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0/G_in_ms2,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(1e-2, acc_body[1]*a_len, -r[7] + x1[14]/G_in_ms2, -2*x[1], 2*-x[0], 2*-x[3], 2*-x[2], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0/G_in_ms2,0.0, 0.0,0.0,0.0);
 		add_observation(1e-2, acc_body[2]*a_len, -r[8] + x1[15]/G_in_ms2, -2*x[0], 2*x[1], 2*x[2], -2*x[3], 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0/G_in_ms2, 0.0,0.0,0.0);
-		add_observation(1e-4, -gyro[0], x1[4], 0.0,0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+		add_observation(1e-4, -gyro[0], x1[4], 0.0,0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);		// gyro bias observation
 		add_observation(1e-4, -gyro[1], x1[5], 0.0,0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 		add_observation(1e-4, -gyro[2], x1[6], 0.0,0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
- 		add_observation(1e-1, 0, x1[10], 0.0,0.0,0.0,0,0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
+ 		add_observation(1e-1, 0, x1[10], 0.0,0.0,0.0,0,0, 0.0,0.0,0.0, 0.0,0.0,0.0, 1.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);				// zero velocity observation
  		add_observation(1e-1, 0, x1[11], 0.0,0.0,0.0,0,0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
  		add_observation(1e-1, 0, x1[12], 0.0,0.0,0.0,0,0, 0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,0.0,0.0, 0.0,0.0,0.0);
 	}
@@ -554,7 +567,8 @@ int EKFINS::init_attitude(const float a[3], const float g[3], const float m[3])
 int EKFINS::get_euler(float *euler)
 {
 
-	Quaternion2RPY(&x[0], euler);
+	float q[4] = {x[0], x[1], x[2], x[3]};
+	Quaternion2RPY(q, euler);
 
 	return 0;
 }

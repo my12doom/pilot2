@@ -1,5 +1,6 @@
 #include "usb_core.h"
 #include "usb_dcd_int.h"
+#include <stm32f4xx_exti.h>
 
 extern USB_OTG_CORE_HANDLE USB_OTG_dev;
 

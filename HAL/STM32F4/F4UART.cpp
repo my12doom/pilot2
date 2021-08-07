@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include "stm32f4xx.h"
 #include <Protocol/common.h>
+#include <stm32f4xx_gpio.h>
+#include <stm32f4xx_dma.h>
 
 namespace STM32F4
 {

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stm32f4xx_exti.h>
 #include <HAL\STM32F4\F4Timer.h>
+#include <stm32f4xx_tim.h>
 
 extern "C" void TIM5_IRQHandler(void)
 {

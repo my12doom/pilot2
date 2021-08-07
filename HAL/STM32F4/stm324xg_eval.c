@@ -33,8 +33,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm324xg_eval.h"
 #include "stm32f4xx_sdio.h"
+#include "stm32f4xx_gpio.h"
 #include "stm32f4xx_dma.h"
 #include "stm32f4xx_i2c.h"
+#include "stm32f4xx_exti.h"
+#include <stm32F4xx_syscfg.h>
 
 /** @addtogroup Utilities
   * @{
