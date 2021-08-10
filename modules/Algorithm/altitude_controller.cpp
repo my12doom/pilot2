@@ -63,10 +63,12 @@ altitude_controller::~altitude_controller()
 
 }
 
+#if !defined (__ARMCC_VERSION) || (__ARMCC_VERSION < 6010050)
 static inline float fmax(float a, float b)
 {
 	return a>b?a:b;
 }
+#endif
 
 // provide system state estimation for controller
 // alt[0-2] : altitude, climb_rate, acceleration

@@ -8,7 +8,7 @@ int test_si5351(HAL::II2C *i2c)
 	si.set_i2c(i2c);
 	si.set_pll(0, 770, si5351::XTAL);
     si.set_output_freq(0, 0, 4);
-    si.set_output(0, false, false);
+    return si.set_output(0, false, false);
 }
 
 si5351::si5351(float crystal)
@@ -80,14 +80,14 @@ int si5351::set_pll(int id, double freq, int freq_src, int input_divider)
 	
 	uint8_t regs[8] =
 	{
-		(p3 >> 8) & 0xff,
-		p3 & 0xff,
-		(p1 >> 16) & 0x3,
-		(p1 >> 8) & 0xff,
-		p1 & 0xff,
-		((p3 >> 12)&0xf0) | ((p2>>16)&0x0f),
-		(p2 >> 8) & 0xff,
-		p2 & 0xff,		
+		uint8_t((p3 >> 8) & 0xff),
+		uint8_t(p3 & 0xff),
+		uint8_t((p1 >> 16) & 0x3),
+		uint8_t((p1 >> 8) & 0xff),
+		uint8_t(p1 & 0xff),
+		uint8_t(((p3 >> 12)&0xf0) | ((p2>>16)&0x0f)),
+		uint8_t((p2 >> 8) & 0xff),
+		uint8_t(p2 & 0xff),
 	};
 	
 	int reg_start = id ? 34 : 26;
@@ -151,14 +151,14 @@ int si5351::set_output_freq(int id, int freq_src, double divider)
 	
 		uint8_t regs[8] =
 		{
-			(p3 >> 8) & 0xff,
-			p3 & 0xff,
-			(R_DIV << 4) | ((p1 >> 16) & 0x3) | (highfreq ? 0xC : 0),
-			(p1 >> 8) & 0xff,
-			p1 & 0xff,
-			((p3 >> 12)&0xf0) | ((p2>>16)&0x0f),
-			(p2 >> 8) & 0xff,
-			p2 & 0xff,		
+			uint8_t((p3 >> 8) & 0xff),
+			uint8_t(p3 & 0xff),
+			uint8_t((R_DIV << 4) | ((p1 >> 16) & 0x3) | (highfreq ? 0xC : 0)),
+			uint8_t((p1 >> 8) & 0xff),
+			uint8_t(p1 & 0xff),
+			uint8_t(((p3 >> 12)&0xf0) | ((p2>>16)&0x0f)),
+			uint8_t((p2 >> 8) & 0xff),
+			uint8_t(p2 & 0xff),
 		};
 		
 		int reg_start = 42 + id * 8;

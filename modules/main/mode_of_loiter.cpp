@@ -37,8 +37,8 @@ int flight_mode_of_loiter::loop(float dt)
 		float wx = yap.flow.x - yap.body_rate.array[0];
 		float wy = yap.flow.y - yap.body_rate.array[1];
 
-		float vx = wx * isnan(yap.sonar_distance) ? 1 : yap.sonar_distance;
-		float vy = wy * isnan(yap.sonar_distance) ? 1 : yap.sonar_distance;
+		float vx = wx * (isnan(yap.sonar_distance) ? 1 : yap.sonar_distance);
+		float vy = wy * (isnan(yap.sonar_distance) ? 1 : yap.sonar_distance);
 
 
 		//transform fused velocity from ned to body 

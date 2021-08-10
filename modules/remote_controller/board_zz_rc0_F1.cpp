@@ -57,8 +57,7 @@ int board_init()
 	timer = &_timer;
 	sbus = &_sbus;
 	telemetry = &tele;
-
-	telemetry->set_baudrate(500000);
+	tele.set_baudrate(500000);
 	
 	//	
 	_spi.init(SPI2);

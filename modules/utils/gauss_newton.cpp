@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <math.h>
 
+#if !defined (__ARMCC_VERSION) || (__ARMCC_VERSION < 6010050)
 static inline float fmin(float a, float b)
 {
 	return a>b?b:a;
@@ -14,6 +15,7 @@ static inline float fmax(float a, float b)
 {
 	return a>b?a:b;
 }
+#endif
 gauss_newton_sphere_fitting::gauss_newton_sphere_fitting()
 {
 

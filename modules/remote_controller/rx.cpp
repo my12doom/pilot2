@@ -35,7 +35,8 @@ AESCryptor2 aes;
 OLED96 oled;
 int o = 0;
 int rdp;
-int hoop_id = 0;
+int hoop_id = -1;
+int trx_hoop_id = -1;
 int miss = 99999;
 int maxmiss = 0;
 int packet_time = 1363;		// in us
@@ -123,13 +124,15 @@ bool LOS()
 
 int tx_spi_time = 0;
 int hoop_to(int next_hoop_id)
-{
-	nrf.rf_off();
-	
+{	
+	int channel = ((pos2rando(next_hoop_id) & 0xffff) * 100) >> 16;	
 	hoop_id = next_hoop_id;
+	if (next_hoop_id == trx_hoop_id && ce->read()) 
+		return 0;
+	
+	nrf.rf_off();	
 	
 	// 68
-	int channel = ((pos2rando(next_hoop_id) & 0xffff) * 100) >> 16;	
 	nrf.write_reg(RF_CH, channel);
 	
 	if (!(hoop_id & 1) || LOS() || !enable_telemetry)
@@ -161,6 +164,7 @@ void nrf_irq_entry(void *parameter, int flags)
 	timer->disable_cb();
 	nrf.rf_off();
 	nrf.write_reg(7, nrf.read_reg(7));
+	trx_hoop_id = -1;
 	
 	int fifo_state = nrf.read_reg(FIFO_STATUS);
 	int next_hoop_id = -1;
@@ -221,6 +225,9 @@ void nrf_irq_entry(void *parameter, int flags)
 	}
 	else
 	{
+		trx_hoop_id = hoop_id + 1;
+		int channel = ((pos2rando(hoop_id+1) & 0xffff) * 100) >> 16;	
+		nrf.write_reg(RF_CH, channel);
 		nrf.rf_on(true);
 	}
 	
@@ -442,7 +449,7 @@ int main()
 		for(int i=0; i<6; i++)
 			data[i] = uplink_payload->channel_data[i]* 1000 / 4096 + 1000;
 		if (miss > 2000 || systimer->gettime() > last_valid_packet + 2000000)
-			data[2] = 800;				
+			data[2] = 800;
 
 		if (ebus && systimer->gettime() - last_ebus_out > 10000)
 		{
@@ -460,9 +467,9 @@ int main()
 			ebus->write(ebus_frame, sizeof(ebus_frame));
 		}
 
-		if (sbus && last_valid_packet - last_sbus_out > 0)
+		if (sbus && last_valid_packet - last_sbus_out > 10000)
 		{
-			last_sbus_out = systimer->gettime();
+			last_sbus_out = last_valid_packet;
 
 			sbus_u s = {0x0f};
 			uint8_t key = uplink_payload->keys[0];

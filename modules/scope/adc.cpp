@@ -131,12 +131,16 @@ int dma_adc::begin()
     _full = false;
 
     TIM_Cmd(TIM2,ENABLE);
+	
+	return 0;
 }
 int dma_adc::stop()
 {
     TIM_Cmd(TIM2, DISABLE);
 	systimer->delayus(10);
     DMA_Cmd(DMA2_Stream0, DISABLE);
+	
+	return 0;
 }
 
 bool dma_adc::full()

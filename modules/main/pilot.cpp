@@ -1373,8 +1373,8 @@ int yet_another_pilot::calculate_state()
 			float wx = flow.x - body_rate.array[0];
 			float wy = flow.y - body_rate.array[1];
 
-			float vx = wx * isnan(sonar_distance) ? 1 : sonar_distance;
-			float vy = wy * isnan(sonar_distance) ? 1 : sonar_distance;
+			float vx = wx * (isnan(sonar_distance) ? 1 : sonar_distance);
+			float vy = wy * (isnan(sonar_distance) ? 1 : sonar_distance);
 			
 			float v_flow_body[3];
 			v_flow_body[0] = vy;//black magic

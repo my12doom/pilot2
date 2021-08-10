@@ -129,10 +129,10 @@ void MAX2871::write_reg(int address, uint32_t data)
 
 	uint8_t buf[4] = 
 	{
-		data >> 24,
-		data >> 16,
-		data >> 8,
-		data >> 0,
+		uint8_t(data >> 24),
+		uint8_t(data >> 16),
+		uint8_t(data >> 8),
+		uint8_t(data >> 0),
 	};
 
 	cs->write(0);

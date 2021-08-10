@@ -44,10 +44,12 @@ static float length(float a, float b, float c)
 {
 	return sqrt(a*a+b*b+c*c);
 }
+#if !defined (__ARMCC_VERSION) || (__ARMCC_VERSION < 6010050)
 static inline float fmin(float a, float b)
 {
 	return a<b?a:b;
 }
+#endif
 
 static float sqrt2(float in)
 {

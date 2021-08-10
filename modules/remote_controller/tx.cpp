@@ -117,7 +117,7 @@ void nrf_irq_entry(void *parameter, int flags)
 		}
 	}
 
-	if (enable_telemetry)
+	if (enable_telemetry && (hoop_id&1))
 	{
 		int channel = ((pos2rando(hoop_id) & 0xffff) * 100) >> 16;
 		nrf.write_reg(5, channel);
@@ -211,8 +211,8 @@ void timer_entry(void *p)
 	hoop_id ++;
 	//channel = hoop_id%100;
 	
-	if (downlink_led && !enable_telemetry)
-		downlink_led->write(1);
+	if (downlink_led)
+		downlink_led->write(enable_telemetry);
 	
 	if (!enable_telemetry || (hoop_id& 1))
 	{
@@ -236,12 +236,6 @@ void timer_entry(void *p)
 		nrf.write_tx(p, 32);
 		nrf.rf_on(false);
 		tx_tx_process_time = systimer->gettime() - t;
-	}
-	else
-	{
-		//nrf.rf_on(true);
-		if (downlink_led)
-			downlink_led->write(enable_telemetry);
 	}
 	
 	interrupt->enable();

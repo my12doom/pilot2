@@ -7,6 +7,7 @@
 #include <HAL/Resources.h>
 #include <math/matrix.h>
 
+#if !defined (__ARMCC_VERSION) || (__ARMCC_VERSION < 6010050)
 static inline float fmax(float a, float b)
 {
 	return a>b?a:b;
@@ -16,6 +17,7 @@ static inline float fmin(float a, float b)
 {
 	return a<b?a:b;
 }
+#endif
 
 mag_calibration::mag_calibration()
 {

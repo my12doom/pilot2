@@ -1,6 +1,10 @@
 #include "ADIS16405.h"
 #include <Protocol/common.h>
 
+#if defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
+#include <arm_acle.h>
+#endif
+
 using namespace HAL;
 
 enum adis16405_registers

@@ -35,10 +35,13 @@ float invSqrt(float x);
 void remove_down_component(float &bx, float &by, float &bz);			// remove earth frame down component of a body frame vector
 int inverse_matrix3x3(const float src[3][3], float dst[3][3]);
 void transpos_matrix3x3(const float src[3][3], float dst[3][3]);
+
+#if !defined (__ARMCC_VERSION) || (__ARMCC_VERSION < 6010050)
 static inline float fmax(float a, float b)
 {
 	return a>b?a:b;
 }
+#endif
 
 //====================================================================================================
 // Functions

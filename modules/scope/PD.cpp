@@ -263,6 +263,8 @@ int pwm_init()
 	TIM_OC1Init(TIM3, &TIM_OCInitStructure);
 	
 	TIM_SetCompare1(TIM3, 2048);
+	
+	return 0;
 }
 
 int pwm_set(int16_t value)

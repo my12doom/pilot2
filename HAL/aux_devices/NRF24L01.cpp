@@ -51,7 +51,7 @@ int NRF24L01::init(HAL::ISPI *spi, HAL::IGPIO *cs, HAL::IGPIO *ce)
 	cs->write(true);
 	ce->write(false);
 
-	spi->set_speed(12000000);
+	spi->set_speed(10000000);
 	spi->set_mode(0, 0);
 
 	systimer->delayms(100);

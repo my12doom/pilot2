@@ -22,6 +22,7 @@ F0GPIO _dbg2(GPIOB, GPIO_Pin_10);
 F0SPI _spi;
 F0Interrupt _interrupt;
 F0Timer _timer(TIM14);
+F0UART uart1(USART1);
 	
 int board_init()
 {
@@ -33,6 +34,7 @@ int board_init()
 	::spi = &_spi;
 	::interrupt = &_interrupt;
 	::timer = &_timer;
+	::telemetry = &uart1;
 	
 	_spi.init(SPI2);
 	_interrupt.init(GPIOA, GPIO_Pin_15, interrupt_falling);

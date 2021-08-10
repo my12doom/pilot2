@@ -297,8 +297,8 @@ int space_write(const void *key, int keysize, const void *data, int num_to_write
 	if (keysize4 > max_key_size || datasize4+keysize4 > space_available())		// we may really out of space
 		return -2;
 
-	entry_header header = {start_code, keysize, num_to_write};
-	entry_footer footer = {keysize4 + datasize4, end_code};
+	entry_header header = {start_code, (unsigned char)keysize, (unsigned char)num_to_write};
+	entry_footer footer = {(unsigned char)(keysize4 + datasize4), end_code};
 
 	
 	int result = param_storage->write(write_pointer, &header, sizeof(header) - sizeof(header.delete_tag));		// don't write the delete tag

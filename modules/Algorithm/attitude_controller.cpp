@@ -136,11 +136,12 @@ int attitude_controller::set_euler_target(const float *euler)
 	return 0;
 }
 
+#if !defined (__ARMCC_VERSION) || (__ARMCC_VERSION < 6010050)
 static inline float fmin(float a, float b)
 {
 	return a<b?a:b;
 }
-
+#endif
 
 // helper function:
 // map rectangular stick to a rounded attitude

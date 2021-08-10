@@ -423,6 +423,7 @@ int board_init()
 	button_int.set_callback(button_entry, NULL);
 	button_timer.set_period(100000);
 	button_timer.set_callback(button_timer_entry, NULL);
+	button_timer.set_priority(4);
 	
 	int64_t up = systimer->gettime();
 	qon.set_mode(MODE_IN);

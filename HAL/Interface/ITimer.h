@@ -31,7 +31,7 @@ namespace HAL
 		virtual void set_callback(timer_callback cb, void *user_data = 0)
 		{
 			_cb = cb;
-			_user_data = _user_data;
+			_user_data = user_data;
 		}
 	private:
 		static void entry(void *parameter, int flags)
