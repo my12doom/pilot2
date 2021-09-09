@@ -14,7 +14,7 @@ public:
 		char *p = (char*)out;
 		int size = count();
 		if (maxcount > size)
-			return -1;
+			maxcount = size;
 		for(int i=0; i<maxcount; i++)
 			p[i] = buffer[(i+start)%buffer_size];
 		start = (maxcount+start)%buffer_size;
