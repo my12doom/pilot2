@@ -391,6 +391,7 @@ uint8_t reg[10];
 int board_init()
 {
 	update_config();
+	watchdog_init();
 	
 	// NRF GPIOs and interrupt 
 	::cs = &_cs;

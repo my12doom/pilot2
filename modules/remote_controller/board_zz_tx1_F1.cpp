@@ -448,7 +448,7 @@ int board_init()
 	i2c.write_reg(0x6b<<1, 3, 0x10);		// 256mA pre-charge, 128mA termination
 	i2c.write_reg(0x6b<<1, 2, 0x20);		// 1A charge
 	i2c.write_reg(0x6b<<1, 0, 0x07);		// allow charger to pull vbus down to 3.88V, 3A max input
-	i2c.write_reg(0x6b<<1, 1, 0x1F);		// 3.7V minimum system voltage, charge enable
+	i2c.write_reg(0x6b<<1, 1, 0x3F);		// 3.7V minimum system voltage, charge enable, boost enable
 	i2c.write_reg(0x6b<<1, 7, 0x4B);		// default value
 	
 	for(int i=0; i<10; i++)
