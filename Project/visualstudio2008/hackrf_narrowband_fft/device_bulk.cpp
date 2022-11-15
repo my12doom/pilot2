@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <stdio.h>
 #include <assert.h>
+#include <F4SDR/F4SDR.h>
 #include "Protocol/crc32.h"
 #pragma comment(lib, "libusb-1.0.lib");
 #pragma comment(lib, "winmm.lib")
@@ -11,12 +12,12 @@ extern "C"
 #include <utils/minilzo.h>
 }
 
-int vendor_id = 0x111b;
-int product_id = 0x1234;
+using namespace F4SDR;
+
 
 #define transfer_size (256*1024)
 #define transfer_count 4
-//#define use_transfers
+// #define use_transfers
 
 struct libusb_transfer* transfers[transfer_count];
 
@@ -30,6 +31,8 @@ static HEAP_ALLOC(wrkmem, LZO1X_1_MEM_COMPRESS);
 
 int erase_test(libusb_device_handle* dev_handle)
 {
+	return 0;
+
 	uint8_t d[256];
 
 	int rr = libusb_control_transfer(
@@ -43,11 +46,11 @@ int erase_test(libusb_device_handle* dev_handle)
 		0
 		);
 
-	static bool once = true;
+	static bool once = false;
 	if (once)
 		return 0;
 
-	FILE * f = fopen("C:\\Users\\my12doom\\Desktop\\LED_CSG324\\led_test.bin", "rb");
+	FILE * f = fopen("C:\\Users\\my12doom\\Desktop\\F4SA\\out\\adc_clk.bin", "rb");
 	fseek(f, 0, SEEK_END);
 	int data_size = ftell(f);
 	fseek(f, 0, SEEK_SET);
@@ -101,7 +104,7 @@ int erase_test(libusb_device_handle* dev_handle)
 
 	// write
 	pkt.cmd = 0x82;
-	pkt.address = 0x08010008;
+	pkt.address = 0x08020008;
 	int left = data_size;
 	while(left>=0)
 	{
@@ -125,7 +128,7 @@ int erase_test(libusb_device_handle* dev_handle)
 
 	// size & checksum
 	pkt.cmd = 0x82;
-	pkt.address = 0x08010000;
+	pkt.address = 0x08020000;
 	pkt.size = 8;
 	int32_t file_size_lzo = lzo ? (data_size | 0x80000000) : data_size;
 	uint32_t crc = crc32(0, data, data_size);	
@@ -141,6 +144,113 @@ int erase_test(libusb_device_handle* dev_handle)
 	delete [] data;
 
 	return 0;
+}
+
+int erase_test2(libusb_device_handle* dev_handle)
+{
+
+ 	return 0;
+
+	static bool once = false;
+	if (once)
+		return 0;
+
+// 	FILE * f = fopen("C:\\Users\\mo\\Desktop\\repo\\F4SA\\out\\adc_clk.bin", "rb");
+	FILE * f = fopen("C:\\Users\\mo\\Desktop\\repo\\VNA1Pro\\out\\VNA1pro.bin", "rb");
+// 	FILE * f = fopen("Y:\\folder\\fpga_proj\\F4SA\\out\\adc_clk.bin", "rb");
+	fseek(f, 0, SEEK_END);
+	int data_size = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	uint8_t *data = new uint8_t[data_size];
+	fread(data, 1, data_size, f);
+	fclose(f);
+	bool lzo = true;
+
+	if (lzo)
+	{
+		uint8_t *compressed = new uint8_t[data_size*2];
+		lzo_uint compressed_len = 0;
+		lzo_init();
+		int r = lzo1x_1_compress(data, data_size, compressed, &compressed_len, wrkmem);
+
+		if (r>=0 && compressed_len < data_size)
+		{
+			memcpy(data, compressed, compressed_len);
+			data_size = compressed_len;
+			delete compressed;
+		}
+		else
+		{
+			lzo = false;
+			delete compressed;
+		}
+	}
+
+	// erase
+
+	uint8_t tmp[64];
+
+	printf("erasing...");
+	*(uint32_t*)tmp = 0xDEADBEAF;
+	int result = libusb_control_transfer(dev_handle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		erase_fpga_rom, 0, 0, tmp, 4, 1000);
+	if (result < 0)
+	{
+		printf("failed\n");
+		return -1;
+	}
+
+	// wait for erasure to finish
+	while(libusb_control_transfer(dev_handle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		ping, 0, 0, tmp, 4, 1000) < 0)
+	{
+		Sleep(10);
+	}
+	printf("%s\n", "OK");
+
+	// write
+	uint32_t address = 0x08020008;
+	int left = data_size;
+	int MTU = sizeof(tmp);
+	
+	while(left>0)
+	{
+		int block_size = min(left, MTU);
+		memcpy(tmp, data+data_size-left, block_size);
+
+		result= libusb_control_transfer(dev_handle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+			write_fpga_rom, address>>16, address, tmp, block_size, 1000);
+		printf("\r%d left      ", left);
+
+		if (result < 0)
+		{
+			printf("error\n");
+
+			return -1;
+		}
+
+		address += block_size;
+		left -= block_size;
+	}
+
+	// size & checksum
+	address = 0x08020000;
+	int32_t file_size_lzo = lzo ? (data_size | 0x80000000) : data_size;
+	uint32_t crc = crc32(0, data, data_size);	
+	memcpy(tmp, &file_size_lzo, 4);
+	memcpy(tmp+4, &crc, 4);
+
+	result = libusb_control_transfer(dev_handle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		write_fpga_rom, address>>16, address, tmp, 8, 1000);
+
+	// reset
+	result= libusb_control_transfer(dev_handle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		reset_mcu, 0, 0, tmp, 4, 1000);
+
+	once = true;
+	delete [] data;
+
+	return result;
 }
 
 namespace NBFFT
@@ -205,16 +315,18 @@ DWORD bulk_device::usb_worker()
 
 	libusb_init(&ctx);
 	usb_ctx = ctx;
+	libusb_set_debug(ctx, 3);
+
 start:
 
 
-	libusb_device_handle* dev_handle;
+// 	libusb_device_handle* dev_handle;
 	dev_handle = NULL;
 
 	while(!dev_handle)
 	{
 		Sleep(100);
-		dev_handle = libusb_open_device_with_vid_pid(ctx, vendor_id, product_id);
+		dev_handle = libusb_open_device_with_vid_pid(ctx, F4SDR_VENDOR_ID, F4SDR_PRODUCT_ID);
 
 		if (!working)
 			return 0;
@@ -225,6 +337,10 @@ start:
 	if(rslt != 0)
 		rslt = libusb_detach_kernel_driver(dev_handle, 1);
 
+	rslt = libusb_kernel_driver_active(dev_handle, 0);
+	if(rslt != 0)
+		rslt = libusb_detach_kernel_driver(dev_handle, 0);
+
 	//int b = libusb_kernel_driver_active(dev_handle, 0);
 	int config2;
 	rslt = libusb_get_configuration(dev_handle,&config2);
@@ -233,6 +349,7 @@ start:
 
 
 	int r = libusb_claim_interface(dev_handle, 0);
+	r = libusb_claim_interface(dev_handle, 1);
 
 	unsigned char data[transfer_size] = {0};
 	int actual_length = 64;
@@ -247,7 +364,7 @@ start:
 
 	Sleep(100);
 
-	erase_test(dev_handle);
+	erase_test2(dev_handle);
 
 	// create and prepare transfers
 #ifdef use_transfers
@@ -264,8 +381,11 @@ start:
 	{
 
 #ifndef use_transfers
-		int result;
-		result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, transfer_size, &actual_length, 0);
+		int result = 0;
+		EnterCriticalSection(&cs_usb);
+ 		result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, transfer_size, &actual_length, 0);
+		//Sleep(10);
+		LeaveCriticalSection(&cs_usb);
 
 		int dt = timeGetTime() - l2;
 		l2 = timeGetTime();
@@ -318,7 +438,7 @@ start:
 
 }
 
-int bulk_device::init(int (*rx)(void *buf, int len, sample_quant type))
+int bulk_device::init(int (*rx)(void *buf, int len))
 {
 	this->cb = rx;
 	working = true;
@@ -349,9 +469,96 @@ DWORD bulk_device::rx_worker()
 	{
 		WaitForSingleObject(usb_event, INFINITE);
 		if (working && cb && rx_data_size)
-			cb(rx_data, rx_data_size, sample_16bit);
+			cb(rx_data, rx_data_size);
 	}
 	return 0;
+}
+
+int bulk_device::tune(int64_t hz)
+{
+	EnterCriticalSection(&cs_usb);
+	if (!dev_handle)
+	{
+		LeaveCriticalSection(&cs_usb);
+		return -1;
+	}
+	int ret = libusb_control_transfer(dev_handle,LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		::tune, 0, 0,	(uint8_t*)&hz, 8,10 );
+	LeaveCriticalSection(&cs_usb);
+
+	return ret;
+}
+int bulk_device::config()
+{
+// 	uint8_t tmp[24];
+// 	int res = libusb_control_transfer(
+// 		dev_handle,
+// 		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+// 		0x85, 1, 2,	tmp, 4,0 );
+// 
+// 	int retval = 0x12345678;
+
+	int dummy = 0;
+
+	EnterCriticalSection(&cs_usb);
+	if (!dev_handle)
+	{
+		LeaveCriticalSection(&cs_usb);
+		return -1;
+	}
+	int result = libusb_control_transfer(
+		dev_handle,
+		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		reset_mcu, 1, 2,	(uint8_t*)&dummy, 0,0 );
+
+	LeaveCriticalSection(&cs_usb);
+	return result;
+}
+int bulk_device::set_gains(uint8_t *gains)
+{
+	EnterCriticalSection(&cs_usb);
+	if (!dev_handle)
+	{
+		LeaveCriticalSection(&cs_usb);
+		return -1;
+	}
+	int result = libusb_control_transfer(
+		dev_handle,
+		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		set_gain, 1, 2,	gains, get_gains_count(),0 );
+
+	LeaveCriticalSection(&cs_usb);
+	return result;
+
+}
+
+
+int bulk_device::get_gains(uint8_t *gains)
+{
+	EnterCriticalSection(&cs_usb);
+	if (!dev_handle)
+	{
+		LeaveCriticalSection(&cs_usb);
+		return -1;
+	}
+	int result = libusb_control_transfer(
+		dev_handle,
+		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		get_gain, 1, 2,	gains, get_gains_count(),0 );
+
+	bool iflna = true;
+	uint8_t ifpath = IF_900;
+	uint8_t rfpath = FE_LNA;
+
+	uint8_t path = (rfpath << 5) | (ifpath << 1) | (iflna?0x10:0);
+
+	int n = libusb_control_transfer(dev_handle,
+		LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		F4SDR::set_path, 0, 0, &path, 1, 0);
+
+	LeaveCriticalSection(&cs_usb);
+	return result;
+
 }
 
 }

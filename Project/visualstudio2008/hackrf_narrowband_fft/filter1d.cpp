@@ -1,6 +1,7 @@
 #include "filter1d.h"
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include "fftw/fftw3.h"
 
 filter1d::filter1d()
@@ -20,6 +21,7 @@ filter1d::filter1d(float *taps, int taps_count)
 
 filter1d::~filter1d()
 {
+	_autolock lck(&cs);
     if (taps)
         delete [] taps;
 
@@ -37,6 +39,7 @@ filter1d::~filter1d()
 
 int filter1d::set_taps(float *taps, int taps_count)
 {
+	_autolock lck(&cs);
     if (this->taps)
         delete [] this->taps;
 
@@ -51,6 +54,7 @@ int filter1d::set_taps(float *taps, int taps_count)
 
 int filter1d::set_taps_fft(float *taps, int taps_count, int data_count)
 {
+	_autolock lck(&cs);
 	if (taps_fft)
 		fftw_free(taps_fft);
 	if (data_fft)
@@ -59,6 +63,22 @@ int filter1d::set_taps_fft(float *taps, int taps_count, int data_count)
 		fftw_destroy_plan((fftw_plan)fftw_plans[0]);
 	if (fftw_plans[1])
 		fftw_destroy_plan((fftw_plan)fftw_plans[1]);
+
+	// normalize
+// 	float total = 0;
+// 	for(int i=0; i<taps_count; i++)
+// 		total += taps[i]*taps[i];
+// 	total = sqrt(total);
+// 	for(int i=0; i<taps_count; i++)
+// 		taps[i] /= total;
+
+	// normalize
+	float total = 0;
+	for(int i=0; i<taps_count; i++)
+		total += taps[i];
+	for(int i=0; i<taps_count; i++)
+		taps[i] /= total;
+
 
 	int len = data_count + taps_count + 16*2;		// 16*2: 2*SIMD padding
 	N = 2;
@@ -89,6 +109,7 @@ int filter1d::set_taps_fft(float *taps, int taps_count, int data_count)
 
 int filter1d::apply(float *in, int intput_count, float *out /*= NULL */, int output_count /*= -1*/)
 {
+	_autolock lck(&cs);
 	if (!use_fft)
 	{
 		if (output_count <= 0)

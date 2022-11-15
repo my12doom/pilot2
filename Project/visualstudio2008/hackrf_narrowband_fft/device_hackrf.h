@@ -19,6 +19,7 @@ public:
 
 
 	int get_sample_rate(){return 20000000;}
+	sample_quant get_sample_quant(){return sample_8bit;}
 	int dynamic_range_db(){return 20*log10(256.0*6.6/0.05);}    // return max noise density SNR in db, assuming hackrf has ~0.05LSB rms noise
 
 protected:

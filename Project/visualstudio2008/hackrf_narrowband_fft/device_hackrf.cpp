@@ -36,7 +36,7 @@ int hackrf_device::rx_callback(hackrf_transfer* transfer)
 
 			if (frequency == 2412000000);
 			if (cb)
-				cb(buf+10, BYTES_PER_BLOCK-10, sample_8bit);
+				cb(buf+10, BYTES_PER_BLOCK-10);
 
 			last_rx_time = GetTickCount();
 			buf += BYTES_PER_BLOCK;
@@ -45,7 +45,7 @@ int hackrf_device::rx_callback(hackrf_transfer* transfer)
 	else
 	{
 		if (cb)
-			cb(buf, len, sample_8bit);
+			cb(buf, len);
 		last_rx_time = GetTickCount();
 	}
 
@@ -88,7 +88,7 @@ int hackrf_device::start_rx()
 
 	result |= hackrf_set_amp_enable(device, 1);
 	result |= hackrf_set_sample_rate(device, 20000000);
-	result |= hackrf_set_baseband_filter_bandwidth(device, 6.0e6);
+	result |= hackrf_set_baseband_filter_bandwidth(device, 9.0e6);
 	result |= hackrf_set_vga_gain(device, 14); // step: 2db, 62db max
 	result |= hackrf_set_lna_gain(device, 24); // step: 8db
 	result |= hackrf_set_freq(device, center_frequency);

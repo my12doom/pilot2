@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include "autolock.h"
 
 class filter1d
 {
@@ -23,4 +24,5 @@ protected:
 	double *data_fft;
 	void *fftw_plans[2];
 	int N;
+	_critical_section cs;
 };

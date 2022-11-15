@@ -20,7 +20,7 @@ enum sample_quant
     sample_float = 2,
 };
 
-typedef int (*data_callback)(void *buf, int len, sample_quant quant);
+typedef int (*data_callback)(void *buf, int len);
 
 class device
 {
@@ -31,8 +31,12 @@ public:
     virtual int config() = 0;
 	virtual int tune(int64_t hz){return -1;}
     virtual int get_sample_rate() = 0;
+	virtual int set_gains(uint8_t *gains){return -1;}
+	virtual int get_gains(uint8_t *gains){return -1;}
+	virtual int get_gains_count(){ return 0;}
     virtual sample_type get_sample_type(){return complex_sample;}
-    virtual int dynamic_range_db(){return 20*log10(32767.0*6.6*10);}     // return max noise density SNR in db
+	virtual sample_quant get_sample_quant(){return sample_16bit;}
+    virtual int dynamic_range_db(){return 130;}     // return max noise density SNR in db
 };
 
 }

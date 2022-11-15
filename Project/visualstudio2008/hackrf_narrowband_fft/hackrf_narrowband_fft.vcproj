@@ -41,15 +41,16 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../../modules;pthread"
+				AdditionalIncludeDirectories="../../../modules;pthread;../../rk3288_android5.1/main_test/libyuv/include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="2"
+				RuntimeLibrary="3"
 				EnableEnhancedInstructionSet="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
+				DisableSpecificWarnings="4305"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -114,14 +115,14 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
+				Optimization="3"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="../../../modules;pthread"
+				FavorSizeOrSpeed="1"
+				AdditionalIncludeDirectories="../../../modules;pthread;../../rk3288_android5.1/main_test/libyuv/include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				EnableEnhancedInstructionSet="0"
-				FloatingPointModel="1"
+				EnableEnhancedInstructionSet="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -180,6 +181,250 @@
 				>
 			</File>
 			<File
+				RelativePath=".\DSOwindow.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\DSOwindow.h"
+				>
+			</File>
+			<File
+				RelativePath=".\main.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\wfm_draw.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						BufferSecurityCheck="false"
+						FloatingPointModel="2"
+						AssemblerOutput="2"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\wfm_draw.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="资源文件"
+			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
+			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
+			>
+			<File
+				RelativePath=".\bin11.bin"
+				>
+			</File>
+			<File
+				RelativePath=".\resource.h"
+				>
+			</File>
+			<File
+				RelativePath=".\window.rc"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="libyuv"
+			>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\compare.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\compare_common.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\compare_gcc.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\compare_neon.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\compare_neon64.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\compare_win.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\convert.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\convert_argb.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\convert_from.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\convert_from_argb.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\convert_jpeg.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\convert_to_argb.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\convert_to_i420.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\cpu_id.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\mjpeg_decoder.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\mjpeg_validate.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\planar_functions.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate_any.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate_argb.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate_common.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate_gcc.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate_mips.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate_msa.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate_neon.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate_neon64.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\rotate_win.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\row_any.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\row_common.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\row_gcc.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\row_mips.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\row_msa.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\row_neon.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\row_neon64.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\row_win.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale_any.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale_argb.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale_common.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale_gcc.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale_mips.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale_msa.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale_neon.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale_neon64.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\scale_win.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\rk3288_android5.1\main_test\libyuv\source\video_common.cpp"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="devices"
+			>
+			<File
+				RelativePath=".\device.h"
+				>
+			</File>
+			<File
 				RelativePath=".\device_bulk.cpp"
 				>
 			</File>
@@ -192,23 +437,23 @@
 				>
 			</File>
 			<File
+				RelativePath=".\device_dummy.h"
+				>
+			</File>
+			<File
+				RelativePath=".\device_fx3.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\device_fx3.h"
+				>
+			</File>
+			<File
 				RelativePath=".\device_hackrf.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\device_hackrf.h"
-				>
-			</File>
-			<File
-				RelativePath=".\filter1d.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\Fourier.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\Fourier.h"
 				>
 			</File>
 			<File
@@ -220,11 +465,119 @@
 				>
 			</File>
 			<File
-				RelativePath=".\main.cpp"
+				RelativePath="..\..\..\modules\utils\minilzo.c"
+				>
+			</File>
+			<Filter
+				Name="FX3"
+				>
+				<File
+					RelativePath=".\FX3\CyAPI.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\FX3\CyAPI.h"
+					>
+				</File>
+				<File
+					RelativePath=".\FX3\cyioctl.h"
+					>
+				</File>
+				<File
+					RelativePath=".\FX3\CyUSB30_def.h"
+					>
+				</File>
+				<File
+					RelativePath=".\FX3\usb100.h"
+					>
+				</File>
+				<File
+					RelativePath=".\FX3\usb200.h"
+					>
+				</File>
+				<File
+					RelativePath=".\FX3\UsbdStatus.h"
+					>
+				</File>
+			</Filter>
+		</Filter>
+		<Filter
+			Name="mem"
+			>
+			<File
+				RelativePath=".\fifo.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\modules\utils\minilzo.c"
+				RelativePath=".\fifo.h"
+				>
+			</File>
+			<File
+				RelativePath=".\memory_pool.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\memory_pool.h"
+				>
+			</File>
+			<File
+				RelativePath=".\MemoryMapped.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\MemoryMapped.h"
+				>
+			</File>
+			<File
+				RelativePath=".\streaming-load-memcpy.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\streaming-load-memcpy.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="math"
+			>
+			<File
+				RelativePath=".\fft_bucket.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\fft_bucket.h"
+				>
+			</File>
+			<File
+				RelativePath=".\filter1d.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\filter1d.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Fourier.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Fourier.h"
+				>
+			</File>
+			<File
+				RelativePath=".\interpolate_1d.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\interpolate_1d.h"
+				>
+			</File>
+			<File
+				RelativePath=".\sinc.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\sinc.h"
 				>
 			</File>
 			<File
@@ -236,30 +589,10 @@
 				>
 			</File>
 		</Filter>
-		<Filter
-			Name="头文件"
-			Filter="h;hpp;hxx;hm;inl;inc;xsd"
-			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
+		<File
+			RelativePath=".\dwindow.manifest"
 			>
-			<File
-				RelativePath=".\resource.h"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="资源文件"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
-			>
-			<File
-				RelativePath=".\window.rc"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="pthread"
-			>
-		</Filter>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
