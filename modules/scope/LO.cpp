@@ -26,11 +26,12 @@ float coupling = -19;
 F4SPI spi(SPI1);
 F4GPIO cs_2572(GPIOA, GPIO_Pin_4);
 F4GPIO att_le(GPIOA, GPIO_Pin_3);
+F4GPIO sync(GPIOB, GPIO_Pin_15);
 
 F4GPIO swd1[3] = {F4GPIO(GPIOB, GPIO_Pin_0), F4GPIO(GPIOB, GPIO_Pin_1), F4GPIO(GPIOB, GPIO_Pin_2)};
 F4GPIO swd2[3] = {F4GPIO(GPIOB, GPIO_Pin_14), F4GPIO(GPIOB, GPIO_Pin_13), F4GPIO(GPIOB, GPIO_Pin_12)};
 dma_adc adc;
-int freq_digits[10] = {0, 1, 0, 0};
+int freq_digits[10] = {2, 4, 0, 0};
 bool freq_changed = false;
 int ptr_x = 1;
 int ptr_y = 0;
@@ -73,15 +74,15 @@ int select_path(int path)
 
 int get_path_by_freq(int64_t freq)
 {
-	if (freq > 3400000000)
+	if (freq > 3800000000)
 		return 3;
-	else if (freq > 1750000000)
+	else if (freq > 2200000000)
 		return 2;
-	else if (freq > 900000000)
+	else if (freq > 1300000000)
 		return 1;
-	else if (freq > 500000000)
+	else if (freq > 700000000)
 		return 4;
-	else if (freq > 250000000)
+	else if (freq > 350000000)
 		return 5;
 	else
 		return 6;
@@ -135,6 +136,7 @@ void button_cmd(int button)
 		else
 			ptr_x = limit(ptr_x, 0, 2);
 
+		sync.toggle();
 	}
 	if (freq_digits[ptr_x] < 0)
 		freq_digits[ptr_x] = 0;
@@ -192,8 +194,13 @@ void set_att(int att)
 	att_le.write(0);
 }
 
+
+int64_t last_freq = 0;
+float next_freq = 61.44*7+50;
+
 int main()
 {
+	//ADF4355_test();
 	init_path();
 
 	LMX2572 lmx2572;
@@ -202,12 +209,35 @@ int main()
 	lmx2572.set_freq(read_freq());
 	lmx2572.set_output(true, 63);
 	select_path_by_freq(read_freq());
-	
+
 
 	F4GPIO lock_led(GPIOB, GPIO_Pin_8);
 	lock_led.set_mode(HAL::MODE_OUT_PushPull);
 	lock_led.write(0);
 
+#if 1
+
+	sync.set_mode(HAL::MODE_OUT_PushPull);
+	sync.write(0);
+
+	lmx2572.set_ref(61440000, false, 1, 1, 1);
+	while(1)
+	{
+		int64_t freq = next_freq * 1e6;
+		if (freq != last_freq)
+		{
+			lmx2572.set_freq(freq);
+			lmx2572.set_output(true, 17);
+			last_freq = freq;
+		}
+		next_freq = next_freq + 1;
+		if (next_freq > 61.44*7 + 300)
+			next_freq = 61.44*7 +1;
+		systimer->delayms(50);
+		lock_led.write(lmx2572.is_locked());
+	}
+#endif
+	
 	att_le.write(0);
 	att_le.set_mode(MODE_OUT_PushPull);
 	set_att(attenuator);
@@ -250,12 +280,24 @@ int main()
 	float vset_deadband = 0;//vset_per_lsb * 1 / 2;
 	double ghz = read_freq() * 1e-9;
 	float intercept_ref = -0.071 * ghz*ghz*ghz + 1.43 * ghz*ghz + -6.9 * ghz + 20.5;
-	float intercept_mv = 2.289 * ghz*ghz*ghz*ghz -22.99 * ghz*ghz*ghz +66.56 * ghz*ghz -89.60 * ghz + 693.7;
-	float intercept = intercept_mv / 22.0f + coupling;
 	char tmp[20];
 
 	while(1)
-	{
+	{					
+		// cal 2019
+		//float intercept_mv = 2.289 * ghz*ghz*ghz*ghz -22.99 * ghz*ghz*ghz +66.56 * ghz*ghz -89.60 * ghz + 693.7;
+		
+		// cal 2022
+		float intercept_mv = (2.237 * ghz*ghz*ghz*ghz -22.37 * ghz*ghz*ghz + 62.39 * ghz*ghz -73.52 * ghz + 686.6);
+		if ( ghz > 5.5)
+		{
+			float ghzm = ghz - 5.5;
+			intercept_mv = (105.3 * ghzm*ghzm*ghzm*ghzm -465.3 * ghzm*ghzm*ghzm + +682.4 * ghzm*ghzm -234.5 * ghzm + 532.4);
+		}
+			
+		
+		float intercept = intercept_mv / 22.0f + coupling;
+	
 		// lock indicator
 		lock_led.write(lmx2572.is_locked());
 
@@ -280,6 +322,7 @@ int main()
 
 			adc.begin();
 		}
+		float dbm_actual = -vdet / 0.022f + intercept - coupling;
 
 		if (1)
 		{
@@ -316,8 +359,7 @@ int main()
 		{
 			ghz = read_freq() * 1e-9;
 			float intercept_ref = -0.071 * ghz*ghz*ghz + 1.43 * ghz*ghz + -6.9 * ghz + 20.5;
-			float intercept_mv = 2.289 * ghz*ghz*ghz*ghz -22.99 * ghz*ghz*ghz +66.56 * ghz*ghz -89.60 * ghz + 693.7;
-			intercept = intercept_mv / 22.0f + coupling;
+
 			
 			freq_changed = false;
 			int64_t t = systimer->gettime();
@@ -343,7 +385,7 @@ int main()
 		sprintf(tmp, "%d", (abs_power/10)%10);
 		oled.show_str(12, 0, tmp, ptr_y == 1 && ptr_x == 1);
 		oled.show_str(18, 0, ".");
-		sprintf(tmp, "%ddbm", abs_power%10);
+		sprintf(tmp, "%d -->> %s%.2fdbm", abs_power%10, dbm_actual >= 0 ? "+":"", dbm_actual);
 		oled.show_str(24, 0, tmp, ptr_y == 1 && ptr_x == 2);
 
 		// long press buttons

@@ -28,9 +28,16 @@ F1SPI _spi;
 F1Interrupt _interrupt;
 F1Timer _timer(TIM2);
 
+F1GPIO ants[2] =
+{
+	F1GPIO(GPIOB, GPIO_Pin_0),
+	F1GPIO(GPIOB, GPIO_Pin_1),
+};
 
-STM32F1::F1UART _sbus(USART2);	
-STM32F1::F1UART tele(USART3);	
+//#define DSM
+
+STM32F1::F1UART _sbus(USART2);
+STM32F1::F1UART tele(USART3);
 
 	
 extern "C" void TIM2_IRQHandler(void)
@@ -55,9 +62,14 @@ int board_init()
 	spi = &_spi;
 	interrupt = &_interrupt;
 	timer = &_timer;
+	
+#ifdef DSM
+	_sbus.set_baudrate(115200);
+#else
 	sbus = &_sbus;
-	telemetry = &tele;
+	telemetry = &tele;	
 	tele.set_baudrate(500000);
+#endif
 	
 	//	
 	_spi.init(SPI2);
@@ -85,8 +97,7 @@ static uint16_t le2be_uint16(uint16_t in)
 
 void custom_output(uint8_t * payload, int payload_size, int latency)
 {
-	return;
-	
+#ifdef DSM	
 	static int64_t last_output = 0;
 	if (systimer->gettime() - last_output < 14000 || latency > 200000)
 		return;
@@ -118,5 +129,16 @@ void custom_output(uint8_t * payload, int payload_size, int latency)
     // 7th channel, 0xffff for compatability
     dsm_packet.channels[6] = 0xffff;
 	
-	sbus->write(&dsm_packet, sizeof(dsm_packet));
+	_sbus.write(&dsm_packet, sizeof(dsm_packet));
+	
+#endif
+}
+
+void select_ant(uint32_t *randomizer, bool tx)
+{
+	for(int i=0; i<2; i++)
+	{
+		ants[i].set_mode(MODE_OUT_PushPull);
+		ants[i].write(!((randomizer[1]+i)&1));
+	}
 }

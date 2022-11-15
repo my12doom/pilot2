@@ -22,6 +22,11 @@ uint64_t seed = 0x1234567890345678;
 configure_entry config[6];
 configure_entry channel_statics[6];
 bool enable_telemetry = false;
+//uint8_t ch_high = 125;
+//uint8_t ch_low = 106;
+
+uint8_t ch_high = 100;
+uint8_t ch_low = 0;
 
 nrf_pkt uplink_pkt;
 uplink_payload_v0 *uplink_payload = (uplink_payload_v0*)uplink_pkt.payload;
@@ -31,7 +36,8 @@ int telemetry_id = 0;
 int telemetry_down_bytes = 0;
 int last_downlink_telemetry_id = -1;
 int telemetry_up_bytes = 0;
-bool telemetry_ready = true;
+bool telemetry_uplink_ready = true;
+bool got_downlink = false;
 
 uint16_t hoop_id = 0;
 uint16_t hoop_interval = 1000;
@@ -45,7 +51,7 @@ int packet_time = 1363;		// in us
 int rf_latency = 45;
 int rx_pkt = 0;
 int rx_pkt_s = 0;
-
+int rx_pkt_s_lpf = 0;
 
 class NRF24L01_ANT : public NRF24L01
 {
@@ -66,7 +72,6 @@ uint32_t pos2rando(int pos)
 	aes.encrypt((uint8_t*)randomizing, (uint8_t*)randomizing);
 	return randomizing[0];
 }
-
 
 void nrf_irq_entry(void *parameter, int flags)
 {
@@ -100,10 +105,12 @@ void nrf_irq_entry(void *parameter, int flags)
 
 			if (downlink_led)
 				downlink_led->write(0);
+			
+			got_downlink = true;
 
 			// handle telemetry
 			if (downlink_payload->ack_id == telemetry_id)
-				telemetry_ready = true;
+				telemetry_uplink_ready = true;
 			if (downlink_payload->telemetry_id != last_downlink_telemetry_id)
 			{
 				last_downlink_telemetry_id = downlink_payload->telemetry_id;
@@ -117,11 +124,19 @@ void nrf_irq_entry(void *parameter, int flags)
 		}
 	}
 
+	// listen for downlink
 	if (enable_telemetry && (hoop_id&1))
 	{
-		int channel = ((pos2rando(hoop_id) & 0xffff) * 100) >> 16;
+		int channel = (((pos2rando(hoop_id) & 0xffff) * (ch_high-ch_low)) >> 16) + ch_low;
 		nrf.write_reg(5, channel);
 		nrf.rf_on(true);
+		
+		// dirty fix for BK5811
+		if (hoop_interval == 1000)
+		{
+			nrf.rf_off();
+			nrf.rf_on(true);
+		}
 	}
 	
 	//dt = systimer->gettime() - ts;
@@ -179,14 +194,14 @@ void fill_telemetry()
 {
 	static uint8_t buf[32] = "HelloWorld";
 	static int buf_size = 10;
-	if (telemetry_ready && telemetry)
+	if (telemetry_uplink_ready && telemetry)
 	{
 		buf_size = telemetry->read(buf, sizeof(uplink_payload->telemetry));
 		if (buf_size > 0)
 		{
 			telemetry_id ++;
 			telemetry_id &= 0xf;
-			telemetry_ready = false;
+			telemetry_uplink_ready = false;
 			telemetry_up_bytes += buf_size;
 		}
 		else
@@ -206,13 +221,9 @@ void timer_entry(void *p)
 	interrupt->disable();
 	dbg->write(true);
 	
-	uplink_pkt.hoop_id = hoop_id;	
-	int channel = ((pos2rando(hoop_id) & 0xffff) * 100) >> 16;
+	uplink_pkt.hoop_id = hoop_id;
+	int channel = (((pos2rando(hoop_id) & 0xffff) * (ch_high-ch_low)) >> 16) + ch_low;
 	hoop_id ++;
-	//channel = hoop_id%100;
-	
-	if (downlink_led)
-		downlink_led->write(enable_telemetry);
 	
 	if (!enable_telemetry || (hoop_id& 1))
 	{
@@ -233,9 +244,16 @@ void timer_entry(void *p)
 		aes.encrypt(p, p);
 		aes.encrypt(p+16, p+16);
 			
+		
 		nrf.write_tx(p, 32);
 		nrf.rf_on(false);
 		tx_tx_process_time = systimer->gettime() - t;
+		
+		if (downlink_led && !got_downlink)
+			downlink_led->write(enable_telemetry);
+		
+		rx_pkt_s_lpf = (rx_pkt_s_lpf * 235 + (got_downlink ? 10000 : 0) * 21) >> 8;
+		got_downlink = false;
 	}
 	
 	interrupt->enable();
@@ -372,6 +390,7 @@ int carrier_test()
 	
 	while(1)
 	{
+		watchdog_reset();
 	}
 }
 
@@ -402,6 +421,7 @@ int apply_channel_statics()
 
 int main()
 {
+	is_tx = true;
 	space_init();	
 	space_read("seed", 4, &seed, 8, NULL);
 	space_read("tele", 4, &enable_telemetry, 1, NULL);
@@ -422,12 +442,12 @@ int main()
 
 	// don't do flash erasure after board init
 	// may corrupt adc dma transfer 
-	board_init();
 	watchdog_init();
+	board_init();
 	
 	// read config again, if board modified
 	space_read("conf", 4, &config, sizeof(config), NULL);
-	
+		
 	irq->set_mode(MODE_IN);
 	dbg->set_mode(MODE_OUT_PushPull);
 	dbg->write(false);
@@ -491,9 +511,6 @@ int main()
 			rx_pkt_s = rx_pkt - last_pkt_count;
 			last_pkt_count = rx_pkt;
 			last_pkt_counting = systimer->gettime();
-
-			//if (downlink_led)
-			//	downlink_led->write(enable_telemetry && rx_pkt_s == 0);
 		}
 		
 		watchdog_reset();

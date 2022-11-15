@@ -12,6 +12,7 @@
 #define INCLUDE_LIBYUV_BASIC_TYPES_H_
 
 #include <stddef.h>  // for NULL, size_t
+#include <stdint.h>
 
 #if defined(_MSC_VER) && (_MSC_VER < 1600)
 #include <sys/types.h>  // for uintptr_t on x86

@@ -21,6 +21,7 @@ HAL::IUART *ebus = NULL;
 HAL::IUART *sbus = NULL;
 
 HAL::IUART *telemetry = NULL;
+bool is_tx = false;
 
 WEAK void select_ant(uint32_t *randomizer, bool tx)
 {

@@ -36,6 +36,7 @@ static F4GPIO cs_IF(GPIOA, GPIO_Pin_0);
 F4GPIO att_le(GPIOA, GPIO_Pin_2);
 
 F4GPIO swd1[3] = {F4GPIO(GPIOD, GPIO_Pin_11), F4GPIO(GPIOD, GPIO_Pin_12), F4GPIO(GPIOD, GPIO_Pin_13)};
+static F4GPIO sync(GPIOB, GPIO_Pin_13);
 
 F4SPI spi(SPI1);
 static I2C_SW i2c(&scl, &sda);
@@ -361,30 +362,103 @@ int select_path_by_freq(int64_t freq)
 
 bool new_freq = true;
 int64_t fc = 3640e6;
-int f_af = 12000;
+//int f_af = 12000;
+//int f_if = 120e6;
+int f_af = 12e3;
 int f_if = 120e6;
+
 int att = 120;
 uint64_t last_fc = 0;
 
-uint16_t LOregs[200];
-uint16_t sourceregs[200];
+uint16_t LOregs[126];
+uint16_t LO2regs[126];
+uint16_t sourceregs[126];
+int test_sync = 0;
+uint16_t r0;
 int update_freq()
 {
 	if (last_fc != fc)
 	{
 		sweeping = true;
 
-		source.set_freq(fc);
-		LO.set_freq((fc<6000e6) ? (fc - f_af + f_if) : (fc+f_af-f_if));
-		LO2.set_freq((fc<6000e6) ? (fc - f_af + f_if) : (fc+f_af-f_if));
-		//LO2.set_freq(6400000000-f_af-f_if);
-				
+		/*
+		uint16_t LO_cap = 0x2742;
+		uint16_t LO_DAC = 0xB0;
+		uint16_t LO2_cap = 0x2748;
+		uint16_t LO2_DAC = 0xB0;
+
+		LO.write_reg(19, LO_cap);
+		LO2.write_reg(19, LO2_cap);
+		LO.write_reg(16, LO_DAC);
+		LO2.write_reg(16, LO2_DAC);
+
+		uint16_t r20 = (4<<11) | 0x48 | 0x4400;
+		uint16_t r8 = 0x6000;
+		LO.write_reg(8, r8);
+		LO2.write_reg(8, r8);
+		LO.write_reg(20, r20);
+		LO2.write_reg(20, r20);
+		*/
+		
+		//printf("\rfreq:%lld  ", fc);
+
+
+		source.set_freq(fc, true);
+		LO.set_freq((fc<6000e6) ? (fc - f_af + f_if) : (fc+f_af-f_if), true);
+		LO2.set_freq((fc<6000e6) ? (fc - f_af + f_if) : (fc+f_af-f_if), true);
+
+		/*
+		LO.sync_start(NULL);
+		LO2.sync_start(NULL);
+		source.sync_start(NULL);
+
+		systimer->delayus(5000);
+		*/
+
+		sync.write(1);
+		systimer->delayus(1);
+		sync.write(0);
+		systimer->delayus(1);
+		sync.write(1);
+		
 		select_path_by_freq(fc);
+		systimer->delayus(1500);
 
-
+		for(int i=0; i<126; i++)
+		{
+			//LOregs[i] = LO.read_reg(i);
+			//LO2regs[i] = LO2.read_reg(i);
+			//sourceregs[i] = source.read_reg(i);
+		}
+	
 		last_fc = fc;
-		systimer->delayus(1000);
 		sweeping = false;
+	}
+	
+	if (test_sync)
+	{
+		test_sync = 0;
+				
+		sync.write(0);
+		systimer->delayus(1);
+		sync.write(1);
+		systimer->delayus(1);
+		sync.write(0);
+		
+		/*
+		r0 = source.read_reg(0);
+		r0 &= ~0x4000;
+		source.write_reg(0, r0);
+		r0 |= 0x4008;
+		source.write_reg(0, r0);
+		*/
+		
+		for(int i=0; i<126; i++)
+		{
+			LOregs[i] = LO.read_reg(i);
+			LO2regs[i] = LO2.read_reg(i);
+			sourceregs[i] = source.read_reg(i);
+		}
 	}
 
 	return 0;
@@ -395,20 +469,24 @@ int init_LO_source()
 	int fref = 40000000;
 
 	LO.init(&spi, &cs_LO);
-	LO.set_ref(fref, true, 1, 1, 1, true);
-	LO.set_freq(fc-f_af-f_if);
+	LO.set_ref(fref, false, 1, 1, 1, true);
+	LO.set_freq(fc-f_af-f_if, true);
 	LO.set_output(true, 63, true, 63);
 
 	LO2.init(&spi, &cs_LO2);
-	LO2.set_ref(fref, true, 1, 1, 1, true);
-	LO2.set_freq(fc-f_af-f_if);
+	LO2.set_ref(fref, false, 1, 1, 1, true);
+	LO2.set_freq(fc-f_af-f_if, true);
 	LO2.set_output(true, 63, true, 63);
 
 	source.init(&spi, &cs_source);	
-	source.set_ref(fref, true, 1, 1, 1, true);
-	source.set_freq(fc);
+	source.set_ref(fref, false, 1, 1, 1, true);
+	source.set_freq(fc, true);
 	source.set_output(false, 0, true, 25);
-	
+
+	LO.sync_start(NULL);
+	LO2.sync_start(NULL);
+	source.sync_start(NULL);
+
 	return 0;
 }
 
@@ -590,6 +668,47 @@ int configure_af_adc()
 	return 0;
 }
 
+void calibrate_pll(IUART *vcp)
+{
+	while (!vcp->available())
+		;
+	
+	int total = 512;
+	for(int i = 0; i< total; i++)
+	{
+		uint64_t freq = i * 100e6 / total + 6300e6;
+		fc = freq;
+		update_freq();
+		
+		uint16_t regs[3][3];
+		for(int i=0; i<3; i++)
+		{
+			regs[0][i] = source.read_reg(110+i);
+			regs[1][i] = LO.read_reg(110+i);
+			regs[2][i] = LO2.read_reg(110+i);
+		}
+		
+		//for(int i=0; i<3; i++)
+		{
+			int vco = (regs[1][0] >> 5) &0x7;
+			int cap = (regs[1][1]) &0xff;
+			int dac = (regs[1][2]) &0x1ff;
+
+			int vco2 = (regs[2][0] >> 5) &0x7;
+			int cap2 = (regs[2][1]) &0xff;
+			int dac2 = (regs[2][2]) &0x1ff;
+
+			int cap_assist = LO.regs[19] & 0xff;
+			int cap_assist2 = LO2.regs[19] & 0xff;
+
+			char tmp[200];
+			sprintf(tmp, "%lld\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", fc, vco, cap, dac, vco2, cap2, dac2, cap_assist, cap_assist2);
+			vcp->write(tmp, strlen(tmp));
+		}
+		
+	}
+}
+
 int main()
 {	
 	// USB ON
@@ -598,7 +717,7 @@ int main()
 	// default registers	
 	*(uint16_t*)&regs[0x20] = 5;		// sweep_points
 	sweep_points = 1;
-	sweep_start = 6.425e9;
+	sweep_start = 40e6;
 	sweep_step = 1e5;
 
 	// cs_IF pins
@@ -619,6 +738,8 @@ int main()
 	cs_source2.write(1);
 	att_le2.set_mode(MODE_OUT_PushPull);
 	att_le2.write(0);
+	sync.set_mode(MODE_OUT_PushPull);
+	sync.write(1);
 	
 	init_path();
 
@@ -633,6 +754,8 @@ int main()
 	led.write(SystemCoreClock == 84000000);
 	
 	configure_af_adc();
+	
+	calibrate_pll(&vcp);
 
 	while(1)
 	{
@@ -779,7 +902,7 @@ extern "C" void DMA1_Stream0_IRQHandler(void)
 	memset(integrate, 0 , sizeof(integrate));
 
 	phase[0] = atan2((double)integrate_out[0], (double)integrate_out[1]);
-	phase[1] = atan2((double)integrate_out[2], (double)integrate_out[3]);
+	phase[1] = atan2((double)integrate_out[6], (double)integrate_out[7]);
 	phase_diff = radian_sub(phase[0], phase[1]);
 
 	amp[0] = sqrt(double(integrate_out[0] * integrate_out[0] + integrate_out[1] * integrate_out[1]));

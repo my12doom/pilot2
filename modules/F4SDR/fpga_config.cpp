@@ -145,6 +145,15 @@ int fpga_config(HAL::IGPIO* init_b /* = NULL */)
 	while(DMA2_Stream3->CR & DMA_SxCR_EN)
 		;
 	
+	// release SPI GPIO
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	
+	
 	return (int)bitstream;
 }
 

@@ -1320,7 +1320,7 @@ int yet_another_pilot::calculate_state()
 	}
 
 
-	bool still = detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100;
+	still = detect_gyro.get_average(NULL) > 100 && detect_acc.get_average(NULL) > 100;
 	if (still)
 	{
 		float alpha = interval / (interval + 1.0f/(2*PI * 0.1f));	// 0.1hz LPF for gyro bias estimation
@@ -2330,7 +2330,7 @@ int yet_another_pilot::handle_cli(IUART *uart)
 	if (out_count>0)
 	{
 		out[out_count] = 0;
-		TRACE("%s,%s\n", line, out);
+		printf("%s,%s\n", line, out);
 		uart->write(out, out_count);
 	}
 
@@ -2962,6 +2962,8 @@ int yet_another_pilot::stupid_joystick()
 
 int yet_another_pilot::light_words()
 {
+	if (!rgb)
+		return -1;	
 	if (critical_errors & (~int(ignore_error)))
 	{
 		static int last_critical_errors = 0;
@@ -3009,9 +3011,7 @@ int yet_another_pilot::light_words()
 	}
 
 	
-	if (!rgb)
-		return -1;	
-	
+
 	if (calvin)
 	{
 		detect_gyro.new_data(gyro_reading);
@@ -3468,6 +3468,7 @@ int yet_another_pilot::setup(void)
 		if (manager.get_flow_count() && manager.get_flow(0)->healthy() && manager.get_flow(0)->read(&flow) == 0)
 			break;
 		
+		/*
 		LOGE("flow error\n");
 
 		// flash the rgb light to indicate a error
@@ -3481,14 +3482,16 @@ int yet_another_pilot::setup(void)
 				systimer->delayms(100);
 			}
 		}
+		*/
 	} while (0);
 		
 	// get two timers, one for main loop and one for SDCARD logging loop
 	manager.getTimer("mainloop")->set_period(cycle_time);
 	manager.getTimer("mainloop")->set_callback(main_loop_entry);
+	manager.getTimer("mainloop")->set_priority(4,0);
 	manager.getTimer("log")->set_period(10000);
 	manager.getTimer("log")->set_callback(sdcard_loop_entry);
-	manager.getTimer("imu")->set_period(1000);
+	manager.getTimer("imu")->set_period(1250);
 	manager.getTimer("imu")->set_callback(imu_reading_entry);
 	
 	return 0;

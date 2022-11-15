@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "i2s.h"
+#include <math.h>
 #include "stm32f4xx_rcc.h"
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_spi.h"
@@ -16,12 +16,17 @@
 #include <HAL/aux_devices/si5351.h>
 #include <HAL/aux_devices/ADF4351.h>
 #include <HAL/aux_devices/MAX2871.h>
+#include <HAL/aux_devices/ADF4001.h>
 #include "fpga_config.h"
 #include "F4SDR.h"
 
 using namespace STM32F4;
 using namespace HAL;
 using namespace F4SDR;
+
+// constants
+int64_t IF_freq = 902.5e6;
+int64_t LF_freq = 100e6;
 
 // board resource
 F4GPIO led0(GPIOC, GPIO_Pin_6);
@@ -33,28 +38,63 @@ F4GPIO cs_adc(GPIOD, GPIO_Pin_0);		// ADC driver & ADC
 F4GPIO cs4351(GPIOA, GPIO_Pin_9);		// adf4351
 F4GPIO cs2871(GPIOC, GPIO_Pin_9);		// max2871
 
+// signal path
+reg_rf_path rfpath = 
+{
+	0, IF_900, 0, 0,
+	IF_AMP_BYPASS, FE_LNA58,
+};
+
 // bulk buffer
 #define BUFFER_COUNT 32768
 static int16_t adc_buffer[BUFFER_COUNT];
 int data_valid = 0;
 int data_flying = 0;
+int64_t parrallel_reset_request = 1;
 
 // functions
 void tune(uint64_t center_freq);
 void set_adc_gain(bool LNA, uint8_t gain);
 int parallel_port_config();
 int usb_event_cb(F4HSBulk *h, int event, void *_p, int size);
+void fpga_reg_write(uint8_t add, uint8_t value);
+uint8_t fpga_reg_read(uint8_t add);
+
+void request_port_reset()
+{
+	DMA_Cmd(DMA2_Stream6, DISABLE);
+	
+	parrallel_reset_request = systimer->gettime();	
+}
 
 void set_adc_gain(bool LNA, uint8_t gain)
 {
+	request_port_reset();
 	spi.set_mode(0,0);
 	spi.set_speed(4000000);
 	cs_adc.set_mode(MODE_OUT_PushPull);
 	cs_adc.write(1);
 	systimer->delayus(1);
 	cs_adc.write(0);
+	spi.txrx(0x32);
 	spi.txrx((LNA ? 0x80 : 0) | gain);
-	cs_adc.write(1);	
+	cs_adc.write(1);
+	
+	request_port_reset();
+	
+	fpga_reg_write(0, gain);
+}
+
+void set_rf_path(uint8_t path)
+{
+	request_port_reset();
+	reg_rf_path *p = (reg_rf_path*)&path;
+	if (!p->IF_sel_override)
+		p->IF_select = rfpath.IF_select;
+	
+	rfpath = *p;
+	fpga_reg_write(0, path);
+	request_port_reset();
 }
 
 extern "C" void DMA2_Stream6_IRQHandler(void)
@@ -107,6 +147,8 @@ int parallel_port_config()
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+	
+	memset(adc_buffer, 0, sizeof(adc_buffer));
 	
 	
 	GPIO_InitTypeDef GPIO_InitStructure;
@@ -235,20 +277,17 @@ int handle_OUT_event(F4HSBulk *h, control_verndor_transfer *t)
 		break;
 
 	case F4SDR::tune:
-		// 1st IF filter passband: 890 - 915Mhz, stop band: <880Mhz or > 925Mhz
-		// baseband mapped to 888 of IF2.
 		if (t->length == 8)
-		{
-			if (*(uint64_t*)t->data > 888000000)				
-				LO1.set_freq(*(uint64_t*)t->data-888000000);
-			else
-				LO1.set_freq(888000000 - *(uint64_t*)t->data);
-		}
+			::tune (*(uint64_t*)t->data);
 		break;
 
 	case set_gain:
 		if (t->length == 1)
 			set_adc_gain(t->data[0]&0x80, t->data[0]&0x7f);
+		break;
+	case F4SDR::set_path:
+		if (t->length == 1)
+			set_rf_path(t->data[0]);
 		break;
 	
 	default:
@@ -358,6 +397,7 @@ int usb_event_cb(F4HSBulk *h, int event, void *_p, int size)
 int write_ad9251(int16_t add, uint8_t v)
 {
 	cs_adc.write(0);
+	spi.txrx(0x31);
 	spi.txrx((add>>8)&0xf);
 	spi.txrx(add&0xff);
 	spi.txrx(v);
@@ -370,6 +410,7 @@ uint8_t read_ad9251(int16_t add)
 {
 	uint8_t v;
 	cs_adc.write(0);
+	spi.txrx(0x31);
 	spi.txrx(0x80 | ((add>>8)&0xf));
 	spi.txrx(add&0xff);
 	v = spi.txrx(0);
@@ -378,54 +419,271 @@ uint8_t read_ad9251(int16_t add)
 	return v;
 }
 
+uint8_t readback[20];
 int configure_ad9251()
 {
 	spi.set_mode(0,0);
 	spi.set_speed(4000000);
 
 		
-	write_ad9251(0x00, 0x3C);	// software reset
-	write_ad9251(0x05, 0x03);	// select channel B
-	write_ad9251(0xff, 0x01);	// execute
+	//write_ad9251(0x00, 0x3C);	// software reset
+	//write_ad9251(0x05, 0x03);	// select both channel
+	//write_ad9251(0xff, 0x01);	// execute
 	
-	systimer->delayms(1);
+	//systimer->delayms(1);
 	
 
+	write_ad9251(0x05, 0x03);	// select both channel
 	write_ad9251(0x14, 0x21);	// use twos complement output, interleaved
-	write_ad9251(0x17, 0x00);	// delay clock 4.5ns
-	write_ad9251(0x15, 0x02);	// weak cmos drive
-	write_ad9251(0x16, 0x00);	// DCO invert
+	write_ad9251(0x17, 0x20);	// delay clock 4.5ns
+	write_ad9251(0x15, 0x22);	// weak cmos drive
+	write_ad9251(0x16, 0x80);	// DCO invert
 
 	//write_ad9251(0x14, 0x01);	// use twos complement output
 	//write_ad9251(0x17, 0x00);	// no delay
 
 	write_ad9251(0x0b, 0x00);	// clock divider : /1
+	//write_ad9251(0x0b, 0x01);	// clock divider : /2
 	write_ad9251(0x09, 0x01);	// clock duty cycle stabalize
 	write_ad9251(0xff, 0x01);	// execute
 	
-	// disable channel B	
+	// disable channel B
+	/*
 	write_ad9251(0x05, 0x02);	// select channel B
 	write_ad9251(0x14, 0x21);	// disable
 	write_ad9251(0xff, 0x01);	// execute
+	*/
+	
+	for(int i=0; i<20; i++)
+		readback[i] = read_ad9251(i);
 	
 	return 0;
 }
 
+void tune(uint64_t center_freq)
+{
+	request_port_reset();
+	// 1st IF filter:
+	// 900M option(NDF9299) center:902.5 passband: 890 - 915 Mhz, stop band: <880Mhz or > 925Mhz
+	// 800M option(NDF8010) center:836.5 passband: 824 - 849 Mhz, stop band:  <800Mhz or > 869Mhz
+	uint8_t if_select_prev = rfpath.IF_select;
+	rfpath.IF_select = center_freq > ((902.5e6f+837.0e6f)/2) ? IF_800 : IF_900;
+	rfpath.IF_select = IF_900;
+	if (if_select_prev != rfpath.IF_select)
+	{
+		IF_freq = (rfpath.IF_select == IF_800) ? 836.5e6f : 902.5e6f;
+		set_rf_path(*(uint8_t*)&rfpath);
+	}
+	
+	if (center_freq > IF_freq*2 + LF_freq)
+	{
+		// low side LO1, low side LO2
+		LO1.set_freq(center_freq-IF_freq);
+		LO2.set_freq(IF_freq - LF_freq);
+	}
+	else
+	{
+		// high side LO1, high side LO2
+		LO1.set_freq(center_freq + IF_freq);
+		LO2.set_freq(IF_freq + LF_freq); 
+	}
+	
+	//LO1.set_output(false, false, false);
+	//LO2.set_freq(100e6);
+	//LO2.set_output(false, false, false);
+	
+	request_port_reset();
+}
+
+uint8_t rb;
+
+void fpga_reg_write(uint8_t add, uint8_t value)
+{
+	request_port_reset();
+	spi.set_mode(0,0);
+	spi.set_speed(4000000);
+	
+	cs_adc.write(0);
+	spi.txrx(0x33);
+	spi.txrx(add);
+	spi.txrx(value);
+	cs_adc.write(1);
+
+	request_port_reset();
+}
+
+uint8_t fpga_reg_read(uint8_t add)
+{
+	//request_port_reset();
+	spi.set_mode(0,0);
+	spi.set_speed(4000000);
+	
+	cs_adc.write(0);
+	spi.txrx(0x33);
+	spi.txrx(add | 0x80);
+	uint8_t rb = spi.txrx(0xAA);
+	cs_adc.write(1);
+	
+	//request_port_reset();
+
+	return rb;
+}
+
+uint8_t tx[32];
+uint8_t rx[32];
+void fpga_reg_read_multi(uint8_t start, uint8_t *out, int count)
+{
+	spi.set_mode(0,0);
+	spi.set_speed(4000000);
+	tx[0] = 0x33;
+	tx[1] = start | 0x80;
+	
+	cs_adc.write(0);
+	spi.txrx2(tx, rx, count+2);
+	/*
+	spi.txrx(0x33);
+	spi.txrx(start | 0x80);
+	for(int i=0; i<count; i++)
+		out[i] = spi.txrx(0xAA);
+	*/
+	cs_adc.write(1);
+	memcpy(out, rx+2, count);
+}
+
+void write_4001_reg(uint32_t v)
+{
+	cs_adc.write(0);
+	spi.txrx(0x34);
+	spi.txrx((v>>16)&0xff);
+	spi.txrx((v>>8)&0xff);
+	spi.txrx((v>>0)&0xff);
+
+	cs_adc.write(1);
+}
+
+void configure_clock_pll()
+{
+	ADF4001_REG0 reg0 = {0};
+	ADF4001_REG1 reg1 = {0};
+	ADF4001_REG2 reg2 = {0};
+	spi.set_mode(0, 0);
+	spi.set_speed(20000000);
+
+	do
+	{
+		reg0.ADDR = 0;
+		reg0.anti_backlash = 0;
+		reg0.lock_detect_precision = 1;
+		reg0.test_mode = 0;
+		reg0.R = 3072/4;							// "ref" divider: 61.44Mhz / 3072 = 20khz
+
+		reg1.ADDR = 1;
+		reg1.reserved = 0;
+		reg1.N = 2000/4;							// "RF" divider: 40Mhz / 2000 = 20khz
+		reg1.cp_gain = 3;
+
+		reg2.ADDR = 2;
+		reg2.counter_reset = 0;
+		reg2.power_down1 = reg2.power_down2 = 0;
+		reg2.mux_out = 1;	// digital lock detect
+		reg2.polarity = 0;
+		reg2.cp_3state = 0;
+		reg2.fast_lock_en = 0;
+		reg2.fast_lock_mode = 0;
+		reg2.timer_control = 0;
+		reg2.cp_current1 = reg2.cp_current2 = 7;		// 5mA
+
+		write_4001_reg(*(uint32_t*)&reg0);
+		write_4001_reg(*(uint32_t*)&reg1);
+		write_4001_reg(*(uint32_t*)&reg2);
+	} while(0);
+	
+}
+
+uint8_t fpga_read[9] = {0};
+int fpga_regs_test()
+{
+	fpga_reg_write(1, 0x3f);
+	fpga_reg_write(2, 0xff);
+	
+	fpga_read[0] = fpga_reg_read(0);
+	fpga_read[1] = fpga_reg_read(1);
+	fpga_read[2] = fpga_reg_read(2);
+	return 0;
+}
+
+uint32_t int_times = 0;
+uint32_t next_int = 61440;
+uint8_t reg_shift = 8;
+
+int64_t timeout = 0;
+int32_t got[2] = {0};
+double gotlpf = 0;
+float gotdb = 0;
+bool int_disable = true;
+void read_integrate()
+{
+	if (int_disable)
+		return;
+	
+	if (systimer->gettime() < timeout)
+		return;
+	
+	if (next_int != int_times)
+	{
+		int_times = next_int;
+		uint8_t tmp[4];
+		memcpy(tmp, &int_times, 4);
+		for(int i=0; i<4; i++)
+		{
+			fpga_reg_write(i+4, tmp[i]);
+			fpga_read[i] = fpga_reg_read(i+4);
+		}
+		fpga_reg_write(8, reg_shift);
+	}
+	
+	//request_port_reset();
+	/*
+	fpga_read[0] = fpga_reg_read(0);
+	fpga_read[1] = fpga_reg_read(1);
+	fpga_read[2] = fpga_reg_read(2);
+
+	for(int i=0; i<8; i++)
+		fpga_read[i] = fpga_reg_read(4+i);
+	*/
+	fpga_reg_read_multi(64, fpga_read, 9);
+	
+	memcpy(&got, fpga_read+1, 8);
+	
+	//got[0] += 30720;
+	//got[1] += 30720;
+	
+	int64_t v = (int64_t)got[0]*(int64_t)got[0]+(int64_t)got[1]*(int64_t)got[1];
+	
+		
+	gotlpf = gotlpf *0.95 + 0.05 * v;
+	
+	gotdb = log10(gotlpf)*10;
+	//request_port_reset();
+	
+	timeout = systimer->gettime() + 50000;
+}
 
 extern "C" void SetSysClock();
 int main()
 {
 	cs_adc.set_mode(MODE_OUT_PushPull);
-	cs_adc.write(1);
+	cs_adc.write(1);	
 
 	// use clock from USB3320
 	RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));		// switch to HSI
-	F4GPIO usb_reset(GPIOA, GPIO_Pin_4);
+	
+	F4GPIO usb_reset(GPIOC, GPIO_Pin_14);
 	usb_reset.set_mode(MODE_OUT_PushPull);
 	usb_reset.write(0);
 	systimer->delayms(10);
-	usb_reset.write(0);
-	systimer->delayms(5);	
+	usb_reset.write(1);
+	systimer->delayms(5);
 	SetSysClock();
 	SystemCoreClockUpdate();
 	led0.write(1);
@@ -438,6 +696,11 @@ int main()
 		led1.write(0);
 	PWR->CR &= ~PWR_CR_VOS;
 	
+	//while(0)
+	{
+		systimer->delayms(50);
+	}
+	
 	// erase fpga
 	F4GPIO fpga_erase(GPIOA, GPIO_Pin_0);
 	fpga_erase.set_mode(MODE_OUT_PushPull);
@@ -445,30 +708,18 @@ int main()
 	systimer->delayms(5);
 	fpga_erase.write(1);
 	
-	// si5351 sample clock
-	F4GPIO scl(GPIOA, GPIO_Pin_11);
-	F4GPIO sda(GPIOA, GPIO_Pin_12);
-	
-	I2C_SW i2c(&scl, &sda);
-	si5351 si;
-	si.set_i2c(&i2c);	
-	si.set_ref_freq(26.0);
-	si.set_pll(0, 720);
-	si.set_output_freq(0, 0, 720/80.0);
-	si.set_output_freq(1, 0, 720/80.0);
-	si.set_output_freq(2, 0, 720/80.0);
-	si.set_output(0, true, false);
-	si.set_output(1, false, false);
-	si.set_output(2, true, true);
-	
 	// fpga configureation
 	F4GPIO init_b(GPIOA, GPIO_Pin_6);
-	fpga_config(&init_b);	
+	fpga_config(&init_b);
+	
+	configure_clock_pll();
+	fpga_regs_test();
+
 
 	// LO2 config
 	LO2.init(&spi, &cs4351);
 	LO2.set_ref(26000000, false, false, 1);
-	LO2.set_freq(788000000);				// 1st IF filter passband: 890 - 915Mhz, stop band: <880Mhz or > 925Mhz
+	LO2.set_freq(IF_freq - LF_freq);		// 1st IF filter passband: 890 - 915Mhz, stop band: <880Mhz or > 925Mhz
 	LO2.set_output(true, false, true);		// baseband mapped to 888 of IF2.
 	
 	// LO1 config
@@ -478,14 +729,18 @@ int main()
 	LO1.set_output(true, true, false);
 
 	// ADC config
-	cs2871.write(0);
-	parallel_port_config();
-	systimer->delayms(1);
-	cs2871.write(1);
 	configure_ad9251();
 
 	// IF config	
-	set_adc_gain(true, 10);
+	set_adc_gain(true, 1);
+	
+	::tune(2400e6);
+	
+	// do a soft reset if first power on
+	// adc clock divider not configured properly may corrupt fpga filter states
+	if (!(RCC->CSR & 0x10000000))
+		NVIC_SystemReset();
+
 
 	// USB
 	F4HSBulk bulk;
@@ -493,5 +748,19 @@ int main()
 	
 	while(1)
 	{
+		read_integrate();
+		if (parrallel_reset_request > 0 && systimer->gettime() > parrallel_reset_request)
+		{
+			parrallel_reset_request = 0;
+
+			// ADC config
+			cs_adc.write(0);
+			parallel_port_config();
+			systimer->delayms(1);
+			cs_adc.write(1);
+			//LO1.set_output(true, true, false);
+			//cs2871.write(1);
+			
+		}
 	}
 }

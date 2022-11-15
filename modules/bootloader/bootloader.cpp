@@ -416,7 +416,7 @@ int main()
 		ApplicationAddress = 0x08010000;
 
 	aes.set_key(aes_key, 256);
-	RDP();
+	//RDP();
 	check_sdcard();
 	led.write(0,0,0);
 

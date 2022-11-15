@@ -54,7 +54,7 @@ F0GPIO power_leds[4] =
 F0GPIO state_led[3] =
 {
 	F0GPIO(GPIOB, GPIO_Pin_6),
-	F0GPIO(GPIOB, GPIO_Pin_5),
+	F0GPIO(GPIOB, GPIO_Pin_7),
 	F0GPIO(GPIOB, GPIO_Pin_4),
 };
 
@@ -360,6 +360,7 @@ void update_config()
 	*/
 	
 	// tx1 no0
+	/*
 	config[0].middle = 2190;
 	config[1].middle = 2057;
 	config[2].middle = 2233;
@@ -382,7 +383,8 @@ void update_config()
 	config[1].reverse = true;
 	config[3].reverse = true;	
 	
-	space_write("conf", 4, &config, sizeof(config), NULL);	
+	space_write("conf", 4, &config, sizeof(config), NULL);
+	*/
 }
 
 F0Interrupt button_int;
@@ -516,8 +518,11 @@ int board_init()
 			if (!charge_done && systimer->gettime() > last_click + 5000000 && systimer->gettime() > last_charging + 5000000)
 				shutdown();
 		}
+		
+		watchdog_reset();
 	}
-
+	state_led[1].write(false);
+	
 	::dbg->write(true);
 	::dbg2->write(true);
 	dac_config(&beep_en, false);
@@ -543,12 +548,29 @@ void read_channels(int16_t *channel, int max_channel_count)
 	channel[5] = 2048;
 }
 
+extern int apply_channel_statics();
 uint8_t gkey;
-
+bool applied = false;
+int64_t apply_timer = 0;
 void read_keys(uint8_t* key, int max_keys)
 {
 	*key = 0;
 	for(int i=0; i<8; i++)
 		*key |= (keys[i].read() ? 1 : 0) << i;
+	*key |= 0x80;
 	gkey = *key;
+
+	if ((gkey & 0x31) == 0)
+		apply_timer = (apply_timer == 0) ? systimer->gettime() : apply_timer;
+	else
+		apply_timer = 0;
+	
+	if ( (apply_timer != 0) && (systimer->gettime() - apply_timer > 3000000) && !applied)
+	{
+		apply_channel_statics();
+		applied = true;
+		vib.write(1);
+		systimer->delayms(500);
+		vib.write(0);
+	}
 }

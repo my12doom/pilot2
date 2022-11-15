@@ -26,6 +26,7 @@ F4GPIO led0(GPIOB, GPIO_Pin_5);
 F4Interrupt trig;
 F4Timer timer(TIM4);
 dma_adc adc;
+F4GPIO oled_rst(GPIOB, GPIO_Pin_15);
 
 devices::OLED96 led;
 
@@ -172,8 +173,58 @@ int DAC_test()
 }
 
 
+int rt[256];
+#include "img.h"
+
+#include "apriltag.h"
+#include "tag36h11.h"
+void tagtest()
+{
+	apriltag_family_t *tf = tag36h11_create();
+	apriltag_detector_t *td = apriltag_detector_create();
+	apriltag_detector_add_family_bits(td, tf, 1);
+
+	td->quad_decimate = 4.0;// getopt_get_double(getopt, "decimate");
+	td->quad_sigma = 0.0;// getopt_get_double(getopt, "blur");
+	td->nthreads = 1;// getopt_get_int(getopt, "threads");
+	td->debug = 0;// getopt_get_bool(getopt, "debug");
+	td->refine_edges = 1;// getopt_get_bool(getopt, "refine-edges");
+	int maxiters = 1;// getopt_get_int(getopt, "iters");
+
+	image_u8_t *im = (image_u8_t*)malloc(sizeof(image_u8_t));
+	im->stride = 480;
+	im->width = 395;
+	im->height = 200;
+	im->buf = (uint8_t*)img;
+	
+	/*
+	im = image_u8_create_alignment(790, 400, 96);
+	FILE * fimg = fopen("img.raw", "rb");
+	fread(im->buf, 1, im->stride * im->height, fimg);
+	fclose(fimg);
+	*/
+
+	zarray_t *detections = NULL;
+	int64_t l = systimer->gettime();
+	detections = apriltag_detector_detect(td, im);
+
+	int dt = systimer->gettime() - l;
+	printf("detect took %d ms\n", dt);
+	for (int i = 0; i < zarray_size(detections); i++) {
+		apriltag_detection_t *det;
+		zarray_get(detections, i, &det);
+			printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
+				i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
+
+		//hamm_hist[det->hamming]++;
+		//total_hamm_hist[det->hamming]++;
+	}
+
+}
+
 int main()
 {
+	//tagtest();
 	// trigger at falling edge
 	// stop at adc full or rising edge
 	trig.init(GPIOA, GPIO_Pin_8, interrupt_rising_or_falling);
@@ -184,6 +235,11 @@ int main()
 
 	led0.set_mode(HAL::MODE_OUT_PushPull);
 	led0.write(0);
+	
+	oled_rst.set_mode(HAL::MODE_OUT_PushPull);
+	oled_rst.write(0);
+	systimer->delayms(200);
+	oled_rst.write(1);
 
 	F4GPIO scl(GPIOA, GPIO_Pin_10);
 	F4GPIO sda(GPIOA, GPIO_Pin_9);
@@ -191,6 +247,12 @@ int main()
 	i2c.set_speed(1);
 	led.init(&i2c, 0x78);
 	led.show_str(0, 0, "HelloWorld");
+	
+	for(int i=0; i<256; i++)
+	{
+		uint8_t reg;
+		rt[i] = i2c.read_reg(i, 0, &reg);
+	}
 
 
 	while(1)
@@ -199,6 +261,9 @@ int main()
 		float dbm = -40.61*v + 51.39;
 		float dbm5g = -39.85*v + 56.18;
 		char tmp[100];
+		
+		dbm -= 2.8f;
+		dbm5g -= 2.8f;
 
 		// free run entry (no trig for 500ms)
 		if (systimer->gettime() - pulse_start > 500000)

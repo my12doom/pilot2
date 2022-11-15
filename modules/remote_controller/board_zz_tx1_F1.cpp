@@ -333,35 +333,6 @@ void button_timer_entry(void *p)
 
 void update_config()
 {
-	configure_entry config[6];
-
-
-	if (space_read("conf", 4, &config, sizeof(config), NULL) < 0)
-	{
-		// default configuration
-		for(int i=0; i<sizeof(config)/sizeof(config[0]); i++)
-		{
-			config[i]._min = 0;
-			config[i]._max = 4095;
-			config[i].middle = 2048;
-			config[i].reverse = 0;
-			config[i].dead_band = 0;
-		}
-				
-		config[0].reverse = true;
-		config[1].reverse = true;
-		config[3].reverse = false;
-		
-		space_write("conf", 4, &config, sizeof(config), NULL);		
-	}
-	else if (!config[0].reverse)
-	{
-		config[0].reverse = true;
-		config[1].reverse = true;
-		config[3].reverse = false;
-		
-		space_write("conf", 4, &config, sizeof(config), NULL);		
-	}
 }
 
 F1Interrupt button_int;
@@ -480,11 +451,13 @@ int board_init()
 
 	for(int i=0; i<3; i++)
 	{
+		watchdog_reset();
 		state_led[0].write(0);
 		state_led[1].write(0);
 		systimer->delayms(200);
 		state_led[0].write(1);
 		state_led[1].write(1);
+		watchdog_reset();
 		systimer->delayms(200);
 	}
 	

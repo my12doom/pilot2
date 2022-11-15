@@ -32,6 +32,7 @@ extern HAL::IUART *ebus;
 extern HAL::IUART *sbus;
 
 extern HAL::IUART *telemetry;
+extern bool is_tx;
 
 typedef struct 
 {

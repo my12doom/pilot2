@@ -24,7 +24,8 @@ using namespace devices;
 // parameters
 uint64_t seed = 0x1234567890345678;
 bool enable_telemetry = false;
-
+uint8_t ch_high = 100;
+uint8_t ch_low = 0;
 
 nrf_pkt uplink_pkt;
 uplink_payload_v0 *uplink_payload = (uplink_payload_v0 *)uplink_pkt.payload;
@@ -45,6 +46,7 @@ int rx_process_time = 208;	// 72Mhz STM32F1 -O0, will be updated in IRQ
 int spi_tune_time = 60;
 int telemetry_id = 0;
 int telemetry_ack_count = 0;
+int telemetry_ack_rate = 0;
 int telemetry_nack_count = 0;
 int telemetry_nack2_count = 0;
 int telemetry_down_bytes = 0;
@@ -53,6 +55,8 @@ int telemetry_up_bytes = 0;
 
 bool downlink_ready = true;
 int last_uplink_telemetry_id = -1;
+uint32_t uplink_rate = 0;
+uint32_t downlink_rate = 0;
 
 int64_t last_valid_packet = -1000000;
 uint16_t hoop_interval = 1000;
@@ -63,7 +67,7 @@ class NRF24L01_ANT : public NRF24L01
 public:
 	virtual int rf_on(bool rx)
 	{
-		select_ant(randomizing, true);
+		select_ant(randomizing, false);
 		return NRF24L01::rf_on(rx);
 	}
 } nrf;
@@ -125,29 +129,31 @@ bool LOS()
 int tx_spi_time = 0;
 int hoop_to(int next_hoop_id)
 {	
-	int channel = ((pos2rando(next_hoop_id) & 0xffff) * 100) >> 16;	
+//	int channel = ((pos2rando(next_hoop_id) & 0xffff) * 100) >> 16;	
+	int channel = (((pos2rando(next_hoop_id) & 0xffff) * (ch_high-ch_low)) >> 16) + ch_low;
+	//channel = 1;
 	hoop_id = next_hoop_id;
 	if (next_hoop_id == trx_hoop_id && ce->read()) 
 		return 0;
 	
 	nrf.rf_off();	
 	
-	// 68
-	nrf.write_reg(RF_CH, channel);
-	
 	if (!(hoop_id & 1) || LOS() || !enable_telemetry)
 	{
+		nrf.write_reg(RF_CH, channel);
 		nrf.rf_on(true);
 	}
 	else
 	{
-		// 131
+		//channel = 2;
+		nrf.write_reg(RF_CH, channel);
 		fill_telemetry_pkt();
 		
 		//if(!downlink_ready)
 		{
 			int64_t t = systimer->gettime();
 			// 105
+			systimer->delayus(60);
 			nrf.write_tx((uint8_t*)&downlink_pkt, 32);
 			nrf.rf_on(false);
 
@@ -187,10 +193,15 @@ void nrf_irq_entry(void *parameter, int flags)
 		next_hoop_id = (data.hoop_id + 1)&0xffff;
 		memcpy(&uplink_pkt, &data, 32);
 		last_valid_packet = ts;
+		
+		// statics
+		uplink_rate = (uplink_rate * 1000 + 10000 * 24) >> 10;
+
 
 		// telemetry
 		if (uplink_payload->ack_id == telemetry_id)
 		{
+			downlink_rate = (downlink_rate * 1000 + 10000 * 24) >> 10;
 			telemetry_ack_count ++;
 			downlink_ready = true;
 		}
@@ -226,7 +237,9 @@ void nrf_irq_entry(void *parameter, int flags)
 	else
 	{
 		trx_hoop_id = hoop_id + 1;
-		int channel = ((pos2rando(hoop_id+1) & 0xffff) * 100) >> 16;	
+		//int channel = ((pos2rando(hoop_id+1) & 0xffff) * 100) >> 16;	
+		int channel = (((pos2rando(hoop_id+1) & 0xffff) * (ch_high-ch_low)) >> 16) + ch_low;
+		//channel = 1;
 		nrf.write_reg(RF_CH, channel);
 		nrf.rf_on(true);
 	}
@@ -241,7 +254,11 @@ void timer_entry(void * p)
 	bool is_rx = !(hoop_id & 1) || LOS() || !enable_telemetry;
 	
 	if (is_rx)
+	{
+		uplink_rate = (uplink_rate * 1000 + 0 * 24) >> 10;
+		downlink_rate = (downlink_rate * 1000 + 0 * 24) >> 10;
 		miss ++;
+	}
 	
 	if (!LOS() && is_rx)
 		dbg2->write(false);
@@ -372,12 +389,14 @@ void carrier_test()
 	
 	while(1)
 	{
+		watchdog_reset();
 	}
 }
 	int lp = 0;
 
 int main()
 {
+	is_tx = false;
 	space_init();
 	space_read("seed", 4, &seed, 8, NULL);
 	space_read("tele", 4, &enable_telemetry, 1, NULL);
@@ -387,7 +406,7 @@ int main()
 	dbg2->write(true);
 	dbg->set_mode(MODE_OUT_OpenDrain);
 	dbg2->set_mode(MODE_OUT_OpenDrain);
-
+	
 	memset(&downlink_pkt, 0, sizeof(downlink_pkt));
 
 	if (SCL && SDA)
@@ -436,6 +455,7 @@ int main()
 	int lo = 0;
 	int64_t t = systimer->gettime();
 	int64_t lt = t;
+	int last_ack_count = 0;
 	while(1)
 	{
 		custom_output(uplink_pkt.payload, 28, systimer->gettime() - last_valid_packet);
@@ -445,10 +465,11 @@ int main()
 		static int64_t last_ebus_out = systimer->gettime();
 
 		
-		int16_t data[6];
+		int16_t data[6] = {0};
+		if (last_valid_packet > 0)
 		for(int i=0; i<6; i++)
 			data[i] = uplink_payload->channel_data[i]* 1000 / 4096 + 1000;
-		if (miss > 2000 || systimer->gettime() > last_valid_packet + 2000000)
+		if (LOS() || systimer->gettime() > last_valid_packet + 2000000)
 			data[2] = 800;
 
 		if (ebus && systimer->gettime() - last_ebus_out > 10000)
@@ -474,6 +495,10 @@ int main()
 			sbus_u s = {0x0f};
 			uint8_t key = uplink_payload->keys[0];
 			
+			// note: px4 maps sbus 200~1800 to 1000~2000
+			//       so sbus 0~2047 maps to 874~2153, 0~250 maps to 874~1030
+			//		
+			
 			s.dat.chan2 = (((int)uplink_payload->channel_data[0] * 800) >> 11)+200;	// roll
 			s.dat.chan1 = (((int)uplink_payload->channel_data[1] * 800) >> 11)+200;	// pitch
 			s.dat.chan3 = (((int)uplink_payload->channel_data[2] * 800) >> 11)+200;	// throttle
@@ -484,6 +509,10 @@ int main()
 			s.dat.chan8 = !(key&2) ? 1800 : 200;				// aux4 stop
 			s.dat.chan9 = !(key&8) ? 1024 : 200;				// aux5 key
 			s.dat.chan10 = !(key&16) ? 1024 : 200;				// aux6 key
+			s.dat.chan15 = telemetry_ack_rate*1600/250 + 200;	// telemetry ack rate
+			s.dat.chan16 = lp*hoop_interval/1250 + 200;			// rx packet rate
+			s.dat.chan15 = uplink_rate*16/100 + 200;			// uplink packet rate(lpf mode)
+			s.dat.chan16 = downlink_rate*16/100 + 200;			// downlink ack rate(lpf mode)
 
 			sbus->write(&s, sizeof(s));
 		}
@@ -519,6 +548,8 @@ int main()
 			lp = o - lo;
 			lo = o;
 			maxmiss = 0;
+			telemetry_ack_rate = telemetry_ack_count - last_ack_count;
+			last_ack_count = telemetry_ack_count;
 		}
 		
 		watchdog_reset();

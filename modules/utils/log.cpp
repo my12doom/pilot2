@@ -45,7 +45,7 @@ int format_sdcard()
 	res = disk_initialize(0) == RES_OK ? FR_OK : FR_DISK_ERR;
 	res = f_mount(&fs, "", 0);
 	res = f_mkfs("", 0, 0);
-	return 0;
+	return res;
 }
 
 int log_init()
@@ -65,6 +65,16 @@ int log_init()
 		if (done != 4)
 			file_number = 0;
 	}
+	else
+	{
+		LOGE("format...");
+		res = (FRESULT)format_sdcard();
+		LOGE("%s\r\n", res == RES_OK ? "OK" : "FAIL");
+		
+		if (res == RES_OK)
+			return log_init();		
+	}
+	
 	return 0;
 }
 
@@ -260,7 +270,7 @@ int log_printf(const char*format, ...)
 		return count;
 	
 	printf(buffer);
-	SEGGER_RTT_WriteString(0, buffer);
+	//SEGGER_RTT_WriteString(0, buffer);
 	
 	return log2(buffer, TAG_TEXT_LOG, count);
 }

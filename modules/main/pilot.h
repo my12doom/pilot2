@@ -82,6 +82,8 @@ public:
 class yet_another_pilot
 {
 public:
+	//int64_t round_start_tick;
+	bool still;
 
 	devices::ILED *state_led;
 	devices::ILED *SD_led;

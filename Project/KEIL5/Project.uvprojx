@@ -313,7 +313,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>2</Optim>
+            <Optim>4</Optim>
             <oTime>1</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -329,7 +329,7 @@
             <uGnu>0</uGnu>
             <useXO>0</useXO>
             <v6Lang>3</v6Lang>
-            <v6LangP>3</v6LangP>
+            <v6LangP>1</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <v6Lto>0</v6Lto>
@@ -337,7 +337,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls>-Wno-c++11-narrowing</MiscControls>
-              <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=8000000,USE_USB_OTG_FS</Define>
+              <Define>USE_STDPERIPH_DRIVER,STM32F40_41xxx,HSE_VALUE=24000000,USE_USB_OTG_FS</Define>
               <Undefine></Undefine>
               <IncludePath>..\..\HAL\STM32F4\STMLib\STM32F4xx_StdPeriph_Driver;..\..\HAL\STM32F4\STMLib;..\..\HAL\Interface;..\..\HAL\STM32F4;..\..\;..\..\modules</IncludePath>
             </VariousControls>
@@ -953,6 +953,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\HAL\sensors\ADIS16405.cpp</FilePath>
             </File>
+            <File>
+              <FileName>bmi160.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\HAL\sensors\bmi160.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1567,7 +1572,7 @@
               <RVCTZI>0</RVCTZI>
               <RVCTOtherData>0</RVCTOtherData>
               <ModuleSelection>0</ModuleSelection>
-              <IncludeInBuild>1</IncludeInBuild>
+              <IncludeInBuild>0</IncludeInBuild>
               <AlwaysBuild>2</AlwaysBuild>
               <GenerateAssemblyFile>2</GenerateAssemblyFile>
               <AssembleAssemblyFile>2</AssembleAssemblyFile>
@@ -2229,6 +2234,31 @@
               <FileName>RGBLED.cpp</FileName>
               <FileType>8</FileType>
               <FilePath>..\..\BSP\boards\fox_v1\RGBLED.cpp</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>BSP_zz1504fz</GroupName>
+          <Files>
+            <File>
+              <FileName>AsyncWorker.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\zz1504fz\AsyncWorker.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>init.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\zz1504fz\init.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RCOUT.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\zz1504fz\RCOUT.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>RGBLED.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\BSP\boards\zz1504fz\RGBLED.cpp</FilePath>
             </File>
           </Files>
         </Group>

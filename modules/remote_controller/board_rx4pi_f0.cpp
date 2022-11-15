@@ -46,7 +46,7 @@ int board_init()
 	
 	static PPMOUT ppmout;
 	::ppm = &ppmout;
-	::telemetry = &uart;
+	//::telemetry = &uart;
 			
 	return 0;
 }

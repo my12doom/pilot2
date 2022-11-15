@@ -50,7 +50,7 @@ F0GPIO power_leds[4] =
 F0GPIO state_led[3] =
 {
 	F0GPIO(GPIOB, GPIO_Pin_6),
-	F0GPIO(GPIOB, GPIO_Pin_5),
+	F0GPIO(GPIOB, GPIO_Pin_7),
 	F0GPIO(GPIOB, GPIO_Pin_4),
 };
 
@@ -66,11 +66,10 @@ F0GPIO keys[8] =
 	F0GPIO(GPIOC, GPIO_Pin_12),
 };
 
-F0GPIO ants[3] =
+F0GPIO ants[2] =
 {
-	F0GPIO(GPIOC, GPIO_Pin_7),
-	F0GPIO(GPIOC, GPIO_Pin_8),
-	F0GPIO(GPIOC, GPIO_Pin_9),
+	F0GPIO(GPIOB, GPIO_Pin_0),
+	F0GPIO(GPIOB, GPIO_Pin_1),
 };
 
 int iabs(int a)
@@ -460,6 +459,8 @@ int board_init()
 			if (systimer->gettime() > last_click + 5000000 && systimer->gettime() > last_charging + 5000000)
 				shutdown();
 		}
+		
+		watchdog_reset();
 	}
 	state_led[0].write(!mode);
 	state_led[1].write(false);
