@@ -5,13 +5,17 @@
 #include <assert.h>
 #include "libusb.h"
 #include "Protocol/crc32.h"
-#pragma comment(lib, "libusb-1.0.lib");
+#pragma comment(lib, "libusb-1.0.lib")
 #pragma comment(lib, "winmm.lib")
+#include <F4SDR/F4SDR.h>
 
 extern "C" 
 {
 #include <utils/minilzo.h>
 }
+
+#define transfer_size (256*1024)
+#define transfer_count 4
 
 int vendor_id = 0x111b;
 int product_id = 0x1234;
@@ -21,8 +25,14 @@ HANDLE usb_thread;
 HANDLE rx_thread;
 HANDLE usb_event;
 bool working = true;
-int16_t rx_data[65536];
+int16_t rx_data[transfer_size];
 int rx_data_size = 0;
+bool cs_ready = false;
+static CRITICAL_SECTION cs;
+libusb_device_handle* dev_handle = NULL;
+int64_t last_freq = 104.3e6;
+uint8_t last_gain = 16 | 0x80;
+uint8_t last_path = 0x32;
 
 DWORD WINAPI rx_worker(LPVOID p)
 {
@@ -156,18 +166,21 @@ DWORD WINAPI usb_worker(LPVOID p)
 
 	libusb_init(&g_libusb_context);
 start:
+	dev_handle = NULL;
 
-	libusb_device_handle* dev_handle = NULL;
 
 	while(!dev_handle)
 	{
 		Sleep(100);
+		EnterCriticalSection(&cs);
 		dev_handle = libusb_open_device_with_vid_pid(g_libusb_context, vendor_id, product_id);
+		LeaveCriticalSection(&cs);
 
 		if (!working)
 			return 0;
 	}
 
+	EnterCriticalSection(&cs);
 	int config2;
 	libusb_get_configuration(dev_handle,&config2);
 	if(config2 != 1)
@@ -175,8 +188,9 @@ start:
 
 
 	int r = libusb_claim_interface(dev_handle, 0);
+	LeaveCriticalSection(&cs);
 
-	unsigned char data[65536] = {0};
+	unsigned char data[transfer_size] = {0};
 	int actual_length = 64;
 	int actual_length2 = 64;
 
@@ -184,19 +198,36 @@ start:
 	uint32_t l = timeGetTime();
 	static uint32_t l2 = timeGetTime();
 
-	uint8_t bulk_cmd[65536] = {0xE8};
+	uint8_t bulk_cmd[transfer_size] = {0xE8};
 
 	bulk_cmd[0] = 0x83;
 	//int rr = libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, bulk_cmd, 1, &actual_length, 1000);
 
 	Sleep(100);
 
+	EnterCriticalSection(&cs);
 	erase_test(dev_handle);
+
+	int n = libusb_control_transfer(dev_handle,
+		LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		F4SDR::tune, 0, 0, (uint8_t*)&last_freq, 8, 0);
+
+	n = libusb_control_transfer(dev_handle,
+		LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		F4SDR::set_gain, 0, 0, (uint8_t*)&last_gain, 1, 0);
+
+	n = libusb_control_transfer(dev_handle,
+		LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		F4SDR::set_path, 0, 0, (uint8_t*)&last_path, 1, 0);
+
+	LeaveCriticalSection(&cs);
 
 	while(1)
 	{	
 		int result;// = libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, bulk_cmd, 512, &actual_length, 0);
-		result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, 65536, &actual_length, 0);
+		EnterCriticalSection(&cs);
+		result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, transfer_size, &actual_length, 0);
+		LeaveCriticalSection(&cs);
 //  		libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, data, actual_length, &actual_length2, 16);
 // 		libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_OUT, data, actual_length, &actual_length2, 16);
 
@@ -276,6 +307,9 @@ start:
 
 int device_bulk_init(int (*rx)(void *buf, int len, int type))
 {
+	InitializeCriticalSection(&cs);
+	cs_ready = true;
+
 	::rx = rx;
 	working = true;
 
@@ -286,6 +320,86 @@ int device_bulk_init(int (*rx)(void *buf, int len, int type))
 	return 0;
 }
 
+int device_bulk_tune(int64_t freq)
+{
+	last_freq = freq;
+
+	if (!cs_ready)
+		return -1;
+
+	EnterCriticalSection(&cs);
+	if (!dev_handle)
+	{
+		LeaveCriticalSection(&cs);
+		return -1;
+	}
+
+	int n = libusb_control_transfer(dev_handle,
+		LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		F4SDR::tune, 0, 0, (uint8_t*)&freq, 8, 0);
+
+	LeaveCriticalSection(&cs);
+
+	return n == 8 ? 0 : -2;
+}
+
+
+int device_bulk_gain(uint8_t gain)
+{
+	last_gain = gain;
+
+	if (!cs_ready)
+		return -1;
+
+	EnterCriticalSection(&cs);
+	if (!dev_handle)
+	{
+		LeaveCriticalSection(&cs);
+		return -1;
+	}
+
+	int n = libusb_control_transfer(dev_handle,
+		LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		F4SDR::set_gain, 0, 0, (uint8_t*)&last_gain, 1, 0);
+
+	LeaveCriticalSection(&cs);
+
+	return n == 1 ? 0 : -2;
+}
+
+
+int device_bulk_path(uint8_t path)
+{
+	last_path = path;
+
+	if (!cs_ready)
+		return -1;
+
+	EnterCriticalSection(&cs);
+	if (!dev_handle)
+	{
+		LeaveCriticalSection(&cs);
+		return -1;
+	}
+
+	int n = libusb_control_transfer(dev_handle,
+		LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		F4SDR::set_path, 0, 0, (uint8_t*)&last_path, 1, 0);
+
+	LeaveCriticalSection(&cs);
+
+	return n == 1 ? 0 : -2;
+}
+
+int device_bulk_control_io(bool tx, uint8_t request, uint16_t value, uint16_t index, uint8_t *data, uint16_t length)
+{
+	int n = libusb_control_transfer(dev_handle,
+		LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE | (tx ? LIBUSB_ENDPOINT_OUT : LIBUSB_ENDPOINT_IN),
+		request, value, index, data, length, 0);
+
+	return n;
+}
+
 int device_bulk_exit()
 {
 	working = false;
@@ -293,6 +407,9 @@ int device_bulk_exit()
 
 	g_libusb_context = NULL;
 	rx_data_size = 0;
+
+	cs_ready = false;
+	DeleteCriticalSection(&cs);
 
 	return 0;
 }

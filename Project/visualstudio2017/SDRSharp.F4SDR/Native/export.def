@@ -7,3 +7,7 @@ EXPORTS
 	f4sdr_cmd
 	f4sdr_setcb
 	f4sdr_enum
+	f4sdr_control_io
+	f4sdr_tune
+	f4sdr_set_gain
+	f4sdr_set_path
