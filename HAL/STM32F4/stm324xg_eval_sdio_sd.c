@@ -516,7 +516,7 @@ uint8_t SD_Detect(void)
   /*!< Check GPIO to detect SD */
   if (GPIO_ReadInputDataBit(SD_DETECT_GPIO_PORT, SD_DETECT_PIN) != Bit_RESET)
   {
-    status = SD_NOT_PRESENT;
+    //status = SD_NOT_PRESENT;
   }
   return status;
 }

@@ -38,7 +38,7 @@ uint8_t  AudioCtlCmd = 0;
 uint32_t AudioCtlLen = 0;
 uint8_t  AudioCtlUnit = 0;
 
-static uint32_t PlayFlag = 0;
+uint32_t PlayFlag = 0;
 
 static __IO uint32_t  usbd_audio_AltSet = 0;
 static uint8_t usbd_audio_CfgDesc[AUDIO_CONFIG_DESC_SIZE];
@@ -196,7 +196,7 @@ static uint8_t usbd_audio_CfgDesc[AUDIO_CONFIG_DESC_SIZE] =
     0x00,                       // Unused. (bRefresh)
     0x00,                       // Unused. (bSynchAddress)
 
-    /* USB Microphone Class-specific Isoc. Audio Data Endpoint Descriptor (CODE == 7) OK - подтверждено документацией*/
+    /* USB Microphone Class-specific Isoc. Audio Data Endpoint Descriptor (CODE == 7)*/
     0x07,                       // Size of the descriptor, in bytes (bLength)
     AUDIO_ENDPOINT_DESCRIPTOR_TYPE,    // CS_ENDPOINT Descriptor Type (bDescriptorType) 0x25
     AUDIO_ENDPOINT_GENERAL,            // GENERAL subtype. (bDescriptorSubtype) 0x01
@@ -289,7 +289,7 @@ static uint8_t  usbd_audio_Setup (void  *pdev,
  		*p = 0x10;
 		USBD_CtlSendData (pdev, buf, req->wLength);
 		break;
-   case AUDIO_REQ_GET_CUR: //запрос состояния mute
+   case AUDIO_REQ_GET_CUR: //запрос сост?ния mute
 		AUDIO_Req_GetCurrent(pdev, req);
 		break;
       
@@ -380,6 +380,7 @@ static uint8_t  usbd_audio_EP0_RxReady (void  *pdev)
 //handle request from HOST
 int usb_idle = 1;
 uint8_t tx_buf[AUDIO_IN_PACKET];
+int count = (AUDIO_IN_PACKET-64)/2 / USBD_IN_AUDIO_CH;
 int do_tx(void *pdev)
 {
 	// TODO
@@ -393,6 +394,26 @@ int do_tx(void *pdev)
 		return 0;
 	}
 	
+	/*
+	static int16_t values[AUDIO_IN_PACKET-64];
+	static int init = 0;
+	if(!init)
+	{
+		for(int i=0; i<count; i++)
+		{
+			for(int j=0; j<USBD_IN_AUDIO_CH; j++)
+			{
+				values[i*USBD_IN_AUDIO_CH + j] = j*1000;
+			}
+		}
+		init = 1;
+	}
+	
+	usb_idle = 0;
+	DCD_EP_Flush(pdev,AUDIO_IN_EP);
+	DCD_EP_Tx (pdev,AUDIO_IN_EP, (uint8_t*)values, count * USBD_IN_AUDIO_CH * 2);
+	return 0;
+	*/
 	
 	return 1;
 }
@@ -497,9 +518,9 @@ static void AUDIO_Req_GetCurrent(void *pdev, USB_SETUP_REQ *req)
   /* Send the current mute state */
   
 	if (req->wLength == 1)
-		USBD_CtlSendData (pdev, &muted, req->wLength);
+		USBD_CtlSendData (pdev, (uint8_t*)&muted, req->wLength);
 	else if (req->wLength == 2)
-		USBD_CtlSendData (pdev, &volume, req->wLength);
+		USBD_CtlSendData (pdev, (uint8_t*)&volume, req->wLength);
 	else
 		USBD_CtlError (pdev, req);
 }

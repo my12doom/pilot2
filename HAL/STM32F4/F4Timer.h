@@ -22,6 +22,7 @@ namespace STM32F4
 		virtual void restart();
 		virtual void enable_cb();
 		virtual void disable_cb();
+		virtual void set_priority(int preemption_priority, int sub_priority = 0);
 			
 		void *user_data;
 	};

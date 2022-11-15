@@ -26,9 +26,10 @@ typedef struct
     unsigned polarity:1;
     unsigned cp_3state:1;
     unsigned fast_lock_en:1;
-    unsigned fast_lock_mode;
+    unsigned fast_lock_mode:1;
     unsigned timer_control:4;
     unsigned cp_current1:3;
     unsigned cp_current2:3;
     unsigned power_down2:1;
+    unsigned prescaler:2;
 } ADF4001_REG2;

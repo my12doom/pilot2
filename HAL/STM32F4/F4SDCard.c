@@ -114,7 +114,7 @@ DRESULT disk_write (
 	BYTE count			/* Number of sectors to write (1..255) */
 )
 {
-	int timeout = 50000;
+	int timeout = 500000;
 	if(count==1)
 	{
 		if (SD_WriteBlock((uint8_t*)buff,((int64_t)sector) << 9 ,SECTOR_SIZE) != SD_OK)
@@ -146,6 +146,9 @@ DRESULT disk_ioctl (
 )
 {	
 	SD_CardInfo SDCardInfo;
+	if (SD_GetCardInfo(&SDCardInfo) != SD_OK)
+		return RES_ERROR;
+	
 	switch(ctrl)
 	{
 	case GET_SECTOR_SIZE:

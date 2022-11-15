@@ -427,7 +427,7 @@ int UartUbloxGPS::detect_and_config(HAL::IUART *uart, int baudrate)
 
 int UartUbloxNMEAGPS::init(HAL::IUART *uart, int baudrate)
 {
-	UartNMEAGPS::init(uart, baudrate);
+	//UartNMEAGPS::init(uart, baudrate);
 	UartUbloxGPS::init(uart, baudrate);
 
 	if (detect_and_config(uart, baudrate) < 0)

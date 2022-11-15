@@ -67,10 +67,16 @@ int OLED96::fill(uint8_t color)
 		WriteCmd(0xb0+m);		//page0-page1
 		WriteCmd(0x00);		//low column start address
 		WriteCmd(0x10);		//high column start address
+		uint8_t tmp[128];
+		memset(tmp, color, sizeof(tmp));
+		i2c->write_regs(address, 0x40, tmp, sizeof(tmp));
+		
+		/*
 		for(n=0;n<128;n++)
 		{
 			write_pixel(color);
 		}
+		*/
 	}
 
 

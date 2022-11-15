@@ -3,12 +3,13 @@
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
+#include <HAL/Interface/ISysTimer.h>
 
-#define VCO_CAL_THRESHOLD 25000000
+#define VCO_CAL_THRESHOLD 0
 
 LMX2572::LMX2572()
 {
-
+	calibration = cali_none;
 }
 LMX2572::~LMX2572()
 {
@@ -27,9 +28,15 @@ int LMX2572::init(HAL::ISPI *spi, HAL::IGPIO *cs)
 	cs->write(1);
 	spi->set_speed(20000000);
 	spi->set_mode(0,0);
+	
+	// soft reset
+	//write_reg(0, 0x0020);
+	systimer->delayms(100);
+	while((read_reg(0) & 0x20) == 0x20)
+		systimer->delayms(10);
 
 	memcpy(regs, LMX2572_default_regs, sizeof(regs));
-	for(int i=0; i<=126; i++)
+	for(int i=125; i>=0; i--)
 		write_reg(i, regs[i]);
 
 	return 0;
@@ -61,7 +68,7 @@ int LMX2572::set_ref(uint32_t ref_freq, bool doubler, int pre_R, int multiplier,
 	for(int i=9; i<=11; i++)
 		write_reg(i, regs[i]);
 
-	regs[5] = (regs[5] &0xEFFF) | (diff ? 0 : 0x1000);
+	regs[5] = diff ? 0x28c8 : 0x30c8;
 	write_reg(5, regs[5]);
 
 	return 0;
@@ -83,7 +90,7 @@ int LMX2572::set_output(bool enableA, int powerA, bool enableB /*= false*/, int 
 	return 0;
 }
 
-int LMX2572::set_freq(uint64_t freq)
+int LMX2572::set_freq(uint64_t freq, bool sync_en)
 {
 	uint32_t denum = 0xffffff;
 	// allowed vco range: 3.2G to 6.4G
@@ -98,10 +105,14 @@ int LMX2572::set_freq(uint64_t freq)
 	if (div > 8)
 		return -1;
 
+	if (sync_en && freq < 3200000000)
+		vco_freq /= 2;
+
 	int N = vco_freq/pfd_freq;
 	int FRAC = (vco_freq - N * (uint64_t)pfd_freq) * denum / pfd_freq;
 
-
+	if (sync_en && freq < 3200000000)
+		vco_freq *= 2;
 
 	regs[34] = ((N>>16)&0x7) | 0x10;
 	regs[36] = N;
@@ -116,66 +127,75 @@ int LMX2572::set_freq(uint64_t freq)
 	int divider_tbl[9] = {0, 0, 1, 3, 5, 7, 9, 12, 14};
 	regs[75] = 0x0800 | (divider_tbl[div]<<6);
 	
-	int freq_delta = last_vco_sel_freq > freq ? last_vco_sel_freq - freq : freq - last_vco_sel_freq;
+	uint64_t freq_delta = (last_vco_sel_freq > freq) ? (last_vco_sel_freq - freq) : (freq - last_vco_sel_freq);
 	if (freq_delta > VCO_CAL_THRESHOLD)
 	{
 		last_vco_sel_freq = freq;
 		regs[78] &= ~0x200;
+
+		// Partial Assist
+#if 1
+		int mhz = vco_freq / 1000000;
+		int assist_tbl[6][6] = 
+		{
+			{3200, 3650, 131, 19, 138, 137},
+			{3650, 4200, 143, 25, 162, 142},
+			{4200, 4650, 135, 34, 126, 114},
+			{4650, 5200, 136, 25, 195, 172},
+			{5200, 5750, 133, 20, 190, 163},
+			{5750, 6400, 151, 27, 256, 204},
+		};
+
+		int select = -1;
+		for(int i=0; i<6; i++)
+		{
+			if (mhz >= assist_tbl[i][0] && mhz <= assist_tbl[i][1])
+				select = i;
+		}
+		if (mhz > 6400)
+			select = 5;
+		
+		int fmin = assist_tbl[select][0];
+		int fmax = assist_tbl[select][1];
+		int cmin = assist_tbl[select][2];
+		int cmax = assist_tbl[select][3];
+		int amin = assist_tbl[select][4];
+		int amax = assist_tbl[select][5];
+
+		int C = floor(0.5f + cmin - float(mhz-fmin) * (cmin-cmax) / (fmax-fmin));
+		int A = floor(0.5f + amin - float(mhz-fmin) * (amin-amax) / (fmax-fmin));
+		int vco = select + 1;
+		
+		//printf("%d\n", C);
+		C += 10;
+
+		regs[78] = 0x000 | (C<<1);
+		regs[20] = 0x4448 | (vco << 11);
+		regs[17] = A;
+		regs[8] = 0x6000;
+		write_reg(20, regs[20]);
+		write_reg(17, regs[17]);
+		write_reg(8, regs[8]);
+		
+		// full
+		regs[16] = A;
+		regs[19] = 0x2700 | C;
+		write_reg(16, regs[16]);
+		write_reg(19, regs[19]);
+#endif
+
 	}
 	else
 	{
-		//regs[78] |= 0x200;
+		regs[78] |= 0x200;
 	}
 
 
-	// Partial Assist
-	int mhz = vco_freq / 1000000;
-	int assist_tbl[6][6] = 
-	{
-		{3200, 3650, 131, 19, 138, 137},
-		{3650, 4200, 143, 25, 162, 142},
-		{4200, 4650, 135, 34, 126, 114},
-		{4650, 5200, 136, 25, 195, 172},
-		{5200, 5750, 133, 20, 190, 163},
-		{5750, 7000, 151, 27, 256, 204},
-	};
 
-	int select = -1;
-	for(int i=0; i<6; i++)
-	{
-		if (mhz >= assist_tbl[i][0] && mhz <= assist_tbl[i][1])
-			select = i;
-	}
-
-	if (select == 3 && mhz < 4900)
-		select = 2;
-
-	if (select == 3 && mhz > 5100)
-		select = 4;
-	
-	int fmin = assist_tbl[select][0];
-	int fmax = assist_tbl[select][1];
-	int cmin = assist_tbl[select][2];
-	int cmax = assist_tbl[select][3];
-	int amin = assist_tbl[select][4];
-	int amax = assist_tbl[select][5];
-
-	int C = floor(0.5f + cmin - float(mhz-fmin) * (cmin-cmax) / (fmax-fmin));
-	int A = floor(0.5f + amin - float(mhz-fmin) * (amin-amax) / (fmax-fmin));
-	int vco = select + 1;
-
-	regs[78] = 0x000 | (C<<1);
-	regs[20] = 0x448 | (vco << 11);
-	regs[17] = A;
-	regs[8] = 0x6000;
-	write_reg(20, regs[20]);
-	write_reg(17, regs[17]);
-	write_reg(8, regs[8]);
 
 	//printf("freq%dMhz, vco%d A%d C%d\n", mhz, vco, A, C);
 
-	int pfd_dly_needed = (FRAC > 0) ? (vco_freq > 4900000000 ? 3 : 2) : 
-								(vco_freq > 4000000000 ? 1 : 0);
+	int pfd_dly_needed = (vco_freq > 4000000000 ? 2 : 1);
 	
 	if (((regs[37] >> 8)&0x3f) != pfd_dly_needed)
 	{
@@ -194,15 +214,52 @@ int LMX2572::set_freq(uint64_t freq)
 	write_reg(42, regs[42]);
 	write_reg(36, regs[36]);
 	write_reg(34, regs[34]);		// write N last
-	write_reg(0, regs[0]);			// FCAL_EN
+
+	if (sync_en)
+	{
+		regs[58] &= ~(1<<15);
+		regs[0] |= 1 << 14;
+		//regs[0] &= ~(1<<3);
+		regs[69] = 0;
+		regs[70] = 30000;
+		write_reg(58, regs[58]);
+		write_reg(69, regs[69]);
+		write_reg(70, regs[70]);
+		//write_reg(0, regs[0]);			// FCAL_EN = 0, VCO_PHASE_SYNC_EN = 1
+	}
+	else
+	{
+		regs[58] |= 1<<15;
+		regs[0] &= ~(1<<14);
+		write_reg(0, regs[0]);			// FCAL_EN = 1
+	}
+	write_reg(58, regs[58]);		// write N last
+
 
 	return 0;
 }
 
+int LMX2572::sync_start(HAL::IGPIO *sync_pin)
+{
+	if (!(regs[0] & 0x4000))
+		return 0;
+
+	write_reg(0, regs[0]);			// FCAL_EN
+
+	if (!sync_pin)
+		return -1;
+
+	sync_pin->write(1);
+	systimer->delayus(1);
+	sync_pin->write(0);
+	return 0;
+}
+
+
 bool LMX2572::is_locked()
 {
 	uint16_t reg110 = read_reg(110);
-	return (reg110>>9) == 2;
+	return ((reg110>>9)&3) == 2;
 }
 void LMX2572::write_reg(uint8_t address, uint16_t data)
 {

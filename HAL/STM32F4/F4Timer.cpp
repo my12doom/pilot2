@@ -143,4 +143,14 @@ namespace STM32F4
 				cb(user_data);
 		}
 	}
+	
+	void F4Timer::set_priority(int preemption_priority, int sub_priority/* = 0 */)
+	{
+		NVIC_InitTypeDef NVIC_InitStructure;
+		NVIC_InitStructure.NVIC_IRQChannel = IRQn;
+		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = preemption_priority;
+		NVIC_InitStructure.NVIC_IRQChannelSubPriority = sub_priority;
+		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+		NVIC_Init(&NVIC_InitStructure);
+	}	
 }

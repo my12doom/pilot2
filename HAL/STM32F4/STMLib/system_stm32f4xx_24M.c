@@ -370,12 +370,16 @@ void SetSysClock(void)
   {
     HSEStatus = (uint32_t)0x00;
   }
+  
+hse_fail:
 
   if (HSEStatus == (uint32_t)0x01)
   {
     /* Select regulator voltage output Scale 1 mode, System frequency up to 168 MHz */
     RCC->APB1ENR |= RCC_APB1ENR_PWREN;
-    PWR->CR |= PWR_CR_VOS;
+    //PWR->CR |= PWR_CR_VOS;
+	PWR->CR &= ~PWR_CR_VOS;
+    PWR->CR |= PWR_CR_VOS_0;
 
     /* HCLK = SYSCLK / 1*/
     RCC->CFGR |= RCC_CFGR_HPRE_DIV1;
@@ -394,8 +398,15 @@ void SetSysClock(void)
     RCC->CR |= RCC_CR_PLLON;
 
     /* Wait till the main PLL is ready */
+	StartUpCounter = 0;
+
     while((RCC->CR & RCC_CR_PLLRDY) == 0)
     {
+		if (StartUpCounter ++  == HSE_STARTUP_TIMEOUT)
+		{
+			HSEStatus = 0;
+			goto hse_fail;
+		}
     }
    
     /* Configure Flash prefetch, Instruction cache, Data cache and wait state */

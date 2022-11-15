@@ -46,9 +46,14 @@
   */ 
 
 /* AudioFreq * DataSize (2 bytes) * NumChannels (Stereo: 2) */
-#define AUDIO_OUT_PACKET                              (uint32_t)(((USBD_AUDIO_FREQ * 2 * 2) /1000)) 
-#define AUDIO_IN_PACKET                               (uint32_t)(((USBD_IN_AUDIO_FREQ * 2 * USBD_IN_AUDIO_CH) /1000) + 64) //48000 -> 96
 
+#ifndef USE_USB_OTG_HS
+#define AUDIO_IN_PACKET                               (uint32_t)(((USBD_IN_AUDIO_FREQ * 2 * USBD_IN_AUDIO_CH) /1000) + 64)
+#define AUDIO_OUT_PACKET                              (uint32_t)(((USBD_AUDIO_FREQ * 2 * 2) /1000))
+#else
+#define AUDIO_IN_PACKET                               (uint32_t)(((USBD_IN_AUDIO_FREQ * 2 * USBD_IN_AUDIO_CH) /1000) + 64)
+#define AUDIO_OUT_PACKET                              (uint32_t)(((USBD_AUDIO_FREQ * 2 * 2) /1000))
+#endif
 
 #define AUDIO_CONFIG_DESC_SIZE                        (118+7+9)
 #define AUDIO_INTERFACE_DESC_SIZE                     9

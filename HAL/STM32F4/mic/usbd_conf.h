@@ -9,11 +9,6 @@
 #define USBD_IN_AUDIO_FREQ                (48000) //MIC frequency in Hz.
 #define USBD_IN_AUDIO_CH                (2) //MIC channels
 
-
-#define DEFAULT_VOLUME                  80    /* Default volume in % (Mute=0%, Max = 100%) in Logarithmic values.
-                                                 To get accurate volume variations, it is possible to use a logarithmic
-                                                 coversion table to convert from percentage to logarithmic law.
-                                                 In order to keep this example code simple, this conversion is not used.*/
 #define AUDIO_TOTAL_IF_NUM              0x02
 #define USBD_CFG_MAX_NUM                1
 #define USBD_ITF_MAX_NUM                1

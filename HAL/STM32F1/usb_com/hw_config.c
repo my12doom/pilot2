@@ -109,13 +109,13 @@ void USB_Interrupts_Config(void)
 #ifdef STM32F10X_CL 
   /* Enable the USB Interrupts */
   NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 5;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 #else
   NVIC_InitStructure.NVIC_IRQChannel = USB_LP_CAN1_RX0_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 5;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -143,20 +143,20 @@ void Get_SerialNum(void)
 
   if (Device_Serial0 != 0)
   {
-    Virtual_Com_Port_StringSerial[2] = (uint8_t)(Device_Serial0 & 0x000000FF);
-    Virtual_Com_Port_StringSerial[4] = (uint8_t)((Device_Serial0 & 0x0000FF00) >> 8);
-    Virtual_Com_Port_StringSerial[6] = (uint8_t)((Device_Serial0 & 0x00FF0000) >> 16);
-    Virtual_Com_Port_StringSerial[8] = (uint8_t)((Device_Serial0 & 0xFF000000) >> 24);
+    Virtual_Com_Port_StringSerial[2] = '8';//(uint8_t)(Device_Serial0 & 0x000000FF);
+    Virtual_Com_Port_StringSerial[4] = '9';//(uint8_t)((Device_Serial0 & 0x0000FF00) >> 8);
+    Virtual_Com_Port_StringSerial[6] = '9';//(uint8_t)((Device_Serial0 & 0x00FF0000) >> 16);
+    Virtual_Com_Port_StringSerial[8] = '9';//(uint8_t)((Device_Serial0 & 0xFF000000) >> 24);
 
-    Virtual_Com_Port_StringSerial[10] = (uint8_t)(Device_Serial1 & 0x000000FF);
-    Virtual_Com_Port_StringSerial[12] = (uint8_t)((Device_Serial1 & 0x0000FF00) >> 8);
-    Virtual_Com_Port_StringSerial[14] = (uint8_t)((Device_Serial1 & 0x00FF0000) >> 16);
-    Virtual_Com_Port_StringSerial[16] = (uint8_t)((Device_Serial1 & 0xFF000000) >> 24);
+    Virtual_Com_Port_StringSerial[10] = '9';//(uint8_t)(Device_Serial1 & 0x000000FF);
+    Virtual_Com_Port_StringSerial[12] = '9';//(uint8_t)((Device_Serial1 & 0x0000FF00) >> 8);
+    Virtual_Com_Port_StringSerial[14] = '9';//(uint8_t)((Device_Serial1 & 0x00FF0000) >> 16);
+    Virtual_Com_Port_StringSerial[16] = '9';//(uint8_t)((Device_Serial1 & 0xFF000000) >> 24);
 
-    Virtual_Com_Port_StringSerial[18] = (uint8_t)(Device_Serial2 & 0x000000FF);
-    Virtual_Com_Port_StringSerial[20] = (uint8_t)((Device_Serial2 & 0x0000FF00) >> 8);
-    Virtual_Com_Port_StringSerial[22] = (uint8_t)((Device_Serial2 & 0x00FF0000) >> 16);
-    Virtual_Com_Port_StringSerial[24] = (uint8_t)((Device_Serial2 & 0xFF000000) >> 24);
+    Virtual_Com_Port_StringSerial[18] = '9';//(uint8_t)(Device_Serial2 & 0x000000FF);
+    Virtual_Com_Port_StringSerial[20] = '9';//(uint8_t)((Device_Serial2 & 0x0000FF00) >> 8);
+    Virtual_Com_Port_StringSerial[22] = '9';//(uint8_t)((Device_Serial2 & 0x00FF0000) >> 16);
+    Virtual_Com_Port_StringSerial[24] = '9';//(uint8_t)((Device_Serial2 & 0xFF000000) >> 24);
   }
 }
 
