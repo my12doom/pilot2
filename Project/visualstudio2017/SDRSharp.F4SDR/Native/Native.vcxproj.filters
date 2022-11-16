@@ -18,10 +18,10 @@
     <ClCompile Include="NativeMain.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="device_bulk.cpp">
+    <ClCompile Include="..\..\..\..\modules\utils\minilzo.c">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\modules\utils\minilzo.c">
+    <ClCompile Include="..\..\..\visualstudio2008\hackrf_narrowband_fft\device_bulk.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -31,7 +31,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="device_bulk.h">
+    <ClInclude Include="..\..\..\visualstudio2008\hackrf_narrowband_fft\device.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\visualstudio2008\hackrf_narrowband_fft\device_bulk.h">
       <Filter>源文件</Filter>
     </ClInclude>
   </ItemGroup>

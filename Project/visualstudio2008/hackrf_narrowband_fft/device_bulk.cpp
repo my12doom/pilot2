@@ -2,7 +2,6 @@
 #include <Windows.h>
 #include <stdio.h>
 #include <assert.h>
-#include <F4SDR/F4SDR.h>
 #include "Protocol/crc32.h"
 #pragma comment(lib, "libusb-1.0.lib");
 #pragma comment(lib, "winmm.lib")
@@ -559,6 +558,23 @@ int bulk_device::get_gains(uint8_t *gains)
 	LeaveCriticalSection(&cs_usb);
 	return result;
 
+}
+
+int bulk_device::control_io(bool tx, uint8_t request, uint16_t value, uint16_t index, uint8_t *data, uint16_t length)
+{
+	EnterCriticalSection(&cs_usb);
+	if (!dev_handle)
+	{
+		LeaveCriticalSection(&cs_usb);
+		return -1;
+	}
+	int result = libusb_control_transfer(dev_handle,
+		LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE | (tx ? LIBUSB_ENDPOINT_OUT : LIBUSB_ENDPOINT_IN),
+		request, value, index, data, length, 0);
+
+	LeaveCriticalSection(&cs_usb);
+
+	return result;
 }
 
 }

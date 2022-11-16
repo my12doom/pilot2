@@ -2,14 +2,16 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "device_bulk.h"
+#include "../../../visualstudio2008/hackrf_narrowband_fft/device_bulk.h"
 
+using namespace NBFFT;
 
 CRITICAL_SECTION cs;
 
 typedef int(__stdcall * CSCallback)(const void* ptr, int length_byte);
 
 CSCallback cb = NULL;
+bulk_device *f4sdr = NULL;
 
 float tmp[1024*1024];
 float DC[2] = { 0 };
@@ -20,11 +22,12 @@ extern "C" BOOL APIENTRY DllMain(HMODULE /* hModule */, DWORD ul_reason_for_call
 	{
 		(void)(lpReserved);
 	}
+
 	
 	return TRUE;
 }
 
-int rx(void *buf, int len, int type)
+int rx(void *buf, int len)
 {
 	//printf("%d samples", len);
 	CSCallback _cb;
@@ -67,13 +70,19 @@ int f4sdr_dll_init()
 
 int f4sdr_open()
 {
-	device_bulk_init(rx);
+
+	f4sdr = new bulk_device();
+	f4sdr->init(rx);
 	return 0;
 }
 
 int f4sdr_close()
 {
-	device_bulk_exit();
+	if (!f4sdr)
+		return -1;
+	f4sdr->destroy();
+	delete f4sdr;
+	f4sdr = NULL;
 	return 0;
 }
 int f4sdr_cmd()
@@ -90,23 +99,31 @@ int f4sdr_setcb(CSCallback _cb)
 
 int f4sdr_control_io(bool tx, uint8_t request, uint16_t value, uint16_t index, uint8_t *data, uint16_t length)
 {
-	return device_bulk_control_io(tx, request, value, index, data, length);
+	if (!f4sdr)
+		return -1;
+	return f4sdr->control_io(tx, request, value, index, data, length);
 }
 
 
 int f4sdr_tune(int64_t fc)
 {
-	return device_bulk_tune(fc);
+	if (!f4sdr)
+		return -1;
+	return f4sdr->control_io(true, F4SDR::tune, 0, 0, (uint8_t*)&fc, 8);
 }
 
 int f4sdr_set_gain(uint8_t gain_code)
 {
-	return device_bulk_gain(gain_code);
+	if (!f4sdr)
+		return -1;
+	return f4sdr->control_io(true, F4SDR::set_gain, 0, 0, (uint8_t*)&gain_code, 1);
 }
 
 int f4sdr_set_path(uint8_t path)
 {
-	return device_bulk_path(path);
+	if (!f4sdr)
+		return -1;
+	return f4sdr->control_io(true, F4SDR::set_path, 0, 0, (uint8_t*)&path, 1);
 }
 int f4sdr_enum()
 {

@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <stdint.h>
 #include "libusb.h"
+#include <F4SDR/F4SDR.h>
 
 namespace NBFFT
 {
@@ -22,6 +23,8 @@ public:
 	virtual int set_gains(uint8_t *gains);
 	virtual int get_gains(uint8_t *gains);
 	virtual int get_gains_count(){ return 1;}
+
+	int control_io(bool tx, uint8_t request, uint16_t value, uint16_t index, uint8_t *data, uint16_t length);
 
 protected:
     data_callback cb;

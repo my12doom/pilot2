@@ -138,14 +138,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\modules\utils\minilzo.c" />
-    <ClCompile Include="device_bulk.cpp" />
+    <ClCompile Include="..\..\..\visualstudio2008\hackrf_narrowband_fft\device_bulk.cpp" />
     <ClCompile Include="NativeMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="export.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="device_bulk.h" />
+    <ClInclude Include="..\..\..\visualstudio2008\hackrf_narrowband_fft\device.h" />
+    <ClInclude Include="..\..\..\visualstudio2008\hackrf_narrowband_fft\device_bulk.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
