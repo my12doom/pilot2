@@ -450,8 +450,14 @@ int data_handler(void *buf, int len)
 			{
 				// convert signed 8bit to unsigned
 				static uint8_t *buf2 = new uint8_t[maxN*4];
-				for(int i=0; i<len*byte_per_sample; i++)
-					buf2[i] = ((int8_t*)buf)[i] + 128;
+				__m128i m128 = _mm_set1_epi8(128);
+
+				for(int i=0; i<len*byte_per_sample; i+=16)
+				{
+					__m128i m = _mm_loadu_si128((__m128i*)(((int8_t*)buf)+i));
+					m = _mm_add_epi8(m, m128);
+					_mm_store_si128((__m128i*)(((int8_t*)buf2)+i), m);
+				}
 				fwrite(buf2, 1, len*byte_per_sample, f);
 				//delete buf2;
 			}
