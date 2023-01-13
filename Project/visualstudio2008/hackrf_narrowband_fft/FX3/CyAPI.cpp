@@ -2523,6 +2523,25 @@ CCyFX3Device::CCyFX3Device()
 CCyFX3Device::~CCyFX3Device()
 {
 }
+
+bool CCyFX3Device::Ep0VendorCommand(bool isRead, UCHAR opcode, WORD value, WORD index, void *buf, WORD len)
+{
+	ControlEndPt->Target    = TGT_DEVICE ;
+	ControlEndPt->ReqType   = REQ_VENDOR ;
+	ControlEndPt->ReqCode   = opcode ;
+	ControlEndPt->Direction = isRead ? DIR_FROM_DEVICE : DIR_TO_DEVICE ;
+
+	ControlEndPt->Value     = value;
+	ControlEndPt->Index     = index;
+
+	LONG out_size = len;
+	bool b = ControlEndPt->XferData((UCHAR*)buf, out_size, NULL);
+	if (!b)
+		return -1;
+
+	return out_size;
+}
+
 bool CCyFX3Device::Ep0VendorCommand(vendorCmdData cmdData)
 {
     ControlEndPt->Target    = TGT_DEVICE ;
@@ -2562,7 +2581,8 @@ bool CCyFX3Device::Ep0VendorCommand(vendorCmdData cmdData)
                     StageBuf[i] = cmdData.buf[BufIndex + i];
             }
 
-            bRetCode = ControlEndPt->XferData(StageBuf, Stagelen, NULL);
+			long out_size = Stagelen;
+            bRetCode = ControlEndPt->XferData(StageBuf, out_size, NULL);
             if (!bRetCode)
 			{
 				if(StageBuf)

@@ -108,14 +108,20 @@ namespace NBFFT
 	{
 		CCyFX3Device * device = open_device(vendor_id, fpga_pid);
 
+		{
+			_autolock lck(&cs_device);
+			fx3device = device;
+		}
+
 		if (!device)
 		{
 			printf("no FX3 device found\n");
 			return -1;
 		}
 
+		Sleep(500);
+
 		uint8_t tmp[256];
-		bootloader_command = false;
 
 		uint16_t value = 0;
 		uint16_t index = 0;
@@ -133,11 +139,11 @@ namespace NBFFT
 
 		printf("OK, done=%d\n", tmp[0]);
 
-// 	if (tmp[0] == 1)
-// 	{
-// 		printf("skip to speed test\n");
-// 		goto speed_test;
-// 	}
+	if (tmp[0] == 1)
+	{
+		printf("skip FPGA\n");
+		goto loop;
+	}
 
 		printf("reading fpga file...");
 		FILE * f = fopen(fpga_bin_file, "rb");
@@ -192,13 +198,14 @@ namespace NBFFT
 
 loop:
 
-		int xfer_size = 16384 * 16;
+		int xfer_size = 16384;
+		const int xfer_count = 16*16;
+		int timeout = 1000;
 		int used_bytes = 0;
 		int total_bytes = 0;
 		int tick = GetTickCount();
 
 		// prepare and commit xfers
-		const int xfer_count = 16;
 		OVERLAPPED* xfer_ov[xfer_count] = {0};
 		PUCHAR xfer_contexts[xfer_count] = {0};
 		uint8_t* ptr[xfer_count];
@@ -215,15 +222,12 @@ loop:
 		while(!exiting)
 		{
 			// wait for first in queue to finish
-			bool err = device->BulkInEndPt->WaitForXfer(xfer_ov[0], 100);
+			bool err = device->BulkInEndPt->WaitForXfer(xfer_ov[0], timeout);
 			if (!err)
 			{
 				device->BulkInEndPt->Abort();
-				err = device->BulkInEndPt->WaitForXfer(xfer_ov[0], 100);
+				err = device->BulkInEndPt->WaitForXfer(xfer_ov[0], timeout);
 				err_count ++;
-				if (err_count > 10)
-					break;
-
 			}
 
 			LONG got = xfer_size;
@@ -236,9 +240,11 @@ loop:
 			if (cb && got)
 			{
 				int16_t *p = (int16_t*)ptr[0];
-				int count = xfer_size / 2;
+				int count = xfer_size;
+				if (get_sample_quant() == sample_16bit)
+					count /= 2;
 
-				if (cb(p, xfer_size/2) == 0)
+				if (cb(p, count) == 0)
 					used_bytes += got;
 			}
 
@@ -261,25 +267,6 @@ loop:
 				xfer_ov[i-1] = xfer_ov[i];
 				xfer_contexts[i-1] = xfer_contexts[i];
 				ptr[i-1] = ptr[i];
-			}
-
-			// handle bootloader command
-			if (bootloader_command)
-			{
-				bootloader_command = false;
-				uint16_t value = 0;
-				uint16_t index = 0;
-				vendorCmdData vcmd = 
-				{
-					tmp, 0xC1, 	value | (index << 16), 4, true
-				};
-
-				printf("reset to bootloader...\n");
-				if (!device->Ep0VendorCommand(vcmd))
-				{
-					printf("FAIL\n");
-					return -1;
-				}
 			}
 
 			// commit transfer and rejoin queue
@@ -310,8 +297,71 @@ loop:
 
 		device->Close();
 		delete device;
+		device = NULL;
 
 		return 0;
 	}
 
+	int fx3_device::reg_read(uint8_t bank, uint16_t add)
+	{
+		_autolock lck(&cs_device);
+		CCyFX3Device * device = (CCyFX3Device *)fx3device;
+		if (!device)
+			return -1;
+
+		uint8_t tmp[512] = {0};
+		if (!device->Ep0VendorCommand(true, 0xB4, bank, add, tmp, sizeof(tmp)))
+			return -2;
+
+		return tmp[0];
+	}
+
+	int fx3_device::reg_write(uint8_t bank, uint16_t add, uint8_t value)
+	{
+		_autolock lck(&cs_device);
+		CCyFX3Device * device = (CCyFX3Device *)fx3device;
+		if (!device)
+			return -1;
+
+		uint8_t tmp[3] = {bank, add, value};
+		return device->Ep0VendorCommand(false, 0xB3, bank, add, tmp, 3) ? 0 : -1;
+	}
+
+	int fx3_device::config()
+	{
+
+		_autolock lck(&cs_device);
+		CCyFX3Device * device = (CCyFX3Device *)fx3device;
+		if (!device)
+			return -1;
+
+		// reset to bootloader command
+// 		device->Ep0VendorCommand(false, 0xC1, 0, 0, "boot", 4);
+
+		static uint8_t toggle = 0;
+		toggle = toggle ^ 0x10;
+// 		reg_write(BANK_ADC, 0x30, toggle);
+
+// 		reg_write(BANK_ADC, 0x18, 0x9C);		// output 0.75V VREF
+// 		reg_write(BANK_ADC, 0xff, 1);			// transfer
+// 		reg_write(BANK_ADC, 0x1A, 0xAA);		//
+// 		reg_write(BANK_ADC, 0xff, 1);			// transfer
+ 		reg_write(BANK_ADC, 0x14, 1);			// use two's complement
+ 		reg_write(BANK_ADC, 0xff, 1);			// transfer
+		reg_write(BANK_FPGA, 4, 1);
+
+		// read fpga regs
+		for(int i=0; i<21; i++)
+		{
+			printf("fpga %02x = %02x, ADC %02x = %02x\n", i, reg_read(BANK_FPGA, i), i, reg_read(BANK_ADC, i));
+		}
+
+
+		printf("ADC 0x2A = %02x\n", reg_read(BANK_ADC, 0x2A));
+		printf("ADC 0x18 = %02x\n", reg_read(BANK_ADC, 0x18));
+		printf("ADC 0x1A = %02x\n", reg_read(BANK_ADC, 0x1A));
+
+		
+		return 0;
+	}
 }

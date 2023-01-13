@@ -585,6 +585,7 @@ public:
 // private:
 
     bool Ep0VendorCommand(vendorCmdData cmdData);
+	bool Ep0VendorCommand(bool isRead, UCHAR opcode, WORD value, WORD index, void *buf, WORD len);
     bool SetProgramEntry(UCHAR opCode,UINT start_addr);
 
     bool DownloadBufferToDevice(UINT start_addr, USHORT count, UCHAR *data_buf, UCHAR opCode);

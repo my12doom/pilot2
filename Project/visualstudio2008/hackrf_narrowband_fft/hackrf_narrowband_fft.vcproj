@@ -193,6 +193,22 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\modules\math\matrix.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\math\matrix.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\uwb.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\modules\uwb.h"
+				>
+			</File>
+			<File
 				RelativePath=".\wfm_draw.cpp"
 				>
 				<FileConfiguration

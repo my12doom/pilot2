@@ -298,9 +298,9 @@ DWORD WINAPI DSO_trigger_thread(LPVOID p)
 
 
 	int fps = 30;
-	int hysteric = 50;
+	int hysteric = 256;
 	int samples_used = 0;
-	int auto_trigger_timeout = sample_rate * 2;
+	int auto_trigger_timeout = sample_rate * 0.5;
 
 	threaded_drawer drawer2(frm_width, frm_height, 3);
 	drawer = &drawer2;

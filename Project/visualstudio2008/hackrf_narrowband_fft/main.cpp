@@ -444,8 +444,22 @@ int data_handler(void *buf, int len)
 {
 	{
 		_autolock lck(&cs_outfile);
-			if (f)
+		if (f)
+		{
+			if (quant_type == sample_8bit)
+			{
+				// convert signed 8bit to unsigned
+				static uint8_t *buf2 = new uint8_t[maxN*4];
+				for(int i=0; i<len*byte_per_sample; i++)
+					buf2[i] = ((int8_t*)buf)[i] + 128;
+				fwrite(buf2, 1, len*byte_per_sample, f);
+				//delete buf2;
+			}
+			else
+			{
 				fwrite(buf, 1, len*byte_per_sample, f);
+			}
+		}
 	}
 	
 	int result = 0;
@@ -945,10 +959,10 @@ void update_marker()
 	static bool last_v = false;
 	if (GetKeyState(VK_HOME) < 0 || GetKeyState(VK_PRIOR) < 0 || GetKeyState(VK_NEXT) < 0 || GetKeyState(VK_CONTROL) < 0)
 	{
-		const int peak_count = 6;
+		const int peak_count = 10;
 		int min_distance = 2 * N / 1024;
-		int peak_pos[8] = {0};
-		float peak_amp[8] = {0};
+		int peak_pos[peak_count] = {0};
+		float peak_amp[peak_count] = {0};
 		static int peak_sel = 0;
 
 		for(int k=0; k<peak_count; k++)
