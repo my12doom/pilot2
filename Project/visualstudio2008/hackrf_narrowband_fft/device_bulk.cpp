@@ -16,6 +16,7 @@ using namespace F4SDR;
 
 #define transfer_size (256*1024)
 #define transfer_count 4
+#define block_bytes 32768
 // #define use_transfers
 
 struct libusb_transfer* transfers[transfer_count];
@@ -154,8 +155,8 @@ int erase_test2(libusb_device_handle* dev_handle)
 	if (once)
 		return 0;
 
-// 	FILE * f = fopen("C:\\Users\\mo\\Desktop\\repo\\F4SA\\out\\adc_clk.bin", "rb");
-	FILE * f = fopen("C:\\Users\\mo\\Desktop\\repo\\VNA1Pro\\out\\VNA1pro.bin", "rb");
+ 	FILE * f = fopen("C:\\Users\\mo\\Desktop\\repo\\F4SA\\out\\adc_clk.bin", "rb");
+//	FILE * f = fopen("C:\\Users\\mo\\Desktop\\repo\\VNA1Pro\\out\\VNA1pro.bin", "rb");
 // 	FILE * f = fopen("Y:\\folder\\fpga_proj\\F4SA\\out\\adc_clk.bin", "rb");
 	fseek(f, 0, SEEK_END);
 	int data_size = ftell(f);
@@ -376,13 +377,28 @@ start:
 	}
 #endif
 
+	uint64_t freq_start = 2.4e9;
+	uint64_t freq_step = 5e6;
+	uint64_t freq_points = 200;
+	uint16_t sweep_blocks = 1;
+
+	this->control_io(true, set_sweep_start, 0, 0, (uint8_t*)&_sweep_config.freq_start, 8);
+	this->control_io(true, set_sweep_step, 0, 0, (uint8_t*)&_sweep_config.freq_step, 8);
+	this->control_io(true, set_sweep_points, 0, 0, (uint8_t*)&_sweep_config.points, 8);
+	this->control_io(true, set_sweep_blocks, sweep_blocks, 0, NULL, 0);
+
+	// flush streaming queue
+	this->control_io(true, stream_enable, 0, 0, NULL, 0);
+	libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, transfer_size, &actual_length, 100);
+	this->control_io(true, stream_enable, 1, 0, NULL, 0);
+
 	while(1)
 	{
 
 #ifndef use_transfers
 		int result = 0;
 		EnterCriticalSection(&cs_usb);
- 		result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, transfer_size, &actual_length, 0);
+		result= libusb_bulk_transfer(dev_handle, 1 | LIBUSB_ENDPOINT_IN, data, transfer_size, &actual_length, 100);
 		//Sleep(10);
 		LeaveCriticalSection(&cs_usb);
 
@@ -439,7 +455,25 @@ start:
 
 int bulk_device::init(int (*rx)(void *buf, int len))
 {
+	destroy();
+
 	this->cb = rx;
+	working = true;
+	rx_data_size = 0;
+	_sweep_config.points = 0;
+
+	usb_thread = CreateThread(NULL, NULL, usb_worker_entry, this, NULL, NULL);
+	rx_thread = CreateThread(NULL, NULL, rx_worker_entry, this, NULL, NULL);
+	usb_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+	return 0;
+}
+
+int bulk_device::init(sweep_callback cb, sweep_config config)
+{
+	destroy();
+
+	sweep_cb = cb;
+	_sweep_config = config;
 	working = true;
 	rx_data_size = 0;
 
@@ -448,6 +482,7 @@ int bulk_device::init(int (*rx)(void *buf, int len))
 	usb_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 	return 0;
 }
+
 
 int bulk_device::destroy()
 {
@@ -468,7 +503,34 @@ DWORD bulk_device::rx_worker()
 	{
 		WaitForSingleObject(usb_event, INFINITE);
 		if (working && cb && rx_data_size)
-			cb(rx_data, rx_data_size);
+		{
+
+			if (_sweep_config.points > 0)
+			{
+				static int l = GetTickCount();
+				for(int i=0; i<rx_data_size; i+=block_bytes/2)
+				{
+					sweep_header *header = (sweep_header*)(rx_data + i);
+					int64_t start = 2400e6;
+					if (header->center_freq == start)
+					{
+						// 			printf("cycle time:%dms\n", GetTickCount() - l);
+						// 			l = GetTickCount();
+
+					}
+					//printf("freq=%lld, block%d\n", header->center_freq, header->block_index);
+					sweep_info info = {header->center_freq};
+					memset(header, 0, 10);		// clear header
+					
+					sweep_cb(rx_data+i, block_bytes, info);
+				}
+			}
+			else
+			{
+
+				cb(rx_data, rx_data_size);
+			}
+		}
 	}
 	return 0;
 }
@@ -487,7 +549,7 @@ int bulk_device::tune(int64_t hz)
 
 	return ret;
 }
-int bulk_device::config()
+int bulk_device::show_config_dialog()
 {
 // 	uint8_t tmp[24];
 // 	int res = libusb_control_transfer(

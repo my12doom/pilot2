@@ -13,7 +13,7 @@ public:
 	~fx3_device(){destroy();};
 	virtual int init(data_callback cb);
 	virtual int destroy();
-	virtual int config();
+	virtual int show_config_dialog();
 	virtual int tune(int64_t hz){return -1;}
 	int get_sample_rate(){return 400e6;}
 	virtual sample_type get_sample_type(){return real_sample;}

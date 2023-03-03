@@ -4,6 +4,8 @@
 //
 #define IDD_DIALOG1                     101
 #define IDD_DSO                         105
+#define IDD_DIALOG2                     106
+#define IDD_SWEEPSA                     106
 #define IDC_GRAPH                       1001
 #define IDC_SLIDER1                     1002
 #define IDC_GRAPH2                      1002
@@ -30,6 +32,7 @@
 #define IDC_DSO                         1026
 #define IDC_BUTTON1                     1027
 #define IDC_EXTRACT                     1027
+#define IDC_SWEEP_SA                    1027
 #define IDC_ZOOM_OUT                    1028
 #define IDC_ZOOM_IN                     1029
 #define IDC_SA                          1030
@@ -42,7 +45,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        106
+#define _APS_NEXT_RESOURCE_VALUE        107
 #define _APS_NEXT_COMMAND_VALUE         40001
 #define _APS_NEXT_CONTROL_VALUE         1035
 #define _APS_NEXT_SYMED_VALUE           101

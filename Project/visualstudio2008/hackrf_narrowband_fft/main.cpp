@@ -27,6 +27,7 @@
 #include "sinc.h"
 
 #include "DSOwindow.h"
+#include "sweepSA.h"
 
 #include <Protocol/common.h>
 
@@ -303,10 +304,20 @@ int process_fft_block(float *ampsq_copy, void *buf, bool update_hitmap)
 	// find DC offset
 	__m128 mdc = {0};
 	float DC_N[2] = {0};
-	total_complex((float*)fft_in, DC_N, N);
 	float alpha_DC = dt / (dt + 1.0f/(5.5f*PI * 1));
-	DC[0] = DC[0] * (1-alpha_DC) + DC_N[0] * alpha_DC / N;
-	DC[1] = DC[1] * (1-alpha_DC) + DC_N[1] * alpha_DC / N;
+
+	if (complex_sample == device_sample_type)
+	{
+		total_complex((float*)fft_in, DC_N, N);
+		DC[0] = DC[0] * (1-alpha_DC) + DC_N[0] * alpha_DC / N;
+		DC[1] = DC[1] * (1-alpha_DC) + DC_N[1] * alpha_DC / N;
+	}
+	else
+	{
+		total_complex((float*)fft_in, DC_N, N/2);
+		DC[0] = DC[0] * (1-alpha_DC) + (DC_N[0]+DC_N[1])/2 * alpha_DC / N;
+		DC[1] = 0;
+	}
 
 	if (complex_sample == device_sample_type)
 	{
@@ -353,7 +364,7 @@ int process_fft_block(float *ampsq_copy, void *buf, bool update_hitmap)
 	}
 	else
 	{
-		__m128 mdc = _mm_set_ps1((DC[0] + DC[1])/2);
+		__m128 mdc = _mm_set_ps1(DC[0]);
 
 		for(int i=0; i<N*2; i+=4)
 		{
@@ -385,7 +396,7 @@ int process_fft_block(float *ampsq_copy, void *buf, bool update_hitmap)
 		m1 = _mm_hadd_ps(m1, m2);
 		m1 = _mm_mul_ps(m1, mN);
 
-		// hitman calculate
+		// hitmap calculate
 		if (N <= maxHitmapN && update_hitmap)
 		{
 			int tmp[4];
@@ -520,6 +531,13 @@ DWORD WINAPI SA_thread(LPVOID p)
 		cs_fft.leave();
 
 		cs_amp.enter();
+		for(int i=0; i<N; i++)
+		{
+			if (!isfinite(ampsq_copy[i]))
+			{
+				ampsq_copy[i] = 1e-15;
+			}
+		}
 		memcpy(ampsq, ampsq_copy, N*sizeof(float));
 		cs_amp.leave();
 	}
@@ -1224,8 +1242,8 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 				int64_t hz = _strtoui64(tmp, NULL, 10);
 
 				hz += zDelta * 1e6 / WHEEL_DELTA;
-				if (hz<10000000)
-					hz = 10000000;
+				if (hz<0)
+					hz = 0;
 
 				if (hz>0)
 				{
@@ -1279,6 +1297,21 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 			if (id == IDC_DSO)
 				show_dso_window(NULL, NULL);
 
+			if (id == IDC_SWEEP_SA)
+			{
+				_autolock lck(&cs_device);
+
+				if (d && d->support_sweep())
+				{
+				//	Button_SetCheck(GetDlgItem(hDlg, IDC_SA), false);
+					show_sweepSA_window(NULL, NULL);
+				}
+				else
+				{
+					MessageBoxA(hDlg, "no sweeping SA support for this device", "error", MB_OK);
+				}
+			}
+
 			if (id == IDC_GAIN_LNA)
 				apply_gain(hDlg);
 
@@ -1315,10 +1348,10 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 				GetDlgItemTextA(hDlg, IDC_FREQ, tmp, sizeof(tmp)-1);
 				int64_t hz = _strtoui64(tmp, NULL, 10);
 
-				if (hz < 10e6)
+				if (hz < 0e6)
 				{
-					hz = 10e6;
-					SetDlgItemTextA(hDlg, IDC_FREQ, "10000000");
+					hz = 0e6;
+					SetDlgItemTextA(hDlg, IDC_FREQ, "00000000");
 				}
 
 				if (hz>0)
@@ -1334,7 +1367,7 @@ INT_PTR CALLBACK main_window_proc( HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 			{
 				cs_device.enter();
 				if(d)
-					d->config();
+					d->show_config_dialog();
 				cs_device.leave();
 			}
 
@@ -1641,7 +1674,7 @@ int open_device(const char *name, void *extra /*= NULL*/)
 	quant_type = d->get_sample_quant();
 	byte_per_sample = (sample_8bit == quant_type) ? 1 : ((sample_16bit==quant_type) ? 2 : 4);
 	range_high = 0;
-	range_low = -d->dynamic_range_db();
+	range_low = -d->noise_density();
 	cs_device.leave();
 
 	set_rbw_filter_hz(g_rbw_type, rbw, -range_low);
@@ -2296,6 +2329,22 @@ int poly_fit()
 
 int main(int argc, char* argv[])
 {
+	double angles[32] =  {
+		0.78539816339745,0.46364760900081,0.24497866312686,0.12435499454676,
+		0.06241880999596,0.03123983343027,0.01562372862048,0.00781234106010,
+		0.00390623013197,0.00195312251648,0.00097656218956,0.00048828121119,
+		0.00024414062015,0.00012207031189,0.00006103515617,0.00003051757812,
+		0.00001525878906,0.00000762939453,0.00000381469727,0.00000190734863,
+		0.00000095367432,0.00000047683716,0.00000023841858,0.00000011920929,
+		0.00000005960464,0.00000002980232,0.00000001490116,0.00000000745058,};
+
+	for(int i=0; i<32; i++)
+	{
+		angles[i] = atan(pow(2.0,-i));
+
+		printf("constant_tbl[%d] = 32'd%.0f;\n", i, angles[i] / angles[0] * (1U<<31));
+	}
+
 	timeBeginPeriod(1);
 // 	test_sinc();
 //    	AMgen();
@@ -2311,7 +2360,7 @@ int main(int argc, char* argv[])
 
 	load_color_table();
 	set_fft_size(N);
-	open_device(device_list[4]);
+	open_device(device_list[2]);
 	DialogBoxW(NULL, MAKEINTRESOURCE(IDD_DIALOG1), NULL, main_window_proc);
 	clearup();
 

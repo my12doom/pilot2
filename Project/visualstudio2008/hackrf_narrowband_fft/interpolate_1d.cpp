@@ -105,7 +105,7 @@ int interpolate1d_mipmap(const float *in, float *out, int in_size, int out_size,
 	if (!mipmap)
 	{
 		mipmap = new float[in_size*2];
-		create_mipmap1d_max(in, mipmap, in_size);
+		create_mipmap1d(in, mipmap, in_size);
 	}
 
 	in = mipmap;

@@ -201,11 +201,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\modules\uwb.cpp"
+				RelativePath=".\sweepSA.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\modules\uwb.h"
+				RelativePath=".\sweepSA.h"
 				>
 			</File>
 			<File
@@ -436,10 +436,6 @@
 		<Filter
 			Name="devices"
 			>
-			<File
-				RelativePath=".\device.h"
-				>
-			</File>
 			<File
 				RelativePath=".\device_bulk.cpp"
 				>

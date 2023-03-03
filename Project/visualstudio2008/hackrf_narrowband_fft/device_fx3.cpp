@@ -7,7 +7,7 @@
 #include <string>
 
 #pragma comment(lib, "setupapi.lib")
-char fpga_bin_file[] = "C:\\Users\\mo\\Desktop\\repo\\yaDSO\\out\\yadso.bin";
+char fpga_bin_file[] = "C:\\Users\\mo\\Desktop\\repo\\yaDSO_trig\\out\\yadso.bin";
 char fx3_firmware[] = "C:\\Users\\mo\\Desktop\\repo\\yaDSO_FX3\\yaDSO.img";
 // char fpga_bin_file[] = "vna1pro.bin";
 // char fx3_firmware[] = "SDDC_FX3.img";
@@ -327,7 +327,7 @@ loop:
 		return device->Ep0VendorCommand(false, 0xB3, bank, add, tmp, 3) ? 0 : -1;
 	}
 
-	int fx3_device::config()
+	int fx3_device::show_config_dialog()
 	{
 
 		_autolock lck(&cs_device);
@@ -346,7 +346,7 @@ loop:
 // 		reg_write(BANK_ADC, 0xff, 1);			// transfer
 // 		reg_write(BANK_ADC, 0x1A, 0xAA);		//
 // 		reg_write(BANK_ADC, 0xff, 1);			// transfer
- 		reg_write(BANK_ADC, 0x14, 1);			// use two's complement
+ 		reg_write(BANK_ADC, 0x14, 0x09);		// use two's complement, DDR
  		reg_write(BANK_ADC, 0xff, 1);			// transfer
 		reg_write(BANK_FPGA, 4, 1);
 
@@ -355,6 +355,13 @@ loop:
 		{
 			printf("fpga %02x = %02x, ADC %02x = %02x\n", i, reg_read(BANK_FPGA, i), i, reg_read(BANK_ADC, i));
 		}
+
+		uint8_t tmp[4];
+		int tmp4;
+		for(int i=0; i<4; i++)
+			tmp[i] = reg_read(BANK_FPGA, i+64);
+		memcpy(&tmp4, tmp, 4);
+		printf("fpga state=%d\n", tmp4);
 
 
 		printf("ADC 0x2A = %02x\n", reg_read(BANK_ADC, 0x2A));

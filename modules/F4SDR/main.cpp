@@ -39,26 +39,44 @@ F4GPIO cs4351(GPIOA, GPIO_Pin_9);		// adf4351
 F4GPIO cs2871(GPIOC, GPIO_Pin_9);		// max2871
 
 // signal path
+bool stream_enabled = true;
+int64_t last_center_freq = 0;
 reg_rf_path rfpath = 
 {
 	0, IF_900, 0, 0,
-	IF_AMP_BYPASS, FE_LNA58,
+	IF_AMP_BYPASS, FE_BYPASS,
 };
 
 // bulk buffer
 #define BUFFER_COUNT 32768
 static int16_t adc_buffer[BUFFER_COUNT];
+static int16_t *adc_buffer0 = adc_buffer;
+static int16_t *adc_buffer1 = adc_buffer+BUFFER_COUNT/2;
 int data_valid = 0;
 int data_flying = 0;
 int64_t parrallel_reset_request = 1;
+bool double_buffer = false;
+
+// sweeping
+int64_t sweep_start = 1e9;
+int64_t sweep_step = 1e6;
+int sweep_points = 0;
+int sweep_blocks = 1;
+
+int sweep_current_point = 0;
+int sweep_current_block = 0;
+int block_to_skip = 1;
+
+
 
 // functions
 void tune(uint64_t center_freq);
 void set_adc_gain(bool LNA, uint8_t gain);
-int parallel_port_config();
+int parallel_port_config(bool double_buffer = false);
 int usb_event_cb(F4HSBulk *h, int event, void *_p, int size);
 void fpga_reg_write(uint8_t add, uint8_t value);
 uint8_t fpga_reg_read(uint8_t add);
+void sweep_next();
 
 void request_port_reset()
 {
@@ -75,14 +93,13 @@ void set_adc_gain(bool LNA, uint8_t gain)
 	cs_adc.set_mode(MODE_OUT_PushPull);
 	cs_adc.write(1);
 	systimer->delayus(1);
+	
 	cs_adc.write(0);
 	spi.txrx(0x32);
 	spi.txrx((LNA ? 0x80 : 0) | gain);
 	cs_adc.write(1);
 	
 	request_port_reset();
-	
-	fpga_reg_write(0, gain);
 }
 
 void set_rf_path(uint8_t path)
@@ -100,24 +117,30 @@ void set_rf_path(uint8_t path)
 extern "C" void DMA2_Stream6_IRQHandler(void)
 {
 	bool overflow = false;
-	if(DMA_GetITStatus(DMA2_Stream6, DMA_IT_TCIF6))	
+	if(DMA_GetITStatus(DMA2_Stream6, DMA_IT_TCIF6))
 	{
-		if (data_valid & 2)
+		int piece = !double_buffer ? 2 : (2-DMA_GetCurrentMemoryTarget(DMA2_Stream6));
+		if (data_valid & piece)
 			overflow = true;
-		data_valid |= 2;
+		data_valid |= piece;
 	}
-	if(DMA_GetITStatus(DMA2_Stream6, DMA_IT_HTIF6))	
+	
+	if (!double_buffer)
 	{
-		if (data_valid & 1)
-			overflow = true;
-		data_valid |= 1;
+		if(DMA_GetITStatus(DMA2_Stream6, DMA_IT_HTIF6))
+		{
+			if (data_valid & 1)
+				overflow = true;
+			data_valid |= 1;
+		}
 	}
+	
 	DMA_ClearITPendingBit(DMA2_Stream6, DMA_FLAG_HTIF6 | DMA_FLAG_TCIF6);
 	
 	led1.write(!overflow);
-
 }
 
+/*
 extern "C" void DMA2_Stream2_IRQHandler(void)
 {
 	bool overflow = false;
@@ -138,18 +161,21 @@ extern "C" void DMA2_Stream2_IRQHandler(void)
 	led1.write(!overflow);
 		
 }
+*/
 
 
 
-int parallel_port_config()
+int parallel_port_config(bool use_double_buffer /*= false*/)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
 	
-	memset(adc_buffer, 0, sizeof(adc_buffer));
-	
+	double_buffer = use_double_buffer = true;
+	data_valid = 0;
+	data_flying = 0;
+	parrallel_reset_request = 0;
 	
 	GPIO_InitTypeDef GPIO_InitStructure;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
@@ -180,7 +206,7 @@ int parallel_port_config()
 	TIM_ICInit(TIM1, &TIM_ICInitStructure);
 	TIM_Cmd(TIM1,ENABLE);
 	
-	TIM_DMACmd(TIM1, TIM_DMA_CC1, ENABLE ); /* Enable TIM1_CC1 DMA Requests     */
+	TIM_DMACmd(TIM1, TIM_DMA_CC1, ENABLE ); // Enable TIM1_CC1 DMA Requests
 	
 	DMA_InitTypeDef DMA_InitStructure = {0};
 	DMA_InitStructure.DMA_Channel = DMA_Channel_0; 
@@ -188,6 +214,8 @@ int parallel_port_config()
 	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)&adc_buffer[0];
 	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
 	DMA_InitStructure.DMA_BufferSize = sizeof(adc_buffer)/sizeof(adc_buffer[0]);
+	if (double_buffer)
+		DMA_InitStructure.DMA_BufferSize /= 2;
 	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
@@ -200,18 +228,25 @@ int parallel_port_config()
 	DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single; 
 	DMA_DeInit(DMA2_Stream6);
 	DMA_Init(DMA2_Stream6, &DMA_InitStructure);
+	
+	if (use_double_buffer)
+	{
+		DMA_DoubleBufferModeConfig(DMA2_Stream6, (uint32_t)(adc_buffer + sizeof(adc_buffer)/sizeof(adc_buffer[0]/2)),
+			DMA_GetCurrentMemoryTarget(DMA2_Stream6) ? DMA_Memory_1 : DMA_Memory_0);
+		DMA_DoubleBufferModeCmd(DMA2_Stream6, ENABLE);
+	}
+	
 	DMA_Cmd(DMA2_Stream6, ENABLE);
 	
 	DMA_ITConfig(DMA2_Stream6, DMA_IT_TC, ENABLE);
-	DMA_ITConfig(DMA2_Stream6, DMA_IT_HT, ENABLE);
+	DMA_ITConfig(DMA2_Stream6, DMA_IT_HT, use_double_buffer ? DISABLE : ENABLE);
 	
 	NVIC_InitTypeDef NVIC_InitStructure;
 	NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream6_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
-	
+	NVIC_Init(&NVIC_InitStructure);	
 	
 	return 0;
 }
@@ -235,35 +270,47 @@ int handle_IN_event(F4HSBulk *h, control_verndor_transfer *t)
 	return 0;
 }
 
+int erase_fpga_rom_sectors()
+{
+	uint32_t sectors_to_erase[] = {FLASH_Sector_4, FLASH_Sector_5, FLASH_Sector_6, FLASH_Sector_7, FLASH_Sector_8, FLASH_Sector_9, FLASH_Sector_10, };
+	int i,j;
+	FLASH_Unlock();
+	for(i=0; i<sizeof(sectors_to_erase)/sizeof(sectors_to_erase[0]); i++)
+	{
+		// empty check
+		uint32_t *p = (uint32_t*)(0x08010000 + i * (i==1?0x10000:0x20000));
+		int word_count = i==0?0x4000:0x8000;
+		for(j=0; j<word_count; j++)
+		{
+			if (p[j] != 0xffffffff)
+			{
+				FLASH_EraseSector(sectors_to_erase[i], VoltageRange_3);
+				FLASH_WaitForLastOperation();
+				break;
+			}
+		}
+	}
+	
+	return 0;
+}
+
 int handle_OUT_event(F4HSBulk *h, control_verndor_transfer *t)
 {
+	int64_t freq = t->length == 8 ? *(uint64_t*)t->data : 0;
 	switch (t->request)
 	{
 	case reset_mcu:
 		NVIC_SystemReset();
 		break;
 
+	case stream_enable:
+		stream_enabled = t->value;
+		break;
+
 	case erase_fpga_rom:		
 		if (t->length == 4 && *(uint32_t*)t->data == 0xDEADBEAF)
 		{
-			uint32_t sectors_to_erase[] = {FLASH_Sector_4, FLASH_Sector_5, FLASH_Sector_6, FLASH_Sector_7, FLASH_Sector_8, FLASH_Sector_9, FLASH_Sector_10, };
-			int i,j;
-			FLASH_Unlock();
-			for(i=0; i<sizeof(sectors_to_erase)/sizeof(sectors_to_erase[0]); i++)
-			{
-				// empty check
-				uint32_t *p = (uint32_t*)(0x08010000 + i * (i==1?0x10000:0x20000));
-				int word_count = i==0?0x4000:0x8000;
-				for(j=0; j<word_count; j++)
-				{
-					if (p[j] != 0xffffffff)
-					{
-						FLASH_EraseSector(sectors_to_erase[i], VoltageRange_3);
-						FLASH_WaitForLastOperation();
-						break;
-					}
-				}
-			}
+			erase_fpga_rom_sectors();
 		}
 		break;
 	
@@ -289,12 +336,32 @@ int handle_OUT_event(F4HSBulk *h, control_verndor_transfer *t)
 		if (t->length == 1)
 			set_rf_path(t->data[0]);
 		break;
-	
+
+	case set_sweep_start:
+		sweep_start = freq;
+		break;
+
+	case set_sweep_step:
+		sweep_step = freq;
+		break;
+
+	case set_sweep_points:
+		sweep_points = freq;	// little endian only
+		break;
+
+	case set_sweep_blocks:
+		sweep_blocks = t->value;
+		break;
+
 	default:
 		break;
 	}
 	return 0;
 }
+
+int64_t last_tx_time[3] = {0};
+int tx_dt[2];
+int dt;
 
 int usb_event_cb(F4HSBulk *h, int event, void *_p, int size)
 {
@@ -302,10 +369,14 @@ int usb_event_cb(F4HSBulk *h, int event, void *_p, int size)
 	{
 	case tx_done:
 		data_valid &= data_flying ? 0xfe : 0xfd;
-	
+		
+
+		
+		// fall through
 	case tx_ready:
 		if (data_valid)
 		{
+
 			int next_part = (data_valid == 3) ? (1-data_flying) : (data_valid & 1);
 			
 			if (next_part == data_flying)
@@ -314,9 +385,51 @@ int usb_event_cb(F4HSBulk *h, int event, void *_p, int size)
 				led0.write(1);
 			
 			data_flying = next_part;
+			int16_t *buffer_to_send = data_flying ? adc_buffer : (adc_buffer + BUFFER_COUNT/2);
 			
+			// sweeping handling
+			if (sweep_points > 0)
+			{
+				// skip blocks for LO lock/transients
+				if (block_to_skip > 0)
+				{
+					block_to_skip --;
+					return -1;
+				}
+
+				// fill header
+				sweep_header *header = (sweep_header*)buffer_to_send;
+				header->center_freq = last_center_freq;
+				header->block_index = sweep_current_block;
+			}
 			
-			h->ioctl(tx_block, data_flying ? adc_buffer : (adc_buffer + BUFFER_COUNT/2), sizeof(adc_buffer)/2);
+			if (!stream_enabled)
+				return -1;
+			
+			/*
+			last_tx_time[0] = last_tx_time[1];
+			last_tx_time[1] = last_tx_time[2];
+			last_tx_time[2] = systimer->gettime();
+			
+			tx_dt[0] = last_tx_time[1] - last_tx_time[0];
+			tx_dt[1] = last_tx_time[2] - last_tx_time[1];
+			*/
+			
+
+			h->ioctl(tx_block, buffer_to_send, sizeof(adc_buffer)/2);			
+			
+			// sweeping handling
+			if (sweep_points > 0)
+			{
+				// how many blocks sent for this point?
+				sweep_current_block ++;
+				if (sweep_current_block >= sweep_blocks)
+				{
+					int l = systimer->gettime();
+					sweep_next();
+					dt = systimer->gettime() - l;
+				}
+			}			
 		}
 		else
 		{
@@ -332,7 +445,6 @@ int usb_event_cb(F4HSBulk *h, int event, void *_p, int size)
 		handle_OUT_event(h, (control_verndor_transfer*)_p);
 		break;
 
-	/*
 	case rx_ready:
 		static uint8_t rx_buffer[512];
 		h->ioctl(rx_block, rx_buffer, sizeof(rx_buffer));
@@ -344,25 +456,7 @@ int usb_event_cb(F4HSBulk *h, int event, void *_p, int size)
 			uint8_t *p = (uint8_t *)_p;
 			if (p[0] == 0x81)
 			{
-				// erase fpga firmware flash
-				uint32_t sectors_to_erase[] = {FLASH_Sector_4, FLASH_Sector_5, FLASH_Sector_6, FLASH_Sector_7, FLASH_Sector_8, FLASH_Sector_9, FLASH_Sector_10, };
-				int i,j;
-				FLASH_Unlock();
-				for(i=0; i<sizeof(sectors_to_erase)/sizeof(sectors_to_erase[0]); i++)
-				{
-					// empty check
-					uint32_t *p = (uint32_t*)(0x08010000 + i * (i==1?0x10000:0x20000));
-					int word_count = i==0?0x4000:0x8000;
-					for(j=0; j<word_count; j++)
-					{
-						if (p[j] != 0xffffffff)
-						{
-							FLASH_EraseSector(sectors_to_erase[i], VoltageRange_3);
-							FLASH_WaitForLastOperation();
-							break;
-						}
-					}
-				}
+				erase_fpga_rom_sectors();
 			}
 			
 			else if (p[0] == 0x82)
@@ -386,9 +480,6 @@ int usb_event_cb(F4HSBulk *h, int event, void *_p, int size)
 		}
 
 		break;
-	*/
-
-
 	}
 
 	return 0;
@@ -442,8 +533,8 @@ int configure_ad9251()
 	//write_ad9251(0x14, 0x01);	// use twos complement output
 	//write_ad9251(0x17, 0x00);	// no delay
 
-	write_ad9251(0x0b, 0x00);	// clock divider : /1
-	//write_ad9251(0x0b, 0x01);	// clock divider : /2
+	//write_ad9251(0x0b, 0x00);	// clock divider : /1
+	write_ad9251(0x0b, 0x01);	// clock divider : /2
 	write_ad9251(0x09, 0x01);	// clock duty cycle stabalize
 	write_ad9251(0xff, 0x01);	// execute
 	
@@ -462,6 +553,11 @@ int configure_ad9251()
 
 void tune(uint64_t center_freq)
 {
+	if (center_freq == last_center_freq)
+		return;
+
+	last_center_freq = center_freq;
+
 	request_port_reset();
 	// 1st IF filter:
 	// 900M option(NDF9299) center:902.5 passband: 890 - 915 Mhz, stop band: <880Mhz or > 925Mhz
@@ -469,6 +565,9 @@ void tune(uint64_t center_freq)
 	uint8_t if_select_prev = rfpath.IF_select;
 	rfpath.IF_select = center_freq > ((902.5e6f+837.0e6f)/2) ? IF_800 : IF_900;
 	rfpath.IF_select = IF_900;
+	rfpath.front_end = FE_BYPASS;
+	//rfpath.front_end = FE_LNA;
+	rfpath.IF_amp = IF_AMP;
 	if (if_select_prev != rfpath.IF_select)
 	{
 		IF_freq = (rfpath.IF_select == IF_800) ? 836.5e6f : 902.5e6f;
@@ -669,6 +768,23 @@ void read_integrate()
 	timeout = systimer->gettime() + 50000;
 }
 
+void sweep_next()
+{
+	sweep_current_point = (sweep_current_point + 1) % sweep_points;
+	int64_t center_freq = sweep_start + sweep_step * sweep_current_point;
+	block_to_skip = 0;
+	sweep_current_block = 0;
+
+	::tune(center_freq);
+
+	// do parallel port reset
+	cs_adc.write(0);
+	parallel_port_config();
+	systimer->delayus(50);
+	parrallel_reset_request = 0;
+	cs_adc.write(1);
+}
+
 extern "C" void SetSysClock();
 int main()
 {
@@ -748,7 +864,7 @@ int main()
 	
 	while(1)
 	{
-		read_integrate();
+		//read_integrate();
 		if (parrallel_reset_request > 0 && systimer->gettime() > parrallel_reset_request)
 		{
 			parrallel_reset_request = 0;
@@ -758,9 +874,6 @@ int main()
 			parallel_port_config();
 			systimer->delayms(1);
 			cs_adc.write(1);
-			//LO1.set_output(true, true, false);
-			//cs2871.write(1);
-			
 		}
 	}
 }

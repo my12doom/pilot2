@@ -27,7 +27,7 @@ public:
     ~dummy_device(){destroy();};
     virtual int init(data_callback cb);
     virtual int destroy();
-    virtual int config(){return 0;}
+    virtual int show_config_dialog(){return 0;}
     int get_sample_rate(){return 10000000;}
     sample_type get_sample_type(){return real_sample;}
 
@@ -52,11 +52,11 @@ public:
 	~wav_device(){destroy();};
 	virtual int init(data_callback cb);
 	virtual int destroy();
-	virtual int config(){return 0;}
+	virtual int show_config_dialog(){return 0;}
 	int get_sample_rate(){return hdr.wex.nSamplesPerSec;}
 	sample_type get_sample_type(){return hdr.wex.nChannels == 2 ? complex_sample : real_sample;}
 	sample_quant get_sample_quant(){return quant;}
-	int dynamic_range_db(){return 120;}     // return max noise density SNR in db
+	int noise_density(){return 120;}     // return max noise density SNR in db
 
 protected:
 	sample_quant quant;
